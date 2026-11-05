@@ -9,6 +9,9 @@ Browser tool to plan a station factory for **Main Sequence**: a top-down grid of
 - Internal factory floor per block (14x14, 14x30, 30x30) with doorways.
 - Machines and belts with toggleable ports, belt link overlay, underground length warnings.
 - Recipe selection per machine, items/min rates and belt speed (Mk1-3) checks.
+- Live simulation: play/pause, 1x/10x/60x; containers, machines (idle/working/starved/blocked), splitters, balancers, merges and undergrounds.
+- Bottlenecks view: Flow / Blockage colours from the plan or the live simulation.
+- Configurable containers (items, amounts, infinite source), recipe supply vs need, hotbar, autosave in your browser.
 - Item and block icons.
 - JSON export / import. Single offline HTML file, no build step.
 
