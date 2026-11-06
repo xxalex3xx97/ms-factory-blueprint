@@ -170,6 +170,7 @@ dialog h3{margin:0 0 8px}
     <input id="search" type="text" placeholder="Search blocks..." aria-label="Search blocks">
     <div id="palCtl"><button id="palCol" title="Collapse all sections">Collapse all</button><button id="palExp" title="Expand all sections">Expand all</button></div>
     <div id="palList"></div>
+    <section id="snp" aria-label="Snippets"><h4>Snippets</h4><button id="snSave">Save selection as snippet</button><div id="snList"></div><button id="snExp">Export library</button><label>Import library <input id="snImp" type="file" accept=".json,application/json"></label></section>
   </aside>
   <section id="stage">
     <canvas id="cv" tabindex="0" aria-label="Station grid canvas"></canvas>
@@ -1117,6 +1118,24 @@ function pasteAt(){
   if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}
   push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));pasting=null;all();
 }
+// ---- snippet library (localStorage msfb.snippets): [{n:name,b:[block copies]}]
+const SNK="msfb.snippets";let SN=[];
+const snOk=s=>s&&typeof s.n==="string"&&Array.isArray(s.b)&&s.b.length;
+try{const o=JSON.parse(localStorage.getItem(SNK));if(Array.isArray(o))SN=o.filter(snOk)}catch(_){}
+const snSave=()=>{try{localStorage.setItem(SNK,JSON.stringify(SN))}catch(_){}};
+function snUniq(n,skip){const b=String(n).trim()||"Snippet";let k=1,u=b;while(SN.some((s,i)=>i!==skip&&s.n===u))u=b+" ("+(++k)+")";return u}
+function snAdd(name){if(!sel.size)return null;const b=S.blocks.filter(x=>sel.has(x.id)).map(x=>JSON.parse(JSON.stringify(x)));if(!b.length)return null;const n=snUniq(name);SN.push({n,b});snSave();snDraw();return n}
+function snRename(i,name){if(!SN[i])return;SN[i].n=snUniq(name,i);snSave();snDraw()}
+function snDel(i){SN.splice(i,1);snSave();snDraw()}
+function snUse(i){const s=SN[i];if(!s)return;const c=s.b.map(b=>({...b}));if(isM(c[0])!==(view==="F")){toast("Switch to "+(isM(c[0])?"Factory floor":"Layout")+" view");return}clip=c;paste()}
+function snExport(){return JSON.stringify({v:1,snippets:SN},null,2)}
+function snImport(txt){let o;try{o=JSON.parse(txt)}catch(_){return -1}const a=(o&&Array.isArray(o.snippets)?o.snippets:[]).filter(snOk);a.forEach(s=>SN.push({n:snUniq(s.n),b:s.b}));snSave();snDraw();return a.length}
+function snDraw(){const el=$("snList");if(!el)return;el.innerHTML=SN.length?SN.map((s,i)=>`<div class="snr"><button data-snuse="${i}" title="Click to paste">${esc(s.n)} <span class="sub">(${s.b.length})</span></button><button data-snren="${i}" aria-label="Rename snippet">Rename</button><button data-sndel="${i}" aria-label="Delete snippet">&times;</button></div>`).join(""):`<div class="sub">No snippets yet. Select blocks, then Save as snippet.</div>`}
+$("snSave").onclick=()=>{if(!sel.size){toast("Select something first");return}const n=prompt("Snippet name");if(n==null)return;toast("Saved: "+snAdd(n))};
+$("snList").onclick=e=>{const t=e.target.closest("button");if(!t)return;const d=t.dataset;if(d.snuse!=null)snUse(+d.snuse);else if(d.snren!=null){const n=prompt("New name",SN[+d.snren].n);if(n!=null)snRename(+d.snren,n)}else if(d.sndel!=null){if(confirm("Delete snippet \""+SN[+d.sndel].n+"\"?"))snDel(+d.sndel)}};
+$("snExp").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([snExport()],{type:"application/json"}));a.download="snippets.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+$("snImp").onchange=async e=>{const f=e.target.files[0];if(!f)return;const r=snImport(await f.text());toast(r<0?"Not a snippet file":r+" imported");e.target.value=""};
+snDraw();
 function frame(a,b,c,d){   // fit rect (view units) into the canvas
   {const r=cv.getBoundingClientRect();W=r.width;H=r.height}
   V.z=Math.min(view==="F"?6:4,Math.max(.1,Math.min((W-80)/((c-a)*CELLS[view]),(H-170)/((d-b)*CELLS[view]))));
@@ -1724,7 +1743,7 @@ $("help").onclick=()=>{
   $("dHelp").showModal();$("dHelp").scrollTop=0;
 };
 $("helpX").onclick=()=>$("dHelp").close();
-window.__fb={parseSav,mirM,dim,outside,btip,rk,bnCol,bnU,bnK,simLive,paint,storeInfo,supplyRows,supplySt,isStore,px:(x,y)=>{const r=cv.getBoundingClientRect();return[r.left+V.ox+(x+.5)*sc(),r.top+V.oy+(y+.5)*sc()]},flowLoad,beltMax,recOf,recsOf,pm,beltRateHtml,rateHtml,portsOf,def,ugWarn,areas,links:()=>links(layer),simInit,simReset,simProd,simStep,simRun,simAdvance,simState,simSig,simView,SIM_NOTES,asvNow,get SPD(){return SPD},get SM(){return SM},get sel(){return sel},get view(){return view},get tab(){return tab},get BN(){return BN},get BM(){return BM},get V(){return V},get VF(){return VF},SIM_DT,SIM_WIN,SIM_MAXSTEPS,get SIM(){return SIM},importJson,build,setView,fit,get S(){return S},get layer(){return layer},click:(x,y)=>{const r=cv.getBoundingClientRect(),o={clientX:r.left+V.ox+(x+.5)*sc(),clientY:r.top+V.oy+(y+.5)*sc(),button:0,pointerId:1,bubbles:true};cv.dispatchEvent(new PointerEvent("pointerdown",o));cv.dispatchEvent(new PointerEvent("pointerup",o))}};
+window.__fb={parseSav,mirM,dim,outside,btip,rk,bnCol,bnU,bnK,simLive,paint,storeInfo,supplyRows,supplySt,isStore,px:(x,y)=>{const r=cv.getBoundingClientRect();return[r.left+V.ox+(x+.5)*sc(),r.top+V.oy+(y+.5)*sc()]},flowLoad,beltMax,recOf,recsOf,pm,beltRateHtml,rateHtml,portsOf,def,ugWarn,areas,links:()=>links(layer),simInit,simReset,simProd,simStep,simRun,simAdvance,simState,simSig,simView,SIM_NOTES,asvNow,get SPD(){return SPD},get SM(){return SM},get sel(){return sel},get view(){return view},get tab(){return tab},get BN(){return BN},get BM(){return BM},get V(){return V},get VF(){return VF},SIM_DT,SIM_WIN,SIM_MAXSTEPS,get SIM(){return SIM},importJson,build,setView,fit,get S(){return S},get layer(){return layer},click:(x,y)=>{const r=cv.getBoundingClientRect(),o={clientX:r.left+V.ox+(x+.5)*sc(),clientY:r.top+V.oy+(y+.5)*sc(),button:0,pointerId:1,bubbles:true};cv.dispatchEvent(new PointerEvent("pointerdown",o));cv.dispatchEvent(new PointerEvent("pointerup",o))},snAdd,snRename,snDel,snUse,snExport,snImport,get SN(){return SN},get clip(){return clip},get pasting(){return pasting}};
 asRestore();ASO=true;all();
 })();
 </script>
