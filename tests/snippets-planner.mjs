@@ -443,6 +443,20 @@ try {
   await pp.selectOption('#plnItem', other);
   chk('(R2) drag offsets reset after #plnItem change', (await pp.locator('#plnOut .plnBox[style]').count()) === 0);
   await pp.selectOption('#plnItem', 'ITEM_CobaltPlates');
+  // (Z) zoom (wheel), drag at zoom, pan, full-screen button
+  const gw = () => pp.evaluate(() => document.querySelector('.plnGrid').getBoundingClientRect().width);
+  const w0 = await gw(), c0 = await bb();
+  await pp.mouse.move(c0.x + c0.w + 20, c0.y - 6); await pp.mouse.wheel(0, 300); await pp.waitForTimeout(150);
+  const w1 = await gw();
+  chk('(Z) wheel down zooms out', w1 < w0 * 0.9, `${w0} -> ${w1}`);
+  const c1 = await bb(), zx = Math.round(c1.x + c1.w / 2), zy = Math.round(c1.y + c1.h / 2);
+  await pp.mouse.move(zx, zy); await pp.mouse.down(); await pp.mouse.move(zx + 30, zy + 20, {steps: 4}); await pp.mouse.up();
+  const c2 = await bb();
+  chk('(Z) drag at zoom follows the pointer', Math.abs(c2.x - c1.x - 30) < 1.5 && Math.abs(c2.y - c1.y - 20) < 1.5, `${c1.x},${c1.y} -> ${c2.x},${c2.y}`);
+  await pp.mouse.move(c0.x + c0.w + 20, c0.y - 6); await pp.mouse.wheel(0, -900); await pp.waitForTimeout(150);
+  chk('(Z) wheel up zooms in', (await gw()) > w1 * 1.1);
+  chk('(Z) full-screen button exists', (await pp.locator('#plnF').count()) === 1);
+  await pp.selectOption('#plnItem', other); await pp.selectOption('#plnItem', 'ITEM_CobaltPlates');
   // (PR) Protomatter toggle in the panel
   chk('(PR5) #plnProto default "0" = Don\'t use, aria-label set', (await pp.inputValue('#plnProto')) === '0' && (await pp.textContent('#plnProto option:checked')) === "Don't use" && (await pp.getAttribute('#plnProto', 'aria-label')) === 'Protomatter use');
   const boxKeys = () => pp.evaluate(() => [...document.querySelectorAll('#plnOut .plnBox')].map(b => b.dataset.item + (b.classList.contains('raw') ? ':raw' : '')));

@@ -102,6 +102,7 @@ kbd{font-family:var(--mono);font-size:11px;background:var(--panel2);border:1px s
 .prr{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 54px;gap:8px;align-items:center;margin:3px 0;font-size:12px}.prr.t2{grid-template-columns:minmax(0,1fr) 54px 64px}.prr.t1{grid-template-columns:minmax(0,1fr) 64px}.prr>b{text-align:right;font-family:var(--mono);font-weight:600}.prr .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.prr .bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}.prr .bar i{display:block;height:100%;border-radius:4px}.prr.hd{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.prr.hd>span:not(:first-child){text-align:right}
 #pln{position:absolute;top:10px;left:10px;z-index:6;display:flex;flex-direction:column;width:calc(100% - 20px);max-height:calc(100% - 20px);background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px oklch(0.1 0.01 250 / .5)}#pln[hidden]{display:none}#pln.col{width:auto;max-width:calc(100% - 20px)}#pln.col #plnBody{display:none}
 #plnHd{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px}#plnHd h3{margin:0;flex:1;font-size:13px}#plnHd button{min-width:30px;padding:2px 6px;line-height:1}#pln.col #plnHd h3{flex:none;margin-right:6px}#pln.col #plnC{transform:rotate(180deg)}
+#pln:fullscreen{inset:0;top:0;left:0;width:100%;height:100%;max-height:none;border-radius:0;border:0}#pln:fullscreen #plnBody{flex:1}#pln:fullscreen #plnOut{flex:1}
 #plnBody{display:flex;flex-direction:column;min-height:0;padding:0 12px 12px}
 #plnForm{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px 10px;padding-bottom:10px;border-bottom:1px solid var(--line)}#plnForm label{display:flex;flex-direction:column;gap:3px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}#plnForm select,#plnForm input{text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
 #plnOut{overflow:auto;min-height:0;margin-top:10px}#plnOut>.sub{padding:18px 4px;margin:0;text-align:center}
@@ -200,7 +201,7 @@ dialog h3{margin:0 0 8px}
       </div>
     </div>
     <div id="pln" role="region" aria-labelledby="plnT" hidden>
-      <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
+      <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnF" aria-label="Full screen" title="Full screen (Esc to exit)">&#x26F6;</button><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
       <div id="plnBody">
       <div id="plnForm">
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
@@ -1357,8 +1358,9 @@ function plnDraw(){
 function plnArrows(E){
   const g=document.querySelector("#plnOut .plnGrid");if(!g)return;
   g.querySelectorAll(".plnSvg,.plnLbl").forEach(n=>n.remove());
-  const G=g.getBoundingClientRect(),bx={};
-  g.querySelectorAll(".plnBox").forEach(b=>{const r=b.getBoundingClientRect(),L=r.left-G.left,R=r.right-G.left,T=r.top-G.top,B=r.bottom-G.top,u=bx[b.dataset.item];
+  g.style.transformOrigin="0 0";g.style.transform=PLN_Z===1?"":`scale(${PLN_Z})`;   // zoom: rects below are divided by PLN_Z
+  const G=g.getBoundingClientRect(),bx={},Z=PLN_Z;
+  g.querySelectorAll(".plnBox").forEach(b=>{const r=b.getBoundingClientRect(),L=(r.left-G.left)/Z,R=(r.right-G.left)/Z,T=(r.top-G.top)/Z,B=(r.bottom-G.top)/Z,u=bx[b.dataset.item];
     if(u){u.l=Math.min(u.l,L);u.r=Math.max(u.r,R);u.t=Math.min(u.t,T);u.b=Math.max(u.b,B)}else bx[b.dataset.item]={l:L,r:R,t:T,b:B}});
   const out={},inn={};E.forEach(e=>{(out[e.from]=out[e.from]||[]).push(e);if(e.to!=null)(inn[e.to]=inn[e.to]||[]).push(e)});
   const ys=(b,l,e)=>b.t+(b.b-b.t)*(l.indexOf(e)+1)/(l.length+1);
@@ -1379,23 +1381,35 @@ function plnArrows(E){
   const ls=[...g.querySelectorAll(".plnLbl")];
   ls.forEach((d,i)=>{const o=lb[i];let y=o.y;for(let j=0;j<i;j++)if(lb[j].x===o.x&&Math.abs(lb[j].y-y)<ls[j].offsetHeight/2+d.offsetHeight/2+4)y=lb[j].y+ls[j].offsetHeight/2+d.offsetHeight/2+4;o.y=y;d.style.left=o.x+"px";d.style.top=y+"px"});
 }
-let PLN_PICK={},PLN_OFF=new Map(),PLN_EX=false,PLN_E=[],PLN_DRAG=null;   // PLN_OFF: key (item, or item#machine in expanded) -> {dx,dy}
+let PLN_PICK={},PLN_OFF=new Map(),PLN_EX=false,PLN_E=[],PLN_DRAG=null,PLN_Z=1,PLN_PAN=null;   // PLN_Z: diagram zoom; PLN_OFF: key (item, or item#machine in expanded) -> {dx,dy}
 // Drag any box (not its recipe select). Offset clamped so the box stays inside the grid (left/top >= 0).
 const plnKey=b=>b.dataset.item+(b.classList.contains("plnM")?"#"+b.dataset.i:"");
 $("plnOut").addEventListener("pointerdown",ev=>{
   const b=ev.target.closest(".plnBox");
+  if(!b&&ev.button===0&&ev.target.closest(".plnGrid")){const o=$("plnOut");PLN_PAN={id:ev.pointerId,x:ev.clientX,y:ev.clientY,sl:o.scrollLeft,st:o.scrollTop};o.setPointerCapture(ev.pointerId);return}   // drag empty space = pan
   if(!b||ev.button!==0||ev.target.closest(".plnAlt,select,button"))return;
   const G=b.closest(".plnGrid").getBoundingClientRect(),r=b.getBoundingClientRect(),k=plnKey(b),o=PLN_OFF.get(k)||{dx:0,dy:0};
-  PLN_DRAG={b,k,id:ev.pointerId,x:ev.clientX,y:ev.clientY,ox:o.dx,oy:o.dy,minX:-(r.left-o.dx-G.left),minY:-(r.top-o.dy-G.top)};
+  PLN_DRAG={b,k,id:ev.pointerId,x:ev.clientX,y:ev.clientY,ox:o.dx,oy:o.dy,minX:-((r.left-G.left)/PLN_Z-o.dx),minY:-((r.top-G.top)/PLN_Z-o.dy)};
   b.setPointerCapture(ev.pointerId);b.classList.add("plnDrag");
 });
 $("plnOut").addEventListener("pointermove",ev=>{
+  const P=PLN_PAN;if(P&&ev.pointerId===P.id){const o=$("plnOut");o.scrollLeft=P.sl-(ev.clientX-P.x);o.scrollTop=P.st-(ev.clientY-P.y);return}
   const d=PLN_DRAG;if(!d||ev.pointerId!==d.id)return;
-  const dx=Math.max(d.minX,d.ox+ev.clientX-d.x),dy=Math.max(d.minY,d.oy+ev.clientY-d.y);
+  const dx=Math.max(d.minX,d.ox+(ev.clientX-d.x)/PLN_Z),dy=Math.max(d.minY,d.oy+(ev.clientY-d.y)/PLN_Z);
   PLN_OFF.set(d.k,{dx,dy});d.b.style.transform=`translate(${dx}px,${dy}px)`;plnArrows(PLN_E);
 });
-const plnUp=ev=>{if(PLN_DRAG&&ev.pointerId===PLN_DRAG.id){PLN_DRAG.b.classList.remove("plnDrag");PLN_DRAG=null}};
+const plnUp=ev=>{if(PLN_PAN&&ev.pointerId===PLN_PAN.id)PLN_PAN=null;if(PLN_DRAG&&ev.pointerId===PLN_DRAG.id){PLN_DRAG.b.classList.remove("plnDrag");PLN_DRAG=null}};
 $("plnOut").addEventListener("pointerup",plnUp);$("plnOut").addEventListener("pointercancel",plnUp);
+// Wheel over the diagram = zoom around the cursor; double-click empty space = reset zoom.
+$("plnOut").addEventListener("wheel",ev=>{
+  const o=$("plnOut");if(!ev.target.closest(".plnGrid")||ev.target.closest("select"))return;
+  ev.preventDefault();
+  const z=Math.min(2.5,Math.max(.3,PLN_Z*(ev.deltaY<0?1.15:1/1.15))),q=o.getBoundingClientRect(),
+    px=ev.clientX-q.left,py=ev.clientY-q.top,k=z/PLN_Z,ax=o.scrollLeft+px,ay=o.scrollTop+py;
+  PLN_Z=z;plnArrows(PLN_E);o.scrollLeft=ax*k-px;o.scrollTop=ay*k-py;
+},{passive:false});
+$("plnF").onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():$("pln").requestFullscreen()}catch(e){}};
+$("plnOut").addEventListener("dblclick",ev=>{if(ev.target.closest(".plnGrid")&&!ev.target.closest(".plnBox")){PLN_Z=1;plnArrows(PLN_E)}});
 $("plnGx").onclick=()=>{PLN_EX=!PLN_EX;$("plnGx").setAttribute("aria-pressed",PLN_EX);$("plnGx").textContent=PLN_EX?"Expanded":"Grouped";plnDraw()};
 const plnProto=()=>$("plnProto").value==="1";
 // craftable items for the current Protomatter setting; keeps the selection if it is still craftable
