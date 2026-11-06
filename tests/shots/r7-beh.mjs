@@ -1,0 +1,15 @@
+import {createRequire} from 'module';import path from 'path';import {pathToFileURL} from 'url';
+const require=createRequire(import.meta.url);
+const {chromium}=require('C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
+const br=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
+const pg=await br.newPage({viewport:{width:1400,height:900}});const errs=[];pg.on('pageerror',e=>errs.push(e.message));
+await pg.goto(pathToFileURL('F:/ms-factory-bp-site/index.html').href);await pg.waitForFunction(()=>window.__fb);
+const st=()=>pg.evaluate(()=>({v:__fb.view,SM:__fb.SM,sim:!!__fb.SIM,play:document.getElementById('smPlay').disabled,hint:document.getElementById('smHint').hidden,pr:document.getElementById('simB').getAttribute('aria-pressed')}));
+console.log('init',await st());
+await pg.click('#simB');console.log('open',await st());
+await pg.click('#vwL');console.log('layout',await st());
+await pg.click('#vwF');console.log('floor',await st());
+await pg.click('#smPlay');await pg.click('#smWX');console.log('closeX',await st());
+await pg.click('#simB');await pg.click('#simB');console.log('toggled off',await st());
+await pg.click('#flwB');await pg.click('#bn');console.log('bn',await pg.evaluate(()=>[bnF.disabled,bnB.disabled,__fb.BN]));await pg.click('#bnF');console.log(await pg.evaluate(()=>[bnF.className,bnB.className,__fb.BM]));
+console.log(errs);await br.close();
