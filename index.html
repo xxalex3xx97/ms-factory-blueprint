@@ -332,7 +332,7 @@ function areas(L){
   const fb=[],floors=[],doors=[],gaps=[],blocked=[],own=new Map();
   S.blocks.filter(b=>b.h===L&&!isM(b)).forEach(b=>{
     const r=floorRect(b);if(!r)return;
-    const f={b,d:dim(b),r};r.cuts=[[],[],[],[]];floors.push(r);fb.push(f);
+    const f={b,d:dim(b),r};r.cuts=[[],[],[],[]];r.wcuts=[[],[],[],[]];floors.push(r);fb.push(f);   // cuts: ring floor in door slots; wcuts: band cut only where a door passage joins two blocks
     for(let i=0;i<f.d.w;i++)for(let j=0;j<f.d.h;j++)own.set((b.x+i)+","+(b.y+j),f);
     const e=elvRect(b);if(e)blocked.push(e);
   });
@@ -343,7 +343,8 @@ function areas(L){
         const t0=(v?r.y:r.x)+FC*k+DOFF-QI,ex=ed===0?r.x+r.w+QI:ed===2?r.x-QI-DW:t0,ey=ed===1?r.y+r.h+QI:ed===3?r.y-QI-DW:t0;
         r.cuts[ed].push([t0,t0+DOORW]);
         const nf=own.get((ed===0?b.x+d.w:ed===2?b.x-1:b.x+k)+","+(ed===1?b.y+d.h:ed===3?b.y-1:b.y+k));
-        if(nf&&nf!==f&&ed>1)continue;   // the E/S side owns a shared door
+        if(nf&&nf!==f)r.wcuts[ed].push([t0,t0+DOORW]);   // passage between two real blocks: both walls open here
+        if(nf&&nf!==f&&ed>1)continue;   // the E/S side owns the shared door (gap strip + door)
         const p=nf&&nf!==f,sp=DW;   // door = the 2-cell passage between the two walls only
         if(p)gaps.push(v?{x:ex,y:r.y+FC*k,w:sp,h:FC}:{x:r.x+FC*k,y:ey,w:FC,h:sp});
         const key=`${L}|${b.x}|${b.y}|${EN[ed]}|${k}`;
@@ -863,9 +864,9 @@ function pieces(a,b,cuts){const o=[];let p=a;cuts.slice().sort((u,v)=>u[0]-v[0])
 function paintFloorBase(s){
   const A=areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;
   // every 2-cell gap between neighbouring block cells (E strip, S strip, SE corner) gets the same gap colour, so no corner is left black or half-tone
-  const occ=new Set();S.blocks.forEach(b=>{if(b.h!==layer||isM(b))return;const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)occ.add((b.x+i)+","+(b.y+j))});
+  const occ=new Set();S.blocks.forEach(b=>{if(b.h!==layer||isM(b)||!floorRect(b))return;const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)occ.add((b.x+i)+","+(b.y+j))});
   cx.fillStyle="rgba(70,80,100,.5)";
-  S.blocks.forEach(b=>{if(b.h!==layer||isM(b))return;const d=dim(b),e=occ.has((b.x+d.w)+","+b.y),so=occ.has(b.x+","+(b.y+d.h)),c=occ.has((b.x+d.w)+","+(b.y+d.h));
+  S.blocks.forEach(b=>{if(b.h!==layer||isM(b)||!floorRect(b))return;const d=dim(b),e=occ.has((b.x+d.w)+","+b.y),so=occ.has(b.x+","+(b.y+d.h)),c=occ.has((b.x+d.w)+","+(b.y+d.h));
     if(e)R({x:FC*(b.x+d.w)-2,y:FC*b.y,w:2,h:FC*d.h},(x,y,w,h)=>cx.fillRect(x,y,w,h));
     if(so)R({x:FC*b.x,y:FC*(b.y+d.h)-2,w:FC*d.w,h:2},(x,y,w,h)=>cx.fillRect(x,y,w,h));
     if(e||so||c)R({x:FC*(b.x+d.w)-2,y:FC*(b.y+d.h)-2,w:2,h:2},(x,y,w,h)=>cx.fillRect(x,y,w,h));});
@@ -880,7 +881,7 @@ function paintFloorBase(s){
     // walls: dark band outside the floor edge, gaps at the doors
     cx.fillStyle="#262e3c";cx.strokeStyle="rgba(150,165,190,.6)";cx.lineWidth=1;
     for(let ed=0;ed<4;ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;
-      pieces(a0,a1,r.cuts[ed]).forEach(([p,q])=>{
+      pieces(a0,a1,r.wcuts[ed]).forEach(([p,q])=>{
         const b=ed===0?{x:sx+sw,y:p,w:T,h:q-p}:ed===2?{x:sx-T,y:p,w:T,h:q-p}:ed===1?{x:p,y:sy+sn,w:q-p,h:T}:{x:p,y:sy-T,w:q-p,h:T};
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
       });
