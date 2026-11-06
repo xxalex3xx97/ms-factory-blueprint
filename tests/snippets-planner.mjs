@@ -554,6 +554,80 @@ try {
   chk('(UI3) planner: no pageerror / console.error', errs.length === 0, errs.join('\n     '));
   await ctxQ.close();
 
+  // ---- (M) Round 3b: layout moves carry the floor machines/belts and closed doorways of the moved station
+  const ctxM = await br.newContext({viewport: {width: 1400, height: 900}});
+  const pm2 = await newPage(ctxM, 'carry');
+  const ASM = (x, y) => mac('DAT_Assembler', x, y, {mid: 5, rec: KC});
+  const BELT = (x, y) => mac('DAT_ConveyorBelt', x, y, {rot: 1});
+  // export units: station cell = GridLocation/4 (1x1), machine floor cell = (GridLocation + 14 - w)/2, machine h = Height/8
+  const stM = () => pm2.evaluate(() => { const o = __fb.build(); return {b: o.Blocks.map(b => [b.GridLocation.X / 4, b.GridLocation.Y / 4, b.Height]), m: o.DefaultMachines.map(m => { const f = __fb.dim({cls: m.DefaultName, rot: m.Transform.GridRotation}), g = m.Transform.GridLocation; return [m.DefaultName, (g.X + 14 - f.w) / 2, (g.Y + 14 - f.h) / 2, m.Transform.Height / 8]; }), c: (o.FactoryLayout.ClosedDoorways || []).map(d => [d.Height, d.X, d.Y, d.Edge, d.Seg].join('|'))}; });
+  const has = (s, n, x, y, h = 0) => s.m.some(q => isDeepStrictEqual(q, [n, x, y, h]));
+  const ASMn = 'DAT_Assembler', BELTn = 'DAT_ConveyorBelt';
+  const setupM = async (extra = {}) => {
+    await imp(pm2, bp([blk('BPO_Station_01', 0, 0), blk('BPO_Station_01', 10, 0)], [ASM(4, 5), BELT(6, 6), ASM(164, 5), ASM(100, 100)], extra));
+    await pm2.evaluate(() => __fb.setView('L'));
+  };
+  const cellPx = (x, y) => pm2.evaluate(([a, b]) => __fb.px(a, b), [x, y]);
+  const dragCells = async (from, to) => {
+    const a = await cellPx(...from), b = await cellPx(...to);
+    await pm2.mouse.move(a[0], a[1]); await pm2.mouse.down(); await pm2.mouse.move(b[0], b[1], {steps: 6}); await pm2.mouse.up();
+  };
+  const undoM = async (n, redo = false) => { await pm2.focus('#cv'); for (let i = 0; i < n; i++) await pm2.keyboard.press(redo ? 'Control+Shift+Z' : 'Control+z'); };
+  const setPanelM = async (id, v) => { await pm2.fill(id, String(v)); await pm2.locator(id).press('Tab'); };   // Tab = one native change event
+
+  // (M1) drag: station + its assembler and belt move by the same delta; station 2 and the outside machine stay
+  await setupM();
+  const m0 = await stM();
+  chk('(M0) setup: 2 stations, 4 floor machines as placed', m0.b.length === 2 && m0.m.length === 4 && has(m0, ASMn, 4, 5) && has(m0, BELTn, 6, 6) && has(m0, ASMn, 164, 5) && has(m0, ASMn, 100, 100), JSON.stringify(m0));
+  await dragCells([0, 0], [3, 2]);
+  const m1 = await stM();
+  chk('(M1) drag station by (+3,+2): station moved', isDeepStrictEqual(m1.b[0], [3, 2, 0]), JSON.stringify(m1.b));
+  chk('(M1) drag: assembler and belt move by (+48,+32) floor cells, same h', has(m1, ASMn, 52, 37) && has(m1, BELTn, 54, 38), JSON.stringify(m1.m));
+  chk('(M1) unselected station 2 and its machine stay', isDeepStrictEqual(m1.b[1], m0.b[1]) && has(m1, ASMn, 164, 5), JSON.stringify([m1.b[1], m1.m]));
+  chk('(M7) machine outside every station footprint does not move', has(m1, ASMn, 100, 100), JSON.stringify(m1.m));
+  // (M2) undo / redo restore and re-apply both
+  await undoM(1);
+  const u1 = await stM();
+  chk('(M2) Ctrl+Z restores station and floor machines', isDeepStrictEqual(u1, m0), diff(u1, m0));
+  await undoM(1, true);
+  const r1 = await stM();
+  chk('(M2) Ctrl+Shift+Z re-applies station and floor machines', isDeepStrictEqual(r1, m1), diff(r1, m1));
+  // (M3) position panel: X +4 -> machines +64 X; height 1 -> station + machines h=1; undo x2 restores
+  await setupM();
+  const sp = await cellPx(0, 0);
+  await pm2.mouse.click(sp[0], sp[1]);
+  await pm2.evaluate(() => { document.querySelector('details[data-sec="pos"]').open = true; });
+  await setPanelM('#fx', 4);
+  const x1 = await stM();
+  chk('(M3) panel X +4: station x=4, machines +64 X, Y unchanged', x1.b[0][0] === 4 && has(x1, ASMn, 68, 5) && has(x1, BELTn, 70, 6), JSON.stringify(x1));
+  await setPanelM('#fh', 1);
+  const hz1 = await stM();
+  chk('(M3) panel height 1: station and its machines h=1, station 2 h=0', hz1.b[0][2] === 1 && has(hz1, ASMn, 68, 5, 1) && has(hz1, BELTn, 70, 6, 1) && hz1.b[1][2] === 0 && has(hz1, ASMn, 164, 5, 0), JSON.stringify(hz1));
+  await undoM(2);
+  const u3 = await stM();
+  chk('(M3) undo x2 restores station and machines (X and height)', isDeepStrictEqual(u3, m0), diff(u3, m0));
+  // (M4) closed doorway of the station follows it (key h|x|y|E|k)
+  await setupM({FactoryLayout: {ClosedDoorways: [{Height: 0, X: 0, Y: 0, Edge: 'E', Seg: 0}]}});
+  const d0 = await stM();
+  chk('(M4) setup: closed door 0|0|0|E|0 present', isDeepStrictEqual(d0.c, ['0|0|0|E|0']), JSON.stringify(d0.c));
+  await dragCells([0, 0], [2, 1]);
+  const d1 = await stM();
+  chk('(M4) drag by (+2,+1): closed door moves to 0|2|1|E|0', isDeepStrictEqual(d1.c, ['0|2|1|E|0']), JSON.stringify(d1.c));
+  await undoM(1);
+  const d2 = await stM();
+  chk('(M4) undo restores closed door', isDeepStrictEqual(d2.c, ['0|0|0|E|0']), JSON.stringify(d2.c));
+  // (M6) multi-select (Ctrl+A) drag: both stations move by the same delta, each with its own machines
+  await setupM();
+  await selectAll(pm2);
+  await dragCells([0, 0], [3, 2]);
+  const mm = await stM();
+  chk('(M6) multi-select drag: both stations +3,+2', isDeepStrictEqual(mm.b[0], [3, 2, 0]) && isDeepStrictEqual(mm.b[1], [13, 2, 0]), JSON.stringify(mm.b));
+  chk('(M6) multi-select drag: machines of both stations +48,+32, outside machine stays', has(mm, ASMn, 52, 37) && has(mm, BELTn, 54, 38) && has(mm, ASMn, 212, 37) && has(mm, ASMn, 100, 100), JSON.stringify(mm.m));
+  await undoM(1);
+  chk('(M6) undo restores both stations and machines', isDeepStrictEqual(await stM(), m0));
+  chk('(M-h) carry: no pageerror / console.error', errs.length === 0, errs.join('\n     '));
+  await ctxM.close();
+
   await ctx.close();
 } finally {
   await br.close();

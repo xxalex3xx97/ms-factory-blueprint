@@ -1022,7 +1022,7 @@ cv.addEventListener("pointerdown",e=>{
   if(b){
     if(e.shiftKey){sel.has(b.id)?sel.delete(b.id):sel.add(b.id)}
     else if(!sel.has(b.id))sel=new Set([b.id]);
-    drag={k:"move",dx:0,dy:0,c0:c,orig:new Map(S.blocks.filter(q=>sel.has(q.id)).map(q=>[q.id,{x:q.x,y:q.y}])),moved:false};
+    drag={k:"move",dx:0,dy:0,c0:c,orig:new Map(S.blocks.filter(q=>sel.has(q.id)).map(q=>[q.id,{x:q.x,y:q.y}])),moved:false,cr:view==="L"?carryOf(S.blocks.filter(q=>sel.has(q.id)&&!isM(q))):null};
     panel();draw();
   }else{
     const dr=view==="F"&&doorAt(c);
@@ -1064,7 +1064,7 @@ cv.addEventListener("pointermove",e=>{
     else if(drag.k==="move"){
       const dx=c.x-drag.c0.x,dy=c.y-drag.c0.y;
       if(!drag.moved&&(dx||dy)){push();drag.moved=true}
-      if(drag.moved){const mv=(a,b)=>S.blocks.forEach(q=>{const o=drag.orig.get(q.id);if(o){q.x=o.x+a;q.y=o.y+b}});
+      if(drag.moved){const mv=(a,b)=>{S.blocks.forEach(q=>{const o=drag.orig.get(q.id);if(o){q.x=o.x+a;q.y=o.y+b}});if(drag.cr)drag.cr(a,b)};
         mv(dx,dy);if(noBuild(S.blocks.filter(q=>sel.has(q.id)&&isM(q)).map(mItem))){mv(drag.dx,drag.dy);toast(NOBUILD)}else{drag.dx=dx;drag.dy=dy}}
     }else{
       drag.px=p.x;drag.py=p.y;
@@ -1124,6 +1124,16 @@ function rotate(){
 }
 $("rot").onclick=rotate;$("undo").onclick=undo;$("redo").onclick=redo;
 function del(){if(!sel.size)return;push();S.blocks=S.blocks.filter(b=>!sel.has(b.id));sel=new Set();all()}
+// Layout move carries the floor machines inside each block's footprint, plus closed doorways of that block. Call BEFORE mutating blocks; returns (dx,dy,dh) applied relative to the originals (idempotent).
+function carryOf(bs){
+  const o=bs.map(b=>({h:b.h,x:b.x,y:b.y})),cl=S.closed.slice(),s=new Set();
+  bs.forEach(b=>{const d=dim(b);S.blocks.forEach(q=>{if(isM(q)&&q.h===b.h&&q.x>=b.x*FC&&q.x<(b.x+d.w)*FC&&q.y>=b.y*FC&&q.y<(b.y+d.h)*FC)s.add(q)})});
+  const fl=[...s].map(q=>({q,x:q.x,y:q.y,h:q.h}));
+  return(dx,dy,dh=0)=>{
+    fl.forEach(f=>{f.q.x=f.x+dx*FC;f.q.y=f.y+dy*FC;f.q.h=f.h+dh});
+    S.closed=cl.map(k=>{const a=k.split("|"),m=o.find(p=>p.h===+a[0]&&p.x===+a[1]&&p.y===+a[2]);if(m){a[0]=m.h+dh;a[1]=m.x+dx;a[2]=m.y+dy}return a.join("|")});
+  };
+}
 function copy(){if(!sel.size)return;clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b}));if(clip.length){toast(clip.length+" copied");paste()}}
 // horizontal mirror of a machine: pick the rotation whose port layout is the mirror image (same face/pos/direction), remap disabled ports; null = cannot mirror
 function mirM(b){
@@ -1572,7 +1582,8 @@ $("insp").addEventListener("change",e=>{
     push();setOV(cls,"portsLayout",{toggleable:$("plt").checked,verified:$("plv").checked,source:old.source||"user edit",ports});all();return;
   }
   if(t.dataset.b&&bs.length===1){
-    push();const v=parseInt(t.value,10)||0,f0=t.dataset.b,o0=bs[0][f0];bs[0][f0]=v;
+    const cr=!isM(bs[0])&&"xyh".includes(t.dataset.b)&&carryOf([bs[0]]);
+    push();const v=parseInt(t.value,10)||0,f0=t.dataset.b,o0=bs[0][f0];bs[0][f0]=v;if(cr)cr(f0==="x"?v-o0:0,f0==="y"?v-o0:0,f0==="h"?v-o0:0);
     if(isM(bs[0])&&noBuild([mItem(bs[0])])){bs[0][f0]=o0;undoS.pop();toast(NOBUILD);all();return}
     if(t.dataset.b==="h"&&v!==layer)sel=new Set();
     all();
