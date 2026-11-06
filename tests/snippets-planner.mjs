@@ -13,6 +13,7 @@ const ROOT = path.resolve(HERE, '..');
 const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href;
 
 let total = 0, pass = 0;
+let MENU_NOTE = 0;   // times a menu was closed+reopened to reach an off-screen control (see reveal)
 const fails = [], errs = [];
 // dialog answers for the next prompt()/confirm(): {accept, text}; default = dismiss. seen = all messages.
 const DLG = {next: null, seen: []};
@@ -29,6 +30,32 @@ function wire(pg, tag) {
     const n = DLG.next; DLG.next = null;
     (n && n.accept ? d.accept(n.text ?? '') : d.dismiss()).catch(() => {});
   });
+  // Header/floor controls live inside menus (#fileL, #simL). Before a click/check/uncheck, open the
+  // menu the way a user would (click its button) when the target is hidden inside a closed menu.
+  // Never forces or dispatches on hidden elements: a target whose menu is unreachable still fails.
+  // index.html places a menu once, at open; after Simulate is switched on inside Floor tools the list
+  // grows past the viewport edge. A control there is reached the way a user would: close and reopen.
+  const rawClick = pg.click.bind(pg);
+  const reveal = async sel => {
+    const m = await pg.evaluate(s => {
+      const el = document.querySelector(s), shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+      const list = el?.closest('.mnl');
+      if (!el || !list) return null;
+      const r = el.getBoundingClientRect(), offscreen = shown(el) && (r.left < 0 || r.right > innerWidth);
+      if (shown(el) && !offscreen) return null;
+      const btn = list.parentElement.firstElementChild;
+      if (!shown(btn) || (!list.hidden && !offscreen)) return null;
+      return {btn: '#' + btn.id, list: '#' + list.id, reopen: !list.hidden};
+    }, sel);
+    if (!m) return;
+    if (m.reopen) { await rawClick(m.btn); MENU_NOTE++; }   // close the open menu first
+    await rawClick(m.btn);
+    await pg.waitForFunction(l => !document.querySelector(l).hidden, m.list);
+  };
+  for (const k of ['click', 'check', 'uncheck']) {
+    const f = pg[k].bind(pg);
+    pg[k] = async (sel, ...a) => { await reveal(sel); return f(sel, ...a); };
+  }
 }
 async function newPage(ctx, tag) {
   const pg = await ctx.newPage();
@@ -628,12 +655,120 @@ try {
   chk('(M-h) carry: no pageerror / console.error', errs.length === 0, errs.join('\n     '));
   await ctxM.close();
 
+  // ---- (H) Round 4 compact header: one 44px row, File menu, Floor tools menu, 390px menu copies
+  const ctxH = await br.newContext({viewport: {width: 1400, height: 900}});
+  await ctxH.addInitScript(() => { delete window.showSaveFilePicker; });   // Save -> download path (no native dialog)
+  const ph = await newPage(ctxH, 'hdr');
+  const hdr = () => ph.evaluate(() => { const h = document.querySelector('header'), b = h.getBoundingClientRect(); return {h: b.height, sh: h.scrollHeight, ch: h.clientHeight}; });
+  const allVis = async ids => { let ok = true; for (const i of ids) ok = ok && await ph.isVisible(i); return ok; };
+  const noneVis = async ids => { let ok = true; for (const i of ids) ok = ok && !(await ph.isVisible(i)); return ok; };
+  const expanded = id => ph.getAttribute(id, 'aria-expanded');
+  const active = () => ph.evaluate(() => document.activeElement && document.activeElement.id);
+  const settle = () => ph.waitForFunction(() => document.getElementById('fileL').contains(document.getElementById('fSave')) === matchMedia('(max-width:700px)').matches);
+  const inList = (list, ids) => ph.evaluate(([l, ids]) => ids.map(i => document.getElementById(l).contains(document.getElementById(i))), [list, ids]);
+
+  // (H1) header: one row, no wrap, at each size, both views
+  for (const [w, h] of [[1600, 800], [1400, 500], [1024, 700], [390, 800], [1200, 400]]) {
+    await ph.setViewportSize({width: w, height: h});
+    await settle();
+    for (const v of ['L', 'F']) {
+      await ph.evaluate(x => __fb.setView(x), v);
+      const d = await hdr();
+      chk(`(H1) header ${w}x${h} view ${v}: <=44px, no wrap (scrollHeight==clientHeight)`, d.h <= 44 && d.sh === d.ch, JSON.stringify(d));
+    }
+  }
+
+  // (H2) File menu
+  await ph.setViewportSize({width: 1400, height: 900});
+  await ph.evaluate(() => __fb.setView('L'));
+  chk('(H2) File closed by default: aria-expanded=false, list hidden', (await expanded('#fileM')) === 'false' && !(await ph.isVisible('#fileL')));
+  await ph.click('#fileM');
+  chk('(H2) click File: aria-expanded=true, New/Open/Save as/Import visible', (await expanded('#fileM')) === 'true' && (await allVis(['#nw', '#fOpen', '#fSaveAs', '#imp'])));
+  await ph.keyboard.press('Escape');
+  chk('(H2) Escape closes File and returns focus to #fileM', (await expanded('#fileM')) === 'false' && !(await ph.isVisible('#fileL')) && (await active()) === 'fileM', `focus ${await active()}`);
+  await ph.click('#fileM');
+  await ph.mouse.click(700, 600);   // outside the menu
+  chk('(H2) outside click closes File', (await expanded('#fileM')) === 'false' && !(await ph.isVisible('#fileL')));
+
+  // (H3) keyboard: ArrowDown opens and walks the items, wraps, ArrowUp goes back
+  await ph.focus('#fileM');
+  await ph.keyboard.press('ArrowDown');
+  const k1 = await active();
+  await ph.keyboard.press('ArrowDown'); const k2 = await active();
+  await ph.keyboard.press('ArrowDown'); const k3 = await active();
+  await ph.keyboard.press('ArrowDown'); const k4 = await active();
+  await ph.keyboard.press('ArrowDown'); const k5 = await active();
+  await ph.keyboard.press('ArrowUp'); const k6 = await active();
+  chk('(H3) ArrowDown opens File and focuses New, then Open, Save as, Import, wraps to New; ArrowUp back to Import',
+    (await expanded('#fileM')) === 'true' && [k1, k2, k3, k4, k5, k6].join() === 'nw,fOpen,fSaveAs,imp,nw,imp', [k1, k2, k3, k4, k5, k6].join());
+  await ph.keyboard.press('Escape');
+
+  // (H4) picking New from the menu still runs its normal flow (confirm, clear), and the menu closes
+  await imp(ph, bp([blk('BPO_Station_01', 0, 0)]));
+  await ph.evaluate(() => __fb.setView('L'));
+  const nBefore = await ph.evaluate(() => __fb.S.blocks.length);
+  DLG.next = {accept: true};
+  await ph.click('#fileM');
+  await ph.click('#nw');
+  chk('(H4) New from File menu: confirm shown, design cleared',
+    nBefore === 1 && DLG.seen.includes('Clear the autosaved design and start with an empty one?') && (await ph.evaluate(() => __fb.S.blocks.length)) === 0, `before ${nBefore} seen ${JSON.stringify(DLG.seen)}`);
+  chk('(H4) picking New closes the File menu', (await expanded('#fileM')) === 'false' && !(await ph.isVisible('#fileL')));
+
+  // (H5) Floor tools menu: #simM only in floor view below 1800px; holds Simulate, Planner, Bottlenecks
+  await ph.evaluate(() => __fb.setView('L'));
+  chk('(H5) layout view: #simM hidden', !(await ph.isVisible('#simM')));
+  await ph.evaluate(() => __fb.setView('F'));
+  chk('(H5) floor view 1400: #simM visible, closed; #sm/#bn/#plnB hidden until opened', (await ph.isVisible('#simM')) && (await expanded('#simM')) === 'false' && !(await ph.isVisible('#simL')) && await noneVis(['#sm', '#bn', '#plnB']));
+  await ph.click('#simM');
+  chk('(H5) click Floor tools: aria-expanded=true, #sm/#bn/#plnB visible', (await expanded('#simM')) === 'true' && await allVis(['#sm', '#bn', '#plnB']));
+  await ph.keyboard.press('Escape');
+  chk('(H5) Escape closes Floor tools and returns focus to #simM', (await expanded('#simM')) === 'false' && (await active()) === 'simM', `focus ${await active()}`);
+  await ph.setViewportSize({width: 1800, height: 900});
+  await settle();
+  await ph.evaluate(() => __fb.setView('F'));
+  chk('(H5) 1800 floor view: #simM hidden, #sm/#bn/#plnB inline', !(await ph.isVisible('#simM')) && await allVis(['#sm', '#bn', '#plnB']));
+  await ph.setViewportSize({width: 1400, height: 900});
+
+  // (H6) 390px: Save/Export/Fit/Rotate/ghost live in the File menu; they work from there
+  await ph.setViewportSize({width: 390, height: 800});
+  await settle();
+  await ph.evaluate(() => __fb.setView('F'));
+  const FM = ['fSave', 'exp', 'fit', 'rot', 'ghost'];
+  chk('(H6) 390: Save/Export/Fit/Rotate/ghost are inside #fileL', (await inList('fileL', FM)).every(Boolean), JSON.stringify(await inList('fileL', FM)));
+  chk('(H6) 390: those are hidden until File opens', await noneVis(['#fSave', '#exp', '#fit', '#rot']));
+  await ph.click('#fileM');
+  chk('(H6) 390: File open shows Save/Export/Fit/Rotate/ghost', await allVis(['#fSave', '#exp', '#fit', '#rot', '#ghost']));
+  await ph.evaluate(() => __fb.setView('L'));
+  await imp(ph, bp([blk('BPO_Station_01', 0, 0)]));
+  await selectAll(ph);   // select the station: Rotate turns the selection
+  const rot0 = await ph.evaluate(() => __fb.build().Blocks[0].GridRotation);
+  await ph.click('#rot');   // reveal opens File
+  const rot1 = await ph.evaluate(() => __fb.build().Blocks[0].GridRotation);
+  chk('(H6) 390: Rotate from the menu turns the selected block', rot1 !== rot0, `${rot0} -> ${rot1}`);
+  await ph.evaluate(() => __fb.setView('F'));
+  await ph.click('#fileM');
+  const [dlH] = await Promise.all([ph.waitForEvent('download'), ph.click('#fSave')]);
+  chk('(H6) 390: Save from the menu downloads a .json (no save picker)', /\.json$/.test(dlH.suggestedFilename()), dlH.suggestedFilename());
+  await ph.click('#fileM');
+  await ph.click('#exp');
+  chk('(H6) 390: Export from the menu opens #dExp with the JSON', await ph.isVisible('#dExp') && (await ph.inputValue('#expTa')).startsWith('{'));
+  await ph.click('#expX');
+  await ph.click('#fileM');
+  await ph.uncheck('#ghost');
+  chk('(H6) 390: ghost layers toggle from the menu', !(await ph.isChecked('#ghost')));
+  await ph.setViewportSize({width: 1400, height: 900});
+  await settle();
+  chk('(H6) back at 1400: Save/Export/Fit/Rotate/ghost inline in the header, not in #fileL', (await inList('fileL', FM)).every(x => !x) && await allVis(['#fSave', '#exp', '#fit', '#rot', '#ghost']));
+
+  chk('(H-h) header tests: no pageerror / console.error', errs.length === 0, errs.join('\n     '));
+  await ctxH.close();
   await ctx.close();
 } finally {
   await br.close();
 }
 chk('(h) no pageerror / console.error during the run', errs.length === 0, errs.join('\n     '));
 console.log(`\nPASS ${pass}/${total}`);
+if (MENU_NOTE) console.log(`NOTE: ${MENU_NOTE} menu reopen(s): Floor tools/File list grew past the viewport edge after Simulate on (index.html places the list once, at open)`);
 if (fails.length) {
   console.log(`FAILED ${fails.length}:`);
   fails.forEach(f => console.log(` - ${f.name}${f.detail ? ' :: ' + f.detail : ''}`));

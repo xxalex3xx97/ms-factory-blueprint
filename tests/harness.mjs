@@ -19,6 +19,7 @@ const G = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'ground_truth.js
 const VIEWPORTS = [{width: 1400, height: 900}, {width: 1024, height: 768}, {width: 390, height: 844}];
 
 let total = 0, pass = 0;
+let MENU_NOTE = 0;   // times a menu was closed+reopened to reach an off-screen control (see reveal)
 const fails = [], errs = [];
 function chk(name, cond, detail = '') {
   total++;
@@ -29,6 +30,32 @@ function wire(pg, tag) {
   pg.on('pageerror', e => errs.push(`[${tag}] pageerror: ${e.message}`));
   pg.on('console', m => { if (m.type() === 'error') errs.push(`[${tag}] console.error: ${m.text()}`); });
   pg.on('dialog', d => { d.dismiss().catch(() => {}); });
+  // Header/floor controls live inside menus (#fileL, #simL). Before a click/check/uncheck, open the
+  // menu the way a user would (click its button) when the target is hidden inside a closed menu.
+  // Never forces or dispatches on hidden elements: a target whose menu is unreachable still fails.
+  // index.html places a menu once, at open; after Simulate is switched on inside Floor tools the list
+  // grows past the viewport edge. A control there is reached the way a user would: close and reopen.
+  const rawClick = pg.click.bind(pg);
+  const reveal = async sel => {
+    const m = await pg.evaluate(s => {
+      const el = document.querySelector(s), shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
+      const list = el?.closest('.mnl');
+      if (!el || !list) return null;
+      const r = el.getBoundingClientRect(), offscreen = shown(el) && (r.left < 0 || r.right > innerWidth);
+      if (shown(el) && !offscreen) return null;
+      const btn = list.parentElement.firstElementChild;
+      if (!shown(btn) || (!list.hidden && !offscreen)) return null;
+      return {btn: '#' + btn.id, list: '#' + list.id, reopen: !list.hidden};
+    }, sel);
+    if (!m) return;
+    if (m.reopen) { await rawClick(m.btn); MENU_NOTE++; }   // close the open menu first
+    await rawClick(m.btn);
+    await pg.waitForFunction(l => !document.querySelector(l).hidden, m.list);
+  };
+  for (const k of ['click', 'check', 'uncheck']) {
+    const f = pg[k].bind(pg);
+    pg[k] = async (sel, ...a) => { await reveal(sel); return f(sel, ...a); };
+  }
 }
 async function open(br, vp, tag) {
   const ctx = await br.newContext({viewport: vp});   // fresh context: no localStorage leakage between runs
@@ -448,7 +475,11 @@ async function s11(br) {
     const {ctx, pg} = await open(br, vp, 'bn' + tag);
     chk(`${tag}: #bn hidden in layer view`, !(await pg.locator('#bn').isVisible()));
     await pg.evaluate(() => __fb.setView('F'));
-    chk(`${tag}: #bn visible in floor view, #bnm hidden`, (await pg.locator('#bn').isVisible()) && !(await pg.locator('#bnm').isVisible()));
+    // round 4: #bn sits in the "Floor tools" menu below 1800px: hidden until the menu is opened
+    const bnClosed = !(await pg.locator('#bn').isVisible());
+    await pg.click('#simM');
+    chk(`${tag}: #bn hidden until Floor tools opened, then visible, #bnm hidden`, bnClosed && (await pg.locator('#bn').isVisible()) && !(await pg.locator('#bnm').isVisible()));
+    await pg.keyboard.press('Escape');
     await pg.evaluate(() => __fb.setView('L'));
     chk(`${tag}: #bn hidden again in layer view`, !(await pg.locator('#bn').isVisible()));
     await pg.evaluate(() => __fb.setView('F'));
@@ -561,7 +592,8 @@ async function s12(br) {
   chk('S12a bnCol Blockage at 80/60 (load > capacity) is red (hue < 30)', hOver !== null && hOver < 30, `hue ${hOver} (${colOver})`);
   const hUnder = await segHue([6, 14], [7, 14]), hOverSeg = await segHue([8, 14], [9, 14]);
   chk('S12a rendered under-capacity segment (6,14)->(7,14) is green (hue 120-160)', hUnder !== null && hUnder >= 120 && hUnder <= 160, `hue ${hUnder}`);
-  chk('S12a rendered over-capacity segment (8,14)->(9,14), load 80/60, is red (hue < 30)', hOverSeg !== null && hOverSeg < 30, `rendered hue ${hOverSeg} (bnCol 80/60 hue ${hOver})`);
+  // hue wraps past 0: a red can read 330-359 (a run measured median hue 355; bnCol itself = 0)
+  chk('S12a rendered over-capacity segment (8,14)->(9,14), load 80/60, is red (hue < 30 or wrapped 330-359)', hOverSeg !== null && (hOverSeg < 30 || hOverSeg >= 330),`rendered hue ${hOverSeg} (bnCol 80/60 hue ${hOver})`);
   const p9 = await cellPx(9, 14);
   await pg.mouse.move(p9[0] - 3, p9[1] - 3); await pg.mouse.move(p9[0], p9[1]);
   const tip = await pg.evaluate(() => document.getElementById('btip').textContent);
@@ -1460,7 +1492,7 @@ async function s16ui(br) {
   const T = p => p.evaluate(() => __fb.SIM ? __fb.SIM.t : -1);
   const sel = (p, c) => p.evaluate(([x, y]) => __fb.click(x, y), [c.x, c.y]);
   const shot = (p, f) => p.screenshot({path: path.join(SHOTS, f)});
-  const simOff = p => p.evaluate(() => { if (__fb.SM) document.getElementById('sm').click(); });
+  const simOff = async p => { if (await p.evaluate(() => __fb.SM)) await p.click('#sm'); };
   const startSim = async (p, id) => { if (!(await p.evaluate(() => __fb.SM))) await p.click('#sm'); await p.click('#' + id); if ((await p.getAttribute('#smPlay', 'aria-pressed')) !== 'true') await p.click('#smPlay'); };
   const stopSim = async p => { if ((await p.getAttribute('#smPlay', 'aria-pressed')) === 'true') await p.click('#smPlay'); };
   const state = p => p.evaluate(() => { const o = {}; __fb.SIM.stat.mach.forEach(m => { o.st = m.st; o.cycles = m.cycles; }); return o; });
@@ -1615,7 +1647,9 @@ async function s17(br) {
   const s = await pg.evaluate(() => ({view: __fb.view, layer: __fb.layer, tab: __fb.tab, bn: __fb.BN, bm: __fb.BM, spd: __fb.SPD, z: __fb.V.z, ox: __fb.V.ox, oy: __fb.V.oy, sm: __fb.SM, sim: __fb.SIM}));
   chk('17 view + layer + palette tab restored', s.view === 'F' && s.layer === 1 && s.tab === 'm', JSON.stringify(s));
   chk('17 pan/zoom restored', Math.abs(s.z - 2.5) < 1e-6 && s.ox === 111 && s.oy === 77, JSON.stringify(s));
+  await pg.click('#simM');   // #bnm sits in the Floor tools menu
   chk('17 Bottlenecks on + Flow/Blockage restored', s.bn === true && s.bm === 'F' && await pg.getAttribute('#bn', 'aria-pressed') === 'true' && await pg.isVisible('#bnm'));
+  await pg.keyboard.press('Escape');
   chk('17 link overlay off + ghost layers off restored', await pg.getAttribute('#lk', 'aria-pressed') === 'false' && !(await pg.isChecked('#ghost')));
   chk('17 sim speed restored, sim not running/active', s.spd === 10 && s.sm === false && s.sim === null);
   // selection on layer 0
@@ -1932,8 +1966,13 @@ async function s21(br) {
   const m = await open(br, {width: 390, height: 844}, 's21m');
   await imp(m.pg, bp([blk('Station 1x1', 0, 0)], [mac('DAT_Assembler', 40, 40, {mid: 1})]));
   await m.pg.evaluate(() => { __fb.setView('F'); __fb.fit(); });
-  const o = await m.pg.evaluate(() => ({sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, h: [...document.querySelectorAll('header .tg, header button, header input')].filter(e => e.offsetWidth).every(e => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= 390.5; }), hh: document.querySelector('header').getBoundingClientRect().height}));
-  chk('21 390px: toolbar has no horizontal overflow, controls inside the viewport', o.sw <= o.cw && o.h, JSON.stringify(o));
+  const o = await m.pg.evaluate(() => {
+    const h = document.querySelector('header'), inV = id => { const r = document.getElementById(id).getBoundingClientRect(); return r.width > 0 && r.left >= 0 && r.right <= 390.5; };
+    return {sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, hsw: h.scrollWidth, hcw: h.clientWidth,
+      h: [...document.querySelectorAll('header .tg, header button, header input')].filter(e => e.offsetWidth).every(e => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= 390.5; }),
+      key: ['vwL', 'vwF', 'fileM', 'undo', 'redo'].every(inV), hh: h.getBoundingClientRect().height};
+  });
+  chk('21 390px: toolbar has no horizontal overflow (page + header), controls inside the viewport, key controls (view switch, File, undo/redo) inside', o.sw <= o.cw && o.hsw <= o.hcw && o.h && o.key, JSON.stringify(o));
   await m.pg.screenshot({path: path.join(SHOTS, 'u1-main-390.png')});
   await m.pg.click('#help');
   const hb = await m.pg.evaluate(() => { const r = document.getElementById('dHelp').getBoundingClientRect(); return {l: r.left, r: r.right, sw: document.documentElement.scrollWidth}; });
@@ -2205,6 +2244,7 @@ try {
 }
 chk('no pageerror / console.error during the run', errs.length === 0, errs.join('\n     '));
 console.log(`\nPASS ${pass}/${total}`);
+if (MENU_NOTE) console.log(`NOTE: ${MENU_NOTE} menu reopen(s): Floor tools/File list grew past the viewport edge after Simulate on (index.html places the list once, at open)`);
 if (fails.length) {
   console.log(`FAILED ${fails.length}:`);
   fails.forEach(f => console.log(` - ${f.name}${f.detail ? ' :: ' + f.detail : ''}`));
