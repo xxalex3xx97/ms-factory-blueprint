@@ -24,7 +24,7 @@ button.danger:hover{border-color:var(--bad);color:var(--bad)}
 :focus-visible{outline:2px solid var(--acc);outline-offset:1px}
 input[type=text],input[type=number],select,textarea{background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:5px 8px;min-height:30px;width:100%}
 input[type=checkbox]{accent-color:var(--acc);width:16px;height:16px}
-header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+header{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;height:44px;flex:none;box-sizing:border-box;padding:0 10px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;overflow-y:hidden;scrollbar-width:none;position:relative;z-index:30}header::-webkit-scrollbar{display:none}header>*,header .tg,header .grp{flex:none;white-space:nowrap}header .tg{flex-wrap:nowrap;border:0;padding:0;gap:8px}header .tg>.gl{display:none}header button{min-height:28px;padding-top:3px;padding-bottom:3px}header #name{width:150px;min-height:28px;padding-top:2px;padding-bottom:2px}header h1{order:-2}header .tg:last-child{order:-1}#simMn:has(#tgS[style*="none"]){display:none}.mnl .tg,.mnl .grp,.mnl .seg{flex-wrap:wrap;white-space:normal}.mnl[role=menu] button{width:100%}#simL{max-width:calc(100vw - 8px);flex-direction:row;padding:8px}@media (min-width:1800px){#simM{display:none}#simL{position:static;display:flex!important;border:0;box-shadow:none;background:none;padding:0;max-width:none}#simL .tg{flex-wrap:nowrap}#simL .grp,#simL .seg{flex-wrap:nowrap;white-space:nowrap}}header .ic{display:none}.mn{position:relative}.mnl{position:fixed;z-index:40;min-width:140px;display:flex;flex-direction:column;gap:2px;padding:4px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 6px 18px oklch(0.1 0.01 250 / .5)}.mnl[hidden]{display:none}.mnl[role=menu] button{text-align:left;border-color:transparent;background:none}.mnl[role=menu] button:hover,.mnl[role=menu] button:focus-visible{background:var(--panel);border-color:var(--acc)}@media (max-width:1500px){header h1 span,header #ghost+.tx{display:none}header .ic{display:inline}header #undo .tx,header #redo .tx,header #rot .tx,header #ghost+.tx{display:none}header #fit{padding-left:6px;padding-right:6px}}@media (max-width:1100px){header h1{display:none}header,header .tg{gap:6px}header #name{width:100px}}@media (max-width:700px){header{scrollbar-width:thin}header #name{width:90px}header .grp>label[for=name]{display:none}header kbd{display:none}}
 h1{font-size:15px;margin:0;letter-spacing:.02em}
 h1 span{color:var(--acc)}
 .grp{display:flex;align-items:center;gap:6px}
@@ -143,22 +143,27 @@ dialog h3{margin:0 0 8px}
     <span id="lay" class="layer" aria-live="polite">0</span>
     <button id="lUp" aria-label="Layer up" title="Layer up (])">&#9650;</button>
   </div>
-  <label title="Show the layers above and below faintly"><input id="ghost" type="checkbox" checked> ghost layers</label>
+  <label title="Show the layers above and below faintly (ghost layers)"><input id="ghost" type="checkbox" checked aria-label="Ghost layers"> <span class="tx">ghost layers</span></label>
   <div class="grp">
-    <button id="rot" aria-label="Rotate placement or selection" title="Rotate (R)">Rotate <kbd>R</kbd> <span id="rotv">0</span></button>
-    <button id="undo" aria-label="Undo" title="Undo (Ctrl+Z)">Undo</button>
-    <button id="redo" aria-label="Redo" title="Redo (Ctrl+Y)">Redo</button>
+    <button id="rot" aria-label="Rotate placement or selection" title="Rotate (R)"><span class="tx">Rotate <kbd>R</kbd></span><span class="ic" aria-hidden="true">&#8635;</span> <span id="rotv">0</span></button>
+    <button id="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><span class="ic" aria-hidden="true">&#8630;</span><span class="tx">Undo</span></button>
+    <button id="redo" aria-label="Redo" title="Redo (Ctrl+Y)"><span class="ic" aria-hidden="true">&#8631;</span><span class="tx">Redo</span></button>
     <button id="fit" aria-label="Zoom to fit" title="Fit view">Fit</button>
   </div>
   <div class="grp">
-    <button id="nw" aria-label="New design and clear saved" title="Clear the autosaved design and start empty">New</button>
-    <button id="fOpen" aria-label="Open file" title="Open a .json file and keep it linked for Save">Open</button>
+    <div class="mn" id="fileMn"><button id="fileM" aria-haspopup="menu" aria-expanded="false" aria-controls="fileL">File <span aria-hidden="true">&#9662;</span></button>
+    <div class="mnl" id="fileL" role="menu" hidden>
+      <button id="nw" role="menuitem" aria-label="New design and clear saved" title="Clear the autosaved design and start empty">New / Clear</button>
+      <button id="fOpen" role="menuitem" aria-label="Open file" title="Open a .json file and keep it linked for Save">Open</button>
+      <button id="fSaveAs" role="menuitem" aria-label="Save as" title="Save to a new file (Ctrl+Shift+S)">Save as</button>
+      <button id="imp" role="menuitem" aria-label="Import JSON">Import</button>
+    </div></div>
     <button id="fSave" class="pri" aria-label="Save" title="Save to the opened file (Ctrl+S)">Save</button>
-    <button id="fSaveAs" aria-label="Save as" title="Save to a new file (Ctrl+Shift+S)">Save as</button>
-    <button id="imp" aria-label="Import JSON">Import</button>
     <button id="exp" class="pri" aria-label="Export JSON">Export</button>
   </div>
   </div>
+  <div class="mn" id="simMn"><button id="simM" aria-haspopup="true" aria-expanded="false" aria-controls="simL">Floor tools <span aria-hidden="true">&#9662;</span></button>
+  <div class="mnl" id="simL" hidden>
   <div class="tg" id="tgS" role="group" aria-label="Simulate" style="display:none"><span class="gl">Simulate</span>
   <div class="grp" id="smg" style="display:none">
     <div class="seg"><button id="sm" aria-pressed="false" title="Live simulation of the factory floor (informational, approximate; sim state is not exported)">Simulate</button></div>
@@ -173,6 +178,7 @@ dialog h3{margin:0 0 8px}
   </div>
   <div class="grp seg" id="lkg" role="group" aria-label="Link overlay" style="display:none"><button id="lk" class="on" aria-pressed="true" title="Informational link overlay (no rules, nothing blocked). Machine&lt;-&gt;belt marker = an ENABLED port faces a belt cell (disabled port = no link, faint red tick); input/output direction is unknown, so it is undirected. Ports: layout inferred from screenshots, not verified vs game data. Arrows = belt flow; green thick = T-join merge; dashed = underground pair.">Links</button><button id="bn" aria-pressed="false" title="Bottlenecks: belt load = items/min passing / belt capacity. Links on: gradient on the flow arrows; links off: belt cells are coloured. While a simulation has run, colours use the simulated values, otherwise the planning estimate. Informational only.">Bottlenecks</button><span id="bnm" class="seg" style="display:none"><button id="bnF" title="Flow: grey (no flow) to green (full capacity). Uses simulated load once the simulation has run.">Flow</button><button id="bnB" class="on" title="Blockage: green up to capacity, red when over capacity (simulation: or when the belt chain is full/blocked)">Blockage</button></span></div>
   </div>
+  </div></div>
   <div class="tg" role="group" aria-label="View"><span class="gl">View</span>
   <div class="grp seg" id="vw" role="group" aria-label="View level"><button id="vwL" class="on" aria-pressed="true" title="Block layout">Layout</button><button id="vwF" aria-pressed="false" title="Factory floor (F)">Factory floor <kbd>F</kbd></button></div>
   <button id="help" aria-label="Help" title="Help: how to, controls, simulation rules, legend">?</button>
@@ -1740,6 +1746,15 @@ async function fOpen(){
   if(!window.showOpenFilePicker){$("imp").click();return}
   try{const [h]=await showOpenFilePicker(JT);const t=await (await h.getFile()).text();if(importJson(t))FH=h}catch(e){if(e.name!=="AbortError")toast("Open failed: "+e.message)}
 }
+document.querySelectorAll("header .mn").forEach(mn=>{const mb=mn.firstElementChild,ml=mn.querySelector(".mnl"),mu=ml.getAttribute("role")==="menu",it=()=>[...ml.querySelectorAll("button")];
+const cl=f=>{ml.hidden=true;mb.setAttribute("aria-expanded","false");if(f)mb.focus()};
+const op=()=>{document.querySelectorAll("header .mnl").forEach(l=>{if(l!==ml)l.hidden=true});const r=mb.getBoundingClientRect();ml.style.left="0";ml.hidden=false;ml.style.top=r.bottom+2+"px";ml.style.left=Math.max(4,Math.min(r.left,innerWidth-ml.offsetWidth-4))+"px";mb.setAttribute("aria-expanded","true")};
+mb.onclick=()=>ml.hidden?op():cl();
+if(mu){mb.onkeydown=e=>{if(e.key==="ArrowDown"){e.preventDefault();if(ml.hidden)op();it()[0].focus()}};
+ml.onclick=()=>cl();
+ml.onkeydown=e=>{const a=it(),i=a.indexOf(document.activeElement);if(e.key==="ArrowDown"){e.preventDefault();a[(i+1)%a.length].focus()}else if(e.key==="ArrowUp"){e.preventDefault();a[(i+a.length-1)%a.length].focus()}else if(e.key==="Tab")cl()}}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!ml.hidden){e.stopPropagation();cl(true)}},true);
+document.addEventListener("pointerdown",e=>{if(!ml.hidden&&!mn.contains(e.target))cl()},true);addEventListener("resize",()=>cl())});
 $("fSave").onclick=()=>fSave(false);$("fSaveAs").onclick=()=>fSave(true);$("fOpen").onclick=fOpen;
 let SAVST=null;   // stations parsed from a chosen *_S.sav, waiting for the user's pick
 $("imp").onclick=()=>{$("impTa").value="";$("impFile").value="";SAVST=null;$("impSt").hidden=true;$("dImp").showModal()};
