@@ -453,8 +453,8 @@ try {
   await pp.mouse.move(zx, zy); await pp.mouse.down(); await pp.mouse.move(zx + 30, zy + 20, {steps: 4}); await pp.mouse.up();
   const c2 = await bb();
   chk('(Z) drag at zoom follows the pointer', Math.abs(c2.x - c1.x - 30) < 1.5 && Math.abs(c2.y - c1.y - 20) < 1.5, `${c1.x},${c1.y} -> ${c2.x},${c2.y}`);
-  await pp.mouse.move(c0.x + c0.w + 20, c0.y - 6); await pp.mouse.wheel(0, -900); await pp.waitForTimeout(150);
-  chk('(Z) wheel up zooms in', (await gw()) > w1 * 1.1);
+  await pp.mouse.move(Math.round(c2.x + c2.w / 2), Math.round(c2.y + c2.h / 2)); await pp.mouse.wheel(0, -900); await pp.waitForTimeout(150);
+  chk('(Z) wheel up zooms in', (await gw()) > w1 * 1.1, String(w1) + ' -> ' + await gw());
   chk('(Z) full-screen button exists', (await pp.locator('#plnF').count()) === 1);
   await pp.selectOption('#plnItem', other); await pp.selectOption('#plnItem', 'ITEM_CobaltPlates');
   // (PR) Protomatter toggle in the panel
