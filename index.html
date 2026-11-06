@@ -340,11 +340,11 @@ function areas(L){
     for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed!==(b.rot+2)%4)continue;   // ship side and short sides: no doors
       const v=ed%2===0,n=v?d.h:d.w;
       for(let k=0;k<n;k++){
-        const t0=(v?r.y:r.x)+FC*k+DOFF-QI,ex=ed===0?r.x+r.w:ed===2?r.x-DW:t0,ey=ed===1?r.y+r.h:ed===3?r.y-DW:t0;
+        const t0=(v?r.y:r.x)+FC*k+DOFF-QI,ex=ed===0?r.x+r.w+QI:ed===2?r.x-QI-DW:t0,ey=ed===1?r.y+r.h+QI:ed===3?r.y-QI-DW:t0;
         r.cuts[ed].push([t0,t0+DOORW]);
         const nf=own.get((ed===0?b.x+d.w:ed===2?b.x-1:b.x+k)+","+(ed===1?b.y+d.h:ed===3?b.y-1:b.y+k));
         if(nf&&nf!==f&&ed>1)continue;   // the E/S side owns a shared door
-        const p=nf&&nf!==f,sp=p?(ed===0?nf.r.x-ex:nf.r.y-ey):DW;   // paired door spans the whole gap to the neighbour's floor (walls + gap)
+        const p=nf&&nf!==f,sp=DW;   // door = the 2-cell passage between the two walls only
         if(p)gaps.push(v?{x:ex,y:r.y+FC*k,w:sp,h:FC}:{x:r.x+FC*k,y:ey,w:FC,h:sp});
         const key=`${L}|${b.x}|${b.y}|${EN[ed]}|${k}`;
         doors.push({key,open:!S.closed.includes(key),paired:!!p,ver:dv(b)&&(!p||dv(nf.b)),ed,bx:b.x,by:b.y,k,x:ex,y:ey,w:v?sp:DOORW,h:v?DOORW:sp,
@@ -878,6 +878,10 @@ function paintFloorBase(s){
       });
     }
     if(w>70){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
+  });
+  A.floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;   // elevator: ring cells inside the door slot are open buildable floor
+    cx.fillStyle="rgba(150,190,230,.08)";
+    for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>{const v=ed%2===0,ring=ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q};R(ring,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))});
   });
   A.blocked.forEach(e=>R(e,(x,y,w,h)=>{
     cx.fillStyle="rgba(255,70,70,.14)";cx.fillRect(x,y,w,h);hatch(x,y,w,h,"rgba(255,110,110,.5)");
