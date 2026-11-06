@@ -39,6 +39,15 @@ $("expCp").onclick=async()=>{const ta=$("expTa");try{await navigator.clipboard.w
 $("expDl").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([$("expTa").value],{type:"application/json"}));a.download=(S.name.replace(/[^\w.-]+/g,"_")||"blueprint")+".json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 // ---- Main Sequence player stations from a *_S.sav. Literal port of extract/import_station.py (the oracle; keep in sync).
 // Returns [{name,objectId,json}] in file order, json = site import format (short machine Class names).
+// mod-built exit records: same Length, sitting on entrance + (Length-1) cells (raw units, 2 per cell). Mirror of ug_exit_dupes (import_station.py).
+function ugDupes(machs,UG){
+  const at=new Map(),dup=new Set();
+  for(const m of machs)if(UG[m.MID]!==undefined){const k=m.X+","+m.Y;(at.get(k)||at.set(k,[]).get(k)).push(m.MID)}
+  for(const m of machs){const Lr=UG[m.MID];if(Lr===undefined||dup.has(m.MID))continue;
+    const r=((m.R%4)+4)%4,k=(m.X+2*(Lr-1)*DIR[r][0])+","+(m.Y+2*(Lr-1)*DIR[r][1]);
+    for(const i of at.get(k)||[])if(UG[i]===Lr&&i!==m.MID)dup.add(i)}
+  return dup;
+}
 function parseSav(buf){
   const d=new DataView(buf),u8=new Uint8Array(buf),L=u8.length,BAD="Not a Main Sequence _S.sav";
   const SIG="\x02\x00\x00\x00\x12\x00\x00\x00\xff\x01\x00\x00\x00";   // BuildBlueprint struct head, then FString DisplayName
@@ -67,8 +76,11 @@ function parseSav(buf){
     const C=A.cls,pth=i=>i>=0&&i<C.length?C[i]:null;
     const blocks=[],machs=A.machs.slice();
     for(const{b,ms}of A.blocks){machs.push(...ms);const p=pth(b.cls);if(p)blocks.push({Class:p,GridLocation:{X:b.X,Y:b.Y},Height:b.H,GridRotation:b.R,BlockID:b.ID,PaletteID:b.PAL})}
-    const dm=[];
-    for(const m of machs){const p=pth(m.cls);if(p){const c=p.split("/").pop().split(".")[0];dm.push({Class:c,Transform:{GridLocation:{X:m.X,Y:m.Y},Height:m.H,GridRotation:m.R},MachineID:m.MID,PaletteID:m.PAL,...(m.hx?cfgView(c,m.hx):{})})}}
+    const dm=[],dup=ugDupes(machs,UG);
+    for(const m of machs){const p=pth(m.cls);if(p){const c=p.split("/").pop().split(".")[0],e={Class:c,Transform:{GridLocation:{X:m.X,Y:m.Y},Height:m.H,GridRotation:m.R},MachineID:m.MID,PaletteID:m.PAL,...(m.hx?cfgView(c,m.hx):{})};
+      if(dup.has(m.MID)){delete e.ConfigHex;delete e.Length}   // mod-built exit record: a tile, not a second tunnel
+      else if(UG[m.MID]!==undefined)e.Length=UG[m.MID];      // world record wins (config is empty unless reconfigured)
+      dm.push(e)}}
     dm.sort((a,b)=>a.MachineID-b.MachineID);
     return{Version:2,DisplayName:A.name,Blocks:blocks,DefaultMachines:dm};
   };
@@ -77,6 +89,19 @@ function parseSav(buf){
   for(let n=I(8);n>0;n--){const r=fstr(o);if(!r)throw new Error(BAD);top.push(r[0]);o=r[1]}
   const sidx=top.indexOf("/Game/Blueprints/Stations/BP_StationObject.BP_StationObject_C");
   if(sidx<0)return[];
+  // underground Length per MachineID from the world tree (literal mirror of underground_lengths(d) in import_station.py)
+  const UG={};
+  for(let ci=0;ci<top.length;ci++){if(!top[ci].includes("UndergroundBeltObject"))continue;
+    for(let q=0;q+36<=L;q++){if(I(q)!==ci)continue;
+      try{const st=q+36;if(I(st+8)!==0||I(st+12)!==6)continue;   // 5-word block: w2=0, w3=6
+        const mid=I(q+4),fx=I(q+8),fy=I(q+12);if((fx>>15)!==I(st+20)||(fy>>15)!==I(st+24))continue;   // gridX, gridY
+        let p=st+36;
+        for(let k=0;k<2;k++){const n=I(p);if(n<0||n>=64)throw 0;p+=4+4*n}   // input / output machine ids
+        p+=8;const n=I(p);if(n<0||n>=1000)throw 0;p+=4;
+        for(let k=0;k<n;k++){const r=fstr(p);if(!r)throw 0;p=r[1]+4}   // Items {FString, i32 progress}
+        const total=I(p),len=I(p+4);
+        if(len>0&&len<=64&&total%len===0)UG[mid]=len;
+      }catch(e){}}}
   const out=[];
   for(let p=o+56;p+13<=L;p++){
     if(u8[p]!==2||!hasAt(p,SIG))continue;
@@ -89,7 +114,7 @@ function parseSav(buf){
 // ConfigHex (game bytes) -> model: recipe (key, or raw game name in recn when unknown), disabled ports (port array order = portsOf order), splitter filters/priorities, underground Length (b.ugl, expanded by importJson)
 function impCfg(b,d,m){
   const k=cfgKind(d.id),dc=k&&cfgDec(d.id,m.ConfigHex);
-  if(k==="underground"){const l=dc?dc.length:n0(m.Length);if(l>1)b.ugl=l;return}
+  if(k==="underground"){const l=n0(m.Length)||(dc?dc.length:0);if(l>1)b.ugl=l;return}   // Length field (world record) first, ConfigHex as fallback
   if(!dc)return;
   const off=[],ps=portsOf(b),sk=k==="splitter"?Math.max(0,ps.length-(dc.ports||[]).length):0;(dc.ports||[]).forEach((e,i)=>{const q=ps[sk+i];if(e===false&&q&&q.tg)off.push(q.key)});if(off.length)b.off=off;
   if(dc.recipe){const kk=recKeyOf(dc.recipe);if(kk)b.rec=kk;else b.recn=dc.recipe}
