@@ -635,11 +635,17 @@ try {
   await pr.click('#lvM');
   await pr.mouse.click(700, 600);
   chk('(R5) outside click closes Level popover', !(await vis('#lvL')));
-  chk('(R5) #lay shows 1 while internal layer is 0', (await pr.textContent('#lay')) === '1' && (await pr.evaluate(() => __fb.layer)) === 0);
+  chk('(R5) #lay shows 1 while internal layer is 0', (await pr.inputValue('#lay')) === '1' && (await pr.evaluate(() => __fb.layer)) === 0);
   await pr.click('#lUp');
-  chk('(R5) Level up: "Level 2", internal layer 1, #lay 2', (await lvTxt()) === 'Level 2' && (await pr.evaluate(() => __fb.layer)) === 1 && (await pr.textContent('#lay')) === '2');
+  chk('(R5) Level up: "Level 2", internal layer 1, #lay 2', (await lvTxt()) === 'Level 2' && (await pr.evaluate(() => __fb.layer)) === 1 && (await pr.inputValue('#lay')) === '2');
   await pr.click('#lDn');
   chk('(R5) Level down: back to "Level 1", internal layer 0', (await lvTxt()) === 'Level 1' && (await pr.evaluate(() => __fb.layer)) === 0);
+  await pr.fill('#lay', '3'); await pr.press('#lay', 'Enter'); await pr.evaluate(() => document.getElementById('lay').dispatchEvent(new Event('change')));
+  chk('(R5b) typing 3 in #lay: internal layer 2, shown 3', (await pr.evaluate(() => __fb.layer)) === 2 && (await pr.inputValue('#lay')) === '3');
+  await pr.fill('#lay', '1'); await pr.press('#lay', 'Tab');
+  chk('(R5b) typing 1 in #lay: internal layer 0', (await pr.evaluate(() => __fb.layer)) === 0);
+  { const d = pr.locator('#insp details[data-sec=ov]'), o0 = await d.evaluate(e => e.open); await d.locator(':scope > summary').click(); const o1 = await d.evaluate(e => e.open); await d.locator(':scope > summary').click();
+  chk('(R5b) Overview is a collapsible card (summary toggles it)', o0 && !o1 && await d.evaluate(e => e.open)); }
   await pr.click('#lvM');
   await pr.uncheck('#ghost');
   chk('(R5) ghost layers checkbox lives in the Level popover and toggles', !(await pr.isChecked('#ghost')) && (await vis('#lvL')));

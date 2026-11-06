@@ -30,7 +30,7 @@ h1 span{color:var(--acc)}
 .grp{display:flex;align-items:center;gap:6px}
 .grp label{color:var(--dim)}
 #name{width:180px}
-.layer{font-family:var(--mono);min-width:3ch;text-align:center;font-size:14px}
+#lay{width:5ch;min-width:0}.layer{font-family:var(--mono);min-width:3ch;text-align:center;font-size:14px}
 .sp{flex:1}
 main{--pw:260px;--dw:290px;flex:1;min-height:0;display:grid;grid-template-columns:var(--pw) minmax(0,1fr) var(--dw)}main.pc{--pw:32px}main.dc{--dw:32px}
 aside{background:var(--panel);overflow:auto;display:flex;flex-direction:column;min-height:0}
@@ -98,7 +98,7 @@ kbd{font-family:var(--mono);font-size:11px;background:var(--panel2);border:1px s
 #prScroll{overflow:auto;overflow-x:hidden;padding:0 12px 12px;min-height:0}#dProd h4{margin:12px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim)}
 #prCv{position:static;display:block;width:100%;max-width:100%;margin-top:4px}#prLeg .sw{display:inline-block;width:10px;height:10px;border-radius:2px}#prLeg .ic,.prr .ic{width:16px;height:16px;vertical-align:middle;margin-right:4px}
 .prr{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 54px;gap:8px;align-items:center;margin:3px 0;font-size:12px}.prr.t2{grid-template-columns:minmax(0,1fr) 54px 64px}.prr.t1{grid-template-columns:minmax(0,1fr) 64px}.prr>b{text-align:right;font-family:var(--mono);font-weight:600}.prr .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.prr .bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}.prr .bar i{display:block;height:100%;border-radius:4px}.prr.hd{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.prr.hd>span:not(:first-child){text-align:right}
-#fms{position:absolute;top:10px;right:10px;z-index:7;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-height:calc(100% - 20px);pointer-events:none}.fm{pointer-events:auto;display:flex;flex-direction:column;width:min(340px,calc(100vw - 20px));max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px oklch(0.1 0.01 250 / .5)}.fm[hidden]{display:none}.fmh{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px}.fmh h3{margin:0;flex:1;font-size:13px}.fmh button{min-width:30px;padding:2px 6px;line-height:1}.fmb{display:flex;flex-direction:column;gap:10px;padding:0 12px 12px}.fmb .grp,.fmb .tg{flex-wrap:wrap}.fmb .hint{margin:0}#stage.fm1 #pln{width:calc(100% - 20px - 350px)}@media (max-width:900px){#stage.fm1 #pln{width:calc(100% - 20px)}#pln:not([hidden])~#fms{top:52px}}@media (max-width:700px){#dProd{z-index:8}}
+#fms{position:absolute;top:10px;right:10px;z-index:7;display:flex;flex-direction:column;align-items:flex-end;gap:8px;max-height:calc(100% - 20px);pointer-events:none}.fm{pointer-events:auto;display:flex;flex-direction:column;width:min(340px,calc(100vw - 20px));max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px oklch(0.1 0.01 250 / .5)}.fm[hidden]{display:none}.fmh{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px}.fmh h3{margin:0;flex:1;font-size:13px}.fmh button{min-width:30px;padding:2px 6px;line-height:1}.fmb{display:flex;flex-direction:column;gap:10px;padding:0 12px 12px}.fmb .grp,.fmb .tg{flex-wrap:wrap}.fmb .hint{margin:0}#stage.fm1 #pln{width:calc(100% - 20px - 350px)}@media (max-width:700px){#dProd{top:auto;bottom:10px;max-height:min(50%,calc(100% - 20px))}}@media (max-width:900px){#stage.fm1 #pln{width:calc(100% - 20px)}#pln:not([hidden])~#fms{top:52px}}
 #pln{position:absolute;top:10px;left:10px;z-index:6;display:flex;flex-direction:column;width:calc(100% - 20px);height:calc(100% - 20px);background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px oklch(0.1 0.01 250 / .5)}#pln[hidden]{display:none}#pln.col{width:auto;height:auto;max-width:calc(100% - 20px)}#pln.col #plnBody{display:none}
 #plnHd{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px}#plnHd h3{margin:0;flex:1;font-size:13px}#plnHd button{min-width:30px;padding:2px 6px;line-height:1}#pln.col #plnHd h3{flex:none;margin-right:6px}#pln.col #plnC{transform:rotate(180deg)}
 #plnBody{display:flex;flex:1;flex-direction:column;min-height:0;padding:0 12px 12px}
@@ -140,7 +140,7 @@ dialog h3{margin:0 0 8px}
     <div class="grp" role="group" aria-label="Level">
       <label>Level</label>
       <button id="lDn" aria-label="Level down" title="Level down ([)">&#9660;</button>
-      <span id="lay" class="layer" aria-live="polite">1</span>
+      <input id="lay" class="layer" type="number" step="1" value="1" aria-label="Level number" aria-live="polite">
       <button id="lUp" aria-label="Level up" title="Level up (])">&#9650;</button>
     </div>
     <label title="Show the levels above and below faintly (ghost layers)"><input id="ghost" type="checkbox" checked aria-label="Ghost layers"> <span class="tx">ghost layers</span></label>
@@ -1119,7 +1119,7 @@ cv.addEventListener("dblclick",e=>{
 });
 
 function setLayer(n){smStop();layer=n;sel=new Set([...sel].filter(i=>S.blocks.find(b=>b.id===i&&b.h===n)));all()}
-$("lUp").onclick=()=>setLayer(layer+1);$("lDn").onclick=()=>setLayer(layer-1);
+$("lay").onchange=e=>{const v=parseInt(e.target.value,10);if(isFinite(v)&&v-1!==layer)setLayer(v-1);else e.target.value=layer+1};$("lUp").onclick=()=>setLayer(layer+1);$("lDn").onclick=()=>setLayer(layer-1);
 $("ghost").onchange=draw;
 function setView(v){
   if(v===view)return;
@@ -1245,7 +1245,7 @@ addEventListener("keyup",e=>{if(e.code==="Space"){space=false;cv.style.cursor=""
 
 // ---- palette
 const BQ='<span class="bq" title="Size not confirmed in game" aria-label="size not confirmed">!?</span>',nog=t=>String(t).replace(/guess(ed|es)?/gi,"unconfirmed");
-const io=new Set(["rate","links","store","belt","sim"]),sec=(id,t,b)=>b?`<details data-sec="${id}" ${io.has(id)?"open":""}><summary>${t}</summary><div class="pad">${b}</div></details>`:"";
+const io=new Set(["rate","links","store","belt","sim","ov"]),sec=(id,t,b)=>b?`<details data-sec="${id}" ${io.has(id)?"open":""}><summary>${t}</summary><div class="pad">${b}</div></details>`:"";
 let q="",po=new Set(["b:Basic","m:Machine","m:Conveyors"]);
 $("search").oninput=e=>{q=e.target.value.trim().toLowerCase();palette()};
 const iconEl=d=>iurl(d.icon)?`<img class="ic" alt="" src="${iurl(d.icon)}">`:`<i class="ic ph" style="background:hsl(${hue(d.category)},55%,48%)"></i>`;
@@ -1580,8 +1580,8 @@ function panel(){
   }
   if(!one&&F&&SM&&SIM)h+=sec("sim","Simulation live",'<div id="simLive">'+simLiveHtml(null)+'</div>');
   const nOv=Object.keys(OV).length,nM=S.blocks.filter(isM).length,dc=A.doors.filter(r=>!r.open).length;
-  h+='<h2>Overview</h2><div class="pad"><div class="sub">'+(S.blocks.length-nM)+' blocks &middot; '+nM+' buildables &middot; '+S.blocks.filter(b=>b.h===layer&&inView(b)).length+' on level '+(layer+1)+' here &middot; '+(A.doors.length-dc)+' doors open / '+dc+' closed (level '+(layer+1)+') &middot; '+S.dm.length+' other default machines kept &middot; '+nOv+' catalog overrides</div>'
-  +'<div class="btns"><button id="bClear" class="danger">Clear all</button><button id="bResetCat" '+(nOv?"":"disabled")+'>Reset catalog edits</button></div></div>';
+  h+=sec("ov","Overview",'<div class="sub">'+(S.blocks.length-nM)+' blocks &middot; '+nM+' buildables &middot; '+S.blocks.filter(b=>b.h===layer&&inView(b)).length+' on level '+(layer+1)+' here &middot; '+(A.doors.length-dc)+' doors open / '+dc+' closed (level '+(layer+1)+') &middot; '+S.dm.length+' other default machines kept &middot; '+nOv+' catalog overrides</div>'
+  +'<div class="btns"><button id="bClear" class="danger">Clear all</button><button id="bResetCat" '+(nOv?"":"disabled")+'>Reset catalog edits</button></div>');
   $("insp").innerHTML=h;
 }
 $("insp").addEventListener("toggle",e=>{const k=e.target.dataset&&e.target.dataset.sec;if(!k)return;e.target.open?io.add(k):io.delete(k);asv()},true);
@@ -1956,7 +1956,7 @@ const HINTS={
   F:'<kbd>click</kbd> place/select &middot; <kbd>click door</kbd> open/closed &middot; <kbd>drag</kbd> move/box, or lay a belt run &middot; <kbd>wheel</kbd> zoom &middot; <kbd>space</kbd>+drag or right/middle drag pan &middot; <kbd>right-click</kbd> delete/deselect &middot; <kbd>1</kbd>-<kbd>9</kbd> hotbar (drag or <kbd>Shift</kbd>+click to assign) &middot; <kbd>R</kbd> rotate &middot; <kbd>Del</kbd> delete &middot; <kbd>Ctrl</kbd>+<kbd>C</kbd>/<kbd>V</kbd>/<kbd>Z</kbd>/<kbd>Y</kbd> &middot; <kbd>[</kbd><kbd>]</kbd> layer &middot; <kbd>F</kbd> layout &middot; <kbd>Esc</kbd> cancel'
 };
 function all(){
-  $("lay").textContent=layer+1;$("lvN").textContent=layer+1;$("undo").disabled=!undoS.length;$("redo").disabled=!redoS.length;
+  $("lay").value=layer+1;$("lvN").textContent=layer+1;$("undo").disabled=!undoS.length;$("redo").disabled=!redoS.length;
   smSync();
   [["vwL","L"],["vwF","F"]].forEach(([i,v])=>{$(i).classList.toggle("on",view===v);$(i).setAttribute("aria-pressed",view===v)});
   cv.setAttribute("aria-label",view==="F"?"Factory floor canvas":"Station grid canvas");
