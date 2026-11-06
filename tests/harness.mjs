@@ -315,14 +315,143 @@ async function s6(pg, C) {
     await imp(pg, bp([], [mac(idA, 0, 0, {mid: 1}), mac(idB, gap + 1, 0, {h: hB, mid: 2})]));
     return pg.evaluate(() => __fb.ugWarn().size);
   };
-  chk('Mk1 (max 8): gap 8 -> no warning', (await ug('DAT_UndergroundBelt', 'DAT_UndergroundBelt', 8)) === 0);
-  chk('Mk1 (max 8): gap 9 -> 1 warning', (await ug('DAT_UndergroundBelt', 'DAT_UndergroundBelt', 9)) === 1);
-  chk('Mk2 (max 10): gap 10 -> no warning', (await ug('DAT_UndergroundBelt_2', 'DAT_UndergroundBelt_2', 10)) === 0);
-  chk('Mk2 (max 10): gap 11 -> 1 warning', (await ug('DAT_UndergroundBelt_2', 'DAT_UndergroundBelt_2', 11)) === 1);
-  chk('Mk3 (max 12): gap 12 -> no warning', (await ug('DAT_UndergroundBelt_3', 'DAT_UndergroundBelt_3', 12)) === 0);
-  chk('Mk3 (max 12): gap 13 -> 1 warning', (await ug('DAT_UndergroundBelt_3', 'DAT_UndergroundBelt_3', 13)) === 1);
-  chk('different height (gap 9, other layer) -> no warning', (await ug('DAT_UndergroundBelt', 'DAT_UndergroundBelt', 9, 1)) === 0);
-  chk('different class (Mk1 facing Mk2, gap 9) -> no warning', (await ug('DAT_UndergroundBelt', 'DAT_UndergroundBelt_2', 9)) === 0);
+  chk('Mk1 (max 8): length 8 (gap 6)  -> no warning', (await ug('DAT_UndergroundBelt', 'DAT_UndergroundBelt', 6)) === 0);
+  chk('Mk1 (max 8): length 9 (gap 7)  -> 1 warning', (await ug('DAT_UndergroundBelt', 'DAT_UndergroundBelt', 7)) === 1);
+  chk('Mk2 (max 10): length 10 (gap 8)  -> no warning', (await ug('DAT_UndergroundBelt_2', 'DAT_UndergroundBelt_2', 8)) === 0);
+  chk('Mk2 (max 10): length 11 (gap 9)  -> 1 warning', (await ug('DAT_UndergroundBelt_2', 'DAT_UndergroundBelt_2', 9)) === 1);
+  chk('Mk3 (max 12): length 12 (gap 10)  -> no warning', (await ug('DAT_UndergroundBelt_3', 'DAT_UndergroundBelt_3', 10)) === 0);
+  chk('Mk3 (max 12): length 13 (gap 11)  -> 1 warning', (await ug('DAT_UndergroundBelt_3', 'DAT_UndergroundBelt_3', 11)) === 1);
+  chk('different height (length 9, other layer) -> no warning', (await ug('DAT_UndergroundBelt', 'DAT_UndergroundBelt', 9, 1)) === 0);
+  chk('different class (Mk1 facing Mk2, length 9) -> no warning', (await ug('DAT_UndergroundBelt', 'DAT_UndergroundBelt_2', 9)) === 0);
+}
+
+// ================= 6b. underground drag placement, tunnel line, config codec
+async function s6b(pg, C) {
+  const UG = ['DAT_UndergroundBelt', 'DAT_UndergroundBelt_2', 'DAT_UndergroundBelt_3'], MAX = [8, 10, 12];
+  const px = (x, y) => pg.evaluate(([x, y]) => __fb.px(x, y), [x, y]);
+  const ugs = () => pg.evaluate(() => __fb.S.blocks.filter(b => b.cls.startsWith('DAT_Underground')).map(b => ({x: b.x, y: b.y, rot: b.rot, cls: b.cls})));
+  const pairs = () => pg.evaluate(() => __fb.ugPairs(__fb.S.blocks.filter(b => b.cls.startsWith('DAT_Underground'))).map(p => ({n: p.n, ux: p.u.x, uy: p.u.y, tx: p.t.x, ty: p.t.y})));
+  // canvas pixels in a strip across the cell centre: differs from an empty cell when the tunnel line is drawn there
+  const snap = async (x, y) => { const [cx, cy] = await px(x, y); return pg.evaluate(([cx, cy]) => { const c = document.getElementById('cv'), r = c.getBoundingClientRect(), k = c.width / r.width, g = c.getContext('2d'); return Array.from(g.getImageData(Math.round((cx - r.left - 12) * k), Math.round((cy - r.top - 2) * k), Math.round(24 * k), Math.round(4 * k)).data); }, [cx, cy]); };
+  const diff = (a, b) => a.reduce((s, v, i) => s + Math.abs(v - b[i]), 0);
+  const start = async cls => { await reset(pg); await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); }); await pg.evaluate(c => { active = c; all(); }, cls); };
+  const press = async (a, b, release = true) => { const [x0, y0] = await px(a[0], a[1]), [x1, y1] = await px(b[0], b[1]); await pg.mouse.move(x0, y0); await pg.mouse.down(); await pg.mouse.move(x1, y1, {steps: 8}); if (release) await pg.mouse.up(); };
+  // pair drag: entrance at the press cell, exit at the dragged end, gap free, line drawn while dragging and after release
+  await start(UG[0]);
+  const base = await snap(7, 5);
+  await press([5, 5], [9, 5], false);
+  const mid = await pg.evaluate(() => { const g = __fb.ugDrag(__fb.drag); return {k: __fb.drag.k, n: g.n, ax: g.a.x, bx: g.b.x}; });
+  chk('ug drag: preview is a pair of length 5 from the press cell', mid.k === 'ug' && mid.n === 5 && mid.ax === 5 && mid.bx === 9, JSON.stringify(mid));
+  chk('ug drag: tunnel line drawn across the gap while dragging', diff(base, await snap(7, 5)) > 200);
+  await pg.mouse.up();
+  let u = await ugs();
+  chk('ug drag: release places entrance + exit tiles (2 machines, same rot 0, same row)', u.length === 2 && u.some(b => b.x === 5 && b.y === 5 && b.rot === 0) && u.some(b => b.x === 9 && b.y === 5 && b.rot === 0), JSON.stringify(u));
+  chk('ug drag: gap cells stay free (no block at x 6..8)', (await pg.evaluate(() => __fb.S.blocks.filter(b => b.y === 5 && b.x > 5 && b.x < 9).length)) === 0);
+  const pr = await pairs();
+  chk('ug pair detected: one pair, length 5, entrance first', pr.length === 1 && pr[0].n === 5 && pr[0].ux === 5 && pr[0].tx === 9, JSON.stringify(pr));
+  chk('ug pair: tunnel line drawn after placement', diff(base, await snap(7, 5)) > 200);
+  await pg.evaluate(() => { __fb.S.blocks.push({id: 9999, cls: 'DAT_ConveyorBelt', x: 7, y: 4, h: 0, rot: 1, pid: 0}); });
+  chk('ug gap: a belt next to / crossing the gap does not remove the pair', (await ugs()).length === 2);
+  // max distance per tier
+  for (let i = 0; i < 3; i++) {
+    await start(UG[i]);
+    await press([5, 5], [40, 5]);
+    u = await ugs();
+    chk(`ug Mk${i + 1}: dragged far, clamped to max length ${MAX[i]}`, u.length === 2 && u.some(b => b.x === 5) && u.some(b => b.x === 5 + MAX[i] - 1), JSON.stringify(u));
+    const pm = await pairs();
+    chk(`ug Mk${i + 1}: exactly max length is not warned`, pm.length === 1 && pm[0].n === MAX[i] && (await pg.evaluate(() => __fb.ugWarn().size)) === 0);
+  }
+  await start(UG[0]); await press([20, 12], [20, 2]);
+  u = await ugs();
+  chk('ug drag up: rot 3, exit above, clamped to 8 (12 -> 5)', u.length === 2 && u.every(b => b.rot === 3 && b.x === 20) && u.some(b => b.y === 12) && u.some(b => b.y === 5), JSON.stringify(u));
+  await start(UG[1]); await press([20, 5], [20, 9]);
+  u = await ugs();
+  chk('ug drag down: rot 1, length 5', u.length === 2 && u.every(b => b.rot === 1) && u.some(b => b.y === 9), JSON.stringify(u));
+  await start(UG[1]); await press([20, 5], [14, 5]);
+  u = await ugs();
+  chk('ug drag left: rot 2, exit left of entrance', u.length === 2 && u.every(b => b.rot === 2) && u.some(b => b.x === 20) && u.some(b => b.x === 14), JSON.stringify(u));
+  await start(UG[0]); await press([5, 5], [5, 5]);
+  chk('ug click without drag: one single tile, no pair/line', (await ugs()).length === 1 && (await pairs()).length === 0);
+  // export: two UG machines, entrance first, same rotation; ConfigHex only on the entrance = 0100 + Length
+  await start(UG[1]); await press([20, 5], [14, 5]);
+  const ex = await pg.evaluate(() => __fb.build());
+  const um = ex.DefaultMachines.filter(m => m.DefaultName === 'DAT_UndergroundBelt_2');
+  chk('ug export: two UndergroundBelt machines, same rotation, same row, entrance first (flow = west)', um.length === 2 && um[0].Transform.GridRotation === 2 && um[1].Transform.GridRotation === 2 && um[0].Transform.GridLocation.Y === um[1].Transform.GridLocation.Y && um[0].Transform.GridLocation.X > um[1].Transform.GridLocation.X && um[0].MachineID < um[1].MachineID, JSON.stringify(um.map(m => [m.MachineID, m.Transform])));
+  chk('ug export: entrance ConfigHex = 0100 + i32 Length 7, exit has none', um[0].ConfigHex === '010007000000' && um[0].Length === 7 && um[1].ConfigHex === undefined, JSON.stringify(um));
+  // import: pair without ConfigHex (old exports) renders the line; lone UG stays single
+  const IM = (cells, cls = 'DAT_UndergroundBelt', o = {}) => bp([], cells.map(([x, y], i) => ({...mac(cls, x, y, {rot: 0, mid: i + 1}), ...(o[i] || {})})));
+  await reset(pg); await imp(pg, IM([[3, 3], [7, 3]])); await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); });
+  chk('ug import: legacy pair (no ConfigHex) detected, length 5, tunnel line drawn', (await pairs()).length === 1 && (await pairs())[0].n === 5 && diff(await snap(5, 3), await snap(5, 8)) > 200);
+  await reset(pg); await imp(pg, IM([[3, 3]]));
+  chk('ug import: single UG machine without partner stays one tile (no partner invented)', (await ugs()).length === 1 && (await pairs()).length === 0);
+  await reset(pg); await imp(pg, IM([[3, 3]], 'DAT_UndergroundBelt_2', [{ConfigHex: '010004000000'}]));
+  u = await ugs();
+  chk('ug import: ONE game machine with Length 4 is rebuilt as entrance + exit tile', u.length === 2 && u.some(b => b.x === 3) && u.some(b => b.x === 6) && (await pairs())[0].n === 4, JSON.stringify(u));
+  await reset(pg); await imp(pg, IM([[3, 3]], 'DAT_UndergroundBelt_2', [{ConfigHex: '010000000000'}]));
+  chk('ug import: Length 0 (unrefreshed game config) stays a single tile', (await ugs()).length === 1);
+  await reset(pg); await imp(pg, IM([[3, 3], [6, 3]], 'DAT_UndergroundBelt_2', [{ConfigHex: '010004000000'}]));
+  chk('ug import: entrance with Length + explicit exit machine is not doubled', (await ugs()).length === 2);
+  await reset(pg); await imp(pg, ex);
+  chk('ug export -> import round trip keeps the pair (2 tiles)', (await ugs()).length === 2 && (await pairs()).length === 1);
+
+  // ---- config codec
+  // real game save with configs (skipped when the user save is absent): Mk2 UGs are matched, Length rebuilds exit tiles, lone UG stays single
+  const SAVF = 'C:/Users/SFidelis/AppData/Local/MainSequence/Saved/SaveGames/blueprint module-Autosave_S.sav';
+  if (fs.existsSync(SAVF)) {
+    const j = await pg.evaluate(b => { const u = Uint8Array.from(atob(b), c => c.charCodeAt(0)); return __fb.parseSav(u.buffer).find(s => s.name === 'Starter Station').json; }, fs.readFileSync(SAVF).toString('base64'));
+    chk('sav import: machines carry ConfigHex (+ Length for undergrounds)', j.DefaultMachines.filter(m => m.ConfigHex).length === 11 && j.DefaultMachines.some(m => m.Length === 3 && m.ConfigHex === '010003000000'));
+    await reset(pg); await imp(pg, j);
+    const s = await pg.evaluate(() => ({u: __fb.S.blocks.filter(b => b.cls.startsWith('DAT_Underground')).length, o: __fb.S.dm.filter(m => /Underground/.test(m.Class)).length, p: __fb.ugPairs(__fb.S.blocks.filter(b => b.cls.startsWith('DAT_Underground'))).map(q => q.n)}));
+    chk('sav import: Length-3 entrance rebuilt as pair (n=3); unconfigured lone UG stays one tile; no UG left unmatched', s.o === 0 && s.p.includes(3) && s.u > s.p.length * 2 - 1, JSON.stringify(s));
+  }
+  const REFH = '0100' + '0f000000' + Buffer.from('titaniumplates\0').toString('hex') + '04000000' + '01010101';
+  const R = await pg.evaluate(() => {
+    const h = cfgEnc('recipe', {recipe: 'titaniumplates', ports: [true, true, true, true]});
+    return {h, d: cfgDec('BP_RefineryObject_C', h), h2: cfgEnc('recipe', cfgDec('BP_RefineryObject_C', h))};
+  });
+  chk('config: refinery 0100 0f000000 titaniumplates 04000000 01010101 encodes exactly', R.h === REFH, R.h);
+  chk('config: refinery bytes decode and re-encode identically', !!R.d && R.d.recipe === 'titaniumplates' && R.d.ports.length === 4 && R.h2 === REFH);
+  const RT = await pg.evaluate(r => {
+    const hx = {
+      asm: cfgEnc('recipe', {recipe: 'hullplates', ports: [1, 1, 1, 1, 1, 1, 1, 1]}),
+      spl: cfgEnc('splitter', {filters: ['', '', ''], prioA: -1, prioB: -1, ports: [1, 1, 1]}),
+      spl2: cfgEnc('splitter', {filters: ['waterice', '', ''], prioA: 2, prioB: -1, ports: [1, 0, 1]}),
+      dock: cfgEnc('dock', {name: 'Station Dock 1', filters: [{item: '', bLoading: 0}, {item: 'waterice', bLoading: 1}]}),
+      bay: cfgEnc('dronebay', {resource: 'silica'}), ug: cfgEnc('underground', {length: 3})};
+    const cl = {asm: 'BP_AssemblerObject_C', spl: 'BP_SplitterObject_C', spl2: 'BP_SplitterObject_C', dock: 'BPO_StationBlockDock_C', bay: 'BPO_MiningDroneBay_C', ug: 'BP_UndergroundBeltObject_C'};
+    const o = {};
+    for (const k in hx) { const d = cfgDec(cl[k], hx[k]); o[k] = !!d && cfgEnc(d.layout, d) === hx[k]; }
+    return {o, hx, sp: cfgDec('BP_SplitterObject_C', hx.spl2), bad: [cfgDec('BP_RefineryObject_C', ''), cfgDec('BP_RefineryObject_C', '0100'), cfgDec('BP_RefineryObject_C', r + '00'), cfgDec('BP_ContainerObject_C', '0100'), cfgDec('BP_RefineryObject_C', 'zz')]};
+  }, REFH);
+  chk('config: assembler, splitter, dock, drone bay, underground round-trip byte-exact', Object.values(RT.o).every(Boolean), JSON.stringify(RT.o));
+  chk('config: splitter bytes follow the documented layout (3 empty filters, -1/-1, 3 ports) and filter/priority/ports decode', RT.hx.spl === '0100' + '03000000' + '00000000'.repeat(3) + 'ffffffff' + 'ffffffff' + '03000000' + '010101' && RT.sp.filters[0] === 'waterice' && RT.sp.prioA === 2 && RT.sp.ports.join() === 'true,false,true', RT.hx.spl);
+  chk('config: empty / truncated / trailing bytes / no-config class / bad hex decode to null', RT.bad.every(x => x === null), JSON.stringify(RT.bad));
+
+  // ---- recipe + ports through the model: export writes game-ready ConfigHex, import reads it back
+  const TKEY = 'ITEM_TitaniumOre>ITEM_TitaniumPlates';
+  const P0 = await pg.evaluate(() => { const p = __fb.portsOf({cls: 'DAT_Refinery', x: 0, y: 0, rot: 0}).find(q => q.tg); return {Face: p.f, Index: p.i, Enabled: false}; });
+  await reset(pg); await imp(pg, bp([], [mac('DAT_Refinery', 10, 10, {mid: 1, rec: TKEY, off: [P0]})]));
+  const E = await pg.evaluate(() => __fb.build().DefaultMachines.find(m => m.DefaultName === 'DAT_Refinery'));
+  const dc = E.ConfigHex ? await pg.evaluate(h => cfgDec('BP_RefineryObject_C', h), E.ConfigHex) : null;
+  chk('config export: refinery ConfigHex carries the game recipe Name (titaniumplates) + port array', !!dc && dc.recipe === 'titaniumplates' && dc.ports.length === 4 && dc.ports.filter(p => !p).length === 1 && E.Recipe === TKEY && !E.ConfigUnverified, JSON.stringify([E.ConfigHex, dc]));
+  await reset(pg); await imp(pg, bp([], [{...mac('DAT_Refinery', 10, 10, {mid: 1}), ConfigHex: E.ConfigHex}]));
+  const IB = await pg.evaluate(() => { const b = __fb.S.blocks.find(q => q.cls === 'DAT_Refinery'); return {rec: b.rec, off: b.off}; });
+  chk('config import: ConfigHex alone selects the recipe and disables the port (round trip)', IB.rec === TKEY && !!IB.off && IB.off.length === 1, JSON.stringify(IB));
+  await reset(pg); await imp(pg, bp([], [mac('DAT_Refinery', 10, 10, {mid: 1, rec: TKEY}), mac('DAT_Assembler', 20, 10, {mid: 2})]));
+  const E2 = await pg.evaluate(() => __fb.build().DefaultMachines);
+  chk('config export: unconfigured machine has no ConfigHex; old-format file (no ConfigHex) still imports', E2.find(m => m.DefaultName === 'DAT_Assembler').ConfigHex === undefined && E2.length === 2 && !!E2.find(m => m.DefaultName === 'DAT_Refinery').ConfigHex);
+  const ZH = '0100' + '0b000000' + Buffer.from('zzzzzzzzzz\0').toString('hex') + '08000000' + '0101010101010101';
+  await reset(pg); await imp(pg, bp([], [{...mac('DAT_Assembler', 10, 10, {mid: 1}), ConfigHex: ZH}]));
+  const U2 = await pg.evaluate(() => { const b = __fb.S.blocks.find(q => q.cls === 'DAT_Assembler'); const e = __fb.build().DefaultMachines[0]; return {rec: b.rec, recn: b.recn, hex: e.ConfigHex}; });
+  chk('config: unknown game recipe name is kept verbatim (recn) and re-exported byte-exact', U2.recn === 'zzzzzzzzzz' && !U2.rec && U2.hex === ZH, JSON.stringify(U2));
+  const SH = '0100' + '03000000' + '09000000' + Buffer.from('waterice\0').toString('hex') + '00000000' + '00000000' + 'ffffffff' + 'ffffffff' + '03000000' + '010101';
+  await reset(pg); await imp(pg, bp([], [{...mac('DAT_Splitter', 10, 10, {mid: 1}), ConfigHex: SH}]));
+  const SP = await pg.evaluate(() => { const b = __fb.S.blocks.find(q => q.cls === 'DAT_Splitter'); const e = __fb.build().DefaultMachines[0]; return {fl: b.fl, hex: e.ConfigHex, f: e.Filters}; });
+  chk('config: splitter filters imported and re-exported byte-exact', !!SP.fl && SP.fl[0] === 'waterice' && SP.hex === SH && SP.f[0] === 'waterice', JSON.stringify(SP));
+  const NMS = await pg.evaluate(() => [Object.keys(RECNAMES).length, 0, Object.values(CATALOG.recipes).flat().filter(r => RECNAMES[r.i.map(x => x[0]).join('+') + '>' + r.o[0]] === undefined).length]);
+  chk('config: REC_AdvancedCircuits/AlphaProtein/BackpackMk1 names verbatim from the game table', (await pg.evaluate(() => [RECNAMES['ITEM_DetectorArray+ITEM_BasicCircuit+ITEM_Superalloy+ITEM_Coolant>ITEM_AdvancedCircuits'], RECNAMES['ITEM_Biomass>ITEM_AlphaProtein'] || null])).slice(0, 1)[0] === 'advancedcircuits');
+  chk('config: recipe name table covers every catalog recipe key (RECNAMES = authoritative game names)', NMS[0] > 0 && NMS[2] === 0, JSON.stringify(NMS));
+  await reset(pg);
 }
 
 // ================= 7. links (informational)
@@ -2219,7 +2348,7 @@ try {
   BMAP = Object.fromEntries(C.buildables.map(b => [b.id, b]));
   BLK = Object.fromEntries(C.blocks.map(b => [b.name, b.class]));
   const sections = [['1 catalog', () => s1(C)], ['2 ports', () => s2(pg, C)], ['3 recipes', () => s3(pg, C)],
-    ['4 doors', () => s4(pg, C)], ['5 roundtrip', () => s5(pg, C)], ['6 underground', () => s6(pg, C)], ['7 links', () => s7(pg, C)], ['8 rates', () => s8(pg, C)], ['9 palette order', () => s9(pg, C)], ['10 bottlenecks', () => s10(pg, C)], ['13 storage', () => s13(pg, C)]];
+    ['4 doors', () => s4(pg, C)], ['5 roundtrip', () => s5(pg, C)], ['6 underground', () => s6(pg, C)], ['6b underground drag + config', () => s6b(pg, C)], ['7 links', () => s7(pg, C)], ['8 rates', () => s8(pg, C)], ['9 palette order', () => s9(pg, C)], ['10 bottlenecks', () => s10(pg, C)], ['13 storage', () => s13(pg, C)]];
   for (const [label, fn] of sections) {
     try { console.log(`--- ${label}`); await fn(); }
     catch (e) { chk(`${label}: section ran`, false, e.stack || String(e)); }

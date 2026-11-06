@@ -12,6 +12,7 @@ cv.addEventListener("pointerdown",e=>{
   if(pasting){hover=c;pasteAt();return}
   if(active){
     if(view==="F"&&runTool(def(active))){drag={k:"belt",c0:c,cur:c,tr:[c]};draw();return}
+    if(view==="F"&&ugTool(def(active))){drag={k:"ug",c0:c,cur:c};draw();return}
     const b={id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:placeRot,pid:0};if(isM(b)&&noBuild([mItem(b)])){toast(NOBUILD);return}push();if(isBelt(b))cutBelts([b]);S.blocks.push(b);sel=new Set([b.id]);all();return}
   if(view==="F"){const q=portAt(p);if(q){push();togglePort(q.b,q.p.key);all();return}}
   const b=hit(c);
@@ -57,6 +58,7 @@ cv.addEventListener("pointermove",e=>{
   if(drag){
     if(drag.k==="pan"){drag.d+=Math.abs(p.x-drag.px)+Math.abs(p.y-drag.py);V.ox+=p.x-drag.px;V.oy+=p.y-drag.py;drag.px=p.x;drag.py=p.y}
     else if(drag.k==="belt"){drag.cur=c;beltStep(drag,c)}
+    else if(drag.k==="ug")drag.cur=c;
     else if(drag.k==="move"){
       const dx=c.x-drag.c0.x,dy=c.y-drag.c0.y;
       if(!drag.moved&&(dx||dy)){push();drag.moved=true}
@@ -79,6 +81,11 @@ const end=e=>{
     const nb=cells.map(c=>({id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:c.rot,pid:0}));
     if(noBuild(nb.map(mItem)))toast(NOBUILD);
     else{push();cutBelts(nb);S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));placeRot=cells[0].rot}
+  }
+  if(k==="ug"){   // press = entrance, release = exit (same rotation, same line); a plain click places one tile
+    const g=ugDrag(drag),nb=(g.n>1?[g.a,g.b]:[g.a]).map(c=>({id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:g.rot,pid:0}));
+    if(noBuild(nb.map(mItem)))toast(NOBUILD);
+    else{push();cutBelts(nb);S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));placeRot=g.rot}
   }
   drag=null;cv.style.cursor=space?"grab":"";
   if(rc){if(pasting){pasting=null;all();return}const b=hit(toCell(rc.x,rc.y));if(b){sel=new Set([b.id]);del();return}if(active){active=null;all();return}}
