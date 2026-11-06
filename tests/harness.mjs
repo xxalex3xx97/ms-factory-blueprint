@@ -1791,7 +1791,7 @@ async function s18(br) {
   chk('18 after Reset: cell tints = static estimate', await sameCols(pz.tint, expS));
   await pg.click('#sm');
   chk('18 sim off: Bottlenecks still toggles', await pg.isEnabled('#bn'));
-  chk('18 dead items-only code removed: no bnTick / bnSync / bnOn / bnR in index.html', !/bnTick|bnSync|bnOn\b|\bbnR\b/.test(fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8')));
+  chk('18 dead items-only code removed: no bnTick / bnSync / bnOn / bnR in index.html', !/bnTick|bnSync|bnOn\b|\bbnR\b/.test(['index.html',...fs.readdirSync(path.join(ROOT,'js')).map(f=>'js/'+f)].map(f=>fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n')));
   await ctx.close();
 }
 
