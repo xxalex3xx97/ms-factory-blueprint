@@ -922,7 +922,7 @@ function paint0(){
     const d=def(active);
     beltCells(drag).forEach(c=>{const px=V.ox+c.x*s,py=V.oy+c.y*s;cx.fillStyle=fill(d.category,.5);cx.fillRect(px,py,s,s);drawIcon(d,px,py,s,s,.8);arrow(px,py,s,s,c.rot,.9)});
   }else if(pasting&&!drag&&hoverIn){
-    const g=clipT(pasting.rot).map(b=>({...b,x:b.x+hover.x,y:b.y+hover.y,h:layer}));
+    const g=clipT(pasting.rot,pasting.fl).map(b=>({...b,x:b.x+hover.x,y:b.y+hover.y,h:layer}));
     g.forEach(b=>drawBlock(b,.45,false));
     if(noBuild(g.filter(isM).map(mItem))){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;g.forEach(b=>{const d=dim(b);cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)})}
   }else if(active&&!drag&&hoverIn){
@@ -1058,9 +1058,11 @@ function rotate(){
 }
 $("rot").onclick=rotate;$("undo").onclick=undo;$("redo").onclick=redo;
 function del(){if(!sel.size)return;push();S.blocks=S.blocks.filter(b=>!sel.has(b.id));sel=new Set();all()}
-function copy(){if(!sel.size)return;clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b}));if(clip.length)toast(clip.length+" copied")}
-function clipT(n){   // clip rotated n x 90deg clockwise, origin at 0,0
+function copy(){if(!sel.size)return;clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b}));if(clip.length){toast(clip.length+" copied");paste()}}
+function clipT(n,fl){   // clip mirrored (fl) then rotated n x 90deg clockwise, origin at 0,0
   let l=clip.map(b=>({...b}));
+  if(fl){const mx=Math.min(...l.map(b=>b.x)),W=Math.max(...l.map(b=>b.x-mx+dim(b).w));
+    l=l.map(b=>({...b,x:mx+W-(b.x-mx)-dim(b).w,rot:b.rot===0?2:b.rot===2?0:b.rot}))}
   for(let k=0;k<n;k++){
     const mx=Math.min(...l.map(b=>b.x)),my=Math.min(...l.map(b=>b.y)),H=Math.max(...l.map(b=>b.y-my+dim(b).h));
     l=l.map(b=>{const d=dim(b);return{...b,x:H-(b.y-my)-d.h,y:b.x-mx,rot:((b.rot||0)+1)&3}});
@@ -1070,10 +1072,10 @@ function clipT(n){   // clip rotated n x 90deg clockwise, origin at 0,0
 }
 function paste(){
   if(!clip.length||isM(clip[0])!==(view==="F"))return;
-  active=null;sel=new Set();pasting={rot:0};toast("Click to place, R rotates, Esc cancels");all();
+  active=null;sel=new Set();pasting={rot:0,fl:false};toast("Click to place, R rotates, V flips, Esc cancels");all();
 }
 function pasteAt(){
-  const nb=clipT(pasting.rot).map(b=>({...b,id:uid++,mid:0,x:b.x+hover.x,y:b.y+hover.y,h:b.h+layer}));
+  const nb=clipT(pasting.rot,pasting.fl).map(b=>({...b,id:uid++,mid:0,x:b.x+hover.x,y:b.y+hover.y,h:b.h+layer}));
   if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}
   push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));pasting=null;all();
 }
@@ -1109,6 +1111,7 @@ addEventListener("keydown",e=>{
   else if(ctl&&k==="v"){e.preventDefault();paste()}
   else if(ctl&&k==="a"){e.preventDefault();sel=new Set(S.blocks.filter(b=>b.h===layer&&inView(b)).map(b=>b.id));all()}
   else if(!ctl&&k==="r"){rotate()}
+  else if(!ctl&&k==="v"&&pasting){pasting.fl=!pasting.fl;all()}
   else if(!ctl&&k==="f"){setView(view==="F"?"L":"F")}
   else if(!ctl&&!e.altKey&&/^[1-9]$/.test(k)){const c=HB[tab][+k-1];if(c&&BASE[c])pick(c)}
   else if(k==="delete"||k==="backspace"){e.preventDefault();del()}
