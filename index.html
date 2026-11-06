@@ -32,10 +32,11 @@ h1 span{color:var(--acc)}
 #name{width:180px}
 .layer{font-family:var(--mono);min-width:3ch;text-align:center;font-size:14px}
 .sp{flex:1}
-main{flex:1;min-height:0;display:grid;grid-template-columns:260px 1fr 290px}
+main{--pw:260px;--dw:290px;flex:1;min-height:0;display:grid;grid-template-columns:var(--pw) minmax(0,1fr) var(--dw)}main.pc{--pw:32px}main.dc{--dw:32px}
 aside{background:var(--panel);overflow:auto;display:flex;flex-direction:column;min-height:0}
 #pal{border-right:1px solid var(--line)}
-#insp{border-left:1px solid var(--line)}
+#dock{border-left:1px solid var(--line)}#insp{display:flex;flex-direction:column;flex:1;min-height:0;overflow:auto}#insp[hidden]{display:none}
+.edge{display:flex;align-items:center;gap:6px;flex:none;width:100%;min-height:26px;padding:2px 10px;font-size:11px;color:var(--dim);background:none;border:0;border-bottom:1px solid var(--line);border-radius:0}.edge:hover{color:var(--text);background:var(--panel2)}.edge .ar{font-size:14px;line-height:1}#pal .edge{justify-content:flex-end}aside.col{overflow:hidden}aside.col>:not(.edge){display:none!important}aside.col .edge,#plnOpt.col .edge{flex:1;justify-content:flex-start;padding:12px 0;border:0;writing-mode:vertical-rl;gap:8px}
 aside h2{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin:0;padding:12px 12px 6px}
 .pad{padding:0 12px 12px}
 #search{margin:8px 12px 4px;width:calc(100% - 24px)}
@@ -57,9 +58,9 @@ summary small{color:var(--dim);font-weight:400;margin-left:auto}
 .it .ic{width:20px;height:20px;border-radius:3px}
 .rec{padding:4px 0;border-bottom:1px solid var(--line)}.rec[data-rk]{cursor:pointer}.rec.sel{outline:1px solid var(--acc,#6cf);background:rgba(120,220,240,.1)}
 .item::after{content:"";order:8;flex-basis:100%;height:0}
-#tabs{display:flex;gap:4px;margin:10px 12px 0;padding:3px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r)}
-#tabs button{flex:1;border:0;background:none;min-height:28px}
-#tabs button.on{background:var(--panel2);box-shadow:inset 0 -2px var(--acc)}
+#tabs,#dockTabs{display:flex;gap:4px;margin:10px 12px 0;padding:3px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r)}
+#tabs button,#dockTabs button{flex:1;border:0;background:none;min-height:28px}
+#tabs button.on,#dockTabs button.on{background:var(--panel2);box-shadow:inset 0 -2px var(--acc)}
 #vw{margin:0}
 .seg{display:flex;gap:2px;padding:2px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r)}
 .seg button{border:0;background:none;min-height:26px}
@@ -95,7 +96,7 @@ kbd{font-family:var(--mono);font-size:11px;background:var(--panel2);border:1px s
 #smLeg,.leg{display:flex;gap:4px 14px;flex-wrap:wrap;font-size:12px;margin:4px 0 8px}#smLeg span,.leg span{display:inline-flex;align-items:center;gap:5px}
 .leg i{display:inline-block;width:34px;height:8px;border-radius:4px}
 #dHelp{max-height:88vh;overflow:auto}#dHelp h4{margin:14px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim)}#dHelp ul{margin:0;padding-left:18px}#dHelp li{margin:2px 0}#dHelp p{margin:2px 0}
-#dProd{position:absolute;top:10px;left:10px;z-index:5;display:flex;flex-direction:column;width:min(340px,calc(100% - 20px));max-height:min(78%,calc(100% - 20px));background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px oklch(0.1 0.01 250 / .5)}#dProd[hidden]{display:none}#dProd.col{width:auto;max-width:calc(100% - 20px)}#dProd.col #prScroll{display:none}
+#dProd{display:flex;flex-direction:column;flex:1;min-height:0}#dProd[hidden]{display:none}#dProd.col #prScroll{display:none}
 #prHd{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px}#prHd h3{margin:0;flex:1;font-size:13px}#prHd button{min-width:30px;padding:2px 6px;line-height:1}#dProd.col #prHd h3{flex:none;margin-right:6px}#dProd.col #prodC{transform:rotate(180deg)}
 #prScroll{overflow:auto;overflow-x:hidden;padding:0 12px 12px;min-height:0}#dProd h4{margin:12px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim)}
 #prCv{position:static;display:block;width:100%;max-width:100%;margin-top:4px}#prLeg .sw{display:inline-block;width:10px;height:10px;border-radius:2px}#prLeg .ic,.prr .ic{width:16px;height:16px;vertical-align:middle;margin-right:4px}
@@ -103,7 +104,7 @@ kbd{font-family:var(--mono);font-size:11px;background:var(--panel2);border:1px s
 #pln{position:absolute;top:10px;left:10px;z-index:6;display:flex;flex-direction:column;width:calc(100% - 20px);height:calc(100% - 20px);background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px oklch(0.1 0.01 250 / .5)}#pln[hidden]{display:none}#pln.col{width:auto;height:auto;max-width:calc(100% - 20px)}#pln.col #plnBody{display:none}
 #plnHd{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px}#plnHd h3{margin:0;flex:1;font-size:13px}#plnHd button{min-width:30px;padding:2px 6px;line-height:1}#pln.col #plnHd h3{flex:none;margin-right:6px}#pln.col #plnC{transform:rotate(180deg)}
 #plnBody{display:flex;flex:1;flex-direction:column;min-height:0;padding:0 12px 12px}
-#plnForm{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px 10px;padding-bottom:10px;border-bottom:1px solid var(--line)}#plnForm label{display:flex;flex-direction:column;gap:3px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}#plnForm select,#plnForm input{text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
+#plnForm{display:grid;grid-template-columns:minmax(150px,2fr) minmax(110px,1fr);gap:8px 10px;padding-bottom:10px;border-bottom:1px solid var(--line)}#plnMain{position:relative;display:flex;flex:1;min-height:0;margin-top:10px}#plnMain>#plnOut{flex:1;min-width:0;margin-top:0}#plnOpt{flex:none;width:200px;display:flex;flex-direction:column;margin-left:10px;border-left:1px solid var(--line);min-height:0}#plnOpt .edge{width:auto;border-bottom:1px solid var(--line);justify-content:flex-start}#plnOptB{display:flex;flex-direction:column;gap:10px;padding:10px 0 0 10px;overflow:auto}#plnOptB label{display:flex;flex-direction:column;gap:3px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}#plnOptB select{text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}#plnOpt.col{width:32px;margin-left:6px}#plnOpt.col #plnOptB{display:none}#plnForm label{display:flex;flex-direction:column;gap:3px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}#plnForm select,#plnForm input{text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
 #plnOut{display:flex;flex-direction:column;overflow:hidden;flex:1;min-height:0;margin-top:10px}#plnOut>.sub{padding:18px 4px;margin:0;text-align:center}
 .plnGrid{position:relative;display:flex;align-items:center;gap:190px;width:max-content;padding:6px 150px 6px 4px}.plnCol{display:flex;flex-direction:column;gap:14px;position:relative;z-index:1}
 .plnBox{width:190px;padding:8px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px}.plnBox.raw{background:transparent;border:1px dashed var(--dim)}.plnBox .it{display:flex;align-items:center;gap:6px;font-weight:600}.plnBox .it .ic{width:22px;height:22px;flex:none}.plnBox .sub{margin:4px 0 0;font-family:var(--mono);font-size:11px}.plnBox.raw .it{color:var(--dim)}.plnBox .plnAlt{margin-top:6px;min-height:26px;padding:2px 6px;font-size:11px;text-overflow:ellipsis}
@@ -121,11 +122,13 @@ dialog h3{margin:0 0 8px}
 #toast.show{opacity:1}
 @media (max-width:900px){
   body{overflow:auto}
-  main{flex:none;grid-template-columns:1fr 1fr;grid-template-rows:62vh auto}
-  #stage{grid-column:1/3;grid-row:1}
-  #pal{grid-row:2;border-right:1px solid var(--line);max-height:60vh}
-  #insp{grid-row:2;max-height:60vh}
+  main{flex:none;display:flex;flex-wrap:wrap}
+  #stage{order:-1;flex:0 0 100%;height:62vh}
+  #pal,#dock{flex:1 1 0;min-width:0;max-height:60vh}
+  #pal{border-right:1px solid var(--line)}
+  #pal.col,#dock.col{flex:0 0 32px;min-height:140px}
 }
+@media (max-width:600px){#plnOpt:not(.col){position:absolute;right:0;top:0;bottom:0;z-index:3;margin:0;padding:0 0 6px 6px;width:min(230px,80%);background:var(--panel);box-shadow:-6px 0 16px oklch(0.1 0.01 250 / .5)}}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 </style>
 </head>
@@ -177,6 +180,7 @@ dialog h3{margin:0 0 8px}
 </header>
 <main>
   <aside id="pal" aria-label="Palette">
+    <button id="palT" class="edge" type="button" aria-expanded="true" aria-controls="palList" aria-label="Hide palette" title="Hide the palette"><span class="ar" aria-hidden="true">&laquo;</span><span class="lb">Hide</span></button>
     <div id="tabs" role="tablist" aria-label="Palette"><button role="tab" data-tab="b" aria-selected="true" class="on">Blocks</button><button role="tab" data-tab="m" aria-selected="false">Buildables</button></div>
     <input id="search" type="text" placeholder="Search blocks..." aria-label="Search blocks">
     <div id="palCtl"><button id="palCol" title="Collapse all sections">Collapse all</button><button id="palExp" title="Expand all sections">Expand all</button></div>
@@ -185,7 +189,35 @@ dialog h3{margin:0 0 8px}
   </aside>
   <section id="stage">
     <canvas id="cv" tabindex="0" aria-label="Station grid canvas"></canvas>
-    <div id="dProd" role="region" aria-labelledby="dProdT" hidden>
+    <div id="pln" role="region" aria-labelledby="plnT" hidden>
+      <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
+      <div id="plnBody">
+      <div id="plnForm">
+      <label>Item <select id="plnItem" aria-label="Target item"></select></label>
+      <label>Rate (items/min) <input id="plnRate" type="number" min="0" value="0" aria-label="Target rate in items per minute"></label>
+      </div>
+      <div id="plnMain">
+      <div id="plnOut" tabindex="0" role="region" aria-label="Planner flow diagram"></div>
+      <div id="plnOpt"><button id="plnOptT" class="edge" type="button" aria-expanded="true" aria-controls="plnOptB" aria-label="Hide options" title="Hide options"><span class="ar" aria-hidden="true">&raquo;</span><span class="lb">Options</span></button><div id="plnOptB">
+      <label>Belt <select id="plnMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+      <label>Splitter <select id="plnSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+      <label>Balancer <select id="plnBal" aria-label="Balancer tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+      <div class="plnGxW"><span>View</span><button id="plnGx" type="button" aria-pressed="false" title="Grouped: one box per node. Expanded: one box per machine">Grouped</button></div>
+      <label>Protomatter <select id="plnProto" aria-label="Protomatter use"><option value="0" selected>Don't use</option><option value="1">Use</option></select></label>
+      </div></div>
+      </div>
+      </div>
+    </div>
+    <div id="hb" role="toolbar" aria-label="Hotbar"></div>
+    <div id="hud">
+      <div id="read" aria-live="off">x 0 y 0</div>
+    </div>
+  </section>
+  <aside id="dock" aria-label="Info and simulation">
+    <button id="dockT" class="edge" type="button" aria-expanded="true" aria-controls="insp" aria-label="Hide side panel" title="Hide the side panel"><span class="ar" aria-hidden="true">&raquo;</span><span class="lb">Hide</span></button>
+    <div id="dockTabs" role="tablist" aria-label="Side panel"><button id="dtI" role="tab" class="on" aria-selected="true" aria-controls="insp">Info</button><button id="dtS" role="tab" aria-selected="false" aria-controls="dProd" hidden>Simulation</button></div>
+    <div id="insp" role="tabpanel" aria-label="Inspector" aria-labelledby="dtI"></div>
+    <div id="dProd" role="tabpanel" aria-labelledby="dtS" hidden>
       <div id="prHd"><h3 id="dProdT">Production</h3><button id="prodC" aria-expanded="true" aria-label="Collapse production" title="Collapse to title bar">&#9650;</button><button id="prodX" aria-label="Close production" title="Close">&times;</button></div>
       <div id="prScroll">
         <div class="sub">30 s average, sampled every 5 s</div>
@@ -199,27 +231,7 @@ dialog h3{margin:0 0 8px}
         </div>
       </div>
     </div>
-    <div id="pln" role="region" aria-labelledby="plnT" hidden>
-      <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
-      <div id="plnBody">
-      <div id="plnForm">
-      <label>Item <select id="plnItem" aria-label="Target item"></select></label>
-      <label>Rate (items/min) <input id="plnRate" type="number" min="0" value="0" aria-label="Target rate in items per minute"></label>
-      <label>Protomatter <select id="plnProto" aria-label="Protomatter use"><option value="0" selected>Don't use</option><option value="1">Use</option></select></label>
-      <label>Belt <select id="plnMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
-      <label>Splitter <select id="plnSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
-      <label>Balancer <select id="plnBal" aria-label="Balancer tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
-      <div class="plnGxW"><span>View</span><button id="plnGx" type="button" aria-pressed="false" title="Grouped: one box per node. Expanded: one box per machine">Grouped</button></div>
-      </div>
-      <div id="plnOut" tabindex="0" role="region" aria-label="Planner flow diagram"></div>
-      </div>
-    </div>
-    <div id="hb" role="toolbar" aria-label="Hotbar"></div>
-    <div id="hud">
-      <div id="read" aria-live="off">x 0 y 0</div>
-    </div>
-  </section>
-  <aside id="insp" aria-label="Inspector"></aside>
+  </aside>
 </main>
 
 <dialog id="dHelp" aria-labelledby="dHelpT">
@@ -1412,7 +1424,7 @@ const plnProto=()=>$("plnProto").value==="1";
 // craftable items for the current Protomatter setting; keeps the selection if it is still craftable
 const plnFillItems=()=>{const cur=$("plnItem").value;$("plnItem").innerHTML='<option value="">(none)</option>'+[...plnBy(plnProto()).keys()].sort((a,b)=>plnNm(a).localeCompare(plnNm(b))).map(k=>`<option value="${esc(k)}">${esc(plnNm(k))}</option>`).join("");if([...$("plnItem").options].some(o=>o.value===cur))$("plnItem").value=cur};
 plnFillItems();
-$("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribute("aria-pressed",!d.hidden);plnDraw()};
+$("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribute("aria-pressed",!d.hidden);if(!d.hidden&&PLNO===null)plnOptFold(d.clientWidth<720);plnDraw()};
 $("plnX").onclick=()=>{$("pln").hidden=true;$("plnB").setAttribute("aria-pressed",false);$("plnB").focus()};
 $("plnC").onclick=()=>{const c=$("pln").classList.toggle("col");$("plnC").setAttribute("aria-expanded",!c);$("plnC").title=c?"Expand":"Collapse to title bar"};
 $("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDraw()};
@@ -1774,14 +1786,32 @@ function prodDraw(){
   $("prMt").innerHTML=`<div class="prr t2 hd"><span>Machine</span><span>/min</span><span>Total</span></div>`+mt.map(([n,a,t])=>`<div class="prr t2"><span class="n">${esc(n)}</span><b>${a}</b><b>${Math.round(t)}</b></div>`).join("");
   $("prTot").innerHTML=tot.sort((a,b)=>b[1]-a[1]).map(([k,n])=>`<div class="prr t1"><span class="n">${itemHtml(k)}</span><b>${Math.round(n)}</b></div>`).join("");
 }
-$("prodB").onclick=()=>{const d=$("dProd");d.hidden=!d.hidden;$("prodB").setAttribute("aria-pressed",!d.hidden);$("prScroll").scrollTop=0;prodDraw()};
-$("prodX").onclick=()=>{$("dProd").hidden=true;$("prodB").setAttribute("aria-pressed",false)};
+// ---- edge-collapsible panels: left palette, right dock (tabs Info/Simulation), planner options
+function fold(el,btn,shut,name,shutLb,openCh,shutCh){el.classList.toggle("col",shut);btn.setAttribute("aria-expanded",!shut);btn.setAttribute("aria-label",(shut?"Show ":"Hide ")+name);btn.title=(shut?"Show ":"Hide ")+name;btn.querySelector(".ar").textContent=shut?shutCh:openCh;btn.querySelector(".lb").textContent=shut?shutLb:"Hide"}
+const PALK="msfb.ui.pal";
+function palFold(shut,save){fold($("pal"),$("palT"),shut,"palette","Palette","«","»");document.querySelector("main").classList.toggle("pc",shut);if(save)try{localStorage.setItem(PALK,shut?"1":"0")}catch(e){}}
+$("palT").onclick=()=>palFold(!$("pal").classList.contains("col"),true);
+{let v=null;try{v=localStorage.getItem(PALK)}catch(e){}if(v==="1")palFold(true)}
+function dockFold(shut){fold($("dock"),$("dockT"),shut,"side panel",$("dtS").classList.contains("on")?"Simulation":"Info","»","«");document.querySelector("main").classList.toggle("dc",shut);if(!shut)prodDraw()}
+$("dockT").onclick=()=>dockFold(!$("dock").classList.contains("col"));
+function dockTab(k){const sm=k==="s";$("dProd").hidden=!sm;$("insp").hidden=sm;
+  [["dtI",!sm],["dtS",sm]].forEach(([i,on])=>{$(i).classList.toggle("on",on);$(i).setAttribute("aria-selected",on);$(i).tabIndex=on?0:-1});
+  $("prodB").setAttribute("aria-pressed",sm);if(sm)$("prScroll").scrollTop=0;
+  if($("dock").classList.contains("col"))$("dockT").querySelector(".lb").textContent=sm?"Simulation":"Info";prodDraw()}
+$("dtI").onclick=()=>dockTab("i");$("dtS").onclick=()=>dockTab("s");
+$("dockTabs").onkeydown=e=>{if(e.key!=="ArrowLeft"&&e.key!=="ArrowRight")return;const t=[$("dtI"),$("dtS")].filter(b=>!b.hidden);if(t.length<2)return;const n=t[(t.indexOf(document.activeElement)+1)%2];n.focus();n.click();e.preventDefault()};
+dockTab("i");
+$("prodB").onclick=()=>{const shut=$("dock").classList.contains("col");if(shut)dockFold(false);dockTab(shut||$("dProd").hidden?"s":"i")};
+$("prodX").onclick=()=>dockTab("i");
+let PLNO=null;   // null = auto by planner width on first open
+function plnOptFold(shut){PLNO=shut;fold($("plnOpt"),$("plnOptT"),shut,"options","Options","»","«")}
+$("plnOptT").onclick=()=>plnOptFold(!$("plnOpt").classList.contains("col"));
 $("prodC").onclick=()=>{const d=$("dProd"),c=d.classList.toggle("col");$("prodC").setAttribute("aria-expanded",!c);$("prodC").title=c?"Expand":"Collapse to title bar";prodDraw()};
 window.addEventListener("resize",prodDraw);
 function simLiveUp(){const e=$("simLive"),o=smOne(),u=$("sumLive");if(e&&smOn())e.innerHTML=simLiveHtml(o);if(u&&o&&smOn())u.innerHTML=sumBody(o,def(o.cls));prodDraw()}
 function smSync(){
   const on=SM&&view==="F";
-  if(!on)$("dProd").hidden=true,$("prodB").setAttribute("aria-pressed",false);
+  $("dtS").hidden=!on;if(!on)dockTab("i");
   $("sm").classList.toggle("on",SM);$("sm").setAttribute("aria-pressed",SM);
   $("smc").style.display=on?"":"none";
   $("smPlay").textContent=SMP?"Pause":"Play";$("smPlay").setAttribute("aria-pressed",SMP);
