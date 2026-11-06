@@ -1,18 +1,32 @@
 // ---- interaction
 let drag=null,space=false,hoverIn=false;
+// underground = click, click: 1st click places the entrance and starts ugPend {id,cls,c0,cur}; a line (n / max) follows the mouse on the 4 axes; 2nd click places the exit if valid; Esc / right click removes the entrance
+let ugPend=null;
+const ugOk=g=>{const d=def(ugPend.cls);if(g.n<2)return false;const q={id:-1,cls:ugPend.cls,x:g.b.x,y:g.b.y,h:layer,rot:g.rot,pid:0};
+  return !S.blocks.some(o=>o.h===layer&&isM(o)&&o.x===q.x&&o.y===q.y)&&!noBuild([mItem(q)])};
+function ugCancel(){if(!ugPend)return false;const i=ugPend.id;ugPend=null;if(S.blocks.some(b=>b.id===i)){S.blocks=S.blocks.filter(b=>b.id!==i);sel=new Set();undoS.pop();all()}return true}
 const pt=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
 const hit=c=>{const l=S.blocks.filter(b=>b.h===layer&&inView(b));for(let i=l.length-1;i>=0;i--){const b=l[i],d=dim(b);if(c.x>=b.x&&c.x<b.x+d.w&&c.y>=b.y&&c.y<b.y+d.h)return b}return null};
 const doorAt=c=>areas(layer).doors.find(r=>c.x>=r.x&&c.x<r.x+r.w&&c.y>=r.y&&c.y<r.y+r.h);
 cv.addEventListener("contextmenu",e=>e.preventDefault());
 cv.addEventListener("pointerdown",e=>{
   cv.focus();const p=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
-  if(e.button===1||e.button===2||(e.button===0&&space)){drag={k:"pan",px:p.x,py:p.y,d:0,rc:e.button===2};cv.style.cursor="grabbing";return}
+  if(e.button===1||e.button===2||(e.button===0&&space)){const uc=e.button===2&&ugCancel();drag={k:"pan",px:p.x,py:p.y,d:0,rc:e.button===2&&!uc};cv.style.cursor="grabbing";return}
   if(e.button!==0)return;
   const c=toCell(p.x,p.y);
   if(pasting){hover=c;pasteAt();return}
   if(active){
     if(view==="F"&&runTool(def(active))){drag={k:"belt",c0:c,cur:c,tr:[c]};draw();return}
-    if(view==="F"&&ugTool(def(active))){drag={k:"ug",c0:c,cur:c};draw();return}
+    if(ugPend&&(active!==ugPend.cls||view!=="F"||!S.blocks.some(b=>b.id===ugPend.id)))ugPend=null;
+    if(view==="F"&&ugTool(def(active))){
+      if(ugPend){   // 2nd click: exit only when the line is valid, else nothing
+        const g=ugDrag(ugPend),en=S.blocks.find(b=>b.id===ugPend.id);
+        if(ugOk(g)){const x={id:uid++,cls:active,x:g.b.x,y:g.b.y,h:layer,rot:g.rot,pid:0};en.rot=g.rot;S.blocks.push(x);sel=new Set([en.id,x.id]);placeRot=g.rot;ugPend=null;all()}
+        return;
+      }
+      const b={id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:placeRot,pid:0};
+      if(noBuild([mItem(b)])){toast(NOBUILD);return}
+      push();cutBelts([b]);S.blocks.push(b);sel=new Set([b.id]);ugPend={id:b.id,cls:active,c0:c,cur:c};all();return}
     const b={id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:placeRot,pid:0};if(isM(b)&&noBuild([mItem(b)])){toast(NOBUILD);return}push();if(isBelt(b))cutBelts([b]);S.blocks.push(b);sel=new Set([b.id]);all();return}
   if(view==="F"){const q=portAt(p);if(q){push();togglePort(q.b,q.p.key);all();return}}
   const b=hit(c);
@@ -40,7 +54,7 @@ function btip(b,pl,ev,w){
   cv.title="";if(ev){const R=cv.getBoundingClientRect();t.style.left=Math.min(innerWidth-300,ev.clientX+14)+"px";t.style.top=(ev.clientY+16)+"px"}t.style.display="block";
 }
 cv.addEventListener("pointermove",e=>{
-  const p=pt(e),c=toCell(p.x,p.y);hover=c;hoverIn=true;
+  const p=pt(e),c=toCell(p.x,p.y);hover=c;hoverIn=true;if(ugPend){ugPend.cur=c;const en=S.blocks.find(b=>b.id===ugPend.id),g=ugDrag(ugPend);if(en&&g.n>1)en.rot=g.rot}
   $("read").textContent=view==="F"?`floor x ${c.x}  y ${c.y}  block ${Math.floor(c.x/FC)},${Math.floor(c.y/FC)}  h ${layer}  zoom ${Math.round(V.z*100)}%`:`x ${c.x}  y ${c.y}  h ${layer}  zoom ${Math.round(V.z*100)}%`;
   if(!drag){
     let w=false;
@@ -58,7 +72,6 @@ cv.addEventListener("pointermove",e=>{
   if(drag){
     if(drag.k==="pan"){drag.d+=Math.abs(p.x-drag.px)+Math.abs(p.y-drag.py);V.ox+=p.x-drag.px;V.oy+=p.y-drag.py;drag.px=p.x;drag.py=p.y}
     else if(drag.k==="belt"){drag.cur=c;beltStep(drag,c)}
-    else if(drag.k==="ug")drag.cur=c;
     else if(drag.k==="move"){
       const dx=c.x-drag.c0.x,dy=c.y-drag.c0.y;
       if(!drag.moved&&(dx||dy)){push();drag.moved=true}
@@ -81,11 +94,6 @@ const end=e=>{
     const nb=cells.map(c=>({id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:c.rot,pid:0}));
     if(noBuild(nb.map(mItem)))toast(NOBUILD);
     else{push();cutBelts(nb);S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));placeRot=cells[0].rot}
-  }
-  if(k==="ug"){   // press = entrance, release = exit (same rotation, same line); a plain click places one tile
-    const g=ugDrag(drag),nb=(g.n>1?[g.a,g.b]:[g.a]).map(c=>({id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:g.rot,pid:0}));
-    if(noBuild(nb.map(mItem)))toast(NOBUILD);
-    else{push();cutBelts(nb);S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));placeRot=g.rot}
   }
   drag=null;cv.style.cursor=space?"grab":"";
   if(rc){if(pasting){pasting=null;all();return}const b=hit(toCell(rc.x,rc.y));if(b){sel=new Set([b.id]);del();return}if(active){active=null;all();return}}

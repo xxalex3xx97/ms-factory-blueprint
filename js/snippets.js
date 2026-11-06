@@ -37,7 +37,7 @@ $("fit").onclick=fit;
 addEventListener("keydown",e=>{
   const t=e.target,typing=t.matches&&t.matches("input[type=text],input[type=number],textarea,select");
   const dlg=document.querySelector("dialog[open]");
-  if(e.key==="Escape"){if(!dlg){active=null;pasting=null;if(!typing)sel=new Set();all()}return}
+  if(e.key==="Escape"){if(!dlg&&ugCancel())return;if(!dlg){active=null;pasting=null;if(!typing)sel=new Set();all()}return}
   if(typing||dlg)return;
   const k=e.key.toLowerCase(),ctl=e.ctrlKey||e.metaKey;
   if(e.code==="Space"){space=true;cv.style.cursor="grab";e.preventDefault();return}

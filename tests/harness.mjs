@@ -325,7 +325,7 @@ async function s6(pg, C) {
   chk('different class (Mk1 facing Mk2, length 9) -> no warning', (await ug('DAT_UndergroundBelt', 'DAT_UndergroundBelt_2', 9)) === 0);
 }
 
-// ================= 6b. underground drag placement, tunnel line, config codec
+// ================= 6b. underground click-click placement, tunnel line, config codec
 async function s6b(pg, C) {
   const UG = ['DAT_UndergroundBelt', 'DAT_UndergroundBelt_2', 'DAT_UndergroundBelt_3'], MAX = [8, 10, 12];
   const px = (x, y) => pg.evaluate(([x, y]) => __fb.px(x, y), [x, y]);
@@ -335,43 +335,68 @@ async function s6b(pg, C) {
   const snap = async (x, y) => { const [cx, cy] = await px(x, y); return pg.evaluate(([cx, cy]) => { const c = document.getElementById('cv'), r = c.getBoundingClientRect(), k = c.width / r.width, g = c.getContext('2d'); return Array.from(g.getImageData(Math.round((cx - r.left - 12) * k), Math.round((cy - r.top - 2) * k), Math.round(24 * k), Math.round(4 * k)).data); }, [cx, cy]); };
   const diff = (a, b) => a.reduce((s, v, i) => s + Math.abs(v - b[i]), 0);
   const start = async cls => { await reset(pg); await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); }); await pg.evaluate(c => { active = c; all(); }, cls); };
-  const press = async (a, b, release = true) => { const [x0, y0] = await px(a[0], a[1]), [x1, y1] = await px(b[0], b[1]); await pg.mouse.move(x0, y0); await pg.mouse.down(); await pg.mouse.move(x1, y1, {steps: 8}); if (release) await pg.mouse.up(); };
-  // pair drag: entrance at the press cell, exit at the dragged end, gap free, line drawn while dragging and after release
+  const clickAt = async a => { const [x, y] = await px(a[0], a[1]); await pg.mouse.move(x, y); await pg.mouse.down(); await pg.mouse.up(); };
+  const moveTo = async a => { const [x, y] = await px(a[0], a[1]); await pg.mouse.move(x, y, {steps: 6}); };
+  const press = async (a, b) => { await clickAt(a); await moveTo(b); await pg.mouse.down(); await pg.mouse.up(); };   // click entrance, move, click exit
+  // click, click: 1st click = entrance + pending state; line follows the mouse on the 4 axes (n / max); 2nd click places the exit when valid
   await start(UG[0]);
   const base = await snap(7, 5);
-  await press([5, 5], [9, 5], false);
-  const mid = await pg.evaluate(() => { const g = __fb.ugDrag(__fb.drag); return {k: __fb.drag.k, n: g.n, ax: g.a.x, bx: g.b.x}; });
-  chk('ug drag: preview is a pair of length 5 from the press cell', mid.k === 'ug' && mid.n === 5 && mid.ax === 5 && mid.bx === 9, JSON.stringify(mid));
-  chk('ug drag: tunnel line drawn across the gap while dragging', diff(base, await snap(7, 5)) > 200);
-  await pg.mouse.up();
+  await clickAt([5, 5]);
+  let pend = await pg.evaluate(() => ({p: !!__fb.ugPend, n: __fb.S.blocks.filter(b => b.cls.startsWith('DAT_Underground')).length}));
+  chk('ug click 1: entrance placed (1 tile) and pending state started', pend.p && pend.n === 1 && (await pairs()).length === 0, JSON.stringify(pend));
+  await moveTo([9, 5]);
+  let mid = await pg.evaluate(() => { const g = __fb.ugDrag(__fb.ugPend); return {n: g.n, ax: g.a.x, bx: g.b.x, by: g.b.y, rot: g.rot, ok: __fb.ugOk(g)}; });
+  chk('ug move: line of length 5 (5 / 8) along the axis, rot 0, valid', mid.n === 5 && mid.ax === 5 && mid.bx === 9 && mid.by === 5 && mid.rot === 0 && mid.ok, JSON.stringify(mid));
+  chk('ug move: dotted tunnel line drawn across the gap before the 2nd click', diff(base, await snap(7, 5)) > 200);
+  await moveTo([8, 7]);
+  mid = await pg.evaluate(() => { const g = __fb.ugDrag(__fb.ugPend); return {n: g.n, bx: g.b.x, by: g.b.y, rot: g.rot}; });
+  chk('ug move: diagonal offset snaps to the axis with the larger offset (never diagonal)', mid.by === 5 && mid.bx === 8 && mid.n === 4 && mid.rot === 0, JSON.stringify(mid));
+  await moveTo([6, 9]);
+  mid = await pg.evaluate(() => { const g = __fb.ugDrag(__fb.ugPend); return {bx: g.b.x, by: g.b.y, rot: g.rot, er: __fb.S.blocks.find(b => b.id === __fb.ugPend.id).rot}; });
+  chk('ug move: vertical offset wins -> down, rot 1, entrance rotation follows', mid.bx === 5 && mid.by === 9 && mid.rot === 1 && mid.er === 1, JSON.stringify(mid));
+  await moveTo([5, 5]);
+  await pg.mouse.down(); await pg.mouse.up();
+  chk('ug click 2 on the entrance cell (length 1) is ignored, still pending', (await ugs()).length === 1 && (await pg.evaluate(() => !!__fb.ugPend)));
+  await pg.evaluate(() => { __fb.S.blocks.push({id: 9998, cls: 'DAT_ConveyorBelt', x: 9, y: 5, h: 0, rot: 0, pid: 0}); });
+  await moveTo([9, 5]);
+  const bad = await pg.evaluate(() => __fb.ugOk(__fb.ugDrag(__fb.ugPend)));
+  await pg.mouse.down(); await pg.mouse.up();
+  chk('ug click 2 on an occupied exit cell: invalid (red) and ignored', !bad && (await ugs()).length === 1 && (await pg.evaluate(() => !!__fb.ugPend)));
+  await pg.evaluate(() => { __fb.S.blocks = __fb.S.blocks.filter(b => b.id !== 9998); });
+  await moveTo([8, 5]); await pg.mouse.down(); await pg.mouse.up();
   let u = await ugs();
-  chk('ug drag: release places entrance + exit tiles (2 machines, same rot 0, same row)', u.length === 2 && u.some(b => b.x === 5 && b.y === 5 && b.rot === 0) && u.some(b => b.x === 9 && b.y === 5 && b.rot === 0), JSON.stringify(u));
-  chk('ug drag: gap cells stay free (no block at x 6..8)', (await pg.evaluate(() => __fb.S.blocks.filter(b => b.y === 5 && b.x > 5 && b.x < 9).length)) === 0);
+  chk('ug click 2 (valid): exit placed, entrance + exit same rot 0 same row, pending cleared', u.length === 2 && u.some(b => b.x === 5 && b.y === 5 && b.rot === 0) && u.some(b => b.x === 8 && b.y === 5 && b.rot === 0) && (await pg.evaluate(() => !__fb.ugPend)), JSON.stringify(u));
+  chk('ug: gap cells stay free (no block at x 6..7)', (await pg.evaluate(() => __fb.S.blocks.filter(b => b.y === 5 && b.x > 5 && b.x < 8).length)) === 0);
   const pr = await pairs();
-  chk('ug pair detected: one pair, length 5, entrance first', pr.length === 1 && pr[0].n === 5 && pr[0].ux === 5 && pr[0].tx === 9, JSON.stringify(pr));
-  chk('ug pair: tunnel line drawn after placement', diff(base, await snap(7, 5)) > 200);
-  await pg.evaluate(() => { __fb.S.blocks.push({id: 9999, cls: 'DAT_ConveyorBelt', x: 7, y: 4, h: 0, rot: 1, pid: 0}); });
-  chk('ug gap: a belt next to / crossing the gap does not remove the pair', (await ugs()).length === 2);
+  chk('ug pair detected: one pair, length 4, entrance first', pr.length === 1 && pr[0].n === 4 && pr[0].ux === 5 && pr[0].tx === 8, JSON.stringify(pr));
+  chk('ug pair: tunnel line drawn after placement', diff(base, await snap(6, 5)) > 100);
+  // Esc / right click cancel and remove the entrance
+  await start(UG[0]); await clickAt([5, 5]); await moveTo([7, 5]); await pg.keyboard.press('Escape');
+  chk('ug Esc: pending cancelled and the half-built entrance removed', (await ugs()).length === 0 && (await pg.evaluate(() => !__fb.ugPend)));
+  await start(UG[0]); await clickAt([5, 5]); await moveTo([7, 5]); await pg.mouse.down({button: 'right'}); await pg.mouse.up({button: 'right'});
+  chk('ug right click: pending cancelled and the entrance removed', (await ugs()).length === 0 && (await pg.evaluate(() => !__fb.ugPend)));
+  await start(UG[0]); await clickAt([5, 5]); await pg.keyboard.press('Escape'); await pg.evaluate(() => __fb.S.blocks.length);
+  chk('ug cancel leaves undo clean (nothing to undo after cancel)', (await pg.evaluate(() => { const n = __fb.S.blocks.length; return n; })) === 0);
   // max distance per tier
   for (let i = 0; i < 3; i++) {
     await start(UG[i]);
-    await press([5, 5], [40, 5]);
+    await clickAt([5, 5]); await moveTo([12, 5]);
+    await pg.evaluate(() => { __fb.ugPend.cur = {x: 40, y: 5}; });
+    await pg.mouse.down(); await pg.mouse.up();
     u = await ugs();
-    chk(`ug Mk${i + 1}: dragged far, clamped to max length ${MAX[i]}`, u.length === 2 && u.some(b => b.x === 5) && u.some(b => b.x === 5 + MAX[i] - 1), JSON.stringify(u));
+    chk(`ug Mk${i + 1}: pointer far away, clamped to max length ${MAX[i]}`, u.length === 2 && u.some(b => b.x === 5) && u.some(b => b.x === 5 + MAX[i] - 1), JSON.stringify(u));
     const pm = await pairs();
     chk(`ug Mk${i + 1}: exactly max length is not warned`, pm.length === 1 && pm[0].n === MAX[i] && (await pg.evaluate(() => __fb.ugWarn().size)) === 0);
   }
   await start(UG[0]); await press([20, 12], [20, 2]);
   u = await ugs();
-  chk('ug drag up: rot 3, exit above, clamped to 8 (12 -> 5)', u.length === 2 && u.every(b => b.rot === 3 && b.x === 20) && u.some(b => b.y === 12) && u.some(b => b.y === 5), JSON.stringify(u));
+  chk('ug up: rot 3, exit above, clamped to 8 (12 -> 5)', u.length === 2 && u.every(b => b.rot === 3 && b.x === 20) && u.some(b => b.y === 12) && u.some(b => b.y === 5), JSON.stringify(u));
   await start(UG[1]); await press([20, 5], [20, 9]);
   u = await ugs();
-  chk('ug drag down: rot 1, length 5', u.length === 2 && u.every(b => b.rot === 1) && u.some(b => b.y === 9), JSON.stringify(u));
+  chk('ug down: rot 1, length 5', u.length === 2 && u.every(b => b.rot === 1) && u.some(b => b.y === 9), JSON.stringify(u));
   await start(UG[1]); await press([20, 5], [14, 5]);
   u = await ugs();
-  chk('ug drag left: rot 2, exit left of entrance', u.length === 2 && u.every(b => b.rot === 2) && u.some(b => b.x === 20) && u.some(b => b.x === 14), JSON.stringify(u));
-  await start(UG[0]); await press([5, 5], [5, 5]);
-  chk('ug click without drag: one single tile, no pair/line', (await ugs()).length === 1 && (await pairs()).length === 0);
+  chk('ug left: rot 2, exit left of entrance', u.length === 2 && u.every(b => b.rot === 2) && u.some(b => b.x === 20) && u.some(b => b.x === 14), JSON.stringify(u));
   // export: two UG machines, entrance first, same rotation; ConfigHex only on the entrance = 0100 + Length
   await start(UG[1]); await press([20, 5], [14, 5]);
   const ex = await pg.evaluate(() => __fb.build());
@@ -2348,7 +2373,7 @@ try {
   BMAP = Object.fromEntries(C.buildables.map(b => [b.id, b]));
   BLK = Object.fromEntries(C.blocks.map(b => [b.name, b.class]));
   const sections = [['1 catalog', () => s1(C)], ['2 ports', () => s2(pg, C)], ['3 recipes', () => s3(pg, C)],
-    ['4 doors', () => s4(pg, C)], ['5 roundtrip', () => s5(pg, C)], ['6 underground', () => s6(pg, C)], ['6b underground drag + config', () => s6b(pg, C)], ['7 links', () => s7(pg, C)], ['8 rates', () => s8(pg, C)], ['9 palette order', () => s9(pg, C)], ['10 bottlenecks', () => s10(pg, C)], ['13 storage', () => s13(pg, C)]];
+    ['4 doors', () => s4(pg, C)], ['5 roundtrip', () => s5(pg, C)], ['6 underground', () => s6(pg, C)], ['6b underground click-click + config', () => s6b(pg, C)], ['7 links', () => s7(pg, C)], ['8 rates', () => s8(pg, C)], ['9 palette order', () => s9(pg, C)], ['10 bottlenecks', () => s10(pg, C)], ['13 storage', () => s13(pg, C)]];
   for (const [label, fn] of sections) {
     try { console.log(`--- ${label}`); await fn(); }
     catch (e) { chk(`${label}: section ran`, false, e.stack || String(e)); }
