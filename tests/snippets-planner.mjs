@@ -381,6 +381,20 @@ try {
   chk('(P6) 180.01/min Mk3: "no single belt carries" shown', (await pp.textContent('#plnOut')).includes('no single belt carries'));
   await pp.fill('#plnRate', '180');
   chk('(P6) 180/min Mk3: exactly 1 belt label', (await labels()).includes('180 items/min, 1 belts (Mk3)'), await labels());
+  // ---- (PR) Protomatter use/don't use. EnrichedNickelOre: 3 NickelOre -> 2 Enriched (90 ticks); NickelOre: Protomatter x1 -> 1 (30 ticks).
+  //   10 Enriched/min -> 15 NickelOre/min -> 15 Protomatter/min (1 RelicSynthesizer, 120/min each).
+  const EN = 'ITEM_EnrichedNickelOre', PLX = (rate, item, opts) => pg.evaluate(a => __fb.plan(...a), [item, rate, 0, {}, {}, opts]);
+  const offP = await PL(10, 0, {}, {}, EN), onP = await PLX(10, EN, {proto: true});
+  const rawN = offP.raw.find(n => n.item === 'ITEM_NickelOre');
+  chk('(PR1) default off: NickelOre is raw 15/min, no recipe', !!rawN && near(rawN.rate, 15) && !offP.nodes.ITEM_NickelOre.rec, JSON.stringify(rawN));
+  chk('(PR1) default off: no Protomatter node, no RelicSynthesizer crafter', !offP.nodes.ITEM_Protomatter && !Object.values(offP.nodes).some(n => n.crafter === 'CRAFT_RelicSynthesizer'));
+  chk('(PR2) {proto:false} same as default', JSON.stringify(await PLX(10, EN, {proto: false})) === JSON.stringify(offP));
+  chk('(PR3) proto on: NickelOre crafted from Protomatter (Enrichment)', onP.nodes.ITEM_NickelOre.crafter === 'CRAFT_Enrichment' && onP.nodes.ITEM_NickelOre.rec.i[0][0] === 'ITEM_Protomatter' && !onP.raw.some(n => n.item === 'ITEM_NickelOre'));
+  const pm = onP.nodes.ITEM_Protomatter;
+  chk('(PR3) proto on: Protomatter node 15/min, 1 RelicSynthesizer', !!pm && pm.crafter === 'CRAFT_RelicSynthesizer' && near(pm.rate, 15) && pm.machines === 1, JSON.stringify(pm));
+  const offN = await PLX(10, 'ITEM_NickelPlates', {proto: false});
+  chk('(PR4) proto off: items with other recipes still craft (NickelPlates)', !!offN.nodes.ITEM_NickelPlates.rec && !offN.nodes.ITEM_Protomatter);
+
   // ---- (R2) planner round 2: raw column, grouped/expanded, crafter icons, flows <details>, drag
   await pp.selectOption('#plnMk', '0');
   await pp.fill('#plnRate', '120');
@@ -428,6 +442,24 @@ try {
   const other = await pp.locator('#plnItem option').nth(2).getAttribute('value');
   await pp.selectOption('#plnItem', other);
   chk('(R2) drag offsets reset after #plnItem change', (await pp.locator('#plnOut .plnBox[style]').count()) === 0);
+  await pp.selectOption('#plnItem', 'ITEM_CobaltPlates');
+  // (PR) Protomatter toggle in the panel
+  chk('(PR5) #plnProto default "0" = Don\'t use, aria-label set', (await pp.inputValue('#plnProto')) === '0' && (await pp.textContent('#plnProto option:checked')) === "Don't use" && (await pp.getAttribute('#plnProto', 'aria-label')) === 'Protomatter use');
+  const boxKeys = () => pp.evaluate(() => [...document.querySelectorAll('#plnOut .plnBox')].map(b => b.dataset.item + (b.classList.contains('raw') ? ':raw' : '')));
+  await pp.selectOption('#plnItem', 'ITEM_EnrichedNickelOre');
+  await pp.fill('#plnRate', '10');
+  const kOff = await boxKeys();
+  chk('(PR5) off: NickelOre is a raw box, no Protomatter box', kOff.includes('ITEM_NickelOre:raw') && !kOff.some(k => k.startsWith('ITEM_Protomatter')), kOff.join(', '));
+  chk('(PR5) off: item list has no Protomatter / NickelOre', (await pp.locator('#plnItem option[value="ITEM_Protomatter"]').count()) === 0 && (await pp.locator('#plnItem option[value="ITEM_NickelOre"]').count()) === 0);
+  await pp.selectOption('#plnProto', '1');
+  const kOn = await boxKeys();
+  chk('(PR6) on: NickelOre crafted, Protomatter box appears', kOn.includes('ITEM_NickelOre') && kOn.includes('ITEM_Protomatter'), kOn.join(', '));
+  chk('(PR6) on: Protomatter box shows RelicSynthesizer', (await pp.textContent('.plnBox[data-item="ITEM_Protomatter"]')).includes('RelicSynthesizer'));
+  chk('(PR6) on: item list has Protomatter', (await pp.locator('#plnItem option[value="ITEM_Protomatter"]').count()) === 1);
+  await pp.fill('#plnRate', '20');
+  chk('(PR7) rate change keeps Use, re-plans to 30/min', (await pp.inputValue('#plnProto')) === '1' && (await pp.textContent('.plnBox[data-item="ITEM_Protomatter"] .sub')).includes('30/min'), await pp.textContent('.plnBox[data-item="ITEM_Protomatter"] .sub'));
+  await pp.selectOption('#plnProto', '0');
+  chk('(PR7) back to Don\'t use: Protomatter box gone, NickelOre raw', !(await boxKeys()).some(k => k.startsWith('ITEM_Protomatter')) && (await boxKeys()).includes('ITEM_NickelOre:raw'));
   await pp.selectOption('#plnItem', 'ITEM_CobaltPlates');
   chk('(P-h) planner: no pageerror / console.error', errs.length === 0, errs.join('\n     '));
   await ctxP.close();

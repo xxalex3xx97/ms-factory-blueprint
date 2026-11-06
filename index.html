@@ -205,6 +205,7 @@ dialog h3{margin:0 0 8px}
       <div id="plnForm">
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
       <label>Rate (items/min) <input id="plnRate" type="number" min="0" value="0" aria-label="Target rate in items per minute"></label>
+      <label>Protomatter <select id="plnProto" aria-label="Protomatter use"><option value="0" selected>Don't use</option><option value="1">Use</option></select></label>
       <label>Belt <select id="plnMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
       <label>Splitter <select id="plnSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
       <label>Balancer <select id="plnBal" aria-label="Balancer tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
@@ -1284,14 +1285,17 @@ function rateHtml(b){
 }
 // Planner (Stage 2): plan() is pure (no DOM). byOut rebuilt per call so injected recipes count (tests).
 const plnR2=v=>Math.round(v*100)/100,plnNm=id=>(ITEMS[id]||{}).n||String(id).replace(/^ITEM_/,"");
-const plnBy=()=>{const m=new Map();Object.keys(RECS).forEach(c=>RECS[c].forEach(r=>{const k=r.o[0],l=m.get(k)||[],key=rk(r);if(!l.some(x=>rk(x.r)===key)){l.push({c,r});m.set(k,l)}}));return m};
+// proto off drops the Protomatter chain: RelicSynthesizer recipes and any recipe that consumes Protomatter (Enrichment ores).
+const PLN_PROTO_CR="CRAFT_RelicSynthesizer",PLN_PROTO_IT="ITEM_Protomatter";
+const plnBy=proto=>{const m=new Map();Object.keys(RECS).forEach(c=>RECS[c].forEach(r=>{if(!proto&&(c===PLN_PROTO_CR||r.i.some(([x])=>x===PLN_PROTO_IT)))return;const k=r.o[0],l=m.get(k)||[],key=rk(r);if(!l.some(x=>rk(x.r)===key)){l.push({c,r});m.set(k,l)}}));return m};
 const plnCb=c=>CATALOG.buildables.find(b=>(b.crafters||[]).includes(c));
 const plnCname=c=>{const b=plnCb(c);return b?lab(def(b.id)):c};
 const plnCico=c=>{const b=plnCb(c),d=b&&def(b.id),u=d&&iurl(d.icon);return u?`<img class="ic plnCic" alt="" title="${esc(lab(d))}" src="${u}">`:""};
 // mk: 0..2 index into MKS (belt). ovr={sp,bal}: splitter/balancer Mk index or null (follow belt). pick={item:recipeKey}.
-function plan(item,rate,mk,ovr,pick){
-  ovr=ovr||{};pick=pick||{};
-  const by=plnBy(),nodes={},edges=[],st={cycle:false},cap=i=>MKS[i][1];
+// opts.proto (default false): false ignores the Protomatter chain (see plnBy).
+function plan(item,rate,mk,ovr,pick,opts){
+  ovr=ovr||{};pick=pick||{};opts=opts||{};
+  const by=plnBy(!!opts.proto),nodes={},edges=[],st={cycle:false},cap=i=>MKS[i][1];
   const find=it=>{const l=by.get(it)||[];return l.find(x=>rk(x.r)===pick[it])||l[0]||null};
   const ex=(it,rt,stack)=>{
     if(stack.has(it)){st.cycle=true;return}
@@ -1324,8 +1328,8 @@ function plan(item,rate,mk,ovr,pick){
 function plnDraw(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0;
   if(!it||!(rate>0)){$("plnOut").innerHTML='<div class="sub">Pick a craftable item and a rate above 0.</div>';return}
-  const BY=plnBy(),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
-  const P=plan(it,rate,mk,{sp:sp===""?null:+sp,bal:bal===""?null:+bal},PLN_PICK);
+  const pr=plnProto(),BY=plnBy(pr),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
+  const P=plan(it,rate,mk,{sp:sp===""?null:+sp,bal:bal===""?null:+bal},PLN_PICK,{proto:pr});
   const col={[it]:0};   // depth from target (target = rightmost column)
   for(let k=0;k<=Object.keys(P.nodes).length;k++)P.edges.forEach(e=>{if(e.to!=null)col[e.from]=Math.max(col[e.from]||0,(col[e.to]||0)+1)});
   const ns=Object.values(P.nodes),rw=ns.filter(n=>!n.rec).length,D0=Math.max(0,...ns.filter(n=>n.rec).map(n=>col[n.item]||0));
@@ -1393,11 +1397,15 @@ $("plnOut").addEventListener("pointermove",ev=>{
 const plnUp=ev=>{if(PLN_DRAG&&ev.pointerId===PLN_DRAG.id){PLN_DRAG.b.classList.remove("plnDrag");PLN_DRAG=null}};
 $("plnOut").addEventListener("pointerup",plnUp);$("plnOut").addEventListener("pointercancel",plnUp);
 $("plnGx").onclick=()=>{PLN_EX=!PLN_EX;$("plnGx").setAttribute("aria-pressed",PLN_EX);$("plnGx").textContent=PLN_EX?"Expanded":"Grouped";plnDraw()};
-$("plnItem").innerHTML='<option value="">(none)</option>'+[...plnBy().keys()].sort((a,b)=>plnNm(a).localeCompare(plnNm(b))).map(k=>`<option value="${esc(k)}">${esc(plnNm(k))}</option>`).join("");
+const plnProto=()=>$("plnProto").value==="1";
+// craftable items for the current Protomatter setting; keeps the selection if it is still craftable
+const plnFillItems=()=>{const cur=$("plnItem").value;$("plnItem").innerHTML='<option value="">(none)</option>'+[...plnBy(plnProto()).keys()].sort((a,b)=>plnNm(a).localeCompare(plnNm(b))).map(k=>`<option value="${esc(k)}">${esc(plnNm(k))}</option>`).join("");if([...$("plnItem").options].some(o=>o.value===cur))$("plnItem").value=cur};
+plnFillItems();
 $("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribute("aria-pressed",!d.hidden);plnDraw()};
 $("plnX").onclick=()=>{$("pln").hidden=true;$("plnB").setAttribute("aria-pressed",false);$("plnB").focus()};
 $("plnC").onclick=()=>{const c=$("pln").classList.toggle("col");$("plnC").setAttribute("aria-expanded",!c);$("plnC").title=c?"Expand":"Collapse to title bar"};
 $("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDraw()};
+$("plnProto").onchange=()=>{plnFillItems();plnDraw()};   // PLN_OFF kept: drag offsets survive
 $("plnRate").oninput=$("plnMk").onchange=$("plnSp").onchange=$("plnBal").onchange=plnDraw;
 $("plnOut").onchange=ev=>{const t=ev.target;if(t.classList.contains("plnAlt")){PLN_PICK[t.dataset.item]=t.value;plnDraw()}};
 const sgn=v=>(v>0?"+":"")+v,
