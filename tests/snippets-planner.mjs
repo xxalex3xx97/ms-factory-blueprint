@@ -176,6 +176,111 @@ try {
   const namesG = await pg.evaluate(() => __fb.SN.map(s => s.n));
   chk('(g) delete removes the snippet', isDeepStrictEqual(namesG, ['B (2)', 'C']), JSON.stringify(namesG));
 
+  // ---- (p) planner logic: plan() on the real catalog. Recipe facts used (catalog):
+  //   CobaltPlates default: CobaltOre x1 -> Plates x1, 90 ticks (3 s)  => 1*1800/90 = 20 plates/min per Refinery
+  //   CobaltPlates alt K2:  EnrichedCobaltOre x1 -> Plates x3, 180 ticks => 3*1800/180 = 30 plates/min per Refinery
+  //   EnrichedCobaltOre:    CobaltOre x3 -> Enriched x2, 90 ticks        => 2*1800/90 = 40 enriched/min per Enrichment
+  //   Belts: Mk1 60, Mk2 120, Mk3 180 items/min.
+  const K2 = 'ITEM_EnrichedCobaltOre>ITEM_CobaltPlates';
+  const PL = (rate, mk, ovr = {}, pick = {}, item = 'ITEM_CobaltPlates') => pg.evaluate(a => __fb.plan(...a), [item, rate, mk, ovr, pick]);
+  const EDGE = (r, from, to) => r.edges.find(e => e.from === from && e.to === to);
+  const near = (a, b) => a != null && Math.abs(a - b) < 1e-6;
+
+  // (p1) hand case: 100 plates/min. machines = ceil(100/20) = 5; util = 100/(5*20) = 100%; raw CobaltOre = 1*100/1 = 100/min.
+  // edge CobaltOre->Plates 100/min on Mk1: belts = ceil(100/60) = 2; Mk2 (120) carries it on 1 belt; 5 machines -> 2->5 balancer.
+  const h1 = await PL(100, 0);
+  const plates1 = h1.nodes.ITEM_CobaltPlates;
+  chk('(p1) plates: 5 machines, 100% util, rate 100', plates1.machines === 5 && near(plates1.util, 1) && near(plates1.rate, 100), JSON.stringify(plates1));
+  chk('(p1) raw = CobaltOre 100/min only', h1.raw.length === 1 && h1.raw[0].item === 'ITEM_CobaltOre' && near(h1.raw[0].rate, 100), JSON.stringify(h1.raw));
+  const e1 = EDGE(h1, 'ITEM_CobaltOre', 'ITEM_CobaltPlates');
+  chk('(p1) edge 100/min, 2 belts Mk1, Mk2 fits', near(e1.flow, 100) && e1.belts === 2 && e1.fits === 1 && e1.label === '100 items/min, 2 belts (Mk1)' && /^needs 2 belts; Mk2 carries it on 1 belt$/.test(e1.note), JSON.stringify(e1));
+  chk('(p1) 2 belts into 5 machines = 2->5 balancer', e1.split === '2->5 balancer', e1.split);
+  chk('(p1) output edge to null, 100/min', near(EDGE(h1, 'ITEM_CobaltPlates', null).flow, 100), JSON.stringify(EDGE(h1, 'ITEM_CobaltPlates', null)));
+  chk('(p1) no cycle flagged', h1.cycle === false);
+
+  // (p2) 60/min: machines 3; CobaltOre 60 on 1 Mk1 belt -> 1 belt, 1 feeding 3 machines = 1->3 splitter x ceil(2/2) = 1
+  const h2 = await PL(60, 0);
+  const e2 = EDGE(h2, 'ITEM_CobaltOre', 'ITEM_CobaltPlates');
+  chk('(p2) 60/min: 3 machines, 1 belt, 1->3 splitter x1, no note', h2.nodes.ITEM_CobaltPlates.machines === 3 && e2.belts === 1 && e2.split === '1->3 splitter x1' && e2.note === '', JSON.stringify(e2));
+
+  // (p3) 1 over: 60.01 -> 2 belts on Mk1
+  const h3 = await PL(60.01, 0);
+  const e3 = EDGE(h3, 'ITEM_CobaltOre', 'ITEM_CobaltPlates');
+  chk('(p3) 60.01 on Mk1 = 2 belts', e3.belts === 2 && e3.label === '60.01 items/min, 2 belts (Mk1)', JSON.stringify(e3));
+  chk('(p3) 60.01: util = 60.01/(4*20)', near(h3.nodes.ITEM_CobaltPlates.util, 60.01 / 80), String(h3.nodes.ITEM_CobaltPlates.util));
+
+  // (p4) Mk switching: CobaltOre 120 -> belts 2,1,1 on Mk1..3 ; 180 -> 3,2,1
+  const b120 = await Promise.all([0, 1, 2].map(m => PL(120, m)));
+  const b180 = await Promise.all([0, 1, 2].map(m => PL(180, m)));
+  const belts = rs => rs.map(r => EDGE(r, 'ITEM_CobaltOre', 'ITEM_CobaltPlates').belts);
+  chk('(p4) 120/min belts Mk1,Mk2,Mk3 = 2,1,1', isDeepStrictEqual(belts(b120), [2, 1, 1]), JSON.stringify(belts(b120)));
+  chk('(p4) 180/min belts Mk1,Mk2,Mk3 = 3,2,1', isDeepStrictEqual(belts(b180), [3, 2, 1]), JSON.stringify(belts(b180)));
+
+  // (p5) exactly 180 on Mk3 = 1 belt, fits Mk3; 180.01 = 2 belts, no single belt
+  const h5 = await PL(180, 2);
+  const e5 = EDGE(h5, 'ITEM_CobaltOre', 'ITEM_CobaltPlates');
+  chk('(p5) exactly 180 on Mk3 = 1 belt, fits Mk3', e5.belts === 1 && e5.fits === 2 && e5.note === '', JSON.stringify(e5));
+  const h5b = await PL(180.01, 2);
+  const e5b = EDGE(h5b, 'ITEM_CobaltOre', 'ITEM_CobaltPlates');
+  chk('(p5) 180.01 on Mk3 = 2 belts, no single belt', e5b.belts === 2 && e5b.fits === null && e5b.note.includes('no single belt'), JSON.stringify(e5b));
+
+  // (p6) ovr: splitter/balancer Mk independent of belt Mk.
+  // 120/min on Mk3: 1 belt, 6 machines -> 1->3 splitter x3 (ceil(5/2)). Splitter Mk1 (60) < lane 120 -> warn; Mk3 -> no warn.
+  const s0 = await PL(120, 2, {sp: 0, bal: null});
+  const s2 = await PL(120, 2, {sp: 2, bal: null});
+  const sMk0 = await PL(120, 0, {sp: 2, bal: null});
+  const es0 = EDGE(s0, 'ITEM_CobaltOre', 'ITEM_CobaltPlates'), es2 = EDGE(s2, 'ITEM_CobaltOre', 'ITEM_CobaltPlates');
+  chk('(p6) splitter 1->3 x3 on 1 belt', es2.split === '1->3 splitter x3' && es2.belts === 1, JSON.stringify(es2));
+  chk('(p6) splitter Mk1 override warns, belts unchanged', !!es0.warn && es0.belts === 1, JSON.stringify(es0));
+  chk('(p6) splitter Mk3 override no warn', es2.warn === '', JSON.stringify(es2));
+  chk('(p6) splitter override does not change belt count (Mk1 belt, sp Mk3)', EDGE(sMk0, 'ITEM_CobaltOre', 'ITEM_CobaltPlates').belts === 2, JSON.stringify(EDGE(sMk0, 'ITEM_CobaltOre', 'ITEM_CobaltPlates')));
+  // balancer: 240/min on Mk3 -> 2 belts, lane 120; balancer Mk1 (60) warns, Mk3 (180) and follow (Mk3) don't
+  const bl0 = await PL(240, 2, {sp: null, bal: 0});
+  const bl2 = await PL(240, 2, {sp: null, bal: 2});
+  const blF = await PL(240, 2, {sp: null, bal: null});
+  const eb0 = EDGE(bl0, 'ITEM_CobaltOre', 'ITEM_CobaltPlates'), eb2 = EDGE(bl2, 'ITEM_CobaltOre', 'ITEM_CobaltPlates'), ebF = EDGE(blF, 'ITEM_CobaltOre', 'ITEM_CobaltPlates');
+  chk('(p6) 240/min: 2 belts, 2->12 balancer, no single belt', eb2.belts === 2 && eb2.split === '2->12 balancer' && eb2.fits === null && eb2.note.includes('no single belt'), JSON.stringify(eb2));
+  chk('(p6) balancer Mk1 override warns, Mk3 and follow do not', !!eb0.warn && eb2.warn === '' && ebF.warn === '', `${eb0.warn} | ${eb2.warn} | ${ebF.warn}`);
+
+  // (p7) one machine -> no split. 20/min = 1 Refinery.
+  const h7 = await PL(20, 0);
+  const e7 = EDGE(h7, 'ITEM_CobaltOre', 'ITEM_CobaltPlates');
+  chk('(p7) 1 machine: no splitter/balancer text', h7.nodes.ITEM_CobaltPlates.machines === 1 && e7.split === '' && e7.belts === 1, JSON.stringify(e7));
+
+  // (p8) 5 machines on 1 belt (100/min, Mk3) -> 1->3 splitter x2 (ceil(4/2))
+  const h8 = await PL(100, 2);
+  chk('(p8) 5 machines on 1 belt = 1->3 splitter x2', EDGE(h8, 'ITEM_CobaltOre', 'ITEM_CobaltPlates').split === '1->3 splitter x2', JSON.stringify(EDGE(h8, 'ITEM_CobaltOre', 'ITEM_CobaltPlates')));
+
+  // (p9) alt recipe changes the result. Plates via K2: 100/30 -> 4 machines, util 100/120 = 83.33%;
+  //   Enriched in = 1*100/3 = 33.33/min -> 1 Enrichment (40/min), util 33.33/40 = 83.33%; CobaltOre in = 33.33*3/2 = 50/min.
+  //   edge Enriched->Plates 33.33 on Mk1: 1 belt, 4 machines -> 1->3 splitter x2.
+  const h9 = await PL(100, 0, {}, {ITEM_CobaltPlates: K2});
+  const p9 = h9.nodes.ITEM_CobaltPlates, en9 = h9.nodes.ITEM_EnrichedCobaltOre;
+  chk('(p9) alt: 4 machines, util 83.33%', p9.machines === 4 && near(p9.util, 100 / 120), JSON.stringify(p9));
+  chk('(p9) alt: Enriched 1 machine, rate 33.33, util 83.33%', en9.machines === 1 && near(en9.rate, 100 / 3) && near(en9.util, (100 / 3) / 40), JSON.stringify(en9));
+  chk('(p9) alt: raw CobaltOre 50/min (not 100)', h9.raw.length === 1 && near(h9.raw[0].rate, 50), JSON.stringify(h9.raw));
+  const e9 = EDGE(h9, 'ITEM_EnrichedCobaltOre', 'ITEM_CobaltPlates');
+  chk('(p9) alt edge: 1 belt, 1->3 splitter x2', near(e9.flow, 100 / 3) && e9.belts === 1 && e9.split === '1->3 splitter x2', JSON.stringify(e9));
+
+  // (p10) self-loop recipe: cycle flagged, returns (no hang). Synthetic recipe injected then removed.
+  await pg.evaluate(() => { CATALOG.recipes.CRAFT_CycleTest = [{o: ['ITEM_CycleTest', 1], i: [['ITEM_CycleTest', 1]], t: 30}]; });
+  const cyc = await PL(10, 0, {}, {}, 'ITEM_CycleTest');
+  await pg.evaluate(() => { delete CATALOG.recipes.CRAFT_CycleTest; });
+  chk('(p10) self-loop: cycle flagged, no hang', cyc.cycle === true, JSON.stringify(cyc.cycle));
+
+  // (p11) UI smoke: button opens panel, item + rate fill #plnOut, alt dropdown re-plans
+  await pg.evaluate(() => document.getElementById('plnB').click());
+  chk('(p11) Planner button opens #pln', await pg.evaluate(() => !document.getElementById('pln').hidden));
+  chk('(p11) hint shown before choosing an item', /Pick a craftable/.test(await pg.textContent('#plnOut')));
+  await pg.selectOption('#plnItem', 'ITEM_CobaltPlates');
+  await pg.fill('#plnRate', '100');
+  const out11 = await pg.textContent('#plnOut');
+  chk('(p11) #plnOut shows 5 x Refinery and raw', /5 x Refinery/.test(out11) && /raw/.test(out11), out11.slice(0, 200));
+  chk('(p11) alt dropdown for plates rendered', (await pg.locator('#plnOut select.plnAlt[data-item="ITEM_CobaltPlates"]').count()) === 1);
+  await pg.selectOption('#plnOut select.plnAlt[data-item="ITEM_CobaltPlates"]', K2);
+  const out11b = await pg.textContent('#plnOut');
+  chk('(p11) choosing alt re-plans (4 x Refinery)', /4 x Refinery/.test(out11b) && !/5 x Refinery/.test(out11b), out11b.slice(0, 200));
+
   await ctx.close();
 } finally {
   await br.close();
