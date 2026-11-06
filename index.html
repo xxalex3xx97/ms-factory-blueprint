@@ -1059,10 +1059,21 @@ function rotate(){
 $("rot").onclick=rotate;$("undo").onclick=undo;$("redo").onclick=redo;
 function del(){if(!sel.size)return;push();S.blocks=S.blocks.filter(b=>!sel.has(b.id));sel=new Set();all()}
 function copy(){if(!sel.size)return;clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b}));if(clip.length){toast(clip.length+" copied");paste()}}
+// horizontal mirror of a machine: pick the rotation whose port layout is the mirror image (same face/pos/direction), remap disabled ports; null = cannot mirror
+function mirM(b){
+  const d=def(b.cls);if(!d||!d.portsLayout||d.elevator)return null;
+  const T=(rot,off)=>({...b,x:0,y:0,rot,off:off||[]}),dm=dim(b),P0=portsOf(T(b.rot&3));
+  for(const r2 of [b.rot&3,(b.rot+2)&3]){
+    const P=portsOf(T(r2)),map=new Map();
+    for(const p of P0){const j=P.find(q=>q.x===dm.w-1-p.x&&q.y===p.y&&q.nx===-p.nx&&q.ny===p.ny&&q.dir===p.dir);if(!j)break;map.set(p.key,j.key)}
+    if(map.size===P0.length)return{rot:r2,off:(b.off||[]).map(k=>map.get(k)||k)};
+  }
+  return null;
+}
 function clipT(n,fl){   // clip mirrored (fl) then rotated n x 90deg clockwise, origin at 0,0
   let l=clip.map(b=>({...b}));
   if(fl){const mx=Math.min(...l.map(b=>b.x)),W=Math.max(...l.map(b=>b.x-mx+dim(b).w));
-    l=l.map(b=>({...b,x:mx+W-(b.x-mx)-dim(b).w,rot:b.rot===0?2:b.rot===2?0:b.rot}))}
+    l=l.map(b=>{const m=mirM(b);return{...b,x:mx+W-(b.x-mx)-dim(b).w,...(m||((def(b.cls)||{}).portsLayout?{}:{rot:b.rot===0?2:b.rot===2?0:b.rot}))}})}
   for(let k=0;k<n;k++){
     const mx=Math.min(...l.map(b=>b.x)),my=Math.min(...l.map(b=>b.y)),H=Math.max(...l.map(b=>b.y-my+dim(b).h));
     l=l.map(b=>{const d=dim(b);return{...b,x:H-(b.y-my)-d.h,y:b.x-mx,rot:((b.rot||0)+1)&3}});
@@ -1611,7 +1622,7 @@ $("help").onclick=()=>{
   $("dHelp").showModal();$("dHelp").scrollTop=0;
 };
 $("helpX").onclick=()=>$("dHelp").close();
-window.__fb={dim,outside,btip,rk,bnCol,bnU,bnK,simLive,paint,storeInfo,supplyRows,supplySt,isStore,px:(x,y)=>{const r=cv.getBoundingClientRect();return[r.left+V.ox+(x+.5)*sc(),r.top+V.oy+(y+.5)*sc()]},flowLoad,beltMax,recOf,recsOf,pm,beltRateHtml,rateHtml,portsOf,def,ugWarn,areas,links:()=>links(layer),simInit,simReset,simProd,simStep,simRun,simAdvance,simState,simSig,simView,SIM_NOTES,asvNow,get SPD(){return SPD},get SM(){return SM},get sel(){return sel},get view(){return view},get tab(){return tab},get BN(){return BN},get BM(){return BM},get V(){return V},get VF(){return VF},SIM_DT,SIM_WIN,SIM_MAXSTEPS,get SIM(){return SIM},importJson,build,setView,fit,get S(){return S},get layer(){return layer},click:(x,y)=>{const r=cv.getBoundingClientRect(),o={clientX:r.left+V.ox+(x+.5)*sc(),clientY:r.top+V.oy+(y+.5)*sc(),button:0,pointerId:1,bubbles:true};cv.dispatchEvent(new PointerEvent("pointerdown",o));cv.dispatchEvent(new PointerEvent("pointerup",o))}};
+window.__fb={mirM,dim,outside,btip,rk,bnCol,bnU,bnK,simLive,paint,storeInfo,supplyRows,supplySt,isStore,px:(x,y)=>{const r=cv.getBoundingClientRect();return[r.left+V.ox+(x+.5)*sc(),r.top+V.oy+(y+.5)*sc()]},flowLoad,beltMax,recOf,recsOf,pm,beltRateHtml,rateHtml,portsOf,def,ugWarn,areas,links:()=>links(layer),simInit,simReset,simProd,simStep,simRun,simAdvance,simState,simSig,simView,SIM_NOTES,asvNow,get SPD(){return SPD},get SM(){return SM},get sel(){return sel},get view(){return view},get tab(){return tab},get BN(){return BN},get BM(){return BM},get V(){return V},get VF(){return VF},SIM_DT,SIM_WIN,SIM_MAXSTEPS,get SIM(){return SIM},importJson,build,setView,fit,get S(){return S},get layer(){return layer},click:(x,y)=>{const r=cv.getBoundingClientRect(),o={clientX:r.left+V.ox+(x+.5)*sc(),clientY:r.top+V.oy+(y+.5)*sc(),button:0,pointerId:1,bubbles:true};cv.dispatchEvent(new PointerEvent("pointerdown",o));cv.dispatchEvent(new PointerEvent("pointerup",o))}};
 asRestore();ASO=true;all();
 })();
 </script>
