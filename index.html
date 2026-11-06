@@ -344,10 +344,10 @@ function areas(L){
         r.cuts[ed].push([t0,t0+DOORW]);
         const nf=own.get((ed===0?b.x+d.w:ed===2?b.x-1:b.x+k)+","+(ed===1?b.y+d.h:ed===3?b.y-1:b.y+k));
         if(nf&&nf!==f&&ed>1)continue;   // the E/S side owns a shared door
-        const p=nf&&nf!==f;
-        if(p)gaps.push(v?{x:ex,y:r.y+FC*k,w:DW,h:FC}:{x:r.x+FC*k,y:ey,w:FC,h:DW});
+        const p=nf&&nf!==f,sp=p?(ed===0?nf.r.x-ex:nf.r.y-ey):DW;   // paired door spans the whole gap to the neighbour's floor (walls + gap)
+        if(p)gaps.push(v?{x:ex,y:r.y+FC*k,w:sp,h:FC}:{x:r.x+FC*k,y:ey,w:FC,h:sp});
         const key=`${L}|${b.x}|${b.y}|${EN[ed]}|${k}`;
-        doors.push({key,open:!S.closed.includes(key),paired:!!p,ver:dv(b)&&(!p||dv(nf.b)),ed,bx:b.x,by:b.y,k,x:ex,y:ey,w:v?DW:DOORW,h:v?DOORW:DW,
+        doors.push({key,open:!S.closed.includes(key),paired:!!p,ver:dv(b)&&(!p||dv(nf.b)),ed,bx:b.x,by:b.y,k,x:ex,y:ey,w:v?sp:DOORW,h:v?DOORW:sp,
           lg:p?(ed===0?`${L}|${b.x+d.w}|${Math.max(b.y,nf.b.y)}|V`:`${L}|${Math.max(b.x,nf.b.x)}|${b.y+d.h}|H`):null});
       }
     }
