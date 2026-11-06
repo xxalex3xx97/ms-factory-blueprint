@@ -100,12 +100,11 @@ kbd{font-family:var(--mono);font-size:11px;background:var(--panel2);border:1px s
 #prScroll{overflow:auto;overflow-x:hidden;padding:0 12px 12px;min-height:0}#dProd h4{margin:12px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim)}
 #prCv{position:static;display:block;width:100%;max-width:100%;margin-top:4px}#prLeg .sw{display:inline-block;width:10px;height:10px;border-radius:2px}#prLeg .ic,.prr .ic{width:16px;height:16px;vertical-align:middle;margin-right:4px}
 .prr{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 54px;gap:8px;align-items:center;margin:3px 0;font-size:12px}.prr.t2{grid-template-columns:minmax(0,1fr) 54px 64px}.prr.t1{grid-template-columns:minmax(0,1fr) 64px}.prr>b{text-align:right;font-family:var(--mono);font-weight:600}.prr .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.prr .bar{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden}.prr .bar i{display:block;height:100%;border-radius:4px}.prr.hd{color:var(--dim);font-size:10px;text-transform:uppercase;letter-spacing:.08em}.prr.hd>span:not(:first-child){text-align:right}
-#pln{position:absolute;top:10px;left:10px;z-index:6;display:flex;flex-direction:column;width:calc(100% - 20px);max-height:calc(100% - 20px);background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px oklch(0.1 0.01 250 / .5)}#pln[hidden]{display:none}#pln.col{width:auto;max-width:calc(100% - 20px)}#pln.col #plnBody{display:none}
+#pln{position:absolute;top:10px;left:10px;z-index:6;display:flex;flex-direction:column;width:calc(100% - 20px);height:calc(100% - 20px);background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 24px oklch(0.1 0.01 250 / .5)}#pln[hidden]{display:none}#pln.col{width:auto;height:auto;max-width:calc(100% - 20px)}#pln.col #plnBody{display:none}
 #plnHd{display:flex;align-items:center;gap:6px;padding:6px 6px 6px 12px}#plnHd h3{margin:0;flex:1;font-size:13px}#plnHd button{min-width:30px;padding:2px 6px;line-height:1}#pln.col #plnHd h3{flex:none;margin-right:6px}#pln.col #plnC{transform:rotate(180deg)}
-#pln:fullscreen{inset:0;top:0;left:0;width:100%;height:100%;max-height:none;border-radius:0;border:0}#pln:fullscreen #plnBody{flex:1}#pln:fullscreen #plnOut{flex:1}
-#plnBody{display:flex;flex-direction:column;min-height:0;padding:0 12px 12px}
+#plnBody{display:flex;flex:1;flex-direction:column;min-height:0;padding:0 12px 12px}
 #plnForm{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px 10px;padding-bottom:10px;border-bottom:1px solid var(--line)}#plnForm label{display:flex;flex-direction:column;gap:3px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}#plnForm select,#plnForm input{text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
-#plnOut{overflow:auto;min-height:0;margin-top:10px}#plnOut>.sub{padding:18px 4px;margin:0;text-align:center}
+#plnOut{overflow:auto;flex:1;min-height:0;margin-top:10px}#plnOut>.sub{padding:18px 4px;margin:0;text-align:center}
 .plnGrid{position:relative;display:flex;align-items:center;gap:190px;width:max-content;padding:6px 150px 6px 4px}.plnCol{display:flex;flex-direction:column;gap:14px;position:relative;z-index:1}
 .plnBox{width:190px;padding:8px 10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px}.plnBox.raw{background:transparent;border:1px dashed var(--dim)}.plnBox .it{display:flex;align-items:center;gap:6px;font-weight:600}.plnBox .it .ic{width:22px;height:22px;flex:none}.plnBox .sub{margin:4px 0 0;font-family:var(--mono);font-size:11px}.plnBox.raw .it{color:var(--dim)}.plnBox .plnAlt{margin-top:6px;min-height:26px;padding:2px 6px;font-size:11px;text-overflow:ellipsis}
 .plnSvg{position:absolute;left:0;top:0;z-index:0;pointer-events:none;overflow:visible}.plnArr{fill:none;stroke:var(--dim);stroke-width:1.6}.plnArr.warn{stroke:var(--warn);stroke-width:2.2}.plnArr.bad{stroke:var(--bad);stroke-width:2.2;stroke-dasharray:6 4}.plnHead{fill:var(--dim)}.plnHead.warn{fill:var(--warn)}.plnHead.bad{fill:var(--bad)}
@@ -201,7 +200,7 @@ dialog h3{margin:0 0 8px}
       </div>
     </div>
     <div id="pln" role="region" aria-labelledby="plnT" hidden>
-      <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnF" aria-label="Full screen" title="Full screen (Esc to exit)">&#x26F6;</button><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
+      <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
       <div id="plnBody">
       <div id="plnForm">
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
@@ -1408,7 +1407,6 @@ $("plnOut").addEventListener("wheel",ev=>{
     px=ev.clientX-q.left,py=ev.clientY-q.top,k=z/PLN_Z,ax=o.scrollLeft+px,ay=o.scrollTop+py;
   PLN_Z=z;plnArrows(PLN_E);o.scrollLeft=ax*k-px;o.scrollTop=ay*k-py;
 },{passive:false});
-$("plnF").onclick=()=>{try{document.fullscreenElement?document.exitFullscreen():$("pln").requestFullscreen()}catch(e){}};
 $("plnOut").addEventListener("dblclick",ev=>{if(ev.target.closest(".plnGrid")&&!ev.target.closest(".plnBox")){PLN_Z=1;plnArrows(PLN_E)}});
 $("plnGx").onclick=()=>{PLN_EX=!PLN_EX;$("plnGx").setAttribute("aria-pressed",PLN_EX);$("plnGx").textContent=PLN_EX?"Expanded":"Grouped";plnDraw()};
 const plnProto=()=>$("plnProto").value==="1";
