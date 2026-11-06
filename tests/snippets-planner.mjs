@@ -39,8 +39,12 @@ function wire(pg, tag) {
   const reveal = async sel => {
     const m = await pg.evaluate(s => {
       const el = document.querySelector(s), shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
-      const list = el?.closest('.mnl');
-      if (!el || !list) return null;
+      if (!el) return null;
+      // floating windows (Simulation #smW, Flow #fwW, top right): open with the header toggle when closed
+      const win = el.closest('#smW') ? 'smW' : el.closest('#fwW') ? 'fwW' : null;
+      if (win) return document.getElementById(win).hidden ? {btn: win === 'smW' ? '#simB' : '#flwB', list: '#' + win} : null;
+      const list = el.closest('.mnl');
+      if (!list) return null;
       const r = el.getBoundingClientRect(), offscreen = shown(el) && (r.left < 0 || r.right > innerWidth);
       if (shown(el) && !offscreen) return null;
       const btn = list.parentElement.firstElementChild;
@@ -534,19 +538,15 @@ try {
   chk('(UI3) #dockT collapses the dock', (await pq.evaluate(() => document.getElementById('dock').classList.contains('col'))) && (await pq.getAttribute('#dockT', 'aria-expanded')) === 'false');
   await pq.click('#dockT');
   chk('(UI3) #dockT re-expands the dock', (await pq.evaluate(() => !document.getElementById('dock').classList.contains('col'))) && (await pq.getAttribute('#dockT', 'aria-expanded')) === 'true');
-  chk('(UI3) #dtS hidden while simulation is off', !(await pq.isVisible('#dtS')) && await pq.isVisible('#insp'));
+  chk('(UI3) no dock tabs: #dockTabs/#dtI/#dtS absent (cards, Round 5)', (await pq.locator('#dockTabs, #dtI, #dtS').count()) === 0);
+  chk('(UI3) #prodB hidden while simulation is off, #dProd hidden', !(await pq.isVisible('#prodB')) && !(await pq.isVisible('#dProd')) && await pq.isVisible('#insp'));
   await pq.click('#sm');
-  chk('(UI3) #dtS visible once simulation is on in floor view', await pq.isVisible('#dtS'));
-  chk('(UI3) Info tab selected by default: #insp shown, #dProd hidden', await pq.isVisible('#insp') && !(await pq.isVisible('#dProd')));
-  await pq.click('#dtS');
-  chk('(UI3) Simulation tab shows #dProd, hides #insp', (await pq.isVisible('#dProd')) && !(await pq.isVisible('#insp')) && (await pq.getAttribute('#dtS', 'aria-selected')) === 'true');
-  await pq.focus('#dtS'); await pq.keyboard.press('ArrowLeft');
-  chk('(UI3) ArrowLeft on Simulation tab selects Info', (await pq.isVisible('#insp')) && !(await pq.isVisible('#dProd')) && (await pq.getAttribute('#dtI', 'aria-selected')) === 'true');
-  await pq.keyboard.press('ArrowRight');
-  chk('(UI3) ArrowRight on Info tab selects Simulation', (await pq.isVisible('#dProd')) && (await pq.getAttribute('#dtS', 'aria-selected')) === 'true');
-  await pq.click('#dtI');
+  chk('(UI3) simulation on: #insp still visible (no tab hides it), #dProd hidden', await pq.isVisible('#insp') && !(await pq.isVisible('#dProd')));
+  await pq.click('#prodB');
+  chk('(UI3) Production card #dProd shows next to #insp (cards, not tabs)', (await pq.isVisible('#dProd')) && (await pq.isVisible('#insp')));
+  await pq.click('#prodB');
   await pq.click('#sm');
-  chk('(UI3) simulation off again hides #dtS and returns to Info', !(await pq.isVisible('#dtS')) && (await pq.isVisible('#insp')));
+  chk('(UI3) simulation off again: #prodB hidden, #insp shown', !(await pq.isVisible('#prodB')) && (await pq.isVisible('#insp')));
   await pq.click('#plnB');
   await pq.selectOption('#plnItem', 'ITEM_CobaltPlates');
   await pq.fill('#plnRate', '120');
@@ -580,6 +580,139 @@ try {
   await pq.selectOption('#plnProto', '0');
   chk('(UI3) planner: no pageerror / console.error', errs.length === 0, errs.join('\n     '));
   await ctxQ.close();
+
+  // ---- (R5) Round 5: 88px header, centred controls, palette/dock labels at top, dock cards, Level popover,
+  //      Simulation + Flow windows (top right, header toggles), #sm/#lk/#bn from Layout switch to Floor
+  const ctxR = await br.newContext({viewport: {width: 1400, height: 900}});
+  const pr = await newPage(ctxR, 'r5');
+  const box = sel => pr.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return {l: r.left, t: r.top, r: r.right, b: r.bottom, h: r.height, cy: r.top + r.height / 2}; }, sel);
+  const vis = sel => pr.isVisible(sel);
+  const winOpen = id => pr.evaluate(i => !document.getElementById(i).hidden, id);
+  const lvTxt = async () => (await pr.textContent('#lvM')).replace(/\s+/g, ' ').trim();
+  const hb = await box('header');
+  chk('(R5) header 80..96px tall at 1400x900', hb.h >= 80 && hb.h <= 96, String(hb.h));
+  const ctr = [];
+  for (const s of ['#name', '#lvM', '#undo', '#fit', '#simB', '#flwB', '#plnB']) ctr.push(s + ' ' + ((await box(s)).cy - hb.cy).toFixed(1));
+  chk('(R5) controls vertically centred on the header (within 4px): #name #lvM #undo #fit #simB #flwB #plnB', ctr.every(x => Math.abs(+x.split(' ')[1]) <= 4), ctr.join(' | '));
+  chk('(R5) #rot, #rotv, #tabs, #simM, #simL, #dockTabs, #dtI, #dtS absent', (await pr.locator('#rot, #rotv, #tabs, #simM, #simL, #dockTabs, #dtI, #dtS').count()) === 0);
+  await pr.evaluate(() => __fb.setView('L'));
+  const palL = await pr.evaluate(() => [...document.querySelectorAll('#palList details[data-c]')].map(d => d.dataset.c));
+  chk('(R5) Layout palette shows blocks (no tab buttons in the palette)', (await pr.evaluate(() => __fb.tab)) === 'b' && palL.length > 0 && palL.every(c => c.startsWith('b:')) && (await pr.locator('#pal [data-tab]').count()) === 0, palL.join(','));
+  await pr.evaluate(() => __fb.setView('F'));
+  const palF = await pr.evaluate(() => [...document.querySelectorAll('#palList details[data-c]')].map(d => d.dataset.c));
+  chk('(R5) Floor palette shows buildables (no tab buttons in the palette)', (await pr.evaluate(() => __fb.tab)) === 'm' && palF.length > 0 && palF.every(c => c.startsWith('m:')), palF.join(','));
+  const topLb = async (btn, panel) => pr.evaluate(([b, p]) => { const l = document.querySelector(b + ' .lb'), pe = document.getElementById(p).getBoundingClientRect(); return {txt: l.textContent, dt: l.getBoundingClientRect().top - pe.top}; }, [btn, panel]);
+  await pr.click('#palT');
+  const pl5 = await topLb('#palT', 'pal');
+  chk('(R5) collapsed palette: "Palette" label at the top (within 60px of #pal top)', pl5.txt === 'Palette' && pl5.dt >= 0 && pl5.dt < 60, JSON.stringify(pl5));
+  await pr.click('#palT');
+  await pr.click('#dockT');
+  const dk5 = await topLb('#dockT', 'dock');
+  chk('(R5) collapsed dock: "Info" label at the top (within 60px of #dock top)', dk5.txt === 'Info' && dk5.dt >= 0 && dk5.dt < 60, JSON.stringify(dk5));
+  await pr.click('#dockT');
+  // dock cards: a selected block shows collapsible cards (summary toggles open)
+  await pr.evaluate(() => __fb.setView('L'));
+  await imp(pr, bp([blk('BPO_Station_01', 0, 0)]));
+  const cp = await pr.evaluate(() => __fb.px(0, 0));
+  await pr.mouse.click(cp[0], cp[1]);
+  const nCards = await pr.locator('#insp details[data-sec]').count();
+  chk('(R5) dock shows cards (details[data-sec]) for a selected block', nCards >= 2, String(nCards));
+  const cardOk = [];
+  for (let i = 0; i < nCards; i++) {
+    const d = pr.locator('#insp details[data-sec]').nth(i), o0 = await d.evaluate(e => e.open);
+    await d.locator(':scope > summary').click();
+    const o1 = await d.evaluate(e => e.open);
+    await d.locator(':scope > summary').click();
+    cardOk.push(o0 !== o1);
+  }
+  chk('(R5) every dock card collapses and expands from its own summary', cardOk.length > 0 && cardOk.every(Boolean), cardOk.join(','));
+  // Level popover (header #lvM): display = internal height + 1
+  chk('(R5) Level popover closed by default, label "Level 1"', !(await vis('#lvL')) && (await pr.getAttribute('#lvM', 'aria-expanded')) === 'false' && (await lvTxt()) === 'Level 1');
+  await pr.click('#lvM');
+  chk('(R5) click Level: popover opens, aria-expanded true', (await vis('#lvL')) && (await pr.getAttribute('#lvM', 'aria-expanded')) === 'true');
+  await pr.keyboard.press('Escape');
+  chk('(R5) Escape closes Level popover', !(await vis('#lvL')));
+  await pr.click('#lvM');
+  await pr.mouse.click(700, 600);
+  chk('(R5) outside click closes Level popover', !(await vis('#lvL')));
+  chk('(R5) #lay shows 1 while internal layer is 0', (await pr.textContent('#lay')) === '1' && (await pr.evaluate(() => __fb.layer)) === 0);
+  await pr.click('#lUp');
+  chk('(R5) Level up: "Level 2", internal layer 1, #lay 2', (await lvTxt()) === 'Level 2' && (await pr.evaluate(() => __fb.layer)) === 1 && (await pr.textContent('#lay')) === '2');
+  await pr.click('#lDn');
+  chk('(R5) Level down: back to "Level 1", internal layer 0', (await lvTxt()) === 'Level 1' && (await pr.evaluate(() => __fb.layer)) === 0);
+  await pr.click('#lvM');
+  await pr.uncheck('#ghost');
+  chk('(R5) ghost layers checkbox lives in the Level popover and toggles', !(await pr.isChecked('#ghost')) && (await vis('#lvL')));
+  await pr.check('#ghost');
+  // typing in the inspector Level field (#fh): 1-based; export stays 0-based (Escape cleared the selection: select again)
+  await pr.mouse.click(cp[0], cp[1]);
+  await pr.evaluate(() => { document.querySelector('details[data-sec="pos"]').open = true; });
+  chk('(R5) inspector Level shows 1 for a ground block', (await pr.inputValue('#fh')) === '1');
+  await pr.fill('#fh', '2'); await pr.locator('#fh').press('Tab');
+  chk('(R5) #fh = 2 gives export Height 1 (0-based, data unchanged)', (await pr.evaluate(() => __fb.build().Blocks[0].Height)) === 1, String(await pr.evaluate(() => __fb.build().Blocks[0].Height)));
+  // the block moved to level 2: switch to level 2 (Level up), select it there, type 1 (back to internal 0)
+  await pr.click('#lUp');
+  await pr.mouse.click(cp[0], cp[1]);
+  await pr.evaluate(() => { document.querySelector('details[data-sec="pos"]').open = true; });
+  chk('(R5) on level 2 the block is selected and #fh shows 2', (await pr.inputValue('#fh')) === '2', await pr.inputValue('#fh').catch(() => 'no #fh'));
+  await pr.fill('#fh', '1'); await pr.locator('#fh').press('Tab');
+  chk('(R5) typing 1 in #fh gives export Height 0', (await pr.evaluate(() => __fb.build().Blocks[0].Height)) === 0);
+  const jx = await pr.evaluate(() => JSON.stringify(__fb.build()));
+  chk('(R5) export JSON is still 0-based (Height 0 present, no +1 shift)', /"Height":0/.test(jx) && !/"Height":1/.test(jx));
+  // Simulation and Flow windows: header toggles, x, both at once, top-right, no overlap
+  for (const v of ['L', 'F']) {
+    await pr.evaluate(x => __fb.setView(x), v);
+    if (await winOpen('smW')) await pr.click('#simB');
+    await pr.click('#simB');
+    const on1 = await winOpen('smW'), p1 = await pr.getAttribute('#simB', 'aria-pressed');
+    await pr.click('#simB');
+    chk(`(R5) ${v}: #simB toggles the Simulation window (aria-pressed)`, on1 && p1 === 'true' && !(await winOpen('smW')) && (await pr.getAttribute('#simB', 'aria-pressed')) === 'false');
+    if (await winOpen('fwW')) await pr.click('#flwB');
+    await pr.click('#flwB');
+    const fon1 = await winOpen('fwW'), fp1 = await pr.getAttribute('#flwB', 'aria-pressed');
+    await pr.click('#flwB');
+    chk(`(R5) ${v}: #flwB toggles the Flow window (aria-pressed)`, fon1 && fp1 === 'true' && !(await winOpen('fwW')) && (await pr.getAttribute('#flwB', 'aria-pressed')) === 'false');
+  }
+  await pr.click('#simB'); await pr.click('#flwB');
+  chk('(R5) Simulation and Flow windows open together', (await winOpen('smW')) && (await winOpen('fwW')));
+  await pr.click('#smWX');
+  chk('(R5) x on Simulation closes it and leaves Flow open', !(await winOpen('smW')) && (await winOpen('fwW')) && (await pr.getAttribute('#simB', 'aria-pressed')) === 'false');
+  await pr.click('#simB');
+  await pr.click('#fwWX');
+  chk('(R5) x on Flow closes it and leaves Simulation open', !(await winOpen('fwW')) && (await winOpen('smW')));
+  await pr.click('#flwB');
+  const sbx = await box('#smW'), fbx = await box('#fwW'), stg = await box('#stage');
+  chk('(R5) windows top right: right edge within 24px of stage right; Simulation top within 24px of stage top (Flow stacks below it)', [sbx, fbx].every(b => Math.abs(b.r - stg.r) <= 24 && b.t >= stg.t) && sbx.t - stg.t <= 24 && fbx.t >= sbx.b, JSON.stringify([sbx.r, fbx.r, stg.r, sbx.t - stg.t, fbx.t - stg.t]));
+  chk('(R5) Simulation and Flow windows do not overlap', sbx.r <= fbx.l || fbx.r <= sbx.l || sbx.b <= fbx.t || fbx.b <= sbx.t, JSON.stringify([sbx, fbx]));
+  // from Layout: #sm switches to Floor and turns Simulate on; #lk / #bn switch to Floor
+  await pr.evaluate(() => __fb.setView('L'));
+  await pr.click('#sm');
+  chk('(R5) #sm from Layout: switches to Floor and turns Simulate on', (await pr.evaluate(() => __fb.view)) === 'F' && (await pr.evaluate(() => __fb.SM)) === true && (await pr.getAttribute('#sm', 'aria-pressed')) === 'true');
+  await pr.click('#sm');
+  await pr.evaluate(() => __fb.setView('L'));
+  const lk0 = await pr.getAttribute('#lk', 'aria-pressed');
+  await pr.click('#lk');
+  chk('(R5) #lk from Layout: switches to Floor and toggles the overlay', (await pr.evaluate(() => __fb.view)) === 'F' && (await pr.getAttribute('#lk', 'aria-pressed')) !== lk0);
+  await pr.evaluate(() => __fb.setView('L'));
+  const bn0 = await pr.getAttribute('#bn', 'aria-pressed');
+  await pr.click('#bn');
+  chk('(R5) #bn from Layout: switches to Floor and toggles Bottlenecks', (await pr.evaluate(() => __fb.view)) === 'F' && (await pr.getAttribute('#bn', 'aria-pressed')) !== bn0);
+  // planner from the header still works with a modal open
+  await pr.click('#plnB');
+  await pr.selectOption('#plnItem', 'ITEM_CobaltPlates');
+  await pr.fill('#plnRate', '120');
+  chk('(R5) planner opens from #plnB with a modal open, still plans (boxes drawn, Simulation still open)', (await vis('#pln')) && (await pr.locator('#plnOut .plnBox').count()) > 0 && (await winOpen('smW')));
+  await pr.click('#plnX');
+  // screenshots: 1400x900, 1024x700, 390x800, Layout and Floor
+  for (const [w, h] of [[1400, 900], [1024, 700], [390, 800]]) {
+    await pr.setViewportSize({width: w, height: h});
+    for (const v of ['L', 'F']) {
+      await pr.evaluate(x => __fb.setView(x), v);
+      await pr.screenshot({path: path.join(HERE, 'shots', `r5t-${w}x${h}-${v === 'L' ? 'layout' : 'floor'}.png`)});
+    }
+  }
+  chk('(R5-h) round 5 section: no pageerror / console.error', errs.length === 0, errs.join('\n     '));
+  await ctxR.close();
 
   // ---- (M) Round 3b: layout moves carry the floor machines/belts and closed doorways of the moved station
   const ctxM = await br.newContext({viewport: {width: 1400, height: 900}});
@@ -627,9 +760,9 @@ try {
   await setPanelM('#fx', 4);
   const x1 = await stM();
   chk('(M3) panel X +4: station x=4, machines +64 X, Y unchanged', x1.b[0][0] === 4 && has(x1, ASMn, 68, 5) && has(x1, BELTn, 70, 6), JSON.stringify(x1));
-  await setPanelM('#fh', 1);
+  await setPanelM('#fh', 2);   // Round 5: the Level field is 1-based (display 2 = internal height 1)
   const hz1 = await stM();
-  chk('(M3) panel height 1: station and its machines h=1, station 2 h=0', hz1.b[0][2] === 1 && has(hz1, ASMn, 68, 5, 1) && has(hz1, BELTn, 70, 6, 1) && hz1.b[1][2] === 0 && has(hz1, ASMn, 164, 5, 0), JSON.stringify(hz1));
+  chk('(M3) panel level 2 (internal h=1): station and its machines h=1, station 2 h=0', hz1.b[0][2] === 1 && has(hz1, ASMn, 68, 5, 1) && has(hz1, BELTn, 70, 6, 1) && hz1.b[1][2] === 0 && has(hz1, ASMn, 164, 5, 0), JSON.stringify(hz1));
   await undoM(2);
   const u3 = await stM();
   chk('(M3) undo x2 restores station and machines (X and height)', isDeepStrictEqual(u3, m0), diff(u3, m0));
@@ -659,22 +792,22 @@ try {
   const ctxH = await br.newContext({viewport: {width: 1400, height: 900}});
   await ctxH.addInitScript(() => { delete window.showSaveFilePicker; });   // Save -> download path (no native dialog)
   const ph = await newPage(ctxH, 'hdr');
-  const hdr = () => ph.evaluate(() => { const h = document.querySelector('header'), b = h.getBoundingClientRect(); return {h: b.height, sh: h.scrollHeight, ch: h.clientHeight}; });
+  const hdr = () => ph.evaluate(() => { const h = document.querySelector('header'), b = h.getBoundingClientRect(); return {h: b.height, sh: h.scrollHeight, ch: h.clientHeight, sw: h.scrollWidth, cw: h.clientWidth}; });
   const allVis = async ids => { let ok = true; for (const i of ids) ok = ok && await ph.isVisible(i); return ok; };
   const noneVis = async ids => { let ok = true; for (const i of ids) ok = ok && !(await ph.isVisible(i)); return ok; };
   const expanded = id => ph.getAttribute(id, 'aria-expanded');
   const active = () => ph.evaluate(() => document.activeElement && document.activeElement.id);
-  const settle = () => ph.waitForFunction(() => document.getElementById('fileL').contains(document.getElementById('fSave')) === matchMedia('(max-width:700px)').matches);
+  const settle = () => ph.waitForFunction(() => document.getElementById('fileL').contains(document.getElementById('fSave')) === matchMedia('(max-width:1100px)').matches);
   const inList = (list, ids) => ph.evaluate(([l, ids]) => ids.map(i => document.getElementById(l).contains(document.getElementById(i))), [list, ids]);
 
-  // (H1) header: one row, no wrap, at each size, both views
-  for (const [w, h] of [[1600, 800], [1400, 500], [1024, 700], [390, 800], [1200, 400]]) {
+  // (H1) header: one row, no wrap, at each size, both views (Round 5: 88px high, one row)
+  for (const [w, h] of [[1400, 900], [1024, 700], [390, 800], [1200, 400]]) {
     await ph.setViewportSize({width: w, height: h});
     await settle();
     for (const v of ['L', 'F']) {
       await ph.evaluate(x => __fb.setView(x), v);
       const d = await hdr();
-      chk(`(H1) header ${w}x${h} view ${v}: <=44px, no wrap (scrollHeight==clientHeight)`, d.h <= 44 && d.sh === d.ch, JSON.stringify(d));
+      chk(`(H1) header ${w}x${h} view ${v}: 80..96px, no wrap (scrollHeight==clientHeight), no horizontal overflow`, d.h >= 80 && d.h <= 96 && d.sh === d.ch && d.sw <= d.cw, JSON.stringify(d));
     }
   }
 
@@ -714,38 +847,23 @@ try {
     nBefore === 1 && DLG.seen.includes('Clear the autosaved design and start with an empty one?') && (await ph.evaluate(() => __fb.S.blocks.length)) === 0, `before ${nBefore} seen ${JSON.stringify(DLG.seen)}`);
   chk('(H4) picking New closes the File menu', (await expanded('#fileM')) === 'false' && !(await ph.isVisible('#fileL')));
 
-  // (H5) Floor tools menu: #simM only in floor view below 1800px; holds Simulate, Planner, Bottlenecks
+  // (H5) Round 5: Floor tools menu and Rotate are gone; Simulation/Flow/Planner are header toggles in both views
   await ph.evaluate(() => __fb.setView('L'));
-  chk('(H5) layout view: #simM hidden', !(await ph.isVisible('#simM')));
+  chk('(H5) #simM, #simL, #rot, #rotv absent', (await ph.locator('#simM, #simL, #rot, #rotv').count()) === 0);
+  chk('(H5) #simB, #flwB, #plnB visible in layout view', await allVis(['#simB', '#flwB', '#plnB']));
   await ph.evaluate(() => __fb.setView('F'));
-  chk('(H5) floor view 1400: #simM visible, closed; #sm/#bn/#plnB hidden until opened', (await ph.isVisible('#simM')) && (await expanded('#simM')) === 'false' && !(await ph.isVisible('#simL')) && await noneVis(['#sm', '#bn', '#plnB']));
-  await ph.click('#simM');
-  chk('(H5) click Floor tools: aria-expanded=true, #sm/#bn/#plnB visible', (await expanded('#simM')) === 'true' && await allVis(['#sm', '#bn', '#plnB']));
-  await ph.keyboard.press('Escape');
-  chk('(H5) Escape closes Floor tools and returns focus to #simM', (await expanded('#simM')) === 'false' && (await active()) === 'simM', `focus ${await active()}`);
-  await ph.setViewportSize({width: 1800, height: 900});
-  await settle();
-  await ph.evaluate(() => __fb.setView('F'));
-  chk('(H5) 1800 floor view: #simM hidden, #sm/#bn/#plnB inline', !(await ph.isVisible('#simM')) && await allVis(['#sm', '#bn', '#plnB']));
-  await ph.setViewportSize({width: 1400, height: 900});
+  chk('(H5) #simB, #flwB, #plnB visible in floor view', await allVis(['#simB', '#flwB', '#plnB']));
 
-  // (H6) 390px: Save/Export/Fit/Rotate/ghost live in the File menu; they work from there
+  // (H6) 390px: Fit/Save/Export/Help live in the File menu (<=1100px); they work from there
   await ph.setViewportSize({width: 390, height: 800});
   await settle();
   await ph.evaluate(() => __fb.setView('F'));
-  const FM = ['fSave', 'exp', 'fit', 'rot', 'ghost'];
-  chk('(H6) 390: Save/Export/Fit/Rotate/ghost are inside #fileL', (await inList('fileL', FM)).every(Boolean), JSON.stringify(await inList('fileL', FM)));
-  chk('(H6) 390: those are hidden until File opens', await noneVis(['#fSave', '#exp', '#fit', '#rot']));
+  const FM = ['fSave', 'exp', 'fit', 'help'];
+  chk('(H6) 390: Save/Export/Fit/Help are inside #fileL', (await inList('fileL', FM)).every(Boolean), JSON.stringify(await inList('fileL', FM)));
+  chk('(H6) 390: those are hidden until File opens', await noneVis(['#fSave', '#exp', '#fit', '#help']));
   await ph.click('#fileM');
-  chk('(H6) 390: File open shows Save/Export/Fit/Rotate/ghost', await allVis(['#fSave', '#exp', '#fit', '#rot', '#ghost']));
-  await ph.evaluate(() => __fb.setView('L'));
-  await imp(ph, bp([blk('BPO_Station_01', 0, 0)]));
-  await selectAll(ph);   // select the station: Rotate turns the selection
-  const rot0 = await ph.evaluate(() => __fb.build().Blocks[0].GridRotation);
-  await ph.click('#rot');   // reveal opens File
-  const rot1 = await ph.evaluate(() => __fb.build().Blocks[0].GridRotation);
-  chk('(H6) 390: Rotate from the menu turns the selected block', rot1 !== rot0, `${rot0} -> ${rot1}`);
-  await ph.evaluate(() => __fb.setView('F'));
+  chk('(H6) 390: File open shows Save/Export/Fit/Help', await allVis(['#fSave', '#exp', '#fit', '#help']));
+  await ph.keyboard.press('Escape');
   await ph.click('#fileM');
   const [dlH] = await Promise.all([ph.waitForEvent('download'), ph.click('#fSave')]);
   chk('(H6) 390: Save from the menu downloads a .json (no save picker)', /\.json$/.test(dlH.suggestedFilename()), dlH.suggestedFilename());
@@ -753,12 +871,12 @@ try {
   await ph.click('#exp');
   chk('(H6) 390: Export from the menu opens #dExp with the JSON', await ph.isVisible('#dExp') && (await ph.inputValue('#expTa')).startsWith('{'));
   await ph.click('#expX');
-  await ph.click('#fileM');
+  await ph.click('#lvM');
   await ph.uncheck('#ghost');
-  chk('(H6) 390: ghost layers toggle from the menu', !(await ph.isChecked('#ghost')));
+  chk('(H6) 390: ghost layers toggle from the Level popover', !(await ph.isChecked('#ghost')));
   await ph.setViewportSize({width: 1400, height: 900});
   await settle();
-  chk('(H6) back at 1400: Save/Export/Fit/Rotate/ghost inline in the header, not in #fileL', (await inList('fileL', FM)).every(x => !x) && await allVis(['#fSave', '#exp', '#fit', '#rot', '#ghost']));
+  chk('(H6) back at 1400: Save/Export/Fit/Help inline in the header, not in #fileL', (await inList('fileL', FM)).every(x => !x) && await allVis(['#fSave', '#exp', '#fit', '#help']));
 
   chk('(H-h) header tests: no pageerror / console.error', errs.length === 0, errs.join('\n     '));
   await ctxH.close();

@@ -39,8 +39,12 @@ function wire(pg, tag) {
   const reveal = async sel => {
     const m = await pg.evaluate(s => {
       const el = document.querySelector(s), shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
-      const list = el?.closest('.mnl');
-      if (!el || !list) return null;
+      if (!el) return null;
+      // floating windows (Simulation #smW, Flow #fwW, top right): open with the header toggle when closed
+      const win = el.closest('#smW') ? 'smW' : el.closest('#fwW') ? 'fwW' : null;
+      if (win) return document.getElementById(win).hidden ? {btn: win === 'smW' ? '#simB' : '#flwB', list: '#' + win} : null;
+      const list = el.closest('.mnl');
+      if (!list) return null;
       const r = el.getBoundingClientRect(), offscreen = shown(el) && (r.left < 0 || r.right > innerWidth);
       if (shown(el) && !offscreen) return null;
       const btn = list.parentElement.firstElementChild;
@@ -409,8 +413,8 @@ async function s9(pg, C) {
   chk('order: Station 1x1 < Station 2x2 B (blocks)', ix(K, 'BPO_Station_01') < ix(K, 'BPO_Station_02'));
   chk('Container and Large Container have category Storage', B.find(b => b.id === 'DAT_Container')?.category === 'Storage' && B.find(b => b.id === 'DAT_Container_2')?.category === 'Storage');
   await reset(pg);
-  await pg.evaluate(() => __fb.setView('F'));   // Buildables tab is enabled in floor view only
-  await pg.click('#tabs [data-tab="m"]');
+  await pg.evaluate(() => __fb.setView('F'));   // Round 5: the view decides the palette (Floor = buildables, no tab click)
+  chk('palette: Floor view shows buildables (tab m), no tab buttons', (await pg.evaluate(() => __fb.tab)) === 'm' && (await pg.locator('#pal [data-tab]').count()) === 0);
   const grp = await pg.evaluate(() => [...document.querySelectorAll('#palList details')].map(d => d.dataset.c));
   const st = await pg.evaluate(() => [...document.querySelectorAll('#palList details[data-c="m:Storage"] .item')].map(b => b.dataset.cls));
   chk('palette: Storage group holds Container and Large Container', st.includes('DAT_Container') && st.includes('DAT_Container_2') && st.length === 2, JSON.stringify(st));
@@ -473,15 +477,14 @@ async function s11(br) {
   for (const vp of [{width: 1400, height: 900}, {width: 1000, height: 700}]) {
     const tag = `${vp.width}x${vp.height}`;
     const {ctx, pg} = await open(br, vp, 'bn' + tag);
-    chk(`${tag}: #bn hidden in layer view`, !(await pg.locator('#bn').isVisible()));
+    chk(`${tag}: #bn hidden in layer view (Flow window closed)`, !(await pg.locator('#bn').isVisible()));
     await pg.evaluate(() => __fb.setView('F'));
-    // round 4: #bn sits in the "Floor tools" menu below 1800px: hidden until the menu is opened
+    // round 5: #bn sits in the Flow window (header #flwB toggle, any view): hidden until the window is opened
     const bnClosed = !(await pg.locator('#bn').isVisible());
-    await pg.click('#simM');
-    chk(`${tag}: #bn hidden until Floor tools opened, then visible, #bnm hidden`, bnClosed && (await pg.locator('#bn').isVisible()) && !(await pg.locator('#bnm').isVisible()));
-    await pg.keyboard.press('Escape');
+    await pg.click('#flwB');
+    chk(`${tag}: #bn hidden until Flow opened, then visible, #bnm hidden`, bnClosed && (await pg.locator('#bn').isVisible()) && !(await pg.locator('#bnm').isVisible()));
     await pg.evaluate(() => __fb.setView('L'));
-    chk(`${tag}: #bn hidden again in layer view`, !(await pg.locator('#bn').isVisible()));
+    chk(`${tag}: #bn still reachable from layout view while Flow is open`, await pg.locator('#bn').isVisible());
     await pg.evaluate(() => __fb.setView('F'));
     const st = blk('BPO_Station_02A', 0, 0);
     await imp(pg, bp([st], [mac('DAT_Refinery', 10, 22, {mid: 1, rec: KEY})]));
@@ -1647,7 +1650,7 @@ async function s17(br) {
   const s = await pg.evaluate(() => ({view: __fb.view, layer: __fb.layer, tab: __fb.tab, bn: __fb.BN, bm: __fb.BM, spd: __fb.SPD, z: __fb.V.z, ox: __fb.V.ox, oy: __fb.V.oy, sm: __fb.SM, sim: __fb.SIM}));
   chk('17 view + layer + palette tab restored', s.view === 'F' && s.layer === 1 && s.tab === 'm', JSON.stringify(s));
   chk('17 pan/zoom restored', Math.abs(s.z - 2.5) < 1e-6 && s.ox === 111 && s.oy === 77, JSON.stringify(s));
-  await pg.click('#simM');   // #bnm sits in the Floor tools menu
+  if (!(await pg.isVisible('#fwW'))) await pg.click('#flwB');   // #bnm sits in the Flow window (Round 5 header toggle)
   chk('17 Bottlenecks on + Flow/Blockage restored', s.bn === true && s.bm === 'F' && await pg.getAttribute('#bn', 'aria-pressed') === 'true' && await pg.isVisible('#bnm'));
   await pg.keyboard.press('Escape');
   chk('17 link overlay off + ghost layers off restored', await pg.getAttribute('#lk', 'aria-pressed') === 'false' && !(await pg.isChecked('#ghost')));
@@ -1941,7 +1944,7 @@ async function s21(br) {
   await pg.click('#helpX');
   chk('21 Help Close button closes it', (await pg.locator('#dHelp[open]').count()) === 0);
   chk('21 palette: no "guessed size" text, "!?" tag present on unverified', !(await pg.evaluate(() => document.getElementById('palList').textContent.includes('guessed'))) && await pg.evaluate(() => { document.querySelectorAll('#palList details').forEach(d => d.open = true); return !!document.querySelector('#palList .bq'); }));
-  chk('21 toolbar groups Plan / Simulate / View', await pg.evaluate(() => [...document.querySelectorAll('header .tg')].map(g => g.querySelector('.gl').textContent).join() === 'Plan,Simulate,View'));
+  chk('21 toolbar groups Plan / Tools / View (Round 5: Simulate group is now header toggles)', await pg.evaluate(() => [...document.querySelectorAll('header .tg')].map(g => g.getAttribute('aria-label')).join() === 'Plan,Tools,View'));
   // collapse / expand all
   await pg.click('#palExp');
   const nAll = await pg.evaluate(() => document.querySelectorAll('#palList details').length), nOpen = () => pg.evaluate(() => document.querySelectorAll('#palList details[open]').length);
@@ -2073,8 +2076,8 @@ async function s23(br) {
   await pg.click('#prodB');
   chk('23 #prodB opens #dProd (box, not a modal dialog)', await pg.isVisible('#dProd') && await pg.evaluate(() => document.getElementById('dProd').tagName !== 'DIALOG' && !document.querySelector('dialog[open]')));
   chk('23 no backdrop / top-layer: nothing covers the canvas outside the box', await pg.evaluate(() => { const e = document.elementFromPoint(innerWidth / 2, innerHeight / 2); return e && e.id === 'cv'; }));
-  chk('23 production box is inside #dock, visible on the Simulation tab', await pg.evaluate(() => { const d = document.getElementById('dProd'), b = d.getBoundingClientRect(); return document.getElementById('dock').contains(d) && !d.hidden && document.getElementById('dtS').getAttribute('aria-selected') === 'true' && b.width > 0 && b.height > 0; }));
-  chk('23 production box does not cover the canvas (sits right of it)', await pg.evaluate(() => { const b = document.getElementById('dProd').getBoundingClientRect(), c = document.getElementById('cv').getBoundingClientRect(); return b.left >= c.right - 1; }));
+  chk('23 production card is a floating card inside #stage, visible (Round 5: no tabs, over the canvas)', await pg.evaluate(() => { const d = document.getElementById('dProd'), b = d.getBoundingClientRect(); return document.getElementById('stage').contains(d) && !d.hidden && b.width > 0 && b.height > 0; }));
+  chk('23 production card floats at the top-left of the canvas', await pg.evaluate(() => { const b = document.getElementById('dProd').getBoundingClientRect(), c = document.getElementById('cv').getBoundingClientRect(); return b.left - c.left < 24 && b.top - c.top < 24; }));
   chk('23 empty state before any production', await pg.isVisible('#prEmpty') && !(await pg.isVisible('#prCv')), await pg.innerText('#prEmpty'));
   await pg.click('#prodX');
   chk('23 Close button closes it', !(await pg.isVisible('#dProd')));
@@ -2197,9 +2200,10 @@ async function s24(br) {
     const sh = await open(br, {width: vp.width, height: vp.height}, 's24s' + vp.width);
     await sh.pg.evaluate(t => { __fb.importJson(t, true); __fb.setView('F'); __fb.fit(); }, txt);
     await sh.pg.click('#sm');
-    await sh.pg.click('#prodB');
     await sh.pg.evaluate(() => __fb.simRun(600));
+    // Play before opening Production: the floating card covers the top-left and can hide the Simulation window's Play at 1024px
     if ((await sh.pg.getAttribute('#smPlay', 'aria-pressed')) !== 'true') await sh.pg.click('#smPlay');
+    await sh.pg.click('#prodB');
     await sh.pg.waitForTimeout(1500);
     chk(`24 shot ${vp.width}px: sim running on user save, Production box open`, await sh.pg.isVisible('#dProd') && (await sh.pg.evaluate(() => __fb.simProd().series.length)) > 0);
     await sh.pg.screenshot({path: path.join(SHOTS, vp.f)});
