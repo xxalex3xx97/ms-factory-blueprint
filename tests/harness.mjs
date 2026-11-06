@@ -2034,7 +2034,8 @@ async function s23(br) {
   await pg.click('#prodB');
   chk('23 #prodB opens #dProd (box, not a modal dialog)', await pg.isVisible('#dProd') && await pg.evaluate(() => document.getElementById('dProd').tagName !== 'DIALOG' && !document.querySelector('dialog[open]')));
   chk('23 no backdrop / top-layer: nothing covers the canvas outside the box', await pg.evaluate(() => { const e = document.elementFromPoint(innerWidth / 2, innerHeight / 2); return e && e.id === 'cv'; }));
-  chk('23 box is top-left over the canvas', await pg.evaluate(() => { const b = document.getElementById('dProd').getBoundingClientRect(), c = document.getElementById('cv').getBoundingClientRect(); return b.left - c.left < 30 && b.top - c.top < 30 && b.right < c.left + c.width / 2; }));
+  chk('23 production box is inside #dock, visible on the Simulation tab', await pg.evaluate(() => { const d = document.getElementById('dProd'), b = d.getBoundingClientRect(); return document.getElementById('dock').contains(d) && !d.hidden && document.getElementById('dtS').getAttribute('aria-selected') === 'true' && b.width > 0 && b.height > 0; }));
+  chk('23 production box does not cover the canvas (sits right of it)', await pg.evaluate(() => { const b = document.getElementById('dProd').getBoundingClientRect(), c = document.getElementById('cv').getBoundingClientRect(); return b.left >= c.right - 1; }));
   chk('23 empty state before any production', await pg.isVisible('#prEmpty') && !(await pg.isVisible('#prCv')), await pg.innerText('#prEmpty'));
   await pg.click('#prodX');
   chk('23 Close button closes it', !(await pg.isVisible('#dProd')));
@@ -2084,9 +2085,11 @@ async function s23(br) {
   chk('23 390px: dialog no horizontal overflow, canvas <= 390', o.sw <= o.cw && o.cv <= 390 && o.pg <= 390, JSON.stringify(o));
   chk('23 390px: canvas drawn', await m.pg.evaluate(() => { const c = document.getElementById('prCv'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) return true; return false; }));
   await m.pg.screenshot({path: path.join(SHOTS, 'r12-production-390.png')});
+  const ebx = await m.pg.evaluate(() => { const b = document.getElementById('dProd').getBoundingClientRect(), k = document.getElementById('dock').getBoundingClientRect(); return {w: b.width, h: b.height, l: b.left, r: b.right, dr: k.right}; });
+  chk('23 390px: dock + production panel fit the viewport width', ebx.l >= -0.5 && ebx.r <= 390.5 && ebx.dr <= 390.5, JSON.stringify(ebx));
   await m.pg.click('#prodC');
   const cbx = await m.pg.evaluate(() => { const b = document.getElementById('dProd').getBoundingClientRect(); return {w: b.width, h: b.height}; });
-  chk('23 390px: collapsed box is small (<60% width, <60px tall)', cbx.w < 234 && cbx.h < 60, JSON.stringify(cbx));
+  chk('23 390px: collapsing production shrinks it (<60px tall)', cbx.h < ebx.h && cbx.h < 60, JSON.stringify({expanded: ebx.h, collapsed: cbx}));
   await m.pg.screenshot({path: path.join(SHOTS, 'r12-production-collapsed-390.png')});
   await m.pg.click('#prodX');
   await m.pg.click('#bn'); await m.pg.click('#sm60'); await m.pg.click('#smPlay'); await m.pg.waitForTimeout(3000);
