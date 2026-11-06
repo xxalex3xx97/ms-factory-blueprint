@@ -1668,7 +1668,8 @@ function simLiveHtml(one){
   return h;
 }
 // ---- autosave (localStorage msfb.state): design (= export JSON) + UI settings. Sim running state/clock are never saved.
-const asNow=()=>{if(!ASO||ASH)return;try{localStorage.setItem(ASK,JSON.stringify({v:1,d:build(),u:{view,layer,tab,spd:SPD,gh:$("ghost").checked,lk:LK,bn:BN,bm:BM,po:[...po],io:[...io],
+// autosave schema v2 (Version 2 export); older autosaves (v1) are ignored on restore
+const asNow=()=>{if(!ASO||ASH)return;try{localStorage.setItem(ASK,JSON.stringify({v:2,d:build(),u:{view,layer,tab,spd:SPD,gh:$("ghost").checked,lk:LK,bn:BN,bm:BM,po:[...po],io:[...io],
   sel:S.blocks.filter(b=>sel.has(b.id)).map(b=>[b.cls,b.x,b.y,b.h]),vl:{ox:VL.ox,oy:VL.oy,z:VL.z},vf:{ox:VF.ox,oy:VF.oy,z:VF.z,init:VF.init}}}))}catch(e){}};
 const asv=()=>{if(!ASO||ASH)return;clearTimeout(AST);AST=setTimeout(asNow,400)};
 const asvNow=()=>{clearTimeout(AST);asNow()};
@@ -1676,7 +1677,7 @@ window.addEventListener("pagehide",asvNow);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)asvNow()});
 function asRestore(){
   let o;try{o=JSON.parse(localStorage.getItem(ASK))}catch(e){return}
-  if(!o||o.v!==1||!o.d||!Array.isArray(o.d.Blocks))return;
+  if(!o||o.v!==2||!o.d||!Array.isArray(o.d.Blocks)||o.d.Version!==2)return;   // stale autosave (older schema / legacy units): ignored
   const bk=snap(),u=o.u&&typeof o.u==="object"?o.u:{},fin=x=>typeof x==="number"&&isFinite(x),bt=(id,on)=>{$(id).classList.toggle("on",on);$(id).setAttribute("aria-pressed",on)};
   try{
     if(!importJson(JSON.stringify(o.d),true))return;
