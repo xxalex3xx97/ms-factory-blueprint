@@ -95,25 +95,16 @@
     <div id="fms">
     <div id="smW" class="fm" role="region" aria-labelledby="smWT" hidden>
       <div class="fmh"><h3 id="smWT">Simulation</h3><button id="smWX" aria-label="Close simulation" title="Close">&times;</button></div>
-      <div class="fmb" id="tgS" role="group" aria-label="Simulate">
-        <div class="grp" id="smg">
-    <div class="seg"><button id="sm" aria-pressed="false" title="Live simulation of the factory floor (informational, approximate; sim state is not exported)">Simulate</button></div>
-    <span class="grp" id="smc" style="display:none">
-      <button id="smPlay" class="pri" aria-label="Play or pause the simulation">Play</button>
-      <button id="smRst" aria-label="Reset the simulation">Reset</button>
-      <button id="prodB" aria-label="Production graph" title="Production: items per minute, per item and machine type">Production</button>
-      <div class="seg" role="group" aria-label="Simulation speed"><button id="sm1" aria-pressed="true" class="on">1x</button><button id="sm10" aria-pressed="false">10x</button><button id="sm60" aria-pressed="false">60x</button></div>
-      <span id="smClk" class="layer" title="Simulation clock (hh:mm:ss game time)" aria-label="Simulation clock">00:00:00</span>
-    </span>
-        </div>
-        <p class="sub hint" id="smHint">Simulate switches to the Factory floor and starts the simulation.</p>
+      <div class="fmb" id="tgS" role="group" aria-label="Simulation controls">
+        <div class="smr"><button id="smPlay" class="pri" aria-label="Play or pause the simulation">Play</button><button id="smRst" aria-label="Reset the simulation">Reset</button><button id="prodB" aria-label="Production graph" title="Production: items per minute, per item and machine type">Production</button></div>
+        <div class="smr"><div class="seg" role="group" aria-label="Simulation speed"><button id="sm1" aria-pressed="true" class="on">1x</button><button id="sm10" aria-pressed="false">10x</button><button id="sm60" aria-pressed="false">60x</button></div><span id="smClk" class="layer" title="Simulation clock (hh:mm:ss game time)" aria-label="Simulation clock">00:00:00</span></div>
+        <p class="sub hint" id="smHint" hidden>Switch to the Factory floor to run the simulation.</p>
       </div>
     </div>
     <div id="fwW" class="fm" role="region" aria-labelledby="fwWT" hidden>
       <div class="fmh"><h3 id="fwWT">Flow</h3><button id="fwWX" aria-label="Close flow" title="Close">&times;</button></div>
       <div class="fmb">
-  <div class="grp seg" id="lkg" role="group" aria-label="Link overlay"><button id="lk" class="on" aria-pressed="true" title="Informational link overlay (no rules, nothing blocked). Machine&lt;-&gt;belt marker = an ENABLED port faces a belt cell (disabled port = no link, faint red tick); input/output direction is unknown, so it is undirected. Ports: layout inferred from screenshots, not verified vs game data. Arrows = belt flow; green thick = T-join merge; dashed = underground pair.">Links</button><button id="bn" aria-pressed="false" title="Bottlenecks: belt load = items/min passing / belt capacity. Links on: gradient on the flow arrows; links off: belt cells are coloured. While a simulation has run, colours use the simulated values, otherwise the planning estimate. Informational only.">Bottlenecks</button><span id="bnm" class="seg" style="display:none"><button id="bnF" title="Flow: grey (no flow) to green (full capacity). Uses simulated load once the simulation has run.">Flow</button><button id="bnB" class="on" title="Blockage: green up to capacity, red when over capacity (simulation: or when the belt chain is full/blocked)">Blockage</button></span></div>
-        <p class="sub hint">Overlays show on the Factory floor; using them switches to it.</p>
+        <div class="chips" id="lkg" role="group" aria-label="Flow overlays"><button id="lk" class="on" aria-pressed="true" title="Informational link overlay (no rules, nothing blocked). Machine&lt;-&gt;belt marker = an ENABLED port faces a belt cell (disabled port = no link, faint red tick); input/output direction is unknown, so it is undirected. Ports: layout inferred from screenshots, not verified vs game data. Arrows = belt flow; green thick = T-join merge; dashed = underground pair.">Links</button><button id="bn" aria-pressed="false" title="Bottlenecks: belt load = items/min passing / belt capacity. Links on: gradient on the flow arrows; links off: belt cells are coloured. While a simulation has run, colours use the simulated values, otherwise the planning estimate. Informational only.">Bottlenecks</button><button id="bnF" aria-pressed="false" disabled title="Flow: grey (no flow) to green (full capacity). Uses simulated load once the simulation has run.">Flow</button><button id="bnB" class="on" aria-pressed="true" disabled title="Blockage: green up to capacity, red when over capacity (simulation: or when the belt chain is full/blocked)">Blockage</button></div>
       </div>
     </div>
     </div>

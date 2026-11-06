@@ -1,6 +1,6 @@
 // ---- Simulation / Flow modals (top right of the canvas, independent toggles)
 function fmSync(){const o=!$("smW").hidden||!$("fwW").hidden;$("stage").classList.toggle("fm1",o&&!$("pln").hidden);if(!$("pln").hidden)plnDraw()}
-[["simB","smW","smWX"],["flwB","fwW","fwWX"]].forEach(([b,w,x])=>{const t=h=>{$(w).hidden=h;$(b).setAttribute("aria-pressed",!h);fmSync()};$(b).onclick=()=>t(!$(w).hidden);$(x).onclick=()=>{t(true);$(b).focus()}});
+[["simB","smW","smWX"],["flwB","fwW","fwWX"]].forEach(([b,w,x])=>{const t=h=>{$(w).hidden=h;$(b).setAttribute("aria-pressed",!h);if(b==="simB")smSet(!h);fmSync()};$(b).onclick=()=>t(!$(w).hidden);$(x).onclick=()=>{t(true);$(b).focus()}});
 $("plnB").addEventListener("click",fmSync);$("plnX").addEventListener("click",fmSync);
 $("help").onclick=()=>{
   $("helpCtl").innerHTML=`<p><b>Layout:</b> ${HINTS.L}</p><p><b>Factory floor:</b> ${HINTS.F}</p>`;

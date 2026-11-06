@@ -482,7 +482,7 @@ async function s11(br) {
     // round 5: #bn sits in the Flow window (header #flwB toggle, any view): hidden until the window is opened
     const bnClosed = !(await pg.locator('#bn').isVisible());
     await pg.click('#flwB');
-    chk(`${tag}: #bn hidden until Flow opened, then visible, #bnm hidden`, bnClosed && (await pg.locator('#bn').isVisible()) && !(await pg.locator('#bnm').isVisible()));
+    chk(`${tag}: #bn hidden until Flow opened, then visible, Flow/Blockage disabled while Bottlenecks off`, bnClosed && (await pg.locator('#bn').isVisible()) && !(await pg.isEnabled('#bnF')) && !(await pg.isEnabled('#bnB')));
     await pg.evaluate(() => __fb.setView('L'));
     chk(`${tag}: #bn still reachable from layout view while Flow is open`, await pg.locator('#bn').isVisible());
     await pg.evaluate(() => __fb.setView('F'));
@@ -501,7 +501,7 @@ async function s11(br) {
       chk('bnCol: F.5 differs from F1, F0 grey', cols[3] !== cols[4] && cols[5] === 'hsl(0,0%,55%)', cols.join(' | '));
     }
     await pg.click('#bn');
-    chk(`${tag}: click #bn sets aria-pressed true, shows #bnm`, (await pg.getAttribute('#bn', 'aria-pressed')) === 'true' && (await pg.locator('#bnm').isVisible()));
+    chk(`${tag}: click #bn sets aria-pressed true, enables Flow/Blockage`, (await pg.getAttribute('#bn', 'aria-pressed')) === 'true' && (await pg.isEnabled('#bnF')) && (await pg.isEnabled('#bnB')));
     // link mode on: tooltip with Load
     const mid = await pg.evaluate(() => { const b = __fb.S.blocks.find(q => q.cls === 'DAT_ConveyorBelt'); const r = document.getElementById('cv').getBoundingClientRect(); return {id: b.id, x: b.x, y: b.y}; });
     const pos = await pg.evaluate(([x, y]) => __fb.px(x, y), [mid.x, mid.y]);
@@ -1495,16 +1495,16 @@ async function s16ui(br) {
   const T = p => p.evaluate(() => __fb.SIM ? __fb.SIM.t : -1);
   const sel = (p, c) => p.evaluate(([x, y]) => __fb.click(x, y), [c.x, c.y]);
   const shot = (p, f) => p.screenshot({path: path.join(SHOTS, f)});
-  const simOff = async p => { if (await p.evaluate(() => __fb.SM)) await p.click('#sm'); };
-  const startSim = async (p, id) => { if (!(await p.evaluate(() => __fb.SM))) await p.click('#sm'); await p.click('#' + id); if ((await p.getAttribute('#smPlay', 'aria-pressed')) !== 'true') await p.click('#smPlay'); };
+  const simOff = async p => { if (await p.evaluate(() => __fb.SM)) await p.click('#simB'); };
+  const startSim = async (p, id) => { if (!(await p.evaluate(() => __fb.SM))) await p.click('#simB'); await p.click('#' + id); if ((await p.getAttribute('#smPlay', 'aria-pressed')) !== 'true') await p.click('#smPlay'); };
   const stopSim = async p => { if ((await p.getAttribute('#smPlay', 'aria-pressed')) === 'true') await p.click('#smPlay'); };
   const state = p => p.evaluate(() => { const o = {}; __fb.SIM.stat.mach.forEach(m => { o.st = m.st; o.cycles = m.cycles; }); return o; });
 
   let cells = await asmScene(pg, tk, {src: INF});
   const ink0 = await ink(pg);
-  chk('16ui Simulate controls hidden while off', !(await pg.isVisible('#smPlay')) && await pg.getAttribute('#sm', 'aria-pressed') === 'false');
-  await pg.click('#sm');
-  chk('16ui Simulate on: controls visible, aria-pressed, SIM created', await pg.isVisible('#smPlay') && await pg.isVisible('#smRst') && await pg.isVisible('#smClk') && (await pg.locator('#dHelp #smLeg').count()) === 1 && await pg.getAttribute('#sm', 'aria-pressed') === 'true' && (await T(pg)) === 0);
+  chk('16ui sim controls hidden while Simulation window closed (#simB aria-pressed false)', !(await pg.isVisible('#smPlay')) && await pg.getAttribute('#simB', 'aria-pressed') === 'false');
+  await pg.click('#simB');
+  chk('16ui Simulate on: controls visible, aria-pressed, SIM created', await pg.isVisible('#smPlay') && await pg.isVisible('#smRst') && await pg.isVisible('#smClk') && (await pg.locator('#dHelp #smLeg').count()) === 1 && await pg.getAttribute('#simB', 'aria-pressed') === 'true' && (await T(pg)) === 0);
   await pg.click('#sm60');
   chk('16ui speed buttons: 60x pressed, 1x/10x not', await pg.getAttribute('#sm60', 'aria-pressed') === 'true' && await pg.getAttribute('#sm1', 'aria-pressed') === 'false' && await pg.getAttribute('#sm10', 'aria-pressed') === 'false' && await pg.evaluate(() => __fb.SPD) === 60);
   await pg.click('#smPlay');
@@ -1546,7 +1546,7 @@ async function s16ui(br) {
   const ta = await T(pg);
   chk('16ui edit during play resets the sim', tb > 30 && ta < tb && ta < 30, `${tb} -> ${ta}`);
   await stopSim(pg);
-  await pg.click('#sm');
+  await pg.click('#simB');
   chk('16ui toggling Simulate off clears SIM', await pg.evaluate(() => __fb.SIM === null && !__fb.SM));
   // view/layer change resets + pauses
   cells = await asmScene(pg, tk, {src: INF});
@@ -1593,7 +1593,7 @@ async function s16ui(br) {
   {
     tk.resetMid(); await imp(pg, bp([], [mac('DAT_Assembler', 40, 40, {rot: 0, mid: tk.nm()})]));
     await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); });
-    await simOff(pg); await pg.click('#sm');
+    await simOff(pg); await pg.click('#simB');
     await pg.evaluate(() => { window.__sr = []; const o = CanvasRenderingContext2D.prototype.strokeRect; CanvasRenderingContext2D.prototype.strokeRect = function (...a) { window.__sr.push(this.strokeStyle); return o.apply(this, a); }; });
     await pg.click('#smRst');
     const sr = await pg.evaluate(() => { const c = document.createElement('canvas').getContext('2d'); c.strokeStyle = 'hsl(220,10%,58%)'; return {g: c.strokeStyle, l: window.__sr}; });
@@ -1606,7 +1606,7 @@ async function s16ui(br) {
     const {ctx: c2, pg: p2} = await open(br, {width: 390, height: 844}, 's16ui-390'), t2 = toolkit(p2);
     await asmScene(p2, t2, {src: INF});
     await startSim(p2, 'sm60'); await p2.waitForTimeout(1200); await stopSim(p2);
-    const o = await p2.evaluate(() => ({sw: document.documentElement.scrollWidth, iw: innerWidth, r: ['sm', 'smPlay', 'smRst', 'sm1', 'sm10', 'sm60', 'smClk'].map(i => { const b = document.getElementById(i).getBoundingClientRect(); return [i, Math.round(b.left), Math.round(b.right), Math.round(b.width)]; })}));
+    const o = await p2.evaluate(() => ({sw: document.documentElement.scrollWidth, iw: innerWidth, r: ['smPlay', 'smRst', 'sm1', 'sm10', 'sm60', 'smClk'].map(i => { const b = document.getElementById(i).getBoundingClientRect(); return [i, Math.round(b.left), Math.round(b.right), Math.round(b.width)]; })}));
     chk('16ui 390px: sim controls rendered, page not wider than the viewport', o.sw <= o.iw && o.r.every(x => x[3] > 0), JSON.stringify(o));
     await shot(p2, 's16-sim-390.png');
     await p2.evaluate(() => { window.__fr = []; const o = CanvasRenderingContext2D.prototype.fillRect; CanvasRenderingContext2D.prototype.fillRect = function (...a) { if (this.fillStyle === 'rgba(0, 0, 0, 0.65)') window.__fr.push(a); return o.apply(this, a); }; });
@@ -1628,7 +1628,7 @@ async function s17(br) {
   const blocks = () => pg.evaluate(() => JSON.stringify(__fb.S.blocks.map(b => ({c: b.cls, x: b.x, y: b.y, h: b.h, r: b.rot, ct: b.ct || null, rec: b.rec || null}))));
   await imp(pg, bp([blk('Station 1x1', 0, 0), blk('Station 1x1', 1, 0, {h: 1})], design, {DisplayName: 'Autosave Test'}));
   await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); });
-  await pg.click('#sm'); await pg.click('#sm10'); await pg.click('#sm');   // speed 10, sim off again
+  await pg.click('#simB'); await pg.click('#sm10'); await pg.click('#simB');   // speed 10, sim off again
   await pg.click('#bn'); await pg.click('#bnF'); await pg.click('#lk');
   await pg.uncheck('#ghost');
   await pg.click('#lUp');
@@ -1650,8 +1650,8 @@ async function s17(br) {
   const s = await pg.evaluate(() => ({view: __fb.view, layer: __fb.layer, tab: __fb.tab, bn: __fb.BN, bm: __fb.BM, spd: __fb.SPD, z: __fb.V.z, ox: __fb.V.ox, oy: __fb.V.oy, sm: __fb.SM, sim: __fb.SIM}));
   chk('17 view + layer + palette tab restored', s.view === 'F' && s.layer === 1 && s.tab === 'm', JSON.stringify(s));
   chk('17 pan/zoom restored', Math.abs(s.z - 2.5) < 1e-6 && s.ox === 111 && s.oy === 77, JSON.stringify(s));
-  if (!(await pg.isVisible('#fwW'))) await pg.click('#flwB');   // #bnm sits in the Flow window (Round 5 header toggle)
-  chk('17 Bottlenecks on + Flow/Blockage restored', s.bn === true && s.bm === 'F' && await pg.getAttribute('#bn', 'aria-pressed') === 'true' && await pg.isVisible('#bnm'));
+  if (!(await pg.isVisible('#fwW'))) await pg.click('#flwB');   // #bn sits in the Flow window (Round 5 header toggle)
+  chk('17 Bottlenecks on + Flow/Blockage restored', s.bn === true && s.bm === 'F' && await pg.getAttribute('#bn', 'aria-pressed') === 'true' && await pg.isEnabled('#bnF') && await pg.isEnabled('#bnB'));
   await pg.keyboard.press('Escape');
   chk('17 link overlay off + ghost layers off restored', await pg.getAttribute('#lk', 'aria-pressed') === 'false' && !(await pg.isChecked('#ghost')));
   chk('17 sim speed restored, sim not running/active', s.spd === 10 && s.sm === false && s.sim === null);
@@ -1733,7 +1733,7 @@ async function s18(br) {
   chk('18 static estimate (no sim): button enabled', await pg.isEnabled('#bn'));
 
   // --- sim running
-  await pg.click('#sm'); await pg.click('#sm60'); await pg.click('#smPlay');
+  await pg.click('#simB'); await pg.click('#sm60'); await pg.click('#smPlay');
   await pg.waitForTimeout(500);
   chk('18 Bottlenecks button + Flow/Blockage enabled while the sim runs', await pg.isEnabled('#bn') && await pg.isEnabled('#bnF') && await pg.isEnabled('#bnB'));
   const pr = await painted();
@@ -1789,7 +1789,7 @@ async function s18(br) {
   chk('18 after Reset: simLive() false, colours = static estimate, no bubbles', await pg.evaluate(() => !__fb.simLive() && __fb.SIM.t === 0) && pz.bub === 0);
   const expS = await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls === 'DAT_ConveyorBelt').map(b => __fb.bnCol(__fb.bnU(__fb.links(), b.id), 'B')));
   chk('18 after Reset: cell tints = static estimate', await sameCols(pz.tint, expS));
-  await pg.click('#sm');
+  await pg.click('#simB');
   chk('18 sim off: Bottlenecks still toggles', await pg.isEnabled('#bn'));
   chk('18 dead items-only code removed: no bnTick / bnSync / bnOn / bnR in index.html', !/bnTick|bnSync|bnOn\b|\bbnR\b/.test(['index.html',...fs.readdirSync(path.join(ROOT,'js')).map(f=>'js/'+f)].map(f=>fs.readFileSync(path.join(ROOT,f),'utf8')).join('\n')));
   await ctx.close();
@@ -1850,14 +1850,14 @@ async function s19(br) {
   chk('19 belt cell that is also a port link: load line first, port-link text as secondary line', /Load \d+%/.test(tp.txt) && /Port link \(informational\)/.test(tp.txt) && tp.txt.indexOf('Load') < tp.txt.indexOf('Port link'), JSON.stringify(tp));
   chk('19 hovering a belt cell with LK off: load shown, no port-link text', await (async () => { if ((await pg.getAttribute('#lk', 'aria-pressed')) === 'true') await pg.click('#lk'); const t = await hover(P.x, P.y - 3); await pg.click('#lk'); return /Load \d+%/.test(t.txt) && !/Port link/.test(t.txt); })());
   // sim on the same scene: live tooltip
-  await pg.click('#sm'); await pg.click('#sm60'); await pg.click('#smPlay'); await pg.waitForTimeout(400); await pg.click('#smPlay');
+  await pg.click('#simB'); await pg.click('#sm60'); await pg.click('#smPlay'); await pg.waitForTimeout(400); await pg.click('#smPlay');
   tp = await hover(P.x, P.y - 1);
   chk('19 sim live: hover belt cell shows live value, items/min and %', /live/.test(tp.txt) && /Load \d+%/.test(tp.txt) && /\/min/.test(tp.txt), JSON.stringify(tp));
   await pg.mouse.move(5, 5);
   await pg.evaluate(() => { const c = document.getElementById('cv').getBoundingClientRect(); });
   tp = await hover(P.x, P.y - 3);
   await pg.screenshot({path: path.join(SHOTS, 's19-belt-tooltip.png')});
-  await pg.click('#sm');
+  await pg.click('#simB');
   // --- sim 2-way and 3-way with container sinks (measured over the 60 s window)
   for (const n of [2, 3]) {
     tk.resetMid();
@@ -1912,12 +1912,12 @@ async function s19(br) {
     await pg.mouse.move(mpos[0] - 3, mpos[1] - 3); await pg.mouse.move(mpos[0], mpos[1]);
     const tStatic = await pg.evaluate(() => document.getElementById('btip').textContent);
     chk('19 static mixed belt: tooltip names "mixed items" and "estimate"', /mixed items/.test(tStatic) && /estimate/.test(tStatic), tStatic);
-    await pg.click('#sm'); await pg.click('#sm60'); await pg.click('#smPlay'); await pg.waitForTimeout(400); await pg.click('#smPlay');
+    await pg.click('#simB'); await pg.click('#sm60'); await pg.click('#smPlay'); await pg.waitForTimeout(400); await pg.click('#smPlay');
     await pg.mouse.move(5, 5);
     await pg.mouse.move(mpos[0] - 3, mpos[1] - 3); await pg.mouse.move(mpos[0], mpos[1]);
     const tLive = await pg.evaluate(() => document.getElementById('btip').textContent), mixedLive = await pg.evaluate(id => { const e = __fb.SIM.sm.load.get(id); return !!e && e.mixed; }, mid);
     chk('19 live mixed belt: sim value (live) with "mixed items" in tooltip', mixedLive && /mixed items/.test(tLive) && /live/.test(tLive), JSON.stringify({mixedLive, tLive}));
-    await pg.click('#sm');
+    await pg.click('#simB');
   }
   await ctx.close();
 }
@@ -2034,7 +2034,7 @@ async function s22(br) {
   chk('22 verified item (Container): no !? tag in the inspector', (await pg.evaluate(() => document.querySelectorAll('#insp .bq').length)) === 0);
   chk('22 unverified palette tooltip says !? size not confirmed', await pg.evaluate(id => /!\? size not confirmed/.test(document.querySelector(`#palList .item[data-cls="${id}"]`).title), unv.id));
   // sim running, container selected
-  if (!(await pg.evaluate(() => __fb.SM))) await pg.click('#sm');
+  if (!(await pg.evaluate(() => __fb.SM))) await pg.click('#simB');
   await pg.click('#sm60'); if ((await pg.getAttribute('#smPlay', 'aria-pressed')) !== 'true') await pg.click('#smPlay');
   await pg.waitForTimeout(2500);
   await pg.screenshot({path: path.join(SHOTS, 'u2-inspector-sim-1400.png')});
@@ -2071,7 +2071,7 @@ async function s23(br) {
   const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's23');
   await scene(pg);
   chk('23 Production button hidden while sim off', !(await pg.isVisible('#prodB')));
-  await pg.click('#sm');
+  await pg.click('#simB');
   chk('23 Production button visible with sim controls', await pg.isVisible('#prodB'));
   await pg.click('#prodB');
   chk('23 #prodB opens #dProd (box, not a modal dialog)', await pg.isVisible('#dProd') && await pg.evaluate(() => document.getElementById('dProd').tagName !== 'DIALOG' && !document.querySelector('dialog[open]')));
@@ -2121,7 +2121,7 @@ async function s23(br) {
   await ctx.close();
   const m = await open(br, {width: 390, height: 844}, 's23m');
   await scene(m.pg);
-  await m.pg.click('#sm'); await m.pg.evaluate(() => __fb.simRun(120));
+  await m.pg.click('#simB'); await m.pg.evaluate(() => __fb.simRun(120));
   await m.pg.click('#prodB');
   const o = await m.pg.evaluate(() => { const d = document.getElementById('prScroll'); return {sw: d.scrollWidth, cw: d.clientWidth, cv: document.getElementById('prCv').getBoundingClientRect().width, pg: document.documentElement.scrollWidth}; });
   chk('23 390px: dialog no horizontal overflow, canvas <= 390', o.sw <= o.cw && o.cv <= 390 && o.pg <= 390, JSON.stringify(o));
@@ -2152,7 +2152,7 @@ async function s24(br) {
   const idleT = await timePaint(pg);
   chk('24 perf: paint idle on user save median < 25 ms', med(idleT) < 25, `median ${med(idleT).toFixed(2)} ms`);
   // sim on: production + storage behaviour
-  await pg.click('#sm');
+  await pg.click('#simB');
   await pg.evaluate(() => __fb.simRun(600));
   const r = await pg.evaluate(() => {
     const S = __fb.S, s = __fb.simState(), K = __fb.links(), ms = Object.values(s.M);
@@ -2199,7 +2199,7 @@ async function s24(br) {
   for (const vp of [{width: 1400, height: 900, f: 'r12-sim-save-1400.png'}, {width: 390, height: 844, f: 'r12-sim-save-390.png'}]) {
     const sh = await open(br, {width: vp.width, height: vp.height}, 's24s' + vp.width);
     await sh.pg.evaluate(t => { __fb.importJson(t, true); __fb.setView('F'); __fb.fit(); }, txt);
-    await sh.pg.click('#sm');
+    await sh.pg.click('#simB');
     await sh.pg.evaluate(() => __fb.simRun(600));
     // Play before opening Production: the floating card covers the top-left and can hide the Simulation window's Play at 1024px
     if ((await sh.pg.getAttribute('#smPlay', 'aria-pressed')) !== 'true') await sh.pg.click('#smPlay');

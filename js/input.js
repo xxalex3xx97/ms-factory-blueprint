@@ -109,8 +109,9 @@ function setView(v){
 const RM=matchMedia("(prefers-reduced-motion:reduce)");
 const toF=()=>{if(view!=="F")setView("F")};
 $("lk").onclick=()=>{toF();LK=!LK;$("lk").classList.toggle("on",LK);$("lk").setAttribute("aria-pressed",LK);draw()};
-$("bn").onclick=()=>{toF();BN=!BN;$("bn").classList.toggle("on",BN);$("bn").setAttribute("aria-pressed",BN);$("bnm").style.display=BN?"":"none";draw()};
-$("bnF").onclick=$("bnB").onclick=e=>{toF();BM=e.currentTarget.id==="bnF"?"F":"B";$("bnF").classList.toggle("on",BM==="F");$("bnB").classList.toggle("on",BM==="B");draw()};
+$("bn").onclick=()=>{toF();BN=!BN;$("bn").classList.toggle("on",BN);$("bn").setAttribute("aria-pressed",BN);bnSub();draw()};
+function bnSub(){$("bnF").disabled=$("bnB").disabled=!BN;$("bnF").setAttribute("aria-pressed",BM==="F");$("bnB").setAttribute("aria-pressed",BM==="B")}
+$("bnF").onclick=$("bnB").onclick=e=>{toF();BM=e.currentTarget.id==="bnF"?"F":"B";$("bnF").classList.toggle("on",BM==="F");$("bnB").classList.toggle("on",BM==="B");bnSub();draw()};bnSub();
 $("vwL").onclick=()=>setView("L");$("vwF").onclick=()=>setView("F");
 function rotate(){
   if(pasting){pasting.rot=(pasting.rot+1)&3;all();return}

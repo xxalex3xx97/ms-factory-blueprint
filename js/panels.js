@@ -17,9 +17,8 @@ function simLiveUp(){const e=$("simLive"),o=smOne(),u=$("sumLive");if(e&&smOn())
 function smSync(){
   const on=SM&&view==="F";
   if(!on)$("dProd").hidden=true,$("prodB").setAttribute("aria-pressed",false);
-  $("smHint").style.display=on?"none":"";
-  $("sm").classList.toggle("on",SM);$("sm").setAttribute("aria-pressed",SM);
-  $("smc").style.display=on?"":"none";
+  $("smHint").hidden=on||!SM;
+  ["smPlay","smRst","prodB"].forEach(i=>$(i).disabled=!on);
   $("smPlay").textContent=SMP?"Pause":"Play";$("smPlay").setAttribute("aria-pressed",SMP);
   [1,10,60].forEach(v=>{const b=$("sm"+v);b.classList.toggle("on",SPD===v);b.setAttribute("aria-pressed",SPD===v)});
   smClkUp();
@@ -37,7 +36,7 @@ function smFrame(ts){
 }
 const smGo=()=>{if(SMP&&!smRaf&&!document.hidden){smLast=0;smRaf=requestAnimationFrame(smFrame)}};
 document.addEventListener("visibilitychange",smGo);
-$("sm").onclick=()=>{if(view!=="F"){setView("F");if(SM)return}SM=!SM;smHalt();if(SM){simInit();SIM.sig=simSig();smPh=0}else SIM=null;all()};
+function smSet(on){if(on){toF();if(!SM){SM=true;smHalt();simInit();SIM.sig=simSig();smPh=0;all()}}else if(SM){SM=false;smHalt();SIM=null;all()}}
 $("smPlay").onclick=()=>{if(!SM||!SIM)return;SMP=!SMP;if(SMP)smGo();else smHalt();smSync();simLiveUp()};
 $("smRst").onclick=()=>{if(!SIM)return;simReset();SIM.sig=simSig();smPh=0;smClkUp();paint();simLiveUp()};
 [1,10,60].forEach(v=>$("sm"+v).onclick=()=>{SPD=v;smSync();asv()});

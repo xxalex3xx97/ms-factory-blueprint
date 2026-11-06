@@ -540,12 +540,12 @@ try {
   chk('(UI3) #dockT re-expands the dock', (await pq.evaluate(() => !document.getElementById('dock').classList.contains('col'))) && (await pq.getAttribute('#dockT', 'aria-expanded')) === 'true');
   chk('(UI3) no dock tabs: #dockTabs/#dtI/#dtS absent (cards, Round 5)', (await pq.locator('#dockTabs, #dtI, #dtS').count()) === 0);
   chk('(UI3) #prodB hidden while simulation is off, #dProd hidden', !(await pq.isVisible('#prodB')) && !(await pq.isVisible('#dProd')) && await pq.isVisible('#insp'));
-  await pq.click('#sm');
+  await pq.click('#simB');
   chk('(UI3) simulation on: #insp still visible (no tab hides it), #dProd hidden', await pq.isVisible('#insp') && !(await pq.isVisible('#dProd')));
   await pq.click('#prodB');
   chk('(UI3) Production card #dProd shows next to #insp (cards, not tabs)', (await pq.isVisible('#dProd')) && (await pq.isVisible('#insp')));
   await pq.click('#prodB');
-  await pq.click('#sm');
+  await pq.click('#simB');
   chk('(UI3) simulation off again: #prodB hidden, #insp shown', !(await pq.isVisible('#prodB')) && (await pq.isVisible('#insp')));
   await pq.click('#plnB');
   await pq.selectOption('#plnItem', 'ITEM_CobaltPlates');
@@ -582,7 +582,7 @@ try {
   await ctxQ.close();
 
   // ---- (R5) Round 5: 88px header, centred controls, palette/dock labels at top, dock cards, Level popover,
-  //      Simulation + Flow windows (top right, header toggles), #sm/#lk/#bn from Layout switch to Floor
+  //      Simulation + Flow windows (top right, header toggles), #simB/#lk/#bn from Layout switch to Floor
   const ctxR = await br.newContext({viewport: {width: 1400, height: 900}});
   const pr = await newPage(ctxR, 'r5');
   const box = sel => pr.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return {l: r.left, t: r.top, r: r.right, b: r.bottom, h: r.height, cy: r.top + r.height / 2}; }, sel);
@@ -690,11 +690,22 @@ try {
   const sbx = await box('#smW'), fbx = await box('#fwW'), stg = await box('#stage');
   chk('(R5) windows top right: right edge within 24px of stage right; Simulation top within 24px of stage top (Flow stacks below it)', [sbx, fbx].every(b => Math.abs(b.r - stg.r) <= 24 && b.t >= stg.t) && sbx.t - stg.t <= 24 && fbx.t >= sbx.b, JSON.stringify([sbx.r, fbx.r, stg.r, sbx.t - stg.t, fbx.t - stg.t]));
   chk('(R5) Simulation and Flow windows do not overlap', sbx.r <= fbx.l || fbx.r <= sbx.l || sbx.b <= fbx.t || fbx.b <= sbx.t, JSON.stringify([sbx, fbx]));
-  // from Layout: #sm switches to Floor and turns Simulate on; #lk / #bn switch to Floor
+  // ---- (R7) Round 7: Simulate button gone, #simB opens sim mode, Flow chips = 4 equal buttons
+  chk('(R7) no #sm button and no "Simulate" button in the header or Simulation window', (await pr.locator('#sm, #smc, #smg').count()) === 0 && !(await pr.evaluate(() => [...document.querySelectorAll('button')].some(b => b.textContent.trim() === 'Simulate'))));
+  if (await winOpen('smW')) await pr.click('#simB');
   await pr.evaluate(() => __fb.setView('L'));
-  await pr.click('#sm');
-  chk('(R5) #sm from Layout: switches to Floor and turns Simulate on', (await pr.evaluate(() => __fb.view)) === 'F' && (await pr.evaluate(() => __fb.SM)) === true && (await pr.getAttribute('#sm', 'aria-pressed')) === 'true');
-  await pr.click('#sm');
+  await pr.click('#simB');
+  chk('(R7) #simB from Layout: opens Simulation window in sim mode (view F, SM on, SIM created, controls visible, hint hidden)', (await pr.evaluate(() => __fb.view)) === 'F' && (await pr.evaluate(() => __fb.SM)) === true && (await pr.evaluate(() => __fb.SIM !== null)) && (await winOpen('smW')) && (await pr.getAttribute('#simB', 'aria-pressed')) === 'true' && await vis('#smPlay') && await vis('#smRst') && await vis('#smClk') && !(await vis('#smHint')));
+  await pr.click('#simB');
+  chk('(R7) #simB again: closes Simulation window and leaves sim mode (SM off, SIM null)', !(await winOpen('smW')) && (await pr.evaluate(() => __fb.SM)) === false && (await pr.evaluate(() => __fb.SIM)) === null);
+  if (!(await winOpen('fwW'))) await pr.click('#flwB');
+  const chipBx = await pr.evaluate(() => ['lk', 'bn', 'bnF', 'bnB'].map(i => { const r = document.getElementById(i).getBoundingClientRect(); return [r.width, r.height]; }));
+  chk('(R7) Flow chips: 4 buttons in #lkg, equal width and height', (await pr.locator('#lkg > button').count()) === 4 && chipBx.every(([w, h]) => w > 0 && h > 0 && Math.abs(w - chipBx[0][0]) <= 1 && Math.abs(h - chipBx[0][1]) <= 1), JSON.stringify(chipBx));
+  // from Layout: #simB switches to Floor, opens the Simulation window and enters sim mode; #lk / #bn switch to Floor
+  await pr.evaluate(() => __fb.setView('L'));
+  await pr.click('#simB');
+  chk('(R5) #simB from Layout: switches to Floor, opens the window, sim mode on', (await pr.evaluate(() => __fb.view)) === 'F' && (await pr.evaluate(() => __fb.SM)) === true && (await pr.getAttribute('#simB', 'aria-pressed')) === 'true');
+  await pr.click('#simB');
   await pr.evaluate(() => __fb.setView('L'));
   const lk0 = await pr.getAttribute('#lk', 'aria-pressed');
   await pr.click('#lk');
@@ -704,6 +715,7 @@ try {
   await pr.click('#bn');
   chk('(R5) #bn from Layout: switches to Floor and toggles Bottlenecks', (await pr.evaluate(() => __fb.view)) === 'F' && (await pr.getAttribute('#bn', 'aria-pressed')) !== bn0);
   // planner from the header still works with a modal open
+  if (!(await winOpen('smW'))) await pr.click('#simB');
   await pr.click('#plnB');
   await pr.selectOption('#plnItem', 'ITEM_CobaltPlates');
   await pr.fill('#plnRate', '120');

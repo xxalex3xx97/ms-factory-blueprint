@@ -21,8 +21,8 @@ function asRestore(){
     if(Array.isArray(u.sel))sel=new Set(u.sel.map(k=>Array.isArray(k)&&S.blocks.find(b=>b.cls===k[0]&&b.x===k[1]&&b.y===k[2]&&b.h===k[3])).filter(Boolean).map(b=>b.id));
     if(typeof u.gh==="boolean")$("ghost").checked=u.gh;
     if(typeof u.lk==="boolean"){LK=u.lk;bt("lk",LK)}
-    if(typeof u.bn==="boolean"){BN=u.bn;bt("bn",BN);$("bnm").style.display=BN?"":"none"}
-    if(u.bm==="F"||u.bm==="B"){BM=u.bm;$("bnF").classList.toggle("on",BM==="F");$("bnB").classList.toggle("on",BM==="B")}
+    if(typeof u.bn==="boolean"){BN=u.bn;bt("bn",BN);bnSub()}
+    if(u.bm==="F"||u.bm==="B"){BM=u.bm;$("bnF").classList.toggle("on",BM==="F");$("bnB").classList.toggle("on",BM==="B");bnSub()}
     if([1,10,60].includes(u.spd))SPD=u.spd;
     if(Array.isArray(u.io)){io.clear();u.io.filter(x=>typeof x==="string").forEach(x=>io.add(x))}
     if(Array.isArray(u.po))po=new Set(u.po.filter(x=>typeof x==="string"));
