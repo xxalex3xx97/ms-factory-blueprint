@@ -14,6 +14,8 @@ const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href;
 
 let total = 0, pass = 0;
 const fails = [], errs = [];
+// dialog answers for the next prompt()/confirm(): {accept, text}; default = dismiss. seen = all messages.
+const DLG = {next: null, seen: []};
 function chk(name, cond, detail = '') {
   total++;
   if (cond) { pass++; console.log(`PASS ${name}`); }
@@ -22,7 +24,11 @@ function chk(name, cond, detail = '') {
 function wire(pg, tag) {
   pg.on('pageerror', e => errs.push(`[${tag}] pageerror: ${e.message}`));
   pg.on('console', m => { if (m.type() === 'error') errs.push(`[${tag}] console.error: ${m.text()}`); });
-  pg.on('dialog', d => { d.dismiss().catch(() => {}); });
+  pg.on('dialog', d => {
+    DLG.seen.push(d.message());
+    const n = DLG.next; DLG.next = null;
+    (n && n.accept ? d.accept(n.text ?? '') : d.dismiss()).catch(() => {});
+  });
 }
 async function newPage(ctx, tag) {
   const pg = await ctx.newPage();
@@ -280,6 +286,103 @@ try {
   await pg.selectOption('#plnOut select.plnAlt[data-item="ITEM_CobaltPlates"]', K2);
   const out11b = await pg.textContent('#plnOut');
   chk('(p11) choosing alt re-plans (4 x Refinery)', /4 x Refinery/.test(out11b) && !/5 x Refinery/.test(out11b), out11b.slice(0, 200));
+
+  // ---- (u) UI path: panel buttons, prompt/confirm dialogs, file download + upload
+  const fs = require('fs');
+  const ctxU = await br.newContext({viewport: {width: 1400, height: 900}, acceptDownloads: true});
+  const pu = await newPage(ctxU, 'ui');
+  await imp(pu, bp([blk('BPO_Station_01', 0, 0), blk('BPO_Station_01', 2, 0)]));
+  await pu.evaluate(() => __fb.setView('L'));
+  await selectAll(pu);
+  DLG.next = {accept: true, text: 'UI1'};
+  await pu.click('#snSave');
+  chk('(u) "Save selection as snippet" prompts and stores 2 blocks',
+    (await pu.evaluate(() => __fb.SN.length)) === 1 && (await pu.evaluate(() => __fb.SN[0].n)) === 'UI1' && (await pu.evaluate(() => __fb.SN[0].b.length)) === 2);
+  chk('(u) panel lists "UI1" with count (2)', /UI1\s*\(2\)/.test(await pu.textContent('#snList')), await pu.textContent('#snList'));
+  DLG.next = {accept: true, text: 'UI1r'};
+  await pu.click('#snList [data-snren="0"]');
+  chk('(u) Rename button (prompt accepted) renames and redraws', (await pu.evaluate(() => __fb.SN[0].n)) === 'UI1r' && /UI1r/.test(await pu.textContent('#snList')));
+  DLG.next = {accept: false};
+  await pu.click('#snList [data-sndel="0"]');
+  chk('(u) delete confirm dismissed: snippet kept', (await pu.evaluate(() => __fb.SN.length)) === 1);
+  chk('(u) delete confirm names the snippet', DLG.seen.some(m => m === 'Delete snippet "UI1r"?'), JSON.stringify(DLG.seen));
+  DLG.next = {accept: true};
+  await pu.click('#snList [data-sndel="0"]');
+  chk('(u) delete confirm accepted: snippet removed', (await pu.evaluate(() => __fb.SN.length)) === 0 && !/UI1r/.test(await pu.textContent('#snList')));
+
+  DLG.next = {accept: true, text: 'UI2'};
+  await pu.evaluate(() => __fb.setView('L'));
+  await selectAll(pu);
+  await pu.click('#snSave');
+  await imp(pu, bp());
+  await pu.evaluate(() => __fb.setView('L'));
+  await pu.click('#snList [data-snuse="0"]');
+  chk('(u) click snippet in panel starts ghost paste', (await pu.evaluate(() => __fb.pasting)) !== null);
+  await pu.evaluate(() => __fb.click(10, 10));
+  chk('(u) panel click + canvas click pastes 2 blocks', (await pu.evaluate(() => __fb.build())).Blocks.length === 2);
+
+  const [dl] = await Promise.all([pu.waitForEvent('download'), pu.click('#snExp')]);
+  const dlTxt = fs.readFileSync(await dl.path(), 'utf8');
+  chk('(u) export downloads snippets.json with 1 snippet', dl.suggestedFilename() === 'snippets.json' && JSON.parse(dlTxt).snippets.length === 1, dl.suggestedFilename());
+  await pu.setInputFiles('#snImp', {name: 'snippets.json', mimeType: 'application/json', buffer: Buffer.from(dlTxt)});
+  await pu.waitForFunction(() => /imported/.test(document.getElementById('toast').textContent));
+  chk('(u) file import toasts "1 imported"', (await pu.textContent('#toast')) === '1 imported', await pu.textContent('#toast'));
+  chk('(u) file import merges with " (2)" suffix', isDeepStrictEqual(await pu.evaluate(() => __fb.SN.map(s => s.n)), ['UI2', 'UI2 (2)']), JSON.stringify(await pu.evaluate(() => __fb.SN.map(s => s.n))));
+
+  await pu.setInputFiles('#snImp', {name: 'junk.json', mimeType: 'application/json', buffer: Buffer.from('garbage{')});
+  await pu.waitForFunction(() => document.getElementById('toast').textContent === 'Not a snippet file');
+  chk('(u) garbage file toasts "Not a snippet file"', (await pu.textContent('#toast')) === 'Not a snippet file');
+  chk('(u) garbage file leaves library unchanged', (await pu.evaluate(() => __fb.SN.length)) === 2);
+
+  // (s) floor snippet with a belt (DAT_ConveyorBelt machine) + assembler: saved, pasted identical
+  await imp(pu, bp([], [mac('DAT_ConveyorBelt', 3, 3, {rot: 1}), mac('DAT_Assembler', 6, 3, {mid: 5, rec: KC})]));
+  await pu.evaluate(() => __fb.setView('F'));
+  const origBelt = (await pu.evaluate(() => __fb.build())).DefaultMachines;
+  await selectAll(pu);
+  await pu.evaluate(() => __fb.snAdd('BeltM'));
+  await imp(pu, bp());
+  await pu.evaluate(() => __fb.setView('F'));
+  await pu.evaluate(() => __fb.snUse(__fb.SN.findIndex(s => s.n === 'BeltM')));
+  await pu.evaluate(() => __fb.click(6, 6));
+  const pasteBelt = (await pu.evaluate(() => __fb.build())).DefaultMachines;
+  chk('(s) floor belt+machine snippet: count kept', pasteBelt.length === origBelt.length, `${pasteBelt.length} vs ${origBelt.length}`);
+  chk('(s) floor belt+machine snippet: layout identical', isDeepStrictEqual(normM(pasteBelt), normM(origBelt)), diff(normM(pasteBelt), normM(origBelt)));
+  await ctxU.close();
+
+  // ---- (P) planner UI: fresh context, floor view, no Simulate
+  const ctxP = await br.newContext({viewport: {width: 1400, height: 900}});
+  const pp = await newPage(ctxP, 'planner');
+  await pp.evaluate(() => __fb.setView('F'));
+  await pp.click('#plnB');
+  chk('(P1) Planner opens via #plnB in floor view (no Simulate)', await pp.evaluate(() => !document.getElementById('pln').hidden && document.getElementById('vwF').getAttribute('aria-pressed') === 'true'));
+  chk('(P2) starts empty: item (none), hint shown', (await pp.inputValue('#plnItem')) === '' && /Pick a craftable/.test(await pp.textContent('#plnOut')));
+  chk('(P2) item list has Cobalt Plates', (await pp.locator('#plnItem option[value="ITEM_CobaltPlates"]').count()) === 1);
+  await pp.selectOption('#plnItem', 'ITEM_CobaltPlates');
+  await pp.fill('#plnRate', '120');
+  const labels = async () => (await pp.locator('.plnLbl').allTextContents()).join(' | ');
+  chk('(P3) Mk1: arrow label "120 items/min, 2 belts (Mk1)"', (await labels()).includes('120 items/min, 2 belts (Mk1)'), await labels());
+  const boxTxt = async () => pp.textContent('.plnBox[data-item="ITEM_CobaltPlates"]');
+  chk('(P3) box shows 6 machines and 100%', /6 x .+100%/.test(await boxTxt()), await boxTxt());
+  await pp.selectOption('#plnMk', '2');
+  chk('(P3) Mk3 switch updates arrow: 1 belt (Mk3)', (await labels()).includes('120 items/min, 1 belts (Mk3)'), await labels());
+  chk('(P4) splitter follows belt Mk3: no warning', (await pp.locator('.plnWarn').count()) === 0);
+  await pp.selectOption('#plnSp', '0');
+  chk('(P4) splitter override Mk1 on Mk3 belt warns', (await pp.locator('.plnWarn').count()) > 0);
+  await pp.selectOption('#plnSp', '');
+  chk('(P4) splitter back to follow: no warning', (await pp.locator('.plnWarn').count()) === 0);
+  chk('(P4) split text "1->3 splitter x3" shown', (await pp.textContent('#plnOut')).includes('1->3 splitter x3'));
+  await pp.selectOption('#plnMk', '0');
+  await pp.fill('#plnRate', '100');
+  const o100 = await pp.textContent('#plnOut');
+  chk('(P5) 100/min Mk1: "2->5 balancer" shown', o100.includes('2->5 balancer'));
+  chk('(P5) 100/min Mk1: "needs 2 belts; Mk2 carries it on 1 belt" shown', o100.includes('needs 2 belts; Mk2 carries it on 1 belt'));
+  await pp.fill('#plnRate', '180.01');
+  await pp.selectOption('#plnMk', '2');
+  chk('(P6) 180.01/min Mk3: "no single belt carries" shown', (await pp.textContent('#plnOut')).includes('no single belt carries'));
+  await pp.fill('#plnRate', '180');
+  chk('(P6) 180/min Mk3: exactly 1 belt label', (await labels()).includes('180 items/min, 1 belts (Mk3)'), await labels());
+  chk('(P-h) planner: no pageerror / console.error', errs.length === 0, errs.join('\n     '));
+  await ctxP.close();
 
   await ctx.close();
 } finally {
