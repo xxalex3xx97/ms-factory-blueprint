@@ -750,10 +750,10 @@ function drawPorts(s){
   S.blocks.forEach(b=>{if(b.h!==layer)return;portsOf(b).forEach(p=>{
     if(p.line){   // elevator: short tick on the outer edge of the ring cell behind the port (pos 4 = low side, pos 9 = high side)
       const low=p.pos==='start',rx=p.x+p.nx,ry=p.y+p.ny,k=(low?0:1);
-      cx.strokeStyle=p.en?"hsl(140,70%,48%)":"hsl(0,75%,55%)";cx.lineWidth=Math.max(2,s*.12);cx.beginPath();
+      cx.save();cx.strokeStyle=p.en?"hsl(140,70%,48%)":"hsl(0,75%,55%)";cx.lineWidth=Math.max(2,s*.12);cx.beginPath();   // save/restore: the tick's stroke style must not leak into the next port
       if(p.ny){const X=V.ox+(rx+k)*s,Y0=V.oy+ry*s,Y1=V.oy+(ry+1)*s;cx.moveTo(X,Y0);cx.lineTo(X,Y1)}   // N/S wall: lateral edges are vertical
       else{const Y=V.oy+(ry+k)*s,X0=V.ox+rx*s,X1=V.ox+(rx+1)*s;cx.moveTo(X0,Y);cx.lineTo(X1,Y)}   // E/W wall: lateral edges are horizontal
-      cx.stroke();return}
+      cx.stroke();cx.restore();return}
     const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,w=p.nx?T:Ln,h=p.nx?Ln:T;
     cx.fillStyle=p.en?"hsl(140,70%,48%)":"hsl(0,75%,55%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1);
     if(p.dir&&s>=10){const r=Math.max(3,s*.2),sg=p.dir==="in"?-1:1,dx=p.nx*sg,dy=p.ny*sg,qx=ex+p.nx*.35*s*(p.dir==="in"?-.2:.2),qy=ey+p.ny*.35*s*(p.dir==="in"?-.2:.2);
