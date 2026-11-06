@@ -862,18 +862,26 @@ function grid(major){
 function pieces(a,b,cuts){const o=[];let p=a;cuts.slice().sort((u,v)=>u[0]-v[0]).forEach(c=>{if(c[0]>p)o.push([p,c[0]]);p=Math.max(p,c[1])});if(p<b)o.push([p,b]);return o}
 function paintFloorBase(s){
   const A=areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;
+  // every 2-cell gap between neighbouring block cells (E strip, S strip, SE corner) gets the same gap colour, so no corner is left black or half-tone
+  const occ=new Set();S.blocks.forEach(b=>{if(b.h!==layer||isM(b))return;const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)occ.add((b.x+i)+","+(b.y+j))});
+  cx.fillStyle="rgba(70,80,100,.5)";
+  S.blocks.forEach(b=>{if(b.h!==layer||isM(b))return;const d=dim(b),e=occ.has((b.x+d.w)+","+b.y),so=occ.has(b.x+","+(b.y+d.h)),c=occ.has((b.x+d.w)+","+(b.y+d.h));
+    if(e)R({x:FC*(b.x+d.w)-2,y:FC*b.y,w:2,h:FC*d.h},(x,y,w,h)=>cx.fillRect(x,y,w,h));
+    if(so)R({x:FC*b.x,y:FC*(b.y+d.h)-2,w:FC*d.w,h:2},(x,y,w,h)=>cx.fillRect(x,y,w,h));
+    if(e||so||c)R({x:FC*(b.x+d.w)-2,y:FC*(b.y+d.h)-2,w:2,h:2},(x,y,w,h)=>cx.fillRect(x,y,w,h));});
   cx.fillStyle="rgba(70,80,100,.5)";A.gaps.forEach(g=>R(g,(x,y,w,h)=>cx.fillRect(x,y,w,h)));   // wall between adjacent blocks
   A.floors.forEach(r=>{
-    const T=((def(r.b.cls)||{}).floorInset)||.5;   // elevator: wall = the 1-cell ring
+    const T=.5,Q=((def(r.b.cls)||{}).floorInset)||0,sx=r.x-Q,sy=r.y-Q,sw=r.w+2*Q,sn=r.h+2*Q;   // shell = floor + inset ring (elevator 1): same 0.5 wall band as a station
     const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s,c=catOf(r.b);
+    if(Q){cx.fillStyle="rgba(150,190,230,.08)";R({x:sx,y:sy,w:sw,h:sn},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}   // inset ring inside the shell: floor colour
     cx.fillStyle="rgba(150,190,230,.08)";cx.fillRect(x,y,w,h);
     if(!r.known)hatch(x,y,w,h);
     cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(c)},70%,70%,.5)`;cx.strokeRect(x+.5,y+.5,w-1,h-1);
     // walls: dark band outside the floor edge, gaps at the doors
     cx.fillStyle="#262e3c";cx.strokeStyle="rgba(150,165,190,.6)";cx.lineWidth=1;
-    for(let ed=0;ed<4;ed++){const v=ed%2===0,a0=(v?r.y:r.x)-T,a1=(v?r.y+r.h:r.x+r.w)+T;
+    for(let ed=0;ed<4;ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;
       pieces(a0,a1,r.cuts[ed]).forEach(([p,q])=>{
-        const b=ed===0?{x:r.x+r.w,y:p,w:T,h:q-p}:ed===2?{x:r.x-T,y:p,w:T,h:q-p}:ed===1?{x:p,y:r.y+r.h,w:q-p,h:T}:{x:p,y:r.y-T,w:q-p,h:T};
+        const b=ed===0?{x:sx+sw,y:p,w:T,h:q-p}:ed===2?{x:sx-T,y:p,w:T,h:q-p}:ed===1?{x:p,y:sy+sn,w:q-p,h:T}:{x:p,y:sy-T,w:q-p,h:T};
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
       });
     }
