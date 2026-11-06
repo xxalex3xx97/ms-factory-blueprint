@@ -455,6 +455,16 @@ try {
   chk('(Z) drag at zoom follows the pointer', Math.abs(c2.x - c1.x - 30) < 1.5 && Math.abs(c2.y - c1.y - 20) < 1.5, `${c1.x},${c1.y} -> ${c2.x},${c2.y}`);
   await pp.mouse.move(Math.round(c2.x + c2.w / 2), Math.round(c2.y + c2.h / 2)); await pp.mouse.wheel(0, -900); await pp.waitForTimeout(150);
   chk('(Z) wheel up zooms in', (await gw()) > w1 * 1.1, String(w1) + ' -> ' + await gw());
+  // pan: drag empty viewport space moves everything; a node can be dragged past the old top-left limit
+  const vp = await pp.evaluate(() => { const r = document.querySelector('.plnVp').getBoundingClientRect(); return {x: r.left, y: r.top, w: r.width, h: r.height}; });
+  const p0 = await bb(), ex = Math.round(vp.x + vp.w - 8), ey = Math.round(vp.y + vp.h - 8);
+  await pp.mouse.move(ex, ey); await pp.mouse.down(); await pp.mouse.move(ex - 50, ey - 30, {steps: 4}); await pp.mouse.up();
+  const p1 = await bb();
+  chk('(Z) pan: dragging empty space moves the diagram', Math.abs(p1.x - p0.x + 50) < 1.5 && Math.abs(p1.y - p0.y + 30) < 1.5, `${p0.x},${p0.y} -> ${p1.x},${p1.y}`);
+  await pp.mouse.move(Math.round(p1.x + p1.w / 2), Math.round(p1.y + p1.h / 2)); await pp.mouse.down();
+  await pp.mouse.move(Math.round(vp.x - 40), Math.round(vp.y - 40), {steps: 6}); await pp.mouse.up();
+  const p2 = await bb();
+  chk('(Z) node moves freely beyond the old edge', p2.x < vp.x, `${p2.x} < ${vp.x}`);
   chk('(Z) planner panel fills the stage height', await pp.evaluate(() => { const p = document.getElementById('pln').getBoundingClientRect(), s = document.getElementById('pln').offsetParent.getBoundingClientRect(); return s.height - p.height < 24; }));
   await pp.selectOption('#plnItem', other); await pp.selectOption('#plnItem', 'ITEM_CobaltPlates');
   // (PR) Protomatter toggle in the panel
