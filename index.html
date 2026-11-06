@@ -50,7 +50,7 @@ summary small{color:var(--dim);font-weight:400;margin-left:auto}
 .sum{padding:10px 12px 6px}.sn{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:4px}.sum .kv{line-height:1.6}.st{font-size:10px;text-transform:uppercase;letter-spacing:.06em;padding:1px 6px;border-radius:99px;border:1px solid var(--line);color:var(--dim)}.st-working{color:hsl(140,55%,62%);border-color:hsl(140,45%,40%)}.st-starved{color:var(--warn);border-color:var(--warn)}.st-blocked{color:hsl(0,75%,68%);border-color:hsl(0,60%,45%)}
 #insp details>.pad{padding-top:8px}
 .bq{font:700 9px/1 var(--mono);color:var(--warn);border:1px solid var(--warn);border-radius:3px;padding:1px 3px;cursor:help}
-#palCtl{display:flex;gap:6px;margin:0 12px 6px}#palCtl button{flex:1;min-height:24px;font-size:11px;padding:0 6px}
+#palCtl{display:flex;gap:6px;margin:0 12px 6px}#palCtl button{flex:1;min-height:24px;font-size:11px;padding:0 6px}#snp{border-top:1px solid var(--line);flex:none}#snp details{border-top:0}#snp .pad{display:flex;flex-direction:column;gap:6px;padding-top:8px}#snp .pad>button,#snp .pad>label{min-height:28px;font-size:11px}#snp .pad>label{display:flex;align-items:center;gap:6px;color:var(--dim);flex-wrap:wrap}#snp input[type=file]{font-size:11px;max-width:100%;min-width:0}#snList{display:flex;flex-direction:column;gap:4px}#snList>.sub{color:var(--dim);padding:6px 2px;line-height:1.4}.snr{display:flex;gap:4px;align-items:stretch}.snr button{min-height:28px;font-size:11px;padding:0 8px;flex:none}.snr button[data-snuse]{flex:1 1 0;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.snr button[data-sndel]:hover{border-color:var(--bad);color:var(--bad)}
 .chip{margin-left:28px;font-size:10px;line-height:1.3;color:var(--dim);border:1px solid var(--line);border-radius:99px;padding:0 6px;order:9}
 .chip.free{font-style:italic;opacity:.8}
 .it{display:inline-flex;align-items:center;gap:4px;margin:0 8px 2px 0;white-space:nowrap}
@@ -111,7 +111,7 @@ dialog h3{margin:0 0 8px}
 #toast.show{opacity:1}
 @media (max-width:900px){
   body{overflow:auto}
-  main{grid-template-columns:1fr 1fr;grid-template-rows:62vh auto}
+  main{flex:none;grid-template-columns:1fr 1fr;grid-template-rows:62vh auto}
   #stage{grid-column:1/3;grid-row:1}
   #pal{grid-row:2;border-right:1px solid var(--line);max-height:60vh}
   #insp{grid-row:2;max-height:60vh}
@@ -170,7 +170,7 @@ dialog h3{margin:0 0 8px}
     <input id="search" type="text" placeholder="Search blocks..." aria-label="Search blocks">
     <div id="palCtl"><button id="palCol" title="Collapse all sections">Collapse all</button><button id="palExp" title="Expand all sections">Expand all</button></div>
     <div id="palList"></div>
-    <section id="snp" aria-label="Snippets"><h4>Snippets</h4><button id="snSave">Save selection as snippet</button><div id="snList"></div><button id="snExp">Export library</button><label>Import library <input id="snImp" type="file" accept=".json,application/json"></label></section>
+    <section id="snp" aria-label="Snippets"><details open><summary>Snippets</summary><div class="pad"><button id="snSave">Save selection as snippet</button><div id="snList"></div><button id="snExp">Export library</button><label>Import library <input id="snImp" type="file" accept=".json,application/json"></label></div></details></section>
   </aside>
   <section id="stage">
     <canvas id="cv" tabindex="0" aria-label="Station grid canvas"></canvas>
