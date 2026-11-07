@@ -81,7 +81,7 @@ const blk = (name, x, y, o = {}) => ({
   Class: BLK[name], GridLocation: {X: x * 2, Y: y * 2}, Height: o.h || 0, GridRotation: o.rot || 0, BlockID: 0, PaletteID: 0,
 });
 const bp = (Blocks = [], DefaultMachines = [], extra = {}) => ({Version: 1, DisplayName: 't', Blocks, DefaultMachines, ...extra});
-const imp = (pg, obj) => pg.evaluate(t => __fb.importJson(t), JSON.stringify(obj));
+const imp = (pg, obj) => pg.evaluate(t => { STRICT = false; return __fb.importJson(t); }, JSON.stringify(obj));   // strict floor placement is covered by harness.mjs
 const KC = 'ITEM_CobaltOre>ITEM_CobaltPlates';
 
 // layout normalisation: shift so min x/y/height is 0 (paste normalises the same way)
@@ -655,7 +655,7 @@ try {
   await pr.evaluate(() => { document.querySelector('details[data-sec="pos"]').open = true; });
   chk('(R5) inspector Level shows 1 for a ground block', (await pr.inputValue('#fh')) === '1');
   await pr.fill('#fh', '2'); await pr.locator('#fh').press('Tab');
-  chk('(R5) #fh = 2 gives export Height 1 (0-based, data unchanged)', (await pr.evaluate(() => __fb.build().Blocks[0].Height)) === 1, String(await pr.evaluate(() => __fb.build().Blocks[0].Height)));
+  chk('(R5) #fh = 2 gives export Height 2 (game Height: 2 per level)', (await pr.evaluate(() => __fb.build().Blocks[0].Height)) === 2, String(await pr.evaluate(() => __fb.build().Blocks[0].Height)));
   // the block moved to level 2: switch to level 2 (Level up), select it there, type 1 (back to internal 0)
   await pr.click('#lUp');
   await pr.mouse.click(cp[0], cp[1]);
@@ -781,7 +781,7 @@ try {
   chk('(M3) panel X +4: station x=4, machines +64 X, Y unchanged', x1.b[0][0] === 4 && has(x1, ASMn, 68, 5) && has(x1, BELTn, 70, 6), JSON.stringify(x1));
   await setPanelM('#fh', 2);   // Round 5: the Level field is 1-based (display 2 = internal height 1)
   const hz1 = await stM();
-  chk('(M3) panel level 2 (internal h=1): station and its machines h=1, station 2 h=0', hz1.b[0][2] === 1 && has(hz1, ASMn, 68, 5, 1) && has(hz1, BELTn, 70, 6, 1) && hz1.b[1][2] === 0 && has(hz1, ASMn, 164, 5, 0), JSON.stringify(hz1));
+  chk('(M3) panel level 2 (internal h=1): station and its machines h=1, station 2 h=0', hz1.b[0][2] === 2 && has(hz1, ASMn, 68, 5, 2) && has(hz1, BELTn, 70, 6, 2) && hz1.b[1][2] === 0 && has(hz1, ASMn, 164, 5, 0), JSON.stringify(hz1));
   await undoM(2);
   const u3 = await stM();
   chk('(M3) undo x2 restores station and machines (X and height)', isDeepStrictEqual(u3, m0), diff(u3, m0));
