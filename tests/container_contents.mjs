@@ -18,7 +18,7 @@ try {
     const mk = (x, id, extra) => ({Class: cd.machineClass, Transform: {GridLocation: {X: x, Y: 0}, Height: 0, GridRotation: 0}, MachineID: id, PaletteID: 0, ...extra});
     const first = [{Item: 'ironore', Count: 120}, {Item: 'nickelore', Count: 40}];
     // 3rd entry: duplicate item in input (must be summed on export), plus a non-container machine carrying Contents (must not be exported)
-    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [blk], DefaultMachines: [mk(-8, 1, {Contents: first.concat([{Item: 'ironore', Count: 5}])}), mk(0, 2, {})]}));
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [blk], DefaultMachines: [mk(-8, 1, {Contents: first.concat([{Item: 'ironore', Count: 5}, {Item: 'warpfuel', Count: 0, Infinite: true}])}), mk(0, 2, {})]}));
     const a = JSON.parse(JSON.stringify(build())), ct = x => x.DefaultMachines.filter(m => /Container/.test(m.Class)).map(m => m.Contents);
     __fb.importJson(JSON.stringify(a));
     const b = JSON.parse(JSON.stringify(build()));
@@ -30,6 +30,7 @@ try {
   chk('empty container omits Contents', r.a[1] === undefined, JSON.stringify(r.a));
   chk('re-import + export: Contents identical', isDeepStrictEqual(r.a, r.b), JSON.stringify([r.a, r.b]));
   chk('re-import + export: DefaultMachines identical', r.same);
+  chk('infinite source goes to SiteOnly, not Contents', JSON.stringify(r.ent.SiteOnly) === JSON.stringify({Infinite: [{Item: 'warpfuel', Count: 0}]}) && !JSON.stringify(r.ent.Contents).includes('warpfuel'), JSON.stringify(r.ent));
   chk('non-containers never get Contents', r.others === 0);
 } finally { await br.close(); }
 process.exit(bad ? 1 : 0);

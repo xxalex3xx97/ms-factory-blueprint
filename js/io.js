@@ -4,10 +4,12 @@ const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.
 const impPorts=(b,L)=>{if(!Array.isArray(L))return;const ps=portsOf(b),off=[],xp=[];L.forEach(e=>{const p=e&&ps.find(q=>q.f===e.Face&&q.i===e.Index);if(p){if(e.Enabled===false)off.push(p.key)}else xp.push(e)});if(off.length)b.off=off;if(xp.length)b.xp=xp};
 // game-ready SerializedMachineConfig per machine (ConfigHex = exact bytes the game applies; Recipe/Ports/Filters stay for humans). Only when the machine has something to configure.
 // Underground: ONE config on the pair's entrance (Length = cells entrance..exit inclusive); the mod's paste tool merges entrance+exit into one game machine. Recipe ports: game port order (config.js gamePortMap; verified Refinery/Assembler, others rule-derived -> PortOrderUnverified).
-// Contents (containers only): totals per item, duplicates summed, Count >= 1, empty = field omitted. Infinite sources (site/simulation only) are never exported; the Infinite key stays on entries (always false here).
-function expCt(b,e){if(!isStore(b)||!b.ct)return;const m=new Map();
-  b.ct.forEach(x=>{const n=Math.max(0,Math.round(Number(x.n))||0);if(!x.item||x.inf||n<1)return;const r=m.get(x.item)||{Item:x.item,Count:0,Infinite:false};r.Count+=n;m.set(x.item,r)});
-  if(m.size)e.Contents=[...m.values()]}
+// Contents (containers only): totals per item, duplicates summed, Count >= 1, empty = field omitted. Infinite sources are site/simulation only: written under SiteOnly.Infinite (the mod's parser ignores SiteOnly), never in Contents.
+function expCt(b,e){if(!isStore(b)||!b.ct)return;const m=new Map(),inf=new Map();
+  b.ct.forEach(x=>{if(!x.item)return;const n=Math.max(0,Math.round(Number(x.n))||0);
+    if(x.inf){const r=inf.get(x.item)||{Item:x.item,Count:0};r.Count+=n;inf.set(x.item,r);return}
+    if(n<1)return;const r=m.get(x.item)||{Item:x.item,Count:0,Infinite:false};r.Count+=n;m.set(x.item,r)});
+  if(m.size)e.Contents=[...m.values()];if(inf.size)e.SiteOnly={Infinite:[...inf.values()]}}
 function expCfg(b,d,e,ugn){
   cfgModel(b,d,e,ugn);
   if(b.cfgKeep&&b.cfgKeep.sig===cfgSig(b)&&cfgKind(d.id)!=="underground")e.ConfigHex=b.cfgKeep.hex;   // imported bytes kept bit-for-bit while recipe/ports/filters are unchanged
@@ -174,6 +176,7 @@ function importJson(txt,quiet){
       if(v2){const f=dim(b);b.x=cell(g.X,2,f.w-14);b.y=cell(g.Y,2,f.h-14);b.h=Math.round(n(t.Height)/MZ)}   // floor cell = (raw-W)/2+7 (fit: 2021/2290 on floors, refinery/splitter/assembler/elevator 100%)
       impCfg(b,d,m);impPorts(b,m.Ports);if(typeof m.Recipe==="string"&&m.Recipe){b.rec=m.Recipe;delete b.recn}
       if(Array.isArray(m.Contents))b.ct=m.Contents.filter(x=>x&&typeof x.Item==="string"&&x.Item).map(x=>({item:x.Item,n:Math.max(0,Math.round(Number(x.Count))||0),inf:x.Infinite===true}));
+      if(m.SiteOnly&&Array.isArray(m.SiteOnly.Infinite))b.ct=(b.ct||[]).concat(m.SiteOnly.Infinite.filter(x=>x&&typeof x.Item==="string"&&x.Item).map(x=>({item:x.Item,n:Math.max(0,Math.round(Number(x.Count))||0),inf:true})));   // site-only infinite sources
       S.blocks.push(b)}
     else S.dm.push(m);
   });
