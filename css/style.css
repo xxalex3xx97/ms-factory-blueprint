@@ -124,3 +124,4 @@ dialog h3{margin:0 0 8px}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 
 @media (max-width:1500px){#comp{display:none}}
+#stG[hidden]{display:none}#stSel{max-width:170px}
