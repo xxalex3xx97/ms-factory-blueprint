@@ -170,8 +170,8 @@ function factsHtml(d){
 }
 
 // Export the diagram as a standalone SVG that is a 1:1 snapshot of the canvas: the live DOM (unzoomed, boxes where you dragged them) cloned into a foreignObject with every computed style inlined and icons embedded as data URIs
-$("plnSv").onclick=async()=>{
-  const g=document.querySelector("#plnOut .plnGrid");if(!g||!g.querySelector(".plnBox")){toast("Nothing to export: pick a target item");return}
+const plnSnap=async()=>{
+  const g=document.querySelector("#plnOut .plnGrid");if(!g||!g.querySelector(".plnBox")){toast("Nothing to export: pick a target item");return null}
   const sv=g.style.transform;g.style.transform="none";   // measure and snapshot at scale 1, no pan
   try{
     const G=g.getBoundingClientRect(),pad=20;let x0=0,y0=0,x1=g.scrollWidth,y1=g.scrollHeight;
@@ -184,38 +184,13 @@ $("plnSv").onclick=async()=>{
     const W=Math.ceil(x1-x0)+2*pad,H=Math.ceil(y1-y0)+2*pad,bg=getComputedStyle($("pln")).backgroundColor,o=document.getElementById("plnOut");
     const body=new XMLSerializer().serializeToString(cl).replace(/^<(\w+)/,'<$1 xmlns="http://www.w3.org/1999/xhtml"');
     const x=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${x0-pad} ${y0-pad} ${W} ${H}"><rect x="${x0-pad}" y="${y0-pad}" width="${W}" height="${H}" fill="${bg}"/><foreignObject x="0" y="0" width="${Math.ceil(x1)}" height="${Math.ceil(y1)}" overflow="visible">${body}</foreignObject></svg>`;
-    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([x],{type:"image/svg+xml"}));a.download=(S.name.replace(/[^\w.-]+/g,"_")||"planner")+"-planner.svg";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e3);
+    return {x,W,H};
   }finally{g.style.transform=sv}
 };
 
-// Vector export: real SVG primitives (rect/path/text/image, no foreignObject) built from the live DOM geometry, so editors like Inkscape/Illustrator can open it. Same scale-1 snapshot and drag positions as the SVG button.
-$("plnVc").onclick=async()=>{
-  const g=document.querySelector("#plnOut .plnGrid");if(!g||!g.querySelector(".plnBox")){toast("Nothing to export: pick a target item");return}
-  const sv=g.style.transform;g.style.transform="none";
-  try{
-    const G=g.getBoundingClientRect(),pad=20,cs=e=>getComputedStyle(e),bgc=cs($("pln")).backgroundColor,A=n=>esc(n);
-    const clear=c=>!c||c==="transparent"||/rgba\(.*,\s*0\)$/.test(c),P=px=>parseFloat(px)||0;
-    let x0=0,y0=0,x1=g.scrollWidth,y1=g.scrollHeight,o="";
-    const img=async im=>{try{const b=await (await fetch(im.src)).blob();return await new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)})}catch(e){return null}};
-    const els=[...g.querySelectorAll("*")].filter(e=>!(e.closest(".plnSvg")&&e.tagName!=="path"&&e.tagName!=="svg"));
-    for(const e of els){
-      const r=e.getBoundingClientRect(),x=r.left-G.left,y=r.top-G.top,w=r.width,h=r.height,c=cs(e);
-      x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x+w);y1=Math.max(y1,y+h);
-      if(e.tagName==="path"){const k=e.classList,hd=k.contains("plnHead"),st=cs(e);o+=`<path d="${e.getAttribute("d")}" fill="${hd?st.fill:"none"}"${hd?"":` stroke="${st.stroke}" stroke-width="${P(st.strokeWidth)}"${st.strokeDasharray&&st.strokeDasharray!=="none"?` stroke-dasharray="${st.strokeDasharray.replace(/px/g,"")}"`:""}`}/>`;continue}
-      if(e.tagName==="svg"||!w||!h)continue;
-      const bw=P(c.borderTopWidth),bs=c.borderTopStyle,hasB=bw>0&&bs!=="none"&&!clear(c.borderTopColor);
-      if(!clear(c.backgroundColor)||hasB)o+=`<rect x="${x+bw/2}" y="${y+bw/2}" width="${w-bw}" height="${h-bw}" rx="${P(c.borderTopLeftRadius)}" fill="${clear(c.backgroundColor)?"none":c.backgroundColor}"${hasB?` stroke="${c.borderTopColor}" stroke-width="${bw}"${bs==="dashed"?' stroke-dasharray="4 3"':""}`:""}/>`;
-      if(e.tagName==="IMG"){const d=await img(e);if(d)o+=`<image x="${x}" y="${y}" width="${w}" height="${h}" href="${d}"/>`}
-      const T=(txt,tx,ty,st,anch)=>{o+=`<text x="${tx}" y="${ty}" font-family="${A(st.fontFamily)}" font-size="${st.fontSize}" font-weight="${st.fontWeight}" fill="${st.color}"${anch?` text-anchor="${anch}"`:""}>${A(txt)}</text>`};
-      if(e.tagName==="SELECT"){const t=e.options[e.selectedIndex];if(t)T(t.textContent,x+P(c.paddingLeft)+bw,y+h/2+P(c.fontSize)*.35,c)}
-      else [...e.childNodes].filter(n=>n.nodeType===3&&n.textContent.trim()).forEach(n=>{   // one <text> per visual line of each text node
-        const words=[...n.textContent.matchAll(/\S+/g)],lines=[];
-        words.forEach(m=>{const rg=document.createRange();rg.setStart(n,m.index);rg.setEnd(n,m.index+m[0].length);const q=rg.getBoundingClientRect(),L=lines[lines.length-1];
-          if(L&&Math.abs(L.t-q.top)<4){L.s+=" "+m[0]}else lines.push({s:m[0],l:q.left,t:q.top,b:q.bottom})});
-        lines.forEach(L=>T(L.s,L.l-G.left,L.b-G.top-(L.b-L.t)*.22,c))})
-    }
-    const W=Math.ceil(x1-x0)+2*pad,H=Math.ceil(y1-y0)+2*pad;
-    const x=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${x0-pad} ${y0-pad} ${W} ${H}"><rect x="${x0-pad}" y="${y0-pad}" width="${W}" height="${H}" fill="${bgc}"/>${o}</svg>`;
-    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([x],{type:"image/svg+xml"}));a.download=(S.name.replace(/[^\w.-]+/g,"_")||"planner")+"-planner-vector.svg";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e3);
-  }finally{g.style.transform=sv}
-};
+const plnSave=(blob,ext)=>{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=(S.name.replace(/[^\w.-]+/g,"_")||"planner")+"-planner."+ext;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e3)};
+$("plnSv").onclick=async()=>{const r=await plnSnap();if(r)plnSave(new Blob([r.x],{type:"image/svg+xml"}),"svg")};
+// PNG: the same snapshot rasterised at 2x
+$("plnPng").onclick=async()=>{const r=await plnSnap();if(!r)return;
+  const im=new Image();im.onload=()=>{const c=document.createElement("canvas");c.width=r.W*2;c.height=r.H*2;const k=c.getContext("2d");k.scale(2,2);k.drawImage(im,0,0,r.W,r.H);c.toBlob(b=>b?plnSave(b,"png"):toast("PNG export failed"),"image/png")};
+  im.onerror=()=>toast("PNG export failed");im.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(r.x)};   // data: URL, a blob: URL taints the canvas (foreignObject)

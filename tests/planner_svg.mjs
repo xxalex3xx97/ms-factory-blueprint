@@ -35,11 +35,10 @@ try {
   chk('dragged box transform kept', r.t === want.t, `${r.t} vs ${want.t}`);
   chk('arrows exported', r.arrows > 0);
   chk('icons embedded (no blob: urls)', !r.blob);
-  const [dv] = await Promise.all([pg.waitForEvent('download'), pg.click('#plnVc')]);
-  const vs = fs.readFileSync(await dv.path(), 'utf8'); fs.copyFileSync(await dv.path(), path.join(ROOT, 'tests/shots/planner-vector.svg'));
-  chk('vector file name', dv.suggestedFilename().endsWith('-planner-vector.svg'));
-  chk('vector: parses, no foreignObject, has text/rect/path/image', await pg.evaluate(t => { const d = new DOMParser().parseFromString(t, 'image/svg+xml'); return !d.querySelector('parsererror') && !d.querySelector('foreignObject') && ['text', 'rect', 'path', 'image'].every(n => d.querySelector(n)); }, vs));
-  chk('vector: item names present as text', /Cobalt Plates/.test(vs) && /Cobalt Ore/.test(vs));
+  const [dp] = await Promise.all([pg.waitForEvent('download'), pg.click('#plnPng')]);
+  const pb = fs.readFileSync(await dp.path()); fs.copyFileSync(await dp.path(), path.join(ROOT, 'tests/shots/planner.png'));
+  chk('png file name + PNG signature', dp.suggestedFilename().endsWith('-planner.png') && pb.slice(1, 4).toString() === 'PNG', dp.suggestedFilename());
+  chk('png is not tiny (has content)', pb.length > 5000, String(pb.length));
   chk('no page errors', errs.length === 0, errs.join('|'));
 } finally { await br.close(); }
 process.exit(bad ? 1 : 0);
