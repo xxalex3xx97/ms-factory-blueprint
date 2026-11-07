@@ -276,6 +276,13 @@ async function s4(pg, C) {
   chk('placing a machine on the elevator centre is refused with warning', toast.includes('Cannot build here') && (await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls.startsWith("DAT_")).length)) === 0, `toast "${toast}"`);
   await pg.evaluate(() => __fb.click(1, 1));
   chk('placing next to the elevator centre (inside block floor) is allowed', (await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls.startsWith("DAT_")).length)) === 1);
+  // elevator ring (x=13, y 4..10 = open door slot E) buildable; unpaired open door strip (x=14) buildable; shaft cell refused
+  const ringOK = await nb(13, 5, 1, 1);
+  const doorOK = await nb(14, 5, 1, 1);
+  const shaftOK = await nb(6, 6, 1, 1);
+  chk('elevator ring cell inside open door slot: buildable', ringOK === false, `noBuild ${ringOK}`);
+  chk('unpaired open door strip: buildable', doorOK === false, `noBuild ${doorOK}`);
+  chk('elevator shaft cell: refused', shaftOK === true, `noBuild ${shaftOK}`);
   await pg.evaluate(() => __fb.setView('L'));
 }
 

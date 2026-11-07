@@ -36,7 +36,10 @@ function areas(L){
       }
     }
   });
-  return{floors,doors,gaps,blocked,rects:floors.concat(doors.filter(d=>d.open&&d.paired))};
+  // elevator ring: inset strip (floorInset Q) inside each open door slot, same geometry as draw.js paintFloorBase
+  const ring=[];floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;
+    for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>ring.push(ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q}))});
+  return{floors,doors,gaps,blocked,rects:floors.concat(doors.filter(d=>d.open),ring)};
 }
 // elevator shaft (blocked 4x4 centre): machines may not overlap it
 let STRICT=true;   // Settings: keep buildables on the floor (no outside / across walls); overlaps are always refused
