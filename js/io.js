@@ -4,9 +4,9 @@ const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.
 const impPorts=(b,L)=>{if(!Array.isArray(L))return;const ps=portsOf(b),off=[],xp=[];L.forEach(e=>{const p=e&&ps.find(q=>q.f===e.Face&&q.i===e.Index);if(p){if(e.Enabled===false)off.push(p.key)}else xp.push(e)});if(off.length)b.off=off;if(xp.length)b.xp=xp};
 // game-ready SerializedMachineConfig per machine (ConfigHex = exact bytes the game applies; Recipe/Ports/Filters stay for humans). Only when the machine has something to configure.
 // Underground: ONE config on the pair's entrance (Length = cells entrance..exit inclusive); the mod's paste tool merges entrance+exit into one game machine. Recipe ports: game port order (config.js gamePortMap; verified Refinery/Assembler, others rule-derived -> PortOrderUnverified).
-// Contents (containers only): totals per item, duplicates summed, empty = field omitted. Infinite is a site-only flag kept as before (always written, so old files round-trip); infinite items keep Count 0
+// Contents (containers only): totals per item, duplicates summed, Count >= 1, empty = field omitted. Infinite sources (site/simulation only) are never exported; the Infinite key stays on entries (always false here).
 function expCt(b,e){if(!isStore(b)||!b.ct)return;const m=new Map();
-  b.ct.forEach(x=>{const n=Math.max(0,Math.round(Number(x.n))||0);if(!x.item||(n<1&&!x.inf))return;const r=m.get(x.item)||{Item:x.item,Count:0,Infinite:false};r.Count+=n;if(x.inf)r.Infinite=true;m.set(x.item,r)});
+  b.ct.forEach(x=>{const n=Math.max(0,Math.round(Number(x.n))||0);if(!x.item||x.inf||n<1)return;const r=m.get(x.item)||{Item:x.item,Count:0,Infinite:false};r.Count+=n;m.set(x.item,r)});
   if(m.size)e.Contents=[...m.values()]}
 function expCfg(b,d,e,ugn){
   cfgModel(b,d,e,ugn);

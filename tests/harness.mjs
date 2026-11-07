@@ -1010,7 +1010,7 @@ async function s13(pg, C) {
   await scene({...mac('DAT_Container_2', 10, 10, {mid: 1}), Contents: ct});
   const b1 = await pg.evaluate(() => __fb.build());
   const e1 = b1.DefaultMachines.find(m => m.MachineID === 1) || {};
-  chk('a: build() DefaultMachines Contents JSON-equal to input', JSON.stringify(e1.Contents) === JSON.stringify(ct), JSON.stringify(e1.Contents));
+  chk('a: build() Contents = input without infinite sources (never exported)', JSON.stringify(e1.Contents) === JSON.stringify(ct.filter(x => !x.Infinite)), JSON.stringify(e1.Contents));
   await imp(pg, b1);
   const b2 = await pg.evaluate(() => __fb.build());
   chk('a: re-import build() output, build again equal', JSON.stringify(b2) === JSON.stringify(b1), firstDiff(b1, b2));
