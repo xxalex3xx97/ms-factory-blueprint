@@ -99,8 +99,9 @@
     <div id="shW" class="fm" role="region" aria-labelledby="shWT" hidden>
       <div class="fmh"><h3 id="shWT">Screenshot</h3><button id="shWX" aria-label="Close screenshot" title="Close">&times;</button></div>
       <div class="fmb">
-        <label title="100% = full size. Lower = smaller picture, same content"><span class="tx">Quality</span> <input id="shQ" type="range" min="10" max="100" step="5" value="100" aria-label="Screenshot quality"> <b id="shQv">100%</b></label>
+        <label title="100% = full size. 100% = the largest picture this browser can make; lower = smaller picture, same content"><span class="tx">Quality</span> <input id="shQ" type="range" min="10" max="100" step="5" value="50" aria-label="Screenshot quality"> <b id="shQv">50%</b></label>
         <div id="shPrev" class="sub" aria-live="polite"></div>
+        <div id="shLim" class="sub"></div>
         <div id="shRef" title="Size preview: the outer square is 100%" aria-hidden="true"><div id="shBox"></div></div>
         <div class="grp"><button id="shPng" title="Export the current view (whole plan, current level) as a PNG image">PNG</button><button id="shSvg" title="Export as an SVG (the image is embedded, not redrawn as vectors)">SVG</button></div>
       </div>

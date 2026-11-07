@@ -284,33 +284,41 @@ function fpSheet(plan,n,cells,unit,wc,hc,bo,ca,cb,P,Sz){   // plan: canvas of th
   q.textAlign="left";q.textBaseline="bottom";q.font=font("bold",22);q.fillText("SCALE",sx,sy-14*f);
   return o;
 }
-// geometry of the export at quality q (0.1..1; 1 = full size). Sheet furniture scales with q, so every quality is the same picture, smaller.
-function fpGeom(q){
+// Browser limit of one canvas: side from a real probe (N x 1 canvas), area from the engine's documented cap (Firefox 472 MP, iOS Safari 16.7 MP, Chromium/desktop Safari 268 MP); 95% of it is used. 100% quality = the biggest square sheet under that limit.
+const fpLim=(()=>{let L=null;return()=>{if(L)return L;
+  let dim=4096;for(const n of [32767,16384,8192,4096]){const c=document.createElement("canvas");c.width=n;c.height=1;const g=c.getContext("2d");if(!g)continue;g.fillStyle="#000";g.fillRect(n-1,0,1,1);if(g.getImageData(n-1,0,1,1).data[3]===255){dim=n;break}}
+  const ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua),ff=/Firefox\//.test(ua),area=ios?16777216:ff?472907776:268435456;
+  return L={side:Math.floor(Math.min(dim,Math.sqrt(area))*.95),dim,area,eng:ios?"iOS Safari":ff?"Firefox":"Chrome/Edge/Safari"}}})();
+// geometry of a sheet whose square side is `side` px: fits the plan (plus padding and the sheet furniture) into it. Furniture (margins, frame, text) scales with px per cell, so every quality is the same picture, smaller.
+function fpGeom(side){
   let a=1e9,b=1e9,c=-1e9,d=-1e9;const add=(x0,y0,x1,y1)=>{a=Math.min(a,x0);b=Math.min(b,y0);c=Math.max(c,x1);d=Math.max(d,y1)};
   if(view==="L")S.blocks.filter(k=>!isM(k)).forEach(k=>{const m=dim(k);add(k.x,k.y,k.x+m.w,k.y+m.h)});
   else{areas(layer).rects.forEach(r=>add(r.x,r.y,r.x+r.w,r.y+r.h));S.blocks.filter(k=>isM(k)&&k.h===layer).forEach(k=>{const m=dim(k);add(k.x,k.y,k.x+m.w,k.y+m.h)})}
   if(a>c)return null;
-  const base=view==="L"?128:80,P=view==="L"?2:8,px=base*q,cw=(c-a+2*P)*px,ch=(d-b+2*P)*px,   // P: empty cells around the building so walls, door slots and ghosts outside the floor rects are not clipped
-    bo=Math.min(4,Math.max(1,Math.max((c-a+2*P)*base,(d-b+2*P)*base)/3500)),f=bo*q,Wt=Math.max(cw+440*f,ch+580*f),   // bo: sheet furniture (margins, frame, text) grows with big plans; square sheet side Wt
-    k=Math.min(1,15980/Wt,Math.sqrt(1.6e8)/Wt);   // k: shrink only past 16000 px a side / 160 MP, sheet margins included
-  return{a,b,c,d,P,px,cw,ch,bo,Wt,k,side:Math.ceil(Wt*k),capped:k<1};
+  const base=view==="L"?128:80,P=view==="L"?2:8,wc=c-a+2*P,hc=d-b+2*P,   // P: empty cells around the building so walls, door slots and ghosts outside the floor rects are not clipped
+    bo=Math.min(4,Math.max(1,Math.max(wc,hc)*base/3500)),                 // bo: furniture grows with big plans
+    px=side/Math.max(wc+440*bo/base,hc+580*bo/base);                      // sheet side = px * max(wc + 440bo/base, hc + 580bo/base)
+  return{a,b,c,d,P,px,bo,wc,hc,cw:wc*px,ch:hc*px,side};
 }
-function fpRender(q){
-  const g=fpGeom(q);if(!g){toast("Nothing to export");return null}
-  const {a,b,c,d,P,px,cw,ch,bo,Wt,k}=g;
+function fpRender(side){
+  const g=fpGeom(side);if(!g){toast("Nothing to export");return null}
+  const {a,b,c,d,P,px,bo,cw,ch}=g;
   const sv={ox:V.ox,oy:V.oy,z:V.z,W,H,dpr,sel,active,pasting,w:cv.width,h:cv.height};
   try{
-    V.z=px*k/CELLS[view];V.ox=-(a-P)*px*k;V.oy=-(b-P)*px*k;W=Math.ceil(cw*k);H=Math.ceil(ch*k);dpr=1;
+    V.z=px/CELLS[view];V.ox=-(a-P)*px;V.oy=-(b-P)*px;W=Math.ceil(cw);H=Math.ceil(ch);dpr=1;
     cv.width=W;cv.height=H;sel=new Set();active=null;pasting=null;paint();
-    const sheet=fpSheet(cv,px*k,px*k,view==="L"?"blocks":"cells",c-a,d-b,bo,a-P,b-P,P,Wt*k);
-    return {url:sheet.toDataURL("image/png"),W:sheet.width,H:sheet.height};
+    return fpSheet(cv,px,px,view==="L"?"blocks":"cells",c-a,d-b,bo,a-P,b-P,P,side);   // canvas
   }finally{V.ox=sv.ox;V.oy=sv.oy;V.z=sv.z;W=sv.W;H=sv.H;dpr=sv.dpr;sel=sv.sel;active=sv.active;pasting=sv.pasting;cv.width=sv.w;cv.height=sv.h;paint()}
 }
 const fpSave=(blob,ext)=>{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=(S.name.replace(/[^\w.-]+/g,"_")||"plan")+"-"+(view==="L"?"layout":"floor-plan")+"."+ext;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e3)};
-const shQ=()=>(+$("shQ").value||100)/100;
-function shPrev(){const g=fpGeom(shQ());$("shQv").textContent=Math.round(shQ()*100)+"%";
-  $("shPrev").textContent=g?`${g.side} × ${g.side} px · ${(g.side*g.side/1e6).toFixed(1)} MP`+(g.capped?" (limited by the browser's max image size)":""):"Nothing to export in this view";
-  $("shBox").style.width=$("shBox").style.height=Math.round(128*shQ())+"px"}
+const shSide=()=>Math.max(512,Math.round(fpLim().side*(+$("shQ").value||100)/100));
+function shPrev(){const q=+$("shQ").value||100,sd=shSide(),g=fpGeom(sd),L=fpLim();$("shQv").textContent=q+"%";
+  $("shPrev").textContent=g?`${sd} × ${sd} px · ${(sd*sd/1e6).toFixed(1)} MP`:"Nothing to export in this view";
+  $("shLim").textContent=`100% = ${L.side} × ${L.side} px, the largest picture ${L.eng} can make`;
+  $("shBox").style.width=$("shBox").style.height=Math.round(128*sd/L.side)+"px"}
 $("shQ").oninput=shPrev;$("shB").addEventListener("click",()=>{if(!$("shW").hidden)shPrev()});
-$("shPng").onclick=()=>{const r=fpRender(shQ());if(r)fetch(r.url).then(x=>x.blob()).then(b=>fpSave(b,"png"))};
-$("shSvg").onclick=()=>{const r=fpRender(shQ());if(r)fpSave(new Blob([`<svg xmlns="http://www.w3.org/2000/svg" width="${r.W}" height="${r.H}" viewBox="0 0 ${r.W} ${r.H}"><image width="${r.W}" height="${r.H}" href="${r.url}"/></svg>`],{type:"image/svg+xml"}),"svg")};
+const fpBlob=cvs=>new Promise(r=>cvs.toBlob(r,"image/png"));
+$("shPng").onclick=async()=>{const c=fpRender(shSide());if(!c)return;const b=await fpBlob(c);b?fpSave(b,"png"):toast("PNG export failed (image too large for this browser): lower the quality")};
+$("shSvg").onclick=async()=>{const c=fpRender(shSide());if(!c)return;const b=await fpBlob(c);if(!b){toast("SVG export failed (image too large for this browser): lower the quality");return}
+  const u=await new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});
+  fpSave(new Blob([`<svg xmlns="http://www.w3.org/2000/svg" width="${c.width}" height="${c.height}" viewBox="0 0 ${c.width} ${c.height}"><image width="${c.width}" height="${c.height}" href="${u}"/></svg>`],{type:"image/svg+xml"}),"svg")};
