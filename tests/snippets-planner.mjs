@@ -588,12 +588,12 @@ try {
   const box = sel => pr.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return {l: r.left, t: r.top, r: r.right, b: r.bottom, h: r.height, cy: r.top + r.height / 2}; }, sel);
   const vis = sel => pr.isVisible(sel);
   const winOpen = id => pr.evaluate(i => !document.getElementById(i).hidden, id);
-  const lvTxt = async () => (await pr.textContent('#lvM')).replace(/\s+/g, ' ').trim();
+  const lvTxt = async () => (await pr.textContent('#lvB')).replace(/\s+/g, ' ').trim();
   const hb = await box('header');
   chk('(R5) header 80..96px tall at 1400x900', hb.h >= 80 && hb.h <= 96, String(hb.h));
   const ctr = [];
-  for (const s of ['#name', '#lvM', '#undo', '#fit', '#simB', '#flwB', '#plnB']) ctr.push(s + ' ' + ((await box(s)).cy - hb.cy).toFixed(1));
-  chk('(R5) controls vertically centred on the header (within 4px): #name #lvM #undo #fit #simB #flwB #plnB', ctr.every(x => Math.abs(+x.split(' ')[1]) <= 4), ctr.join(' | '));
+  for (const s of ['#name', '#lvB', '#undo', '#fit', '#simB', '#flwB', '#plnB']) ctr.push(s + ' ' + ((await box(s)).cy - hb.cy).toFixed(1));
+  chk('(R5) controls vertically centred on the header (within 4px): #name #lvB #undo #fit #simB #flwB #plnB', ctr.every(x => Math.abs(+x.split(' ')[1]) <= 4), ctr.join(' | '));
   chk('(R5) #rot, #rotv, #tabs, #simM, #simL, #dockTabs, #dtI, #dtS absent', (await pr.locator('#rot, #rotv, #tabs, #simM, #simL, #dockTabs, #dtI, #dtS').count()) === 0);
   await pr.evaluate(() => __fb.setView('L'));
   const palL = await pr.evaluate(() => [...document.querySelectorAll('#palList details[data-c]')].map(d => d.dataset.c));
@@ -626,15 +626,16 @@ try {
     cardOk.push(o0 !== o1);
   }
   chk('(R5) every dock card collapses and expands from its own summary', cardOk.length > 0 && cardOk.every(Boolean), cardOk.join(','));
-  // Level popover (header #lvM): display = internal height + 1
-  chk('(R5) Level popover closed by default, label "Level 1"', !(await vis('#lvL')) && (await pr.getAttribute('#lvM', 'aria-expanded')) === 'false' && (await lvTxt()) === 'Level 1');
-  await pr.click('#lvM');
-  chk('(R5) click Level: popover opens, aria-expanded true', (await vis('#lvL')) && (await pr.getAttribute('#lvM', 'aria-expanded')) === 'true');
-  await pr.keyboard.press('Escape');
-  chk('(R5) Escape closes Level popover', !(await vis('#lvL')));
-  await pr.click('#lvM');
-  await pr.mouse.click(700, 600);
-  chk('(R5) outside click closes Level popover', !(await vis('#lvL')));
+  // Level window (header #lvB toggles the floating #lvW, #lvWX closes it): display = internal height + 1
+  chk('(R5) Level window closed by default, label "Level 1"', !(await vis('#lvW')) && (await pr.getAttribute('#lvB', 'aria-pressed')) === 'false' && (await lvTxt()) === 'Level 1');
+  await pr.click('#lvB');
+  chk('(R5) click Level: window opens, aria-pressed true', (await vis('#lvW')) && (await pr.getAttribute('#lvB', 'aria-pressed')) === 'true');
+  await pr.click('#lvWX');
+  chk('(R5) close button closes Level window', !(await vis('#lvW')));
+  await pr.click('#lvB');
+  await pr.click('#lvB');
+  chk('(R5) clicking Level again closes the window', !(await vis('#lvW')));
+  await pr.click('#lvB');
   chk('(R5) #lay shows 1 while internal layer is 0', (await pr.inputValue('#lay')) === '1' && (await pr.evaluate(() => __fb.layer)) === 0);
   await pr.click('#lUp');
   chk('(R5) Level up: "Level 2", internal layer 1, #lay 2', (await lvTxt()) === 'Level 2' && (await pr.evaluate(() => __fb.layer)) === 1 && (await pr.inputValue('#lay')) === '2');
@@ -646,9 +647,8 @@ try {
   chk('(R5b) typing 1 in #lay: internal layer 0', (await pr.evaluate(() => __fb.layer)) === 0);
   { const d = pr.locator('#insp details[data-sec=ov]'), o0 = await d.evaluate(e => e.open); await d.locator(':scope > summary').click(); const o1 = await d.evaluate(e => e.open); await d.locator(':scope > summary').click();
   chk('(R5b) Overview is a collapsible card (summary toggles it)', o0 && !o1 && await d.evaluate(e => e.open)); }
-  await pr.click('#lvM');
   await pr.uncheck('#ghost');
-  chk('(R5) ghost layers checkbox lives in the Level popover and toggles', !(await pr.isChecked('#ghost')) && (await vis('#lvL')));
+  chk('(R5) ghost layers checkbox lives in the Level window and toggles', !(await pr.isChecked('#ghost')) && (await vis('#lvW')));
   await pr.check('#ghost');
   // typing in the inspector Level field (#fh): 1-based; export stays 0-based (Escape cleared the selection: select again)
   await pr.mouse.click(cp[0], cp[1]);
@@ -687,6 +687,7 @@ try {
   await pr.click('#fwWX');
   chk('(R5) x on Flow closes it and leaves Simulation open', !(await winOpen('fwW')) && (await winOpen('smW')));
   await pr.click('#flwB');
+  await pr.click('#lvWX');   // Level window shares the top-right stack with Simulation/Flow: close it so their positions are measured alone
   const sbx = await box('#smW'), fbx = await box('#fwW'), stg = await box('#stage');
   chk('(R5) windows top right: right edge within 24px of stage right; Simulation top within 24px of stage top (Flow stacks below it)', [sbx, fbx].every(b => Math.abs(b.r - stg.r) <= 24 && b.t >= stg.t) && sbx.t - stg.t <= 24 && fbx.t >= sbx.b, JSON.stringify([sbx.r, fbx.r, stg.r, sbx.t - stg.t, fbx.t - stg.t]));
   chk('(R5) Simulation and Flow windows do not overlap', sbx.r <= fbx.l || fbx.r <= sbx.l || sbx.b <= fbx.t || fbx.b <= sbx.t, JSON.stringify([sbx, fbx]));
@@ -889,9 +890,9 @@ try {
   await ph.click('#exp');
   chk('(H6) 390: Export from the menu opens #dExp with the JSON', await ph.isVisible('#dExp') && (await ph.inputValue('#expTa')).startsWith('{'));
   await ph.click('#expX');
-  await ph.click('#lvM');
+  await ph.click('#lvB');
   await ph.uncheck('#ghost');
-  chk('(H6) 390: ghost layers toggle from the Level popover', !(await ph.isChecked('#ghost')));
+  chk('(H6) 390: ghost layers toggle from the Level window', !(await ph.isChecked('#ghost')));
   await ph.setViewportSize({width: 1400, height: 900});
   await settle();
   chk('(H6) back at 1400: Save/Export/Fit/Help inline in the header, not in #fileL', (await inList('fileL', FM)).every(x => !x) && await allVis(['#fSave', '#exp', '#fit', '#help']));
