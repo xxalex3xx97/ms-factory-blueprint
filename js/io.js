@@ -255,7 +255,7 @@ function fpRender(){
   if(view==="L")S.blocks.filter(k=>!isM(k)).forEach(k=>{const m=dim(k);add(k.x,k.y,k.x+m.w,k.y+m.h)});
   else{areas(layer).rects.forEach(r=>add(r.x,r.y,r.x+r.w,r.y+r.h));S.blocks.filter(k=>isM(k)&&k.h===layer).forEach(k=>{const m=dim(k);add(k.x,k.y,k.x+m.w,k.y+m.h)})}
   if(a>c){toast("Nothing to export");return null}
-  const px=view==="L"?64:40,pad=24,cw=(c-a)*px,ch=(d-b)*px,k=Math.min(1,8000/(cw+2*pad),8000/(ch+2*pad));   // k: shrink only past 8000 px
+  const px=view==="L"?128:80,pad=48,cw=(c-a)*px,ch=(d-b)*px,k=Math.min(1,16000/(cw+2*pad),16000/(ch+2*pad),Math.sqrt(1.2e8/((cw+2*pad)*(ch+2*pad))));   // k: shrink only past 16000 px a side / 120 MP
   const sv={ox:V.ox,oy:V.oy,z:V.z,W,H,dpr,sel,active,pasting,w:cv.width,h:cv.height};
   try{
     V.z=px*k/CELLS[view];V.ox=pad*k-a*px*k;V.oy=pad*k-b*px*k;W=Math.ceil((cw+2*pad)*k);H=Math.ceil((ch+2*pad)*k);dpr=1;

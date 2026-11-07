@@ -27,7 +27,7 @@ try {
       const f = await dl.path(), buf = fs.readFileSync(f);
       fs.copyFileSync(f, path.join(ROOT, `tests/shots/fp-${v}.${ext}`));
       chk(`${v} ${ext}: file name`, dl.suggestedFilename().endsWith(v === 'L' ? `-layout.${ext}` : `-floor-plan.${ext}`), dl.suggestedFilename());
-      if (ext === 'png') { chk(`${v} png: signature + size`, buf.slice(1, 4).toString() === 'PNG' && buf.length > 5000, String(buf.length)); chk(`${v} png: dimensions sane`, buf.readUInt32BE(16) > 200 && buf.readUInt32BE(20) > 200 && buf.readUInt32BE(16) <= 8000, `${buf.readUInt32BE(16)}x${buf.readUInt32BE(20)}`); }
+      if (ext === 'png') { chk(`${v} png: signature + size`, buf.slice(1, 4).toString() === 'PNG' && buf.length > 5000, String(buf.length)); chk(`${v} png: dimensions sane`, buf.readUInt32BE(16) > 200 && buf.readUInt32BE(20) > 200 && buf.readUInt32BE(16) <= 16000 && buf.readUInt32BE(20) <= 16000, `${buf.readUInt32BE(16)}x${buf.readUInt32BE(20)}`); }
       if (ext === 'png') chk(`${v} png: opaque dark background (corner pixel alpha 255, dark)`, await pg.evaluate(async b64 => { const im = new Image(); im.src = 'data:image/png;base64,' + b64; await im.decode(); const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d'); g.drawImage(im, 0, 0); const d = g.getImageData(0, 0, 1, 1).data; return d[3] === 255 && d[0] + d[1] + d[2] < 200; }, buf.toString('base64')));
       else chk(`${v} svg: parses, embeds image`, await pg.evaluate(t => { const d = new DOMParser().parseFromString(t, 'image/svg+xml'); return !d.querySelector('parsererror') && !!d.querySelector('image'); }, buf.toString('utf8')));
     }
