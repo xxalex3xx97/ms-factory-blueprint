@@ -254,7 +254,7 @@ function drawUG(s){
 }
 function paint(){LKP=true;LKC=null;try{paint0()}finally{LKP=false;LKC=null}}
 function paint0(){
-  cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,W,H);
+  cx.setTransform(dpr,0,0,dpr,0,0);cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality="high";cx.clearRect(0,0,W,H);
   const s=sc(),F=view==="F";
   RCT=null;
   if(F&&SM&&SIM&&SIM.sig!==simSig()){simReset();SIM.sig=simSig();smClkUp()}
