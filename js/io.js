@@ -248,3 +248,21 @@ $("name").onfocus=()=>{nameBefore=S.name};
 $("name").oninput=e=>{S.name=e.target.value;ASH=false;asv()};
 $("name").onchange=()=>{if(S.name!==nameBefore){const o=JSON.parse(snap());o.n=nameBefore;undoS.push(JSON.stringify(o));redoS=[];all()}nameBefore=S.name};
 
+
+// ---- floor plan image: repaint the live canvas at a fixed zoom, sized to the whole plan of the current view/level (no selection, ghost or hover overlays), then restore
+function fpRender(){
+  let a=1e9,b=1e9,c=-1e9,d=-1e9;const add=(x0,y0,x1,y1)=>{a=Math.min(a,x0);b=Math.min(b,y0);c=Math.max(c,x1);d=Math.max(d,y1)};
+  if(view==="L")S.blocks.filter(k=>!isM(k)).forEach(k=>{const m=dim(k);add(k.x,k.y,k.x+m.w,k.y+m.h)});
+  else{areas(layer).rects.forEach(r=>add(r.x,r.y,r.x+r.w,r.y+r.h));S.blocks.filter(k=>isM(k)&&k.h===layer).forEach(k=>{const m=dim(k);add(k.x,k.y,k.x+m.w,k.y+m.h)})}
+  if(a>c){toast("Nothing to export");return null}
+  const px=view==="L"?64:40,pad=24,cw=(c-a)*px,ch=(d-b)*px,k=Math.min(1,8000/(cw+2*pad),8000/(ch+2*pad));   // k: shrink only past 8000 px
+  const sv={ox:V.ox,oy:V.oy,z:V.z,W,H,dpr,sel,active,pasting,w:cv.width,h:cv.height};
+  try{
+    V.z=px*k/CELLS[view];V.ox=pad*k-a*px*k;V.oy=pad*k-b*px*k;W=Math.ceil((cw+2*pad)*k);H=Math.ceil((ch+2*pad)*k);dpr=1;
+    cv.width=W;cv.height=H;sel=new Set();active=null;pasting=null;paint();
+    return {url:cv.toDataURL("image/png"),W,H};
+  }finally{V.ox=sv.ox;V.oy=sv.oy;V.z=sv.z;W=sv.W;H=sv.H;dpr=sv.dpr;sel=sv.sel;active=sv.active;pasting=sv.pasting;cv.width=sv.w;cv.height=sv.h;paint()}
+}
+const fpSave=(blob,ext)=>{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=(S.name.replace(/[^\w.-]+/g,"_")||"plan")+"-"+(view==="L"?"layout":"floor-plan")+"."+ext;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e3)};
+$("fpPng").onclick=()=>{const r=fpRender();if(r)fetch(r.url).then(x=>x.blob()).then(b=>fpSave(b,"png"))};
+$("fpSvg").onclick=()=>{const r=fpRender();if(r)fpSave(new Blob([`<svg xmlns="http://www.w3.org/2000/svg" width="${r.W}" height="${r.H}" viewBox="0 0 ${r.W} ${r.H}"><image width="${r.W}" height="${r.H}" href="${r.url}"/></svg>`],{type:"image/svg+xml"}),"svg")};
