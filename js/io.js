@@ -92,6 +92,7 @@ function parseSav(buf){
     for(const m of machs){const p=pth(m.cls);if(p){const c=p.split("/").pop().split(".")[0],e={Class:c,Transform:{GridLocation:{X:m.X,Y:m.Y},Height:m.H,GridRotation:m.R},MachineID:m.MID,PaletteID:m.PAL,...(m.hx?cfgView(c,m.hx):{})};
       if(dup.has(m.MID)){delete e.ConfigHex;delete e.Length}   // mod-built exit record: a tile, not a second tunnel
       else if(UG[m.MID]!==undefined)e.Length=UG[m.MID];      // world record wins (config is empty unless reconfigured)
+      if(CT[m.MID])e.Contents=CT[m.MID];
       dm.push(e)}}
     dm.sort((a,b)=>a.MachineID-b.MachineID);
     return{Version:2,DisplayName:A.name,Blocks:blocks,DefaultMachines:dm};
@@ -113,6 +114,21 @@ function parseSav(buf){
         for(let k=0;k<n;k++){const r=fstr(p);if(!r)throw 0;p=r[1]+4}   // Items {FString, i32 progress}
         const total=I(p),len=I(p+4);
         if(len>0&&len<=64&&total%len===0)UG[mid]=len;
+      }catch(e){}}}
+  // container inventories from the world tree: record head as for undergrounds, then `1, 27, id, 1, <slots>` followed by <slots> x {FString item (empty = len 0), i32 count}
+  const CT={},nrm=t=>t.toLowerCase().replace(/^item_/,"").replace(/[^a-z0-9]/g,""),IDS={};Object.keys(ITEMS).forEach(k=>IDS[nrm(k)]=k);
+  for(let ci=0;ci<top.length;ci++){if(!/\/BP_ContainerObject(_2)?\.BP_ContainerObject(_2)?_C$/.test(top[ci]))continue;
+    for(let q=0;q+36<=L;q++){if(I(q)!==ci)continue;
+      try{const st=q+36;if(I(st+8)!==0||I(st+12)!==6)continue;
+        const mid=I(q+4),fx=I(q+8),fy=I(q+12);if((fx>>15)!==I(st+20)||(fy>>15)!==I(st+24))continue;
+        let h=-1;for(let k=st+36;k<st+400&&k+20<=L;k+=4)if(I(k)===27&&I(k-4)===1&&I(k+8)===1&&I(k+12)>=1&&I(k+12)<=512){h=k;break}
+        if(h<0)continue;
+        let p=h+16;const sl=I(h+12),m=new Map();
+        for(let k=0;k<sl;k++){const n=I(p);if(n<0||n>200)throw 0;let nm="";
+          if(n>0){const r=fstr(p);if(!r)throw 0;nm=r[0];p=r[1]}else p+=4;
+          const c=I(p);p+=4;if(c<0||c>1e9)throw 0;
+          if(nm&&c>0)m.set(nm,(m.get(nm)||0)+c)}
+        if(m.size)CT[mid]=[...m].map(([it,c])=>({Item:IDS[nrm(it)]||IDS[nrm(it)+"s"]||IDS[nrm(it).replace(/(\d+)$/,"mk$1")]||it,Count:c,Infinite:false}));
       }catch(e){}}}
   const out=[];
   for(let p=o+56;p+13<=L;p++){
