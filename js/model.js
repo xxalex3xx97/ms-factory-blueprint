@@ -20,7 +20,7 @@ function areas(L){
     const e=elvRect(b);if(e)blocked.push(e);
   });
   fb.forEach(f=>{const{b,d,r}=f,QI=(def(b.cls)||{}).floorInset||0;   // QI: floor inset inside the shell (elevator 1)
-    for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed%2!==(d.h>d.w?0:1))continue;   // Industrial Dock: doors on both long sides, none on the short ends (user, 2026-11-07; positions = station rule, unverified)
+    for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot)continue;   // Industrial Dock: doors on every side except the ship side (rot = ship direction); user screenshot 2026-11-07: station side 2 doors, both short ends 1 each; positions = station rule, unverified
       const v=ed%2===0,n=v?d.h:d.w;
       for(let k=0;k<n;k++){
         const t0=(v?r.y:r.x)+FC*k+DOFF-QI,ex=ed===0?r.x+r.w+QI:ed===2?r.x-QI-DW:t0,ey=ed===1?r.y+r.h+QI:ed===3?r.y-QI-DW:t0;

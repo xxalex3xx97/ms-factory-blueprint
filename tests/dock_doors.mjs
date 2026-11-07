@@ -1,4 +1,4 @@
-// Industrial Dock (BPO_Dock_2): doors on both long sides, none on the short ends, at every rotation. Run: node tests/dock_doors.mjs
+// Industrial Dock (BPO_Dock_2): doors on every side except the ship side, at every rotation. Run: node tests/dock_doors.mjs
 import {createRequire} from 'module';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
@@ -18,8 +18,10 @@ try {
       const a = __fb.areas(0), f = a.floors[0];
       return {eds: a.doors.map(x => x.ed).sort().join(''), w: f.w, h: f.h};
     }, rot);
-    const long = r.h > r.w ? '02' : '13';
-    chk(`rot ${rot}: floor ${r.w}x${r.h}, 2 doors on each long side (edges ${long}), none on short ends`, r.eds === long[0] + long[0] + long[1] + long[1], r.eds);
+    // doors on every side except the ship side (edge index = rot): long sides 2 doors, short ends 1 each
+    const tall = r.h > r.w, n = ed => ed % 2 === 0 ? (tall ? 2 : 1) : (tall ? 1 : 2);
+    const want = [0, 1, 2, 3].filter(ed => ed !== rot).flatMap(ed => Array(n(ed)).fill(ed)).join('');
+    chk(`rot ${rot}: floor ${r.w}x${r.h}, doors ${want} (all sides but the ship side ${rot})`, r.eds === want, r.eds);
   }
 } finally { await br.close(); }
 process.exit(bad ? 1 : 0);
