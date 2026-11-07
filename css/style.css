@@ -22,7 +22,7 @@ h1 span{color:var(--acc)}
 .grp{display:flex;align-items:center;gap:6px}
 .grp label{color:var(--dim)}
 #name{width:180px}
-#lay{width:5ch;min-width:0}.layer{font-family:var(--mono);min-width:3ch;text-align:center;font-size:14px}
+#lay{width:8ch;min-width:0}.layer{font-family:var(--mono);min-width:3ch;text-align:center;font-size:14px}
 .sp{flex:1}
 main{--pw:260px;--dw:290px;flex:1;min-height:0;display:grid;grid-template-columns:var(--pw) minmax(0,1fr) var(--dw)}main.pc{--pw:32px}main.dc{--dw:32px}
 aside{background:var(--panel);overflow:auto;display:flex;flex-direction:column;min-height:0}

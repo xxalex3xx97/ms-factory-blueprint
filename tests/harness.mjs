@@ -2333,6 +2333,8 @@ async function s26(br) {
   const key = b => `${b.Class}|${b.GridLocation.X}|${b.GridLocation.Y}|${b.Height}|${b.GridRotation}`;
   const diff = inp.map(key).filter(k => !out.map(key).includes(k));
   chk('26 round trip: every block identical after import+export (ShipyardCore_02 at -8,-2,-4 r2)', diff.length === 0, diff.join(' ; '));
+  const lv = await pg.evaluate(() => [...new Set(__fb.S.blocks.map(b => b.h))].sort((x, y) => x - y));
+  chk('26 levels: game Heights -4,0,-4.. become consecutive levels', JSON.stringify(lv) === JSON.stringify([-2, 0]), JSON.stringify(lv));
   await pg.evaluate(() => { const b = __fb.S.blocks.find(q => q.raw); b.x += 1; });
   const moved = await pg.evaluate(() => __fb.build().Blocks.filter(b => b.Class.includes('ShipyardCore_02')).map(b => b.GridLocation.X + ',' + b.GridLocation.Y));
   chk('26 round trip: a block moved in the editor is exported at its new cell', !moved.includes('-8,-2') || moved.length === 2 && moved.filter(m => m === '-8,-2').length === 0, moved.join(' ; '));
