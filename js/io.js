@@ -251,15 +251,18 @@ $("name").onchange=()=>{if(S.name!==nameBefore){const o=JSON.parse(snap());o.n=n
 
 // ---- floor plan image: the live canvas repainted at a fixed zoom (no selection/ghost/hover), placed on a blueprint sheet: frame, grid, dimension lines, scale bar and a title block. Units are the editor's own cells (floor cells on the factory floor, block cells in Layout), never real-world metres.
 const FP_URL="https://xxalex3xx97.github.io/ms-factory-blueprint/";
-function fpSheet(plan,n,cells,unit,wc,hc,bo){   // plan: canvas of the plan (transparent), n: px per cell, cells: px of one cell in the sheet
+function fpSheet(plan,n,cells,unit,wc,hc,bo,ca,cb){   // plan: canvas of the plan (transparent), n: px per cell, cells: px of one cell in the sheet
   const f=n/(view==="L"?128:80)*bo,M=220*f,B=360*f,pw=plan.width,ph=plan.height,Wt=pw+2*M,Ht=ph+M+B,o=document.createElement("canvas");o.width=Math.ceil(Wt);o.height=Math.ceil(Ht);
   let e=cv,bg="";while(e&&(!bg||/rgba\(.*,\s*0\)$|transparent/.test(bg))){bg=getComputedStyle(e).backgroundColor;e=e.parentElement}   // paper = the page colour, ink = the site's own text colours
   bg=bg||"#0b0e11";const rs=getComputedStyle(document.documentElement),q=o.getContext("2d"),ink=rs.getPropertyValue("--text").trim()||"#e6edf3",dim=rs.getPropertyValue("--dim").trim()||"#8b98a5",mono=`${Math.round(28*f)}px Consolas,"Courier New",monospace`,font=(w,sz)=>`${w} ${Math.round(sz*f)}px Consolas,"Courier New",monospace`;
   q.fillStyle=bg;q.fillRect(0,0,Wt,Ht);
-  // paper grid, aligned to the plan origin: fine every cell, strong every 5
-  for(let i=0,x=M%cells;x<Wt;x+=cells,i++){q.strokeStyle="rgba(255,255,255,"+(Math.round((x-M)/cells)%5===0?.10:.04)+")";q.lineWidth=Math.max(1,f);q.beginPath();q.moveTo(x,0);q.lineTo(x,Ht);q.stroke()}
-  for(let y=M%cells;y<Ht;y+=cells){q.strokeStyle="rgba(255,255,255,"+(Math.round((y-M)/cells)%5===0?.10:.04)+")";q.lineWidth=Math.max(1,f);q.beginPath();q.moveTo(0,y);q.lineTo(Wt,y);q.stroke()}
-    // the plan keeps the editor's own colours, drawn unfiltered
+  // paper grid = the editor's grid (same lines, colours, majors, origin line), continued over the whole sheet and left out of the plan area (the plan already carries it)
+  q.save();q.beginPath();q.rect(0,0,Wt,Ht);q.rect(M,M,pw,ph);q.clip("evenodd");q.lineWidth=Math.max(1,Math.round(f/2));
+  const major=view==="L"?8:16,st=i=>i===0?"rgba(120,220,240,.5)":i%major===0?"rgba(140,160,200,.26)":"rgba(140,160,200,.09)";
+  for(let i=Math.floor((0-M)/cells)+ca;i<=Math.ceil((Wt-M)/cells)+ca;i++){q.strokeStyle=st(i);const X=Math.round(M+(i-ca)*cells)+.5;q.beginPath();q.moveTo(X,0);q.lineTo(X,Ht);q.stroke()}
+  for(let j=Math.floor((0-M)/cells)+cb;j<=Math.ceil((Ht-M)/cells)+cb;j++){q.strokeStyle=st(j);const Y=Math.round(M+(j-cb)*cells)+.5;q.beginPath();q.moveTo(0,Y);q.lineTo(Wt,Y);q.stroke()}
+  q.restore();
+  // the plan keeps the editor's own colours, drawn unfiltered
   q.drawImage(plan,M,M);
   // frame (double line)
   q.strokeStyle=ink;q.lineWidth=4*f;q.strokeRect(36*f,36*f,Wt-72*f,Ht-72*f);q.lineWidth=1.5*f;q.strokeRect(54*f,54*f,Wt-108*f,Ht-108*f);
@@ -292,7 +295,7 @@ function fpRender(){
   try{
     V.z=px*k/CELLS[view];V.ox=-a*px*k;V.oy=-b*px*k;W=Math.ceil(cw*k);H=Math.ceil(ch*k);dpr=1;
     cv.width=W;cv.height=H;sel=new Set();active=null;pasting=null;paint();
-    const sheet=fpSheet(cv,px*k,px*k,view==="L"?"blocks":"cells",c-a,d-b,bo);
+    const sheet=fpSheet(cv,px*k,px*k,view==="L"?"blocks":"cells",c-a,d-b,bo,a,b);
     return {url:sheet.toDataURL("image/png"),W:sheet.width,H:sheet.height};
   }finally{V.ox=sv.ox;V.oy=sv.oy;V.z=sv.z;W=sv.W;H=sv.H;dpr=sv.dpr;sel=sv.sel;active=sv.active;pasting=sv.pasting;cv.width=sv.w;cv.height=sv.h;paint()}
 }
