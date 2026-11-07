@@ -1,0 +1,1012 @@
+{
+  "shots": "ShareX 2026-11 palette + dimension + build menu screenshots, user text",
+  "blocks": [
+    {
+      "label": "Station 1x1",
+      "name": "BPO_Station_01",
+      "category": "Basic",
+      "w": 1,
+      "h": 1,
+      "size": "label",
+      "floor": {
+        "w": 14,
+        "h": 14
+      },
+      "conf": "high (icon T_Station_01 + research StationModules1)",
+      "doorVerified": true
+    },
+    {
+      "label": "Station 2x1",
+      "name": "BPO_Station_2x1",
+      "category": "Basic",
+      "w": 2,
+      "h": 1,
+      "size": "label",
+      "floor": {
+        "w": 14,
+        "h": 30
+      },
+      "conf": "high (unique name, icon = flat white bar)",
+      "doorVerified": true
+    },
+    {
+      "label": "Station 2x2 A",
+      "name": "BPO_Station_02A",
+      "category": "Basic",
+      "w": 2,
+      "h": 2,
+      "size": "label",
+      "floor": {
+        "w": 30,
+        "h": 30
+      },
+      "conf": "high (icon texture T_Station_02A = flat low block, research RSC_Station2A)",
+      "doorVerified": true
+    },
+    {
+      "label": "Station 2x2 B",
+      "name": "BPO_Station_02",
+      "category": "Basic",
+      "w": 2,
+      "h": 2,
+      "size": "label",
+      "floor": {
+        "w": 30,
+        "h": 30
+      },
+      "floorNote": "second floor is a non-buildable balcony; treat as 2x2 A",
+      "conf": "high (icon texture T_Station_02B = taller checker block; Station_03 uses T_Station_02C = the locked 2x2 C)",
+      "doorVerified": true
+    },
+    {
+      "label": "Corner 1x1",
+      "name": "BPO_StationCorner_01",
+      "category": "Basic",
+      "w": 1,
+      "h": 1,
+      "size": "label",
+      "floor": null,
+      "conf": "high (icon + research StationModules3)"
+    },
+    {
+      "label": "Corridor 1x1",
+      "name": "BPO_StationCorridor_01",
+      "category": "Basic",
+      "w": 1,
+      "h": 1,
+      "size": "label",
+      "floor": null,
+      "conf": "high (icon + research StationModules3; Corridor_02 needs Corridor2)"
+    },
+    {
+      "label": "Elevator 1x1",
+      "name": "BPO_ElevatorBlock_03",
+      "category": "Vertical",
+      "w": 1,
+      "h": 1,
+      "size": "label",
+      "floor": {
+        "w": 12,
+        "h": 12,
+        "verified": true,
+        "source": "user 2026-11-06: 12x12 buildable inside 14x14 shell (1-cell input ring)"
+      },
+      "conf": "medium (icon T_StationElevator_01 matches; ElevatorBlock_02A icon T_StationElevator_02 is the other candidate)",
+      "elevator": {
+        "w": 4,
+        "h": 4,
+        "portsLayout": {
+          "toggleable": false,
+          "line": true,
+          "doorSlot": true,
+          "verified": true,
+          "source": "user 2026-11-06 (msedge_FuNgCZkHqN, LkFZKi3PA5, miViG8DMyG): ports = lateral edges of each door slot, one at each end; connection cell = ring cell outside the slot end cell",
+          "ports": [
+            {
+              "face": "N",
+              "pos": "start"
+            },
+            {
+              "face": "N",
+              "pos": "end"
+            },
+            {
+              "face": "E",
+              "pos": "start"
+            },
+            {
+              "face": "E",
+              "pos": "end"
+            },
+            {
+              "face": "S",
+              "pos": "start"
+            },
+            {
+              "face": "S",
+              "pos": "end"
+            },
+            {
+              "face": "W",
+              "pos": "start"
+            },
+            {
+              "face": "W",
+              "pos": "end"
+            }
+          ]
+        }
+      },
+      "floorInset": 1
+    },
+    {
+      "label": "Plasma Turret",
+      "name": "BPO_StationTurretBlock_01",
+      "category": "Defence",
+      "w": 1,
+      "h": 1,
+      "size": "guess",
+      "note": "footprint 3x1 units (saves-weak) not divisible by 2 -> guessed 1x1",
+      "floor": null,
+      "conf": "high"
+    },
+    {
+      "label": "Station Armour",
+      "name": "BPO_StationArmour_01",
+      "category": "Defence",
+      "w": 1,
+      "h": 1,
+      "size": "guess",
+      "note": "no footprint data; 01 vs 01B share the same icon",
+      "floor": null,
+      "conf": "medium (01 vs 01B)"
+    },
+    {
+      "label": "Dock",
+      "name": "BPO_Dock",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 1,
+      "size": "saves",
+      "units": [
+        2,
+        2
+      ],
+      "note": "footprint 2x2 units = 1x1 cell, 3 weak saves",
+      "floor": null,
+      "conf": "high",
+      "nofloor": true
+    },
+    {
+      "label": "Industrial Dock",
+      "name": "BPO_Dock_2",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 2,
+      "size": "user addendum 2026-11-06",
+      "note": "2x1 block; 14x30 floor (user addendum)",
+      "floor": {
+        "w": 14,
+        "h": 30
+      },
+      "conf": "high (user addendum)",
+      "shipEnd": true,
+      "floorNote": "box 2x2 cells: station row = drawn 1x2 (rot0 vertical), ship row empty; ship end = rotation dir; doors on station side only"
+    },
+    {
+      "label": "Command Module",
+      "name": "BPO_CommandModule",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 1,
+      "size": "guess",
+      "note": "footprint 18x2 units implausible (round ring) -> guessed 1x1",
+      "floor": null,
+      "conf": "high",
+      "tex": "T_CommandModule"
+    },
+    {
+      "label": "Mining Drone Bay Mk.1",
+      "name": "BPO_MiningDroneBayBlock",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 1,
+      "size": "guess",
+      "note": "footprint 6x1 units (saves-weak) -> guessed 1x1",
+      "floor": null,
+      "conf": "high (RSC_MiningDroneBay; Mk2 is BPO_MiningDroneBayBlock_2)",
+      "tex": "T_DroneBay_01"
+    },
+    {
+      "label": "Solar Panels Mk.1",
+      "name": "BPO_SolarPanelBlock",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 1,
+      "size": "saves",
+      "units": [
+        2,
+        2
+      ],
+      "note": "footprint 2x2 units = 1x1 cell (86 evidence). Icon T_SolarPanels missing from export -> no icon",
+      "floor": null,
+      "conf": "high (RSC_SolarPanels)"
+    },
+    {
+      "label": "Solar Panels Mk.2",
+      "name": "BPO_SolarPanelBlock_02",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 1,
+      "size": "saves",
+      "units": [
+        2,
+        2
+      ],
+      "note": "assumed same footprint as Mk.1 (no own footprint data)",
+      "floor": null,
+      "conf": "high (RSC_SolarPanels2, icon T_SolarPanels_01 tall blue panels)",
+      "tex": "T_SolarPanels_01"
+    },
+    {
+      "label": "Shipyard Core",
+      "name": "BPO_ShipyardCore",
+      "category": "Shipyards",
+      "w": 1,
+      "h": 1,
+      "size": "saves",
+      "units": [
+        2,
+        2
+      ],
+      "note": "footprint 2x2 units = 1x1 cell (6 saves); shipyards likely much bigger visually",
+      "floor": null,
+      "conf": "high (RSC_Shipyard1)",
+      "tex": "T_ShipyardCore_01",
+      "nofloor": true
+    },
+    {
+      "label": "Shipyard Core Mk.2",
+      "name": "BPO_ShipyardCore_02",
+      "category": "Shipyards",
+      "w": 1,
+      "h": 1,
+      "size": "guess",
+      "note": "no footprint data",
+      "floor": null,
+      "conf": "high (RSC_Shipyard2)",
+      "tex": "T_Shipyard_02",
+      "nofloor": true
+    },
+    {
+      "label": "Shipyard Side",
+      "name": "BPO_ShipyardSide",
+      "category": "Shipyards",
+      "w": 1,
+      "h": 1,
+      "size": "saves",
+      "units": [
+        2,
+        2
+      ],
+      "note": "footprint 2x2 units = 1x1 cell (20 saves)",
+      "floor": null,
+      "conf": "high (RSC_Shipyard1)",
+      "tex": "T_ShipyardSide_01",
+      "nofloor": true
+    }
+  ],
+  "buildables": {
+    "DAT_SignWall": {
+      "label": "Doorway Wall",
+      "w": 2,
+      "h": 6,
+      "ev": "user round 11: 2x6, same dimensions as a door, placed in a doorway",
+      "verified": true
+    },
+    "DAT_ReactorMachine": {
+      "label": "Reactor",
+      "w": 6,
+      "h": 6,
+      "ev": "user round 4: 6x6",
+      "verified": false,
+      "note": "conflicts with 4x4 badge; check game data"
+    },
+    "DAT_WorkbenchMachine": {
+      "label": "Workbench",
+      "w": 2,
+      "h": 4,
+      "ev": "user round 4: Workstation 2x4 no ports (mapped to the only workbench/workstation buildable; was 1x2)",
+      "conf": "medium"
+    },
+    "DAT_Refinery": {
+      "label": "Refinery",
+      "w": 3,
+      "h": 3,
+      "ev": "user round 4: 3x3 (was 2x2)"
+    },
+    "DAT_Assembler": {
+      "label": "Assembler",
+      "w": 5,
+      "h": 5,
+      "ev": "user round 4: 5x5 (was 4x4)"
+    },
+    "DAT_EnrichmentChamber": {
+      "label": "Enrichment Chamber",
+      "w": 9,
+      "h": 9,
+      "ev": "user round 4: 9x9 (was 8x8)"
+    },
+    "DAT_Armoury": {
+      "label": "Armoury",
+      "w": 4,
+      "h": 4,
+      "ev": "user round 4: 4x4 no ports (was 2x2)",
+      "conf": "high"
+    },
+    "DAT_MatSciLab": {
+      "label": "Material Science Lab",
+      "w": 3,
+      "h": 3,
+      "ev": "user round 4: 3x3 (was 2x2)",
+      "conf": "medium"
+    },
+    "DAT_CompSciLab": {
+      "label": "Computation Science Lab",
+      "w": 3,
+      "h": 3,
+      "ev": "user round 4: 3x3 (was 2x2)"
+    },
+    "DAT_ElectroSciLab": {
+      "label": "Electromagnetic Science Lab",
+      "w": 5,
+      "h": 5,
+      "ev": "user round 4: 5x5 (was 4x4)"
+    },
+    "DAT_RelicAnalyzer": {
+      "label": "Relic Analyzer",
+      "w": 3,
+      "h": 3,
+      "ev": "user round 4 said 5x5; user later decided 3x3 (game data)",
+      "conf": "high"
+    },
+    "DAT_ConveyorBelt": {
+      "label": "Conveyor Belt",
+      "w": 1,
+      "h": 1,
+      "ev": "Logistics icon 1 (1x1, dragged, direction)"
+    },
+    "DAT_ConveyorBelt2": {
+      "label": "Conveyor Belt Mk2",
+      "w": 1,
+      "h": 1,
+      "ev": "Logistics icon 2 (1x1): tall rails + green stripe",
+      "conf": "medium",
+      "amb": "Logistics belt #2 (tall side rails, green stripe): ConveyorBelt2 vs ConveyorBelt3 vs LargeConveyorBelt look alike; all 1x1 so size is unaffected"
+    },
+    "DAT_UndergroundBelt": {
+      "label": "Underground Belt Mk1",
+      "w": 1,
+      "h": 1,
+      "maxApart": 8,
+      "ev": "Logistics icon 3 + user note (max 8 apart)"
+    },
+    "DAT_UndergroundBelt_2": {
+      "label": "Underground Belt Mk2",
+      "w": 1,
+      "h": 1,
+      "maxApart": 10,
+      "ev": "Logistics icon 4 (dark side panel) + user correction (max 10 apart)"
+    },
+    "DAT_Splitter": {
+      "label": "Splitter",
+      "w": 1,
+      "h": 1,
+      "ev": "Logistics row 2 icon 1 (1x1, no screen)"
+    },
+    "DAT_Splitter_2": {
+      "label": "Splitter Mk2",
+      "w": 1,
+      "h": 1,
+      "ev": "Logistics row 2 icon 2 (1x1, screen on top)"
+    },
+    "DAT_BeltBalancer_01": {
+      "label": "Belt Balancer Mk1",
+      "w": 1,
+      "h": 2,
+      "ev": "Logistics row 2 icon 3 (1x2, no screen)"
+    },
+    "DAT_BeltBalancer_02": {
+      "label": "Belt Balancer Mk2",
+      "w": 1,
+      "h": 2,
+      "ev": "Logistics row 2 icon 4 (1x2, screen)"
+    },
+    "DAT_Container": {
+      "label": "Container",
+      "w": 2,
+      "h": 2,
+      "ev": "user text Container 2x2 (not visible in menu screenshots)",
+      "conf": "medium",
+      "amb": "Container 2x2 ports unknown: guessed 1 per side, pos 1"
+    },
+    "DAT_Container_2": {
+      "label": "Large Container",
+      "w": 4,
+      "h": 4,
+      "verified": false,
+      "ev": "user round 4: Large Container 4x4; mapping to DAT_Container_2 still assumed",
+      "conf": "low"
+    }
+  },
+  "guessFamily": {
+    "DAT_Splitter_3": [
+      1,
+      1
+    ],
+    "DAT_BeltBalancer_03": [
+      1,
+      2
+    ],
+    "DAT_UndergroundBelt_3": [
+      1,
+      1
+    ]
+  },
+  "portSrc": "user screenshots/text round 4",
+  "ports": {
+    "DAT_Assembler": {
+      "t": true,
+      "v": true,
+      "src": "user screenshots/text round 4",
+      "ports": [
+        [
+          "N",
+          2,
+          null
+        ],
+        [
+          "N",
+          4,
+          null
+        ],
+        [
+          "E",
+          2,
+          null
+        ],
+        [
+          "E",
+          4,
+          null
+        ],
+        [
+          "S",
+          2,
+          null
+        ],
+        [
+          "S",
+          4,
+          null
+        ],
+        [
+          "W",
+          2,
+          null
+        ],
+        [
+          "W",
+          4,
+          null
+        ]
+      ]
+    },
+    "DAT_Container_2": {
+      "t": false,
+      "v": true,
+      "src": "user screenshots/text round 4 (type mapping to Container_2 assumed)",
+      "ports": [
+        [
+          "N",
+          1,
+          null
+        ],
+        [
+          "N",
+          2,
+          null
+        ],
+        [
+          "N",
+          3,
+          null
+        ],
+        [
+          "N",
+          4,
+          null
+        ],
+        [
+          "E",
+          1,
+          null
+        ],
+        [
+          "E",
+          2,
+          null
+        ],
+        [
+          "E",
+          3,
+          null
+        ],
+        [
+          "E",
+          4,
+          null
+        ],
+        [
+          "S",
+          1,
+          null
+        ],
+        [
+          "S",
+          2,
+          null
+        ],
+        [
+          "S",
+          3,
+          null
+        ],
+        [
+          "S",
+          4,
+          null
+        ],
+        [
+          "W",
+          1,
+          null
+        ],
+        [
+          "W",
+          2,
+          null
+        ],
+        [
+          "W",
+          3,
+          null
+        ],
+        [
+          "W",
+          4,
+          null
+        ]
+      ]
+    },
+    "DAT_Container": {
+      "t": false,
+      "v": false,
+      "src": "guess: 1 per side (ports unknown)",
+      "ports": [
+        [
+          "N",
+          1,
+          null
+        ],
+        [
+          "E",
+          1,
+          null
+        ],
+        [
+          "S",
+          1,
+          null
+        ],
+        [
+          "W",
+          1,
+          null
+        ]
+      ]
+    },
+    "DAT_Refinery": {
+      "t": true,
+      "v": true,
+      "src": "user screenshots/text round 4",
+      "ports": [
+        [
+          "N",
+          2,
+          null
+        ],
+        [
+          "E",
+          2,
+          null
+        ],
+        [
+          "S",
+          2,
+          null
+        ],
+        [
+          "W",
+          2,
+          null
+        ]
+      ]
+    },
+    "DAT_EnrichmentChamber": {
+      "t": true,
+      "v": true,
+      "src": "user screenshots/text round 4",
+      "ports": [
+        [
+          "N",
+          3,
+          null
+        ],
+        [
+          "N",
+          5,
+          null
+        ],
+        [
+          "N",
+          7,
+          null
+        ],
+        [
+          "E",
+          3,
+          null
+        ],
+        [
+          "E",
+          5,
+          null
+        ],
+        [
+          "E",
+          7,
+          null
+        ],
+        [
+          "S",
+          3,
+          null
+        ],
+        [
+          "S",
+          5,
+          null
+        ],
+        [
+          "S",
+          7,
+          null
+        ],
+        [
+          "W",
+          3,
+          null
+        ],
+        [
+          "W",
+          5,
+          null
+        ],
+        [
+          "W",
+          7,
+          null
+        ]
+      ]
+    },
+    "DAT_ReactorMachine": {
+      "t": false,
+      "v": false,
+      "src": "user: positions 3,4, not toggleable; 8 ports 2 per side from REA game data",
+      "ports": [
+        [
+          "N",
+          3,
+          null
+        ],
+        [
+          "N",
+          4,
+          null
+        ],
+        [
+          "E",
+          3,
+          null
+        ],
+        [
+          "E",
+          4,
+          null
+        ],
+        [
+          "S",
+          3,
+          null
+        ],
+        [
+          "S",
+          4,
+          null
+        ],
+        [
+          "W",
+          3,
+          null
+        ],
+        [
+          "W",
+          4,
+          null
+        ]
+      ]
+    },
+    "DAT_CompSciLab": {
+      "t": true,
+      "v": false,
+      "src": "side E from REA, unverified",
+      "ports": [
+        [
+          "E",
+          2,
+          null
+        ]
+      ]
+    },
+    "DAT_MatSciLab": {
+      "t": true,
+      "v": false,
+      "src": "side E from REA, unverified",
+      "ports": [
+        [
+          "E",
+          2,
+          null
+        ]
+      ]
+    },
+    "DAT_ElectroSciLab": {
+      "t": true,
+      "v": false,
+      "src": "side E from REA, unverified",
+      "ports": [
+        [
+          "E",
+          3,
+          null
+        ]
+      ]
+    },
+    "DAT_RelicAnalyzer": {
+      "t": true,
+      "v": false,
+      "src": "user text one middle port; side E from REA local frame, unverified",
+      "ports": [
+        [
+          "E",
+          2,
+          null
+        ]
+      ]
+    },
+    "DAT_Armoury": {
+      "t": false,
+      "v": true,
+      "src": "user screenshots/text round 4: no ports",
+      "ports": []
+    },
+    "DAT_WorkbenchMachine": {
+      "t": false,
+      "v": true,
+      "src": "user screenshots/text round 4: no ports",
+      "ports": []
+    },
+    "DAT_Splitter": {
+      "t": true,
+      "v": false,
+      "src": "user screenshots/text round 4: 1 in + 3 out from user + hologram; faces guessed (rear W in, N/E/S out)",
+      "ports": [
+        [
+          "W",
+          1,
+          "in"
+        ],
+        [
+          "N",
+          1,
+          "out"
+        ],
+        [
+          "E",
+          1,
+          "out"
+        ],
+        [
+          "S",
+          1,
+          "out"
+        ]
+      ]
+    },
+    "DAT_Splitter_2": {
+      "t": true,
+      "v": false,
+      "src": "guess: copy of Splitter Mk1 layout",
+      "ports": [
+        [
+          "W",
+          1,
+          "in"
+        ],
+        [
+          "N",
+          1,
+          "out"
+        ],
+        [
+          "E",
+          1,
+          "out"
+        ],
+        [
+          "S",
+          1,
+          "out"
+        ]
+      ]
+    },
+    "DAT_Splitter_3": {
+      "t": true,
+      "v": false,
+      "src": "guess: copy of Splitter Mk1 layout",
+      "ports": [
+        [
+          "W",
+          1,
+          "in"
+        ],
+        [
+          "N",
+          1,
+          "out"
+        ],
+        [
+          "E",
+          1,
+          "out"
+        ],
+        [
+          "S",
+          1,
+          "out"
+        ]
+      ]
+    },
+    "DAT_BeltBalancer_01": {
+      "t": true,
+      "v": false,
+      "src": "user screenshots/text round 4: hologram reading 2 in (W) + 2 out (E), 1x2; guessed",
+      "ports": [
+        [
+          "W",
+          1,
+          "in"
+        ],
+        [
+          "W",
+          2,
+          "in"
+        ],
+        [
+          "E",
+          1,
+          "out"
+        ],
+        [
+          "E",
+          2,
+          "out"
+        ]
+      ]
+    },
+    "DAT_BeltBalancer_02": {
+      "t": true,
+      "v": false,
+      "src": "guess: copy of Balancer Mk1 layout",
+      "ports": [
+        [
+          "W",
+          1,
+          "in"
+        ],
+        [
+          "W",
+          2,
+          "in"
+        ],
+        [
+          "E",
+          1,
+          "out"
+        ],
+        [
+          "E",
+          2,
+          "out"
+        ]
+      ]
+    },
+    "DAT_BeltBalancer_03": {
+      "t": true,
+      "v": false,
+      "src": "guess: copy of Balancer Mk1 layout",
+      "ports": [
+        [
+          "W",
+          1,
+          "in"
+        ],
+        [
+          "W",
+          2,
+          "in"
+        ],
+        [
+          "E",
+          1,
+          "out"
+        ],
+        [
+          "E",
+          2,
+          "out"
+        ]
+      ]
+    }
+  },
+  "speeds": {
+    "DAT_ConveyorBelt": 60,
+    "DAT_Splitter": 60,
+    "DAT_BeltBalancer_01": 60,
+    "DAT_UndergroundBelt": 60,
+    "DAT_ConveyorBelt2": 120,
+    "DAT_Splitter_2": 120,
+    "DAT_BeltBalancer_02": 120,
+    "DAT_UndergroundBelt_2": 120
+  },
+  "speedSrc": "user screenshots/text round 4",
+  "inputs": {
+    "DAT_CompSciLab": [
+      "Basic Circuits",
+      "T_BasicCircuit"
+    ],
+    "DAT_MatSciLab": [
+      "Hull Plate",
+      "T_HullPlate"
+    ],
+    "DAT_ElectroSciLab": [
+      "Detector Array",
+      "T_DetectorArray"
+    ],
+    "DAT_RelicAnalyzer": [
+      "Relic Shard",
+      "T_RelicShard"
+    ]
+  }
+}
