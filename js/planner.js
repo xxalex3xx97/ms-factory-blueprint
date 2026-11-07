@@ -7,11 +7,12 @@ const plnCb=c=>CATALOG.buildables.find(b=>(b.crafters||[]).includes(c));
 const plnCname=c=>{const b=plnCb(c);return b?lab(def(b.id)):c};
 const plnCico=c=>{const b=plnCb(c),d=b&&def(b.id),u=d&&iurl(d.icon);return u?`<img class="ic plnCic" alt="" title="${esc(lab(d))}" src="${u}">`:""};
 // mk: 0..2 index into MKS (belt). ovr={sp,bal}: splitter/balancer Mk index or null (follow belt). pick={item:recipeKey}.
-// opts.proto (default false): false ignores the Protomatter chain (see plnBy).
+// opts.proto (default false): false ignores the Protomatter chain (see plnBy). opts.enr (default false): false picks plain-ore recipes by default, true picks the recipe that consumes enriched ores when there is one; an explicit pick always wins.
+const PLN_ENR=/^ITEM_Enriched\w*Ore$/;
 function plan(item,rate,mk,ovr,pick,opts){
   ovr=ovr||{};pick=pick||{};opts=opts||{};
   const by=plnBy(!!opts.proto),nodes={},edges=[],st={cycle:false},cap=i=>MKS[i][1];
-  const find=it=>{const l=by.get(it)||[];return l.find(x=>rk(x.r)===pick[it])||l[0]||null};
+  const find=it=>{const l=by.get(it)||[];return l.find(x=>rk(x.r)===pick[it])||l.find(x=>x.r.i.some(([y])=>PLN_ENR.test(y))===!!opts.enr)||l[0]||null};
   const ex=(it,rt,stack)=>{
     if(stack.has(it)){st.cycle=true;return}
     const n=nodes[it]||(nodes[it]={item:it,rate:0,rec:null,crafter:null,alts:(by.get(it)||[]).length,pmach:null,machines:0,util:null,in:[]});
@@ -44,7 +45,7 @@ function plnDraw(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0;
   if(!it||!(rate>0)){$("plnOut").innerHTML='<div class="sub">Pick a craftable item and a rate above 0.</div>';return}
   const pr=plnProto(),BY=plnBy(pr),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
-  const P=plan(it,rate,mk,{sp:sp===""?null:+sp,bal:bal===""?null:+bal},PLN_PICK,{proto:pr});
+  const P=plan(it,rate,mk,{sp:sp===""?null:+sp,bal:bal===""?null:+bal},PLN_PICK,{proto:pr,enr:$("plnEnr").checked});
   const col={[it]:0};   // depth from target (target = rightmost column)
   for(let k=0;k<=Object.keys(P.nodes).length;k++)P.edges.forEach(e=>{if(e.to!=null)col[e.from]=Math.max(col[e.from]||0,(col[e.to]||0)+1)});
   const ns=Object.values(P.nodes),rw=ns.filter(n=>!n.rec).length,D0=Math.max(0,...ns.filter(n=>n.rec).map(n=>col[n.item]||0));
@@ -131,6 +132,7 @@ $("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribut
 $("plnX").onclick=()=>{$("pln").hidden=true;$("plnB").setAttribute("aria-pressed",false);$("plnB").focus()};
 $("plnC").onclick=()=>{const c=$("pln").classList.toggle("col");$("plnC").setAttribute("aria-expanded",!c);$("plnC").title=c?"Expand":"Collapse to title bar"};
 $("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDraw()};
+$("plnEnr").onchange=plnDraw;
 $("plnProto").onchange=()=>{plnFillItems();plnDraw()};   // PLN_OFF kept: drag offsets survive
 $("plnRate").oninput=$("plnMk").onchange=$("plnSp").onchange=$("plnBal").onchange=plnDraw;
 $("plnOut").onchange=ev=>{const t=ev.target;if(t.classList.contains("plnAlt")){PLN_PICK[t.dataset.item]=t.value;plnDraw()}};
@@ -166,3 +168,22 @@ function factsHtml(d){
   if(!st.length&&!cost.length)return"";
   return st.map(([k,v])=>`<div class="row"><label>${SL[k]}</label><span>${esc(v)}</span></div>`).join("")+(cost.length?`<div class="row"><label>Cost</label><span style="display:flex;flex-wrap:wrap">${cost.map(c=>itemHtml(c[0],c[1])).join("")}</span></div>`:"")
 }
+
+// Export the diagram as a standalone SVG that is a 1:1 snapshot of the canvas: the live DOM (unzoomed, boxes where you dragged them) cloned into a foreignObject with every computed style inlined and icons embedded as data URIs
+$("plnSv").onclick=async()=>{
+  const g=document.querySelector("#plnOut .plnGrid");if(!g||!g.querySelector(".plnBox")){toast("Nothing to export: pick a target item");return}
+  const sv=g.style.transform;g.style.transform="none";   // measure and snapshot at scale 1, no pan
+  try{
+    const G=g.getBoundingClientRect(),pad=20;let x0=0,y0=0,x1=g.scrollWidth,y1=g.scrollHeight;
+    g.querySelectorAll(".plnBox,.plnLbl").forEach(e=>{const r=e.getBoundingClientRect();x0=Math.min(x0,r.left-G.left);y0=Math.min(y0,r.top-G.top);x1=Math.max(x1,r.right-G.left);y1=Math.max(y1,r.bottom-G.top)});
+    const cl=g.cloneNode(true),A=[g,...g.querySelectorAll("*")],B=[cl,...cl.querySelectorAll("*")];
+    A.forEach((e,i)=>{const c=getComputedStyle(e),t=B[i];let h="";for(let k=0;k<c.length;k++)h+=c[k]+":"+c.getPropertyValue(c[k])+";";t.setAttribute("style",h);
+      if(e.tagName==="SELECT")[...t.options].forEach((o,j)=>j===e.selectedIndex?o.setAttribute("selected",""):o.removeAttribute("selected"))});
+    cl.style.transform="none";
+    await Promise.all([...cl.querySelectorAll("img")].map(async im=>{try{const b=await (await fetch(im.src)).blob();im.src=await new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)})}catch(e){}}));
+    const W=Math.ceil(x1-x0)+2*pad,H=Math.ceil(y1-y0)+2*pad,bg=getComputedStyle($("pln")).backgroundColor,o=document.getElementById("plnOut");
+    const body=new XMLSerializer().serializeToString(cl).replace(/^<(\w+)/,'<$1 xmlns="http://www.w3.org/1999/xhtml"');
+    const x=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${x0-pad} ${y0-pad} ${W} ${H}"><rect x="${x0-pad}" y="${y0-pad}" width="${W}" height="${H}" fill="${bg}"/><foreignObject x="0" y="0" width="${Math.ceil(x1)}" height="${Math.ceil(y1)}" overflow="visible">${body}</foreignObject></svg>`;
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([x],{type:"image/svg+xml"}));a.download=(S.name.replace(/[^\w.-]+/g,"_")||"planner")+"-planner.svg";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e3);
+  }finally{g.style.transform=sv}
+};
