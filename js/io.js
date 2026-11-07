@@ -3,15 +3,21 @@ const CU=CATALOG.cell_units||2;
 const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.length)e.Ports=ps.map(p=>({Face:p.f,Index:p.i,Enabled:p.en})).concat(xp);return e};   // extra non-game field, only when non-default
 const impPorts=(b,L)=>{if(!Array.isArray(L))return;const ps=portsOf(b),off=[],xp=[];L.forEach(e=>{const p=e&&ps.find(q=>q.f===e.Face&&q.i===e.Index);if(p){if(e.Enabled===false)off.push(p.key)}else xp.push(e)});if(off.length)b.off=off;if(xp.length)b.xp=xp};
 // game-ready SerializedMachineConfig per machine (ConfigHex = exact bytes the game applies; Recipe/Ports/Filters stay for humans). Only when the machine has something to configure.
-// Underground: ONE config on the pair's entrance (Length = cells entrance..exit inclusive); the mod's paste tool merges entrance+exit into one game machine. Port array order = portsOf order (UNVERIFIED vs game).
+// Underground: ONE config on the pair's entrance (Length = cells entrance..exit inclusive); the mod's paste tool merges entrance+exit into one game machine. Recipe ports: game port order (config.js gamePortMap; verified Refinery/Assembler, others rule-derived -> PortOrderUnverified).
 function expCfg(b,d,e,ugn){
+  cfgModel(b,d,e,ugn);
+  if(b.cfgKeep&&b.cfgKeep.sig===cfgSig(b)&&cfgKind(d.id)!=="underground")e.ConfigHex=b.cfgKeep.hex;   // imported bytes kept bit-for-bit while recipe/ports/filters are unchanged
+}
+function cfgModel(b,d,e,ugn){
   const k=cfgKind(d.id);if(!k)return;
   if(k==="underground"){const n=ugn.get(b.id);if(n){e.Length=n;e.ConfigHex=cfgEnc(k,{length:n})}return}
   const ps=portsOf(b),en=ps.map(p=>p.en),off=!!(b.off&&b.off.length);
   if(k==="recipe"){
     if(!b.rec&&!b.recn&&!off)return;
     if(b.rec&&!RECNAMES[b.rec])e.ConfigUnverified=true;   // recipe not in the game table (js/recnames.js): name is a lowercase output-name guess
-    e.ConfigHex=cfgEnc(k,{recipe:b.rec?recName(b.rec):b.recn||"",ports:en});
+    const gf=gameFlags(b);
+    if(gf&&!PORT_ORDER[b.cls].verified){poWarn(b.cls);e.PortOrderUnverified=true}
+    e.ConfigHex=cfgEnc(k,{recipe:b.rec?recName(b.rec):b.recn||"",ports:gf||en});
   }else if(k==="splitter"){
     if(!b.fl&&!b.pr&&!off)return;
     if(b.fl)e.Filters=b.fl;
@@ -111,14 +117,18 @@ function parseSav(buf){
   }
   return out;
 }
-// ConfigHex (game bytes) -> model: recipe (key, or raw game name in recn when unknown), disabled ports (port array order = portsOf order), splitter filters/priorities, underground Length (b.ugl, expanded by importJson)
+// ConfigHex (game bytes) -> model: recipe (key, or raw game name in recn when unknown), disabled ports (game port order when mapped, else portsOf order), splitter filters/priorities, underground Length (b.ugl, expanded by importJson)
 function impCfg(b,d,m){
   const k=cfgKind(d.id),dc=k&&cfgDec(d.id,m.ConfigHex);
   if(k==="underground"){const l=n0(m.Length)||(dc?dc.length:0);if(l>1)b.ugl=l;return}   // Length field (world record) first, ConfigHex as fallback
   if(!dc)return;
-  const off=[],ps=portsOf(b),sk=k==="splitter"?Math.max(0,ps.length-(dc.ports||[]).length):0;(dc.ports||[]).forEach((e,i)=>{const q=ps[sk+i];if(e===false&&q&&q.tg)off.push(q.key)});if(off.length)b.off=off;
+  const off=[],ps=portsOf(b),gm=gamePortMap(b);
+  if(gm&&dc.ports&&dc.ports.length===gm.length)dc.ports.forEach((e,g)=>{const q=ps[gm[g]];if(e===false&&q.tg)off.push(q.key)});
+  else{const sk=k==="splitter"?Math.max(0,ps.length-(dc.ports||[]).length):0;(dc.ports||[]).forEach((e,i)=>{const q=ps[sk+i];if(e===false&&q&&q.tg)off.push(q.key)})}
+  if(off.length)b.off=off;
   if(dc.recipe){const kk=recKeyOf(dc.recipe);if(kk)b.rec=kk;else b.recn=dc.recipe}
   if(dc.filters){if(dc.filters.some(Boolean))b.fl=dc.filters;if(dc.prioA!==-1||dc.prioB!==-1)b.pr=[dc.prioA,dc.prioB]}
+  b.cfgKeep={hex:m.ConfigHex,sig:cfgSig(b)};
 }
 const n0=v=>Math.round(Number(v))||0;
 const bbs=CATALOG.buildables;

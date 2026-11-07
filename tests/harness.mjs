@@ -476,6 +476,27 @@ async function s6b(pg, C) {
   const NMS = await pg.evaluate(() => [Object.keys(RECNAMES).length, 0, Object.values(CATALOG.recipes).flat().filter(r => RECNAMES[r.i.map(x => x[0]).join('+') + '>' + r.o[0]] === undefined).length]);
   chk('config: REC_AdvancedCircuits/AlphaProtein/BackpackMk1 names verbatim from the game table', (await pg.evaluate(() => [RECNAMES['ITEM_DetectorArray+ITEM_BasicCircuit+ITEM_Superalloy+ITEM_Coolant>ITEM_AdvancedCircuits'], RECNAMES['ITEM_Biomass>ITEM_AlphaProtein'] || null])).slice(0, 1)[0] === 'advancedcircuits');
   chk('config: recipe name table covers every catalog recipe key (RECNAMES = authoritative game names)', NMS[0] > 0 && NMS[2] === 0, JSON.stringify(NMS));
+  // ---- game port order (js/port_order.js; config byte g = game cell g). Verified: Refinery, Assembler. Rotation rule unverified for rot!=0.
+  const PH = '0100' + '00000000';
+  const EX = async (cls, rot, ports) => { await reset(pg); await imp(pg, bp([], [{...mac(cls, 10, 10, {mid: 1, rot}), Ports: ports}])); return pg.evaluate(() => __fb.build().DefaultMachines[0].ConfigHex); };
+  const RS = await EX('DAT_Refinery', 0, [{Face: 'S', Index: 2, Enabled: false}]);
+  chk('port order: refinery South port off -> 0100 00000000 04000000 01000101 (byte 1 = (0,3))', RS === PH + '04000000' + '01000101', RS);
+  const AS = await EX('DAT_Assembler', 0, [{Face: 'S', Index: 4, Enabled: false}]);
+  chk('port order: assembler South-left port off -> 0101010001010101 (byte 3 = (-2,5))', AS === PH + '08000000' + '0101010001010101', AS);
+  const WP = await pg.evaluate(() => { const q = __fb.portsOf({cls: 'DAT_Refinery', x: 10, y: 10, rot: 1}).find(q => q.tg && q.nx === -1 && q.ny === 0); return {Face: q.f, Index: q.i, Enabled: false}; });
+  const RR = await EX('DAT_Refinery', 1, [WP]);
+  chk('port order: rot 1 refinery, port facing world-west (rotated (0,3)) -> byte 1 off', RR === PH + '04000000' + '01000101', RR);
+  await reset(pg); await imp(pg, bp([], [{...mac('DAT_Assembler', 10, 10, {mid: 1}), ConfigHex: AS}]));
+  const AB = await pg.evaluate(() => __fb.S.blocks.find(q => q.cls === 'DAT_Assembler').off);
+  chk('port order: assembler bytes import back to port S4 off', JSON.stringify(AB) === '["S4"]', JSON.stringify(AB));
+  await reset(pg); await imp(pg, bp([], [{...mac('DAT_Refinery', 10, 10, {mid: 1, rot: 1}), ConfigHex: RR}]));
+  const RB = await pg.evaluate(() => __fb.S.blocks.find(q => q.cls === 'DAT_Refinery').off);
+  chk('port order: rot 1 refinery bytes import back to the rotated port off', JSON.stringify(RB) === JSON.stringify([WP.Face + WP.Index]), JSON.stringify(RB));
+  await reset(pg); await imp(pg, bp([], [{...mac('DAT_Refinery', 10, 10, {mid: 1}), ConfigHex: REFH}]));
+  const KB = await pg.evaluate(() => __fb.build().DefaultMachines[0].ConfigHex);
+  chk('port order: imported ConfigHex kept bit-for-bit while recipe/ports unchanged', KB === REFH, KB);
+  const MP = await pg.evaluate(() => Object.keys(PORT_ORDER).filter(c => cfgKind(c) === 'recipe' && def(c)).map(c => [c, [0, 1, 2, 3].every(rot => !!gamePortMap({cls: c, x: 10, y: 10, rot}))]));
+  chk('port order: every recipe class maps site ports 1:1 onto the game table at rot 0..3', MP.length >= 6 && MP.every(x => x[1]), JSON.stringify(MP.filter(x => !x[1])));
   await reset(pg);
 }
 

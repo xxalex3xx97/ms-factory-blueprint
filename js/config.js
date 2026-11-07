@@ -47,6 +47,20 @@ function cfgView(cls,hex){
   if(d){if("recipe"in d)o.RecipeName=d.recipe;if("ports"in d)o.PortsEnabled=d.ports;if("filters"in d)o.Filters=d.filters;if("length"in d)o.Length=d.length}
   return o;
 }
+// ---- game port order (js/port_order.js, from bpu_port_data.lua): config byte g = game cell g. Site port matched by position (half cells, centre origin, y down); rotation (x,y)->(-y,x) per step (unverified for rot!=0).
+// gamePortMap(b) -> site port index per game byte, or null (no table, elevator, or positions do not match)
+function gamePortMap(b){
+  const t=PORT_ORDER[b.cls],d=def(b.cls);if(!t||!d||d.elevator)return null;
+  const ps=portsOf(b),odd=b.rot&1,Wr=odd?d.h:d.w,Hr=odd?d.w:d.h,pos=ps.map(p=>[2*(p.x-b.x)-(Wr-1)+p.nx,2*(p.y-b.y)-(Hr-1)+p.ny]);
+  const m=t.cells.map(([x0,y0])=>{let x=x0,y=y0;for(let r=0;r<(b.rot&3);r++)[x,y]=[-y,x];return pos.findIndex(q=>q[0]===x&&q[1]===y)});
+  return m.length===ps.length&&!m.includes(-1)?m:null;
+}
+// site enabled flags in game byte order, or null
+const gameFlags=b=>{const m=gamePortMap(b);if(!m)return null;const ps=portsOf(b);return m.map(s=>ps[s].en)};
+const PO_WARNED=new Set();
+function poWarn(cls){const t=PORT_ORDER[cls];if(!t||t.verified||PO_WARNED.has(cls))return;PO_WARNED.add(cls);console.warn("port order unverified for "+cls)}
+// what the exported bytes depend on (imported ConfigHex is kept bit-for-bit while this is unchanged)
+const cfgSig=b=>JSON.stringify([b.rec||"",b.recn||"",(b.off||[]).slice().sort(),b.fl||null,b.pr||null]);
 // site recipe key (inputs>output, see inspector.js rk) <-> game Recipe.Name
 const recName=key=>RECNAMES[key]||(key?String(key).split(">").pop().replace(/^ITEM_/,"").toLowerCase():"");
 const recKeyOf=(()=>{let m=null;return name=>{if(!m){m=new Map();Object.keys(RECNAMES).forEach(k=>m.set(RECNAMES[k].toLowerCase(),k))}return m.get(String(name).toLowerCase())}})();
