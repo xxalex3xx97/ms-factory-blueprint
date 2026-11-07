@@ -15,11 +15,19 @@ Browser tool to plan a station factory for **Main Sequence**: a top-down grid of
 - Item and block icons.
 - JSON export / import. Static page (index.html + css/ + js/ plain scripts), no build step, opens from file://.
 
-## Blueprint Unit mod
-[MSBlueprintUnit](https://github.com/xxalex3xx97/MSBlueprintUnit) is a Main Sequence mod that adds a **Blueprint Unit** station block. Export the JSON from this site, paste it into the unit's window in the game, check the modification cost, and it builds the factory on your station (keeps what already matches, changes or removes the rest, refunds to the unit). Needs MSCore, installed with MSCoreManager.
+## Companion mod: Blueprint Unit
+[**MSBlueprintUnit**](https://github.com/xxalex3xx97/MSBlueprintUnit) turns a plan from this site into a real factory in Main Sequence. Use the **Companion mod** button in the site header to open its page.
+
+**What it does**
+- Adds a **Blueprint Unit** station block (researched under Computation Science).
+- You export the JSON here (File > Export), open the unit in the game and paste it in.
+- The window shows the net **modification cost** before anything is built.
+- **Build** places the blocks, machines, belts and ports on your station. Parts that already match are kept, different ones are changed in place, stale ones are removed and refunded to the unit.
+
+**What you need:** Main Sequence Demo and MSCore (installed with MSCoreManager). Install steps are in the mod's README.
 
 ## Roadmap
-- [ ] Savegame station selection: load a save and pick one of its stations to plan or edit.
+- [x] Savegame station selection: load a save and pick one of its stations to plan or edit.
 - [x] In-game blueprint construction: see the Blueprint Unit mod below.
 
 ## Notes
