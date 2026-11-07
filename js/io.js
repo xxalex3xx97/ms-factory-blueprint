@@ -253,18 +253,19 @@ $("name").onchange=()=>{if(S.name!==nameBefore){const o=JSON.parse(snap());o.n=n
 const FP_URL="https://xxalex3xx97.github.io/ms-factory-blueprint/";
 function fpSheet(plan,n,cells,unit,wc,hc,bo){   // plan: canvas of the plan (transparent), n: px per cell, cells: px of one cell in the sheet
   const f=n/(view==="L"?128:80)*bo,M=220*f,B=360*f,pw=plan.width,ph=plan.height,Wt=pw+2*M,Ht=ph+M+B,o=document.createElement("canvas");o.width=Math.ceil(Wt);o.height=Math.ceil(Ht);
-  const q=o.getContext("2d"),ink="#e6f0ff",dim="#9cc4ff",mono=`${Math.round(28*f)}px Consolas,"Courier New",monospace`,font=(w,sz)=>`${w} ${Math.round(sz*f)}px Consolas,"Courier New",monospace`;
-  q.fillStyle="#0a2d63";q.fillRect(0,0,Wt,Ht);
+  let e=cv,bg="";while(e&&(!bg||/rgba\(.*,\s*0\)$|transparent/.test(bg))){bg=getComputedStyle(e).backgroundColor;e=e.parentElement}   // paper = the page colour, ink = the site's own text colours
+  bg=bg||"#0b0e11";const rs=getComputedStyle(document.documentElement),q=o.getContext("2d"),ink=rs.getPropertyValue("--text").trim()||"#e6edf3",dim=rs.getPropertyValue("--dim").trim()||"#8b98a5",mono=`${Math.round(28*f)}px Consolas,"Courier New",monospace`,font=(w,sz)=>`${w} ${Math.round(sz*f)}px Consolas,"Courier New",monospace`;
+  q.fillStyle=bg;q.fillRect(0,0,Wt,Ht);
   // paper grid, aligned to the plan origin: fine every cell, strong every 5
-  for(let i=0,x=M%cells;x<Wt;x+=cells,i++){q.strokeStyle="rgba(150,195,255,"+(Math.round((x-M)/cells)%5===0?.16:.06)+")";q.lineWidth=Math.max(1,f);q.beginPath();q.moveTo(x,0);q.lineTo(x,Ht);q.stroke()}
-  for(let y=M%cells;y<Ht;y+=cells){q.strokeStyle="rgba(150,195,255,"+(Math.round((y-M)/cells)%5===0?.16:.06)+")";q.lineWidth=Math.max(1,f);q.beginPath();q.moveTo(0,y);q.lineTo(Wt,y);q.stroke()}
-  let e=cv,bg="";while(e&&(!bg||/rgba\(.*,\s*0\)$|transparent/.test(bg))){bg=getComputedStyle(e).backgroundColor;e=e.parentElement}   // the plan keeps the editor's own colours: drawn unfiltered on the page background, only the sheet around it is blueprint paper
-  q.fillStyle=bg||"#0b0e11";q.fillRect(M,M,pw,ph);q.drawImage(plan,M,M);
+  for(let i=0,x=M%cells;x<Wt;x+=cells,i++){q.strokeStyle="rgba(255,255,255,"+(Math.round((x-M)/cells)%5===0?.10:.04)+")";q.lineWidth=Math.max(1,f);q.beginPath();q.moveTo(x,0);q.lineTo(x,Ht);q.stroke()}
+  for(let y=M%cells;y<Ht;y+=cells){q.strokeStyle="rgba(255,255,255,"+(Math.round((y-M)/cells)%5===0?.10:.04)+")";q.lineWidth=Math.max(1,f);q.beginPath();q.moveTo(0,y);q.lineTo(Wt,y);q.stroke()}
+    // the plan keeps the editor's own colours, drawn unfiltered
+  q.drawImage(plan,M,M);
   // frame (double line)
   q.strokeStyle=ink;q.lineWidth=4*f;q.strokeRect(36*f,36*f,Wt-72*f,Ht-72*f);q.lineWidth=1.5*f;q.strokeRect(54*f,54*f,Wt-108*f,Ht-108*f);
   // dimension lines: architectural ticks, extension lines, text on the line
   const tick=(x,y)=>{q.beginPath();q.moveTo(x-9*f,y+9*f);q.lineTo(x+9*f,y-9*f);q.stroke()};
-  const label=(t,x,y,rot)=>{q.save();q.translate(x,y);if(rot)q.rotate(-Math.PI/2);q.font=font("bold",30);q.textAlign="center";q.textBaseline="middle";const w=q.measureText(t).width;q.fillStyle="#0a2d63";q.fillRect(-w/2-12*f,-20*f,w+24*f,40*f);q.fillStyle=ink;q.fillText(t,0,0);q.restore()};
+  const label=(t,x,y,rot)=>{q.save();q.translate(x,y);if(rot)q.rotate(-Math.PI/2);q.font=font("bold",30);q.textAlign="center";q.textBaseline="middle";const w=q.measureText(t).width;q.fillStyle=bg;q.fillRect(-w/2-12*f,-20*f,w+24*f,40*f);q.fillStyle=ink;q.fillText(t,0,0);q.restore()};
   q.strokeStyle=dim;q.lineWidth=2*f;
   const ty=M-100*f;q.beginPath();q.moveTo(M,ty);q.lineTo(M+pw,ty);q.moveTo(M,M-20*f);q.lineTo(M,ty-30*f);q.moveTo(M+pw,M-20*f);q.lineTo(M+pw,ty-30*f);q.stroke();tick(M,ty);tick(M+pw,ty);label(wc+" "+unit,M+pw/2,ty,false);
   const lx=M-100*f;q.beginPath();q.moveTo(lx,M);q.lineTo(lx,M+ph);q.moveTo(M-20*f,M);q.lineTo(lx-30*f,M);q.moveTo(M-20*f,M+ph);q.lineTo(lx-30*f,M+ph);q.stroke();tick(lx,M);tick(lx,M+ph);label(hc+" "+unit,lx,M+ph/2,true);
