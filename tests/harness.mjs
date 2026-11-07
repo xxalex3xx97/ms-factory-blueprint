@@ -2341,6 +2341,23 @@ async function s25(br) {
   await ctx.close();
 }
 
+// ================= 26 round trip: Version 2 game blocks must export with identical Class/X/Y/Height/Rotation (no re-snapping)
+async function s26(br) {
+  const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's26');
+  const P = '/Game/Blueprints/BuildingBlocks/';
+  const B = (n, X, Y, h, r) => ({Class: `${P}${n}.${n}_C`, GridLocation: {X, Y}, Height: h, GridRotation: r, BlockID: 1, PaletteID: 0});
+  const inp = [B('BPO_ShipyardCore_02', -8, -2, -4, 2), B('BPO_ShipyardCore_02', 6, 4, -4, 0), B('BPO_ShipyardCore', -8, 6, -4, 1), B('BPO_Station_01', 2, 2, 0, 0), B('BPO_Station_02A', 10, 6, 0, 3), B('BPO_Dock_2', 18, 2, 0, 2), B('BPO_ShipyardSide', 3, 9, -4, 3)];
+  await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: inp, DefaultMachines: []}));
+  const out = await pg.evaluate(() => __fb.build().Blocks);
+  const key = b => `${b.Class}|${b.GridLocation.X}|${b.GridLocation.Y}|${b.Height}|${b.GridRotation}`;
+  const diff = inp.map(key).filter(k => !out.map(key).includes(k));
+  chk('26 round trip: every block identical after import+export (ShipyardCore_02 at -8,-2,-4 r2)', diff.length === 0, diff.join(' ; '));
+  await pg.evaluate(() => { const b = __fb.S.blocks.find(q => q.raw); b.x += 1; });
+  const moved = await pg.evaluate(() => __fb.build().Blocks.filter(b => b.Class.includes('ShipyardCore_02')).map(b => b.GridLocation.X + ',' + b.GridLocation.Y));
+  chk('26 round trip: a block moved in the editor is exported at its new cell', !moved.includes('-8,-2') || moved.length === 2 && moved.filter(m => m === '-8,-2').length === 0, moved.join(' ; '));
+  await ctx.close();
+}
+
 // ================= 24 r12: user save (Test (8).json): sim outcome, storage pulls, perf, shots
 async function s24(br) {
   const txt = fs.readFileSync('C:/Users/SFidelis/Downloads/Test (8).json', 'utf8');
@@ -2442,6 +2459,7 @@ try {
   try { console.log('--- 23 U3 production'); await s23(br); } catch (e) { chk('23 U3: section ran', false, e.stack || String(e)); }
   try { console.log('--- 24 r12 user save: sim, perf, shots'); await s24(br); } catch (e) { chk('24 r12: section ran', false, e.stack || String(e)); }
   try { console.log('--- 25 roofless layout'); await s25(br); } catch (e) { chk('25 roofless: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
     try { console.log(`--- viewport ${vp.width}x${vp.height}`); await viewport(br, vp); }
     catch (e) { chk(`viewport ${vp.width}x${vp.height} ran`, false, e.stack || String(e)); }
