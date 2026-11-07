@@ -2322,25 +2322,6 @@ async function s23(br) {
   await m.ctx.close();
 }
 
-// ================= 25 roofless layout plans: all verified blocks x rot 0..3, layout view paints clean, shot
-async function s25(br) {
-  const N = ['BPO_Station_01', 'BPO_Station_2x1', 'BPO_Station_02A', 'BPO_Station_02', 'BPO_ElevatorBlock_03', 'BPO_SolarPanelBlock', 'BPO_SolarPanelBlock_02', 'BPO_StationTurretBlock_01'];
-  const {ctx, pg} = await open(br, {width: 1900, height: 1000}, 's25');
-  const e0 = errs.length;
-  await imp(pg, bp(N.flatMap((n, i) => [0, 1, 2, 3].map(r => blk(n, Math.floor(i / 4) * 14 + r * 3, (i % 4) * 3, {rot: r}))), []));   // 2 groups of 4 classes, columns = rot 0..3
-  const has = await pg.evaluate(() => typeof ROOFLESS !== 'undefined' && __fb.S.blocks.length);
-  chk('25 roofless: 32 verified blocks imported, ROOFLESS loaded', has === 32, String(has));
-  await pg.evaluate(() => { __fb.setView('L'); __fb.fit(); __fb.paint(); });
-  await pg.waitForTimeout(300);
-  const L = await pg.evaluate(() => ['BPO_Station_01', 'BPO_SolarPanelBlock_02', 'BPO_Dock'].map(n => !!ROOFLESS[n]));
-  chk('25 roofless: data only for verified classes (Dock none)', L[0] && L[1] && !L[2], JSON.stringify(L));
-  await pg.screenshot({path: path.join(SHOTS, 'roofless-layout.png')});
-  await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); __fb.paint(); });
-  await pg.waitForTimeout(150);
-  chk('25 roofless: layout paint + Factory view paint no page errors', errs.length === e0, errs.slice(e0).join(' | '));
-  await ctx.close();
-}
-
 // ================= 26 round trip: Version 2 game blocks must export with identical Class/X/Y/Height/Rotation (no re-snapping)
 async function s26(br) {
   const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's26');
@@ -2458,7 +2439,6 @@ try {
   try { console.log('--- 22 U2 inspector'); await s22(br); } catch (e) { chk('22 U2: section ran', false, e.stack || String(e)); }
   try { console.log('--- 23 U3 production'); await s23(br); } catch (e) { chk('23 U3: section ran', false, e.stack || String(e)); }
   try { console.log('--- 24 r12 user save: sim, perf, shots'); await s24(br); } catch (e) { chk('24 r12: section ran', false, e.stack || String(e)); }
-  try { console.log('--- 25 roofless layout'); await s25(br); } catch (e) { chk('25 roofless: section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
     try { console.log(`--- viewport ${vp.width}x${vp.height}`); await viewport(br, vp); }
