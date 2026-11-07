@@ -249,20 +249,50 @@ $("name").oninput=e=>{S.name=e.target.value;ASH=false;asv()};
 $("name").onchange=()=>{if(S.name!==nameBefore){const o=JSON.parse(snap());o.n=nameBefore;undoS.push(JSON.stringify(o));redoS=[];all()}nameBefore=S.name};
 
 
-// ---- floor plan image: repaint the live canvas at a fixed zoom, sized to the whole plan of the current view/level (no selection, ghost or hover overlays), then restore
+// ---- floor plan image: the live canvas repainted at a fixed zoom (no selection/ghost/hover), placed on a blueprint sheet: frame, grid, dimension lines, scale bar and a title block. Units are the editor's own cells (floor cells on the factory floor, block cells in Layout), never real-world metres.
+const FP_URL="https://xxalex3xx97.github.io/ms-factory-blueprint/";
+function fpSheet(plan,n,cells,unit,wc,hc,bo){   // plan: canvas of the plan (transparent), n: px per cell, cells: px of one cell in the sheet
+  const f=n/(view==="L"?128:80)*bo,M=220*f,B=360*f,pw=plan.width,ph=plan.height,Wt=pw+2*M,Ht=ph+M+B,o=document.createElement("canvas");o.width=Math.ceil(Wt);o.height=Math.ceil(Ht);
+  const q=o.getContext("2d"),ink="#e6f0ff",dim="#9cc4ff",mono=`${Math.round(28*f)}px Consolas,"Courier New",monospace`,font=(w,sz)=>`${w} ${Math.round(sz*f)}px Consolas,"Courier New",monospace`;
+  q.fillStyle="#0a2d63";q.fillRect(0,0,Wt,Ht);
+  // paper grid, aligned to the plan origin: fine every cell, strong every 5
+  for(let i=0,x=M%cells;x<Wt;x+=cells,i++){q.strokeStyle="rgba(150,195,255,"+(Math.round((x-M)/cells)%5===0?.16:.06)+")";q.lineWidth=Math.max(1,f);q.beginPath();q.moveTo(x,0);q.lineTo(x,Ht);q.stroke()}
+  for(let y=M%cells;y<Ht;y+=cells){q.strokeStyle="rgba(150,195,255,"+(Math.round((y-M)/cells)%5===0?.16:.06)+")";q.lineWidth=Math.max(1,f);q.beginPath();q.moveTo(0,y);q.lineTo(Wt,y);q.stroke()}
+  let e=cv,bg="";while(e&&(!bg||/rgba\(.*,\s*0\)$|transparent/.test(bg))){bg=getComputedStyle(e).backgroundColor;e=e.parentElement}   // the plan keeps the editor's own colours: drawn unfiltered on the page background, only the sheet around it is blueprint paper
+  q.fillStyle=bg||"#0b0e11";q.fillRect(M,M,pw,ph);q.drawImage(plan,M,M);
+  // frame (double line)
+  q.strokeStyle=ink;q.lineWidth=4*f;q.strokeRect(36*f,36*f,Wt-72*f,Ht-72*f);q.lineWidth=1.5*f;q.strokeRect(54*f,54*f,Wt-108*f,Ht-108*f);
+  // dimension lines: architectural ticks, extension lines, text on the line
+  const tick=(x,y)=>{q.beginPath();q.moveTo(x-9*f,y+9*f);q.lineTo(x+9*f,y-9*f);q.stroke()};
+  const label=(t,x,y,rot)=>{q.save();q.translate(x,y);if(rot)q.rotate(-Math.PI/2);q.font=font("bold",30);q.textAlign="center";q.textBaseline="middle";const w=q.measureText(t).width;q.fillStyle="#0a2d63";q.fillRect(-w/2-12*f,-20*f,w+24*f,40*f);q.fillStyle=ink;q.fillText(t,0,0);q.restore()};
+  q.strokeStyle=dim;q.lineWidth=2*f;
+  const ty=M-100*f;q.beginPath();q.moveTo(M,ty);q.lineTo(M+pw,ty);q.moveTo(M,M-20*f);q.lineTo(M,ty-30*f);q.moveTo(M+pw,M-20*f);q.lineTo(M+pw,ty-30*f);q.stroke();tick(M,ty);tick(M+pw,ty);label(wc+" "+unit,M+pw/2,ty,false);
+  const lx=M-100*f;q.beginPath();q.moveTo(lx,M);q.lineTo(lx,M+ph);q.moveTo(M-20*f,M);q.lineTo(lx-30*f,M);q.moveTo(M-20*f,M+ph);q.lineTo(lx-30*f,M+ph);q.stroke();tick(lx,M);tick(lx,M+ph);label(hc+" "+unit,lx,M+ph/2,true);
+  // title block, bottom-left
+  const bx=90*f,bw=900*f,bh=250*f,by=Ht-90*f-bh,r=[["STATION",S.name||"Untitled"],["SAVE",(typeof FH!=="undefined"&&FH&&FH.name)||"(not saved to a file)"],["DATE",new Date().toISOString().slice(0,10)],["VIEW",(view==="L"?"Layout":"Factory floor, level "+layer)],["MADE WITH",FP_URL.replace("https://","")]];
+  q.strokeStyle=ink;q.lineWidth=3*f;q.strokeRect(bx,by,bw,bh);q.lineWidth=1.2*f;
+  r.forEach((row,i)=>{const y=by+i*bh/r.length;if(i){q.beginPath();q.moveTo(bx,y);q.lineTo(bx+bw,y);q.stroke()}q.textBaseline="middle";q.fillStyle=dim;q.font=font("",20);q.textAlign="left";q.fillText(row[0],bx+16*f,y+bh/r.length/2);q.fillStyle=ink;q.font=font(i===0?"bold":"",i===0?32:24);q.fillText(row[1].length>46?row[1].slice(0,45)+"…":row[1],bx+230*f,y+bh/r.length/2)});
+  q.beginPath();q.moveTo(bx+210*f,by);q.lineTo(bx+210*f,by+bh);q.stroke();
+  // scale bar: 5 cells, alternating blocks, ticks labelled in cells
+  const sx=bx+bw+120*f,sy=Ht-170*f,seg=Math.max(1,Math.min(5,Math.floor((Wt-sx-110*f)/cells))),sw=cells*seg;   // up to 5 cells, fewer when the sheet is narrowq.lineWidth=2*f;q.strokeStyle=ink;
+  for(let i=0;i<seg;i++){q.fillStyle=i%2?"rgba(0,0,0,0)":ink;q.fillRect(sx+i*cells,sy,cells,22*f);q.strokeRect(sx+i*cells,sy,cells,22*f)}
+  q.fillStyle=ink;q.font=font("",22);q.textAlign="center";q.textBaseline="top";[0,seg].forEach(i=>q.fillText(String(i),sx+i*cells,sy+34*f));q.fillText(unit,sx+sw/2,sy+34*f);
+  q.textAlign="left";q.textBaseline="bottom";q.font=font("bold",22);q.fillText("SCALE",sx,sy-14*f);
+  return o;
+}
 function fpRender(){
   let a=1e9,b=1e9,c=-1e9,d=-1e9;const add=(x0,y0,x1,y1)=>{a=Math.min(a,x0);b=Math.min(b,y0);c=Math.max(c,x1);d=Math.max(d,y1)};
   if(view==="L")S.blocks.filter(k=>!isM(k)).forEach(k=>{const m=dim(k);add(k.x,k.y,k.x+m.w,k.y+m.h)});
   else{areas(layer).rects.forEach(r=>add(r.x,r.y,r.x+r.w,r.y+r.h));S.blocks.filter(k=>isM(k)&&k.h===layer).forEach(k=>{const m=dim(k);add(k.x,k.y,k.x+m.w,k.y+m.h)})}
   if(a>c){toast("Nothing to export");return null}
-  const px=view==="L"?128:80,pad=48,cw=(c-a)*px,ch=(d-b)*px,k=Math.min(1,16000/(cw+2*pad),16000/(ch+2*pad),Math.sqrt(1.2e8/((cw+2*pad)*(ch+2*pad))));   // k: shrink only past 16000 px a side / 120 MP
+  const px=view==="L"?128:80,cw=(c-a)*px,ch=(d-b)*px,bo=Math.min(4,Math.max(1,Math.max(cw,ch)/3500)),f=bo,Wt=cw+440*f,Ht=ch+580*f,   // bo: sheet furniture (margins, frame, text) grows with big plans
+    k=Math.min(1,15980/Wt,15980/Ht,Math.sqrt(1.2e8/(Wt*Ht)));   // k: shrink only past 16000 px a side / 120 MP, sheet margins included
   const sv={ox:V.ox,oy:V.oy,z:V.z,W,H,dpr,sel,active,pasting,w:cv.width,h:cv.height};
   try{
-    V.z=px*k/CELLS[view];V.ox=pad*k-a*px*k;V.oy=pad*k-b*px*k;W=Math.ceil((cw+2*pad)*k);H=Math.ceil((ch+2*pad)*k);dpr=1;
+    V.z=px*k/CELLS[view];V.ox=-a*px*k;V.oy=-b*px*k;W=Math.ceil(cw*k);H=Math.ceil(ch*k);dpr=1;
     cv.width=W;cv.height=H;sel=new Set();active=null;pasting=null;paint();
-    let e=cv,bg="";while(e&&(!bg||/rgba\(.*,\s*0\)$|transparent/.test(bg))){bg=getComputedStyle(e).backgroundColor;e=e.parentElement}   // the canvas itself is transparent: flatten onto the page colour
-    const o=document.createElement("canvas");o.width=W;o.height=H;const q=o.getContext("2d");q.fillStyle=bg||"#0b0e11";q.fillRect(0,0,W,H);q.drawImage(cv,0,0);
-    return {url:o.toDataURL("image/png"),W,H};
+    const sheet=fpSheet(cv,px*k,px*k,view==="L"?"blocks":"cells",c-a,d-b,bo);
+    return {url:sheet.toDataURL("image/png"),W:sheet.width,H:sheet.height};
   }finally{V.ox=sv.ox;V.oy=sv.oy;V.z=sv.z;W=sv.W;H=sv.H;dpr=sv.dpr;sel=sv.sel;active=sv.active;pasting=sv.pasting;cv.width=sv.w;cv.height=sv.h;paint()}
 }
 const fpSave=(blob,ext)=>{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=(S.name.replace(/[^\w.-]+/g,"_")||"plan")+"-"+(view==="L"?"layout":"floor-plan")+"."+ext;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e3)};
