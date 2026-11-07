@@ -237,18 +237,19 @@ async function s4(pg, C) {
   chk('two adjacent 1x1: 2 floors', A.floors.length === 2);
   chk('two adjacent 1x1: exactly one shared doorway (one paired door)', paired.length === 1, `paired ${paired.length}`);
   chk('two adjacent 1x1: shared strip is 2 wide x 6 long at x=14,y=4', A.rects.some(r => r.x === 14 && r.y === 4 && r.w === 2 && r.h === 6), JSON.stringify(A.rects));
-  // close it by clicking the door on the factory floor (UI path)
+  // doors are not interactive: clicking one changes nothing
   await pg.evaluate(() => __fb.setView('F'));
   const dr = paired[0];
   await pg.evaluate(([x, y]) => __fb.click(x, y), [dr.x, dr.y]);
-  const closedKeys = await pg.evaluate(() => __fb.S.closed.slice());
-  const A2 = await areas();
-  chk('click closes the shared door: S.closed has 0|0|0|E|0', closedKeys.includes('0|0|0|E|0'), JSON.stringify(closedKeys));
-  chk('closed door removes its strip from buildable rects', !A2.rects.some(r => r.x === 14 && r.y === 4 && r.w === 2 && r.h === 6));
-  chk('closed door reported as closed', A2.doors.some(d => d.paired && !d.open));
-  await pg.evaluate(([x, y]) => __fb.click(x, y), [dr.x, dr.y]);
-  const A3 = await areas();
-  chk('click again re-opens the door and strip', A3.rects.some(r => r.x === 14 && r.y === 4 && r.w === 2 && r.h === 6) && (await pg.evaluate(() => __fb.S.closed.length)) === 0);
+  chk('click on a door does not close it', (await pg.evaluate(() => __fb.S.closed.length)) === 0 && (await areas()).rects.some(r => r.x === 14 && r.y === 4 && r.w === 2 && r.h === 6));
+
+  // strict placement: on floor ok, across the wall / outside refused, overlap refused, switch off allows outside
+  const nb = (x, y, w, h, id = 999) => pg.evaluate(a => noBuild([{id: a[4], x: a[0], y: a[1], w: a[2], h: a[3], l: layer}]), [x, y, w, h, id]);
+  chk('strict: machine on the floor allowed', !(await nb(2, 2, 2, 2)));
+  chk('strict: machine outside the floor refused', await nb(-5, -5, 2, 2));
+  await pg.evaluate(() => { STRICT = false; });
+  chk('switch off: outside allowed', !(await nb(-5, -5, 2, 2)));
+  await pg.evaluate(() => { STRICT = true; });
 
   // 2x1 block: 14x30 floor (long side follows block axis), 6 doors
   await imp(pg, bp([blk('BPO_Station_2x1', 0, 0)]));
@@ -272,7 +273,7 @@ async function s4(pg, C) {
   await pg.click('#palList .item[data-cls="DAT_ConveyorBelt"]');
   await pg.evaluate(() => __fb.click(6, 6));
   const toast = await pg.locator('#toast').textContent();
-  chk('placing a machine on the elevator centre is refused with warning', toast.includes('Elevator shaft') && (await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls.startsWith("DAT_")).length)) === 0, `toast "${toast}"`);
+  chk('placing a machine on the elevator centre is refused with warning', toast.includes('Cannot build here') && (await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls.startsWith("DAT_")).length)) === 0, `toast "${toast}"`);
   await pg.evaluate(() => __fb.click(1, 1));
   chk('placing next to the elevator centre (inside block floor) is allowed', (await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls.startsWith("DAT_")).length)) === 1);
   await pg.evaluate(() => __fb.setView('L'));
@@ -334,7 +335,7 @@ async function s6b(pg, C) {
   // canvas pixels in a strip across the cell centre: differs from an empty cell when the tunnel line is drawn there
   const snap = async (x, y) => { const [cx, cy] = await px(x, y); return pg.evaluate(([cx, cy]) => { const c = document.getElementById('cv'), r = c.getBoundingClientRect(), k = c.width / r.width, g = c.getContext('2d'); return Array.from(g.getImageData(Math.round((cx - r.left - 12) * k), Math.round((cy - r.top - 2) * k), Math.round(24 * k), Math.round(4 * k)).data); }, [cx, cy]); };
   const diff = (a, b) => a.reduce((s, v, i) => s + Math.abs(v - b[i]), 0);
-  const start = async cls => { await reset(pg); await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); }); await pg.evaluate(c => { active = c; all(); }, cls); };
+  const start = async cls => { await reset(pg); await pg.evaluate(() => { STRICT = false; __fb.setView('F'); __fb.fit(); }); await pg.evaluate(c => { active = c; all(); }, cls); };
   const clickAt = async a => { const [x, y] = await px(a[0], a[1]); await pg.mouse.move(x, y); await pg.mouse.down(); await pg.mouse.up(); };
   const moveTo = async a => { const [x, y] = await px(a[0], a[1]); await pg.mouse.move(x, y, {steps: 6}); };
   const press = async (a, b) => { await clickAt(a); await moveTo(b); await pg.mouse.down(); await pg.mouse.up(); };   // click entrance, move, click exit
