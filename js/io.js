@@ -260,7 +260,9 @@ function fpRender(){
   try{
     V.z=px*k/CELLS[view];V.ox=pad*k-a*px*k;V.oy=pad*k-b*px*k;W=Math.ceil((cw+2*pad)*k);H=Math.ceil((ch+2*pad)*k);dpr=1;
     cv.width=W;cv.height=H;sel=new Set();active=null;pasting=null;paint();
-    return {url:cv.toDataURL("image/png"),W,H};
+    let e=cv,bg="";while(e&&(!bg||/rgba\(.*,\s*0\)$|transparent/.test(bg))){bg=getComputedStyle(e).backgroundColor;e=e.parentElement}   // the canvas itself is transparent: flatten onto the page colour
+    const o=document.createElement("canvas");o.width=W;o.height=H;const q=o.getContext("2d");q.fillStyle=bg||"#0b0e11";q.fillRect(0,0,W,H);q.drawImage(cv,0,0);
+    return {url:o.toDataURL("image/png"),W,H};
   }finally{V.ox=sv.ox;V.oy=sv.oy;V.z=sv.z;W=sv.W;H=sv.H;dpr=sv.dpr;sel=sv.sel;active=sv.active;pasting=sv.pasting;cv.width=sv.w;cv.height=sv.h;paint()}
 }
 const fpSave=(blob,ext)=>{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=(S.name.replace(/[^\w.-]+/g,"_")||"plan")+"-"+(view==="L"?"layout":"floor-plan")+"."+ext;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e3)};
