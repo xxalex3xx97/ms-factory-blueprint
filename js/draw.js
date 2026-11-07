@@ -105,6 +105,14 @@ function drawBadges(s){
     cx.fillStyle="#fff";ln.forEach((t,i)=>cx.fillText(t,mx,py+2+i*(fs+4)))});
   cx.restore();
 }
+const ugTool=d=>d&&d.kind==="m"&&d.directional&&d.w===1&&d.h===1&&d.category==="Undergrounds";
+// underground drag: entrance at the press cell, exit on the dominant axis of the drag, clamped to the tier max length (cells entrance..exit inclusive)
+function ugDrag(g){
+  const mx=def(g.cls).maxApart,dx=g.cur.x-g.c0.x,dy=g.cur.y-g.c0.y;
+  if(!dx&&!dy)return{a:g.c0,b:g.c0,n:1,rot:placeRot};
+  const h=Math.abs(dx)>=Math.abs(dy),v=h?dx:dy,k=Math.min(Math.abs(v),mx-1),sg=Math.sign(v),rot=h?(sg>0?0:2):(sg>0?1:3);
+  return{a:g.c0,b:{x:g.c0.x+(h?sg*k:0),y:g.c0.y+(h?0:sg*k)},n:k+1,rot};
+}
 const runTool=d=>d&&d.kind==="m"&&d.directional&&d.w===1&&d.h===1&&d.category==="Conveyors";
 const cutBelts=nb=>{const k=new Set(nb.map(n=>n.x+","+n.y));S.blocks=S.blocks.filter(b=>!(b.h===layer&&isBelt(b)&&k.has(b.x+","+b.y)))};
 function beltStep(g,c){
@@ -233,6 +241,17 @@ function paintFloorBase(s){
 }
 let LKC=null,LKP=false;   // links() memo, valid only during one paint (state cannot change mid-paint)
 const linksC=L=>{if(!LKP)return links(L);if(!LKC||LKC.L!==L)LKC={L,K:links(L)};return LKC.K};
+// underground belt tunnel: thin dashed line (dark halo + light core) entrance centre -> exit centre; the gap cells stay free
+function ugLine(a,b,s,over,pv){
+  cx.save();cx.lineCap="round";cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);
+  cx.strokeStyle="rgba(0,0,0,.55)";cx.lineWidth=Math.max(3,s*.14)+2;cx.stroke();
+  cx.setLineDash(pv?[2,Math.max(4,s*.2)]:[Math.max(4,s*.3),Math.max(3,s*.2)]);cx.strokeStyle=over?"hsl(0,85%,65%)":pv?"hsl(215,95%,62%)":"hsl(190,90%,72%)";cx.lineWidth=Math.max(2,s*.1);cx.stroke();
+  cx.restore();
+}
+function drawUG(s){
+  const c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s];
+  ugPairs(S.blocks.filter(b=>isM(b)&&b.h===layer&&inView(b))).forEach(({u,t,n,max})=>ugLine(c(u),c(t),s,n>max));
+}
 function paint(){LKP=true;LKC=null;try{paint0()}finally{LKP=false;LKC=null}}
 function paint0(){
   cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,W,H);
@@ -252,6 +271,14 @@ function paint0(){
   if(F&&BN&&!LK)drawBnCells(s);
   if(F&&LK)drawLinks(s);
   if(F&&smOn())drawSimFull(s);
+  if(F)drawUG(s);
+  if(F&&ugPend&&ugPend.cls&&ugTool(def(ugPend.cls))){   // pending underground: blue dotted line + n / max, red when the second click would be refused
+    const g=ugDrag(ugPend),c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s],a=c(g.a),b=c(g.b),ok=ugOk(g);
+    if(g.n>1)ugLine(a,b,s,!ok,true);
+    cx.save();cx.fillStyle=ok?"hsl(215,95%,75%)":"hsl(0,85%,70%)";cx.font="bold 12px system-ui,sans-serif";cx.textBaseline="bottom";cx.fillText(`${g.n} / ${def(ugPend.cls).maxApart}${ok?"":" invalid"}`,(a[0]+b[0])/2+6,(a[1]+b[1])/2-6);
+    if(g.n>1){const px=V.ox+g.b.x*s,py=V.oy+g.b.y*s;cx.strokeStyle=ok?"hsl(215,95%,62%)":"hsl(0,85%,65%)";cx.setLineDash([3,3]);cx.lineWidth=1.5;cx.strokeRect(px+.5,py+.5,s-1,s-1)}
+    cx.restore();
+  }
   if(F&&smOn())drawBeltItems(s);
   if(F&&smOn())drawSimRouters(s);
   if(F){drawPorts(s);drawBadges(s)}
@@ -261,7 +288,7 @@ function paint0(){
       const a=S.blocks.find(b=>b.id===id);if(!a||a.h!==layer)return;
       const ax=V.ox+(a.x+.5)*s,ay=V.oy+(a.y+.5)*s,bx=V.ox+(u.to.x+.5)*s,by=V.oy+(u.to.y+.5)*s;
       cx.beginPath();cx.moveTo(ax,ay);cx.lineTo(bx,by);cx.stroke();
-      cx.fillText(`distance ${u.n} > max ${u.max}`,(ax+bx)/2+4,(ay+by)/2-3);
+      cx.fillText(`length ${u.n} > max ${u.max}`,(ax+bx)/2+4,(ay+by)/2-3);
     });
     cx.restore();
   }

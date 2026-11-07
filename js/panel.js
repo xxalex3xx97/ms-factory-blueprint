@@ -37,7 +37,7 @@ function panel(){
     if(one){
       if(F){
         if(one.h===layer&&outside(one,A.rects))h+='<div class="warnline">'+esc(WARN)+'</div>';
-        const u=ugWarn().get(one.id);if(u)h+='<div class="warnline">Underground: distance '+u.n+' &gt; max '+u.max+'</div>';
+        const u=ugWarn().get(one.id);if(u)h+='<div class="warnline">Underground: length '+u.n+' &gt; max '+u.max+'</div>';
       }else{
         const fr=floorRect(one),o=dim(one);
         if(fr)h+='<div class="sub">Floor '+fr.w+'&times;'+fr.h+(fr.known?(fr.guess?" "+BQ:""):" "+BQ)+(dv(one)?"":" &middot; doors "+BQ)+'</div>';
@@ -69,7 +69,7 @@ function panel(){
       +(d.note?'<div class="sub">'+esc(nog(d.note))+'</div>':"")
       +(d.kind==="m"&&d.evidence?'<div class="sub">'+esc(nog(d.evidence))+'</div>':"")
       +(d.kind==="m"?'<div class="sub">Size '+d.w+'&times;'+d.h+' floor cells'+(d.directional?' &middot; directional (rot 0 = east, 90&deg; steps clockwise)':"")+'</div>':"")
-      +(d.maxApart!=null?'<div class="sub">Max apart: '+d.maxApart+' cells (warning only)</div>':"")
+      +(d.maxApart!=null?'<div class="sub">Max length: '+d.maxApart+' cells, entrance to exit inclusive (warning only)</div>':"")
       +'<div class="row"><label for="tw">Width</label><input id="tw" type="number" min="1" step="1" data-t="w" value="'+d.w+'"></div>'
       +'<div class="row"><label for="th">Depth</label><input id="th" type="number" min="1" step="1" data-t="h" value="'+d.h+'"></div>'
       +(d.kind==="b"?'<div class="row"><label for="tfw">Floor W</label><input id="tfw" type="number" min="1" step="1" data-t="fw" placeholder="unknown" value="'+(d.fw==null?"":d.fw)+'"></div><div class="row"><label for="tfh">Floor H</label><input id="tfh" type="number" min="1" step="1" data-t="fh" placeholder="unknown" value="'+(d.fh==null?"":d.fh)+'"></div>':"")

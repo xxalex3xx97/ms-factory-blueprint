@@ -49,24 +49,24 @@ function onArea(x,y,w,h,R){
 }
 const outside=(b,R)=>{const d=dim(b);return !onArea(b.x,b.y,d.w,d.h,R)};
 const WARN="Not fully on the buildable floor (block floors + open doors). Allowed, but may not work in game";
-// underground belts: next same-id belt in facing direction; warn when gap > maxApart
-function ugNext(u,ms){
-  const[dx,dy]=DIR[u.rot];let best=null,bd=1e9;
-  ms.forEach(v=>{
-    if(v===u||v.cls!==u.cls||v.h!==u.h)return;
-    const ex=v.x-u.x,ey=v.y-u.y;
-    const t=dx?(ey===0?ex*dx:-1):(ex===0?ey*dy:-1);
-    if(t>0&&t<bd){bd=t;best=v}
+// underground belts: entrance+exit = two UG machines of the same class/height/rotation on one line. Per line, sorted along the flow, pair 1+2, 3+4 ...
+// (skip a tile whose follower is too far when the next one is in range). n = cells entrance..exit inclusive; the game limit is d.maxApart (Mk max length).
+function ugPairs(ms){
+  const g=new Map(),out=[];
+  ms.forEach(u=>{const d=def(u.cls);if(!d||d.category!=="Undergrounds")return;const[dx]=DIR[u.rot],k=[u.cls,u.h,u.rot,dx?u.y:u.x].join("|");(g.get(k)||g.set(k,[]).get(k)).push(u)});
+  g.forEach(l=>{
+    const[dx,dy]=DIR[l[0].rot],pos=u=>dx?u.x*dx:u.y*dy,mx=def(l[0].cls).maxApart;l.sort((a,b)=>pos(a)-pos(b));
+    for(let i=0;i+1<l.length;i++){
+      const n=pos(l[i+1])-pos(l[i])+1;
+      if(n>mx&&i+2<l.length&&pos(l[i+2])-pos(l[i+1])+1<=mx)continue;
+      out.push({u:l[i],t:l[i+1],n,max:mx});i++;
+    }
   });
-  return{best,bd};
+  return out;
 }
 function ugWarn(){
-  const out=new Map(),ms=S.blocks.filter(isM);
-  ms.forEach(u=>{
-    const d=def(u.cls);if(!d||d.maxApart==null)return;
-    const{best,bd}=ugNext(u,ms);
-    if(best&&bd-1>d.maxApart)out.set(u.id,{n:bd-1,max:d.maxApart,to:best});
-  });
+  const out=new Map();
+  ugPairs(S.blocks.filter(isM)).forEach(({u,t,n,max})=>{if(n>max)out.set(u.id,{n,max,to:t})});
   return out;
 }
 // ---- ports: {face N/E/S/W relative to machine rotation, index along face, enabled}; layout per type (guessed), enabled per placed machine (b.off = disabled keys, b.xp = unknown pass-through)
@@ -152,8 +152,8 @@ function links(L){
   belts.forEach(u=>{const t=occ.get((u.x+DIR[u.rot][0])+","+(u.y+DIR[u.rot][1]));
     if(t&&t!==u&&isBelt(t)&&t.rot!==(u.rot+2)%4){fl.push({u,t});inc.set(t.id,(inc.get(t.id)||0)+1)}});
   fl.forEach(({u,t})=>{const side=t.rot!==u.rot;o.flow.push({u,t,merge:side&&inc.get(t.id)>1});uni(u,t);nb(u,t,"out");nb(t,u,"in")});
-  // 3) underground pairs (same logic as the distance warning)
-  belts.filter(u=>(def(u.cls)||{}).category==="Undergrounds").forEach(u=>{const{best}=ugNext(u,ms);if(best){o.ug.push({u,t:best});uni(u,best);nb(u,best,"pair");nb(best,u,"pair")}});
+  // 3) underground pairs (ugPairs, same as the length warning)
+  ugPairs(belts).forEach(({u,t})=>{o.ug.push({u,t});uni(u,t);nb(u,t,"pair");nb(t,u,"pair")});
   // chain -> machines
   belts.forEach(b=>{const r=root(b.id);if(!o.mach.has(r))o.mach.set(r,new Set())});
   o.ports.forEach(p=>o.mach.get(root(p.b.id)).add(p.m));
