@@ -28,11 +28,12 @@ function cfgModel(b,d,e,ugn){
 function build(){
   const bl=S.blocks.filter(b=>!isM(b)),ms=S.blocks.filter(isM),UGN=new Map(ugPairs(ms).map(q=>[q.u.id,q.n]));
   let base=Math.max(0,...S.dm.map(m=>Number(m&&m.MachineID)||0),...ms.map(b=>b.mid||0));
-  // Version 2 out: inverse of importJson v2 (block 4 units/cell, footprint centre; machine 2 units/floor cell, +W-14, Height*8)
-  const RB=b=>{const f=dim(b),sh=SHIPEND(b),ax=sh&&f.w===1&&DIR[b.rot][0]<0?1:0,ay=sh&&f.h===1&&DIR[b.rot][1]<0?1:0;return{X:4*(b.x-ax)+2*(sh?1:f.w-1),Y:4*(b.y-ay)+2*(sh?1:f.h-1)}},RM=b=>{const f=dim(b);return{X:2*b.x+f.w-14,Y:2*b.y+f.h-14}};
+  // Version 2 out: inverse of importJson v2 (block 4 units/cell, footprint centre; machine 2 units/floor cell, +W-14, Height 16 per level)
+  const RB=b=>{if(b.raw&&b.raw.x===b.x&&b.raw.y===b.y&&b.raw.r===b.rot)return{X:b.raw.X,Y:b.raw.Y};   // game coords that the site footprint cannot express: written back untouched until moved/rotated
+    const f=dim(b),sh=SHIPEND(b),ax=sh&&f.w===1&&DIR[b.rot][0]<0?1:0,ay=sh&&f.h===1&&DIR[b.rot][1]<0?1:0;return{X:4*(b.x-ax)+2*(sh?1:f.w-1),Y:4*(b.y-ay)+2*(sh?1:f.h-1)}},RM=b=>{const f=dim(b);return{X:2*b.x+f.w-14,Y:2*b.y+f.h-14}};
   return{Version:2,DisplayName:S.name,
-    Blocks:bl.map((b,i)=>expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h,GridRotation:b.rot,BlockID:i+1,PaletteID:b.pid||0})),
-    DefaultMachines:ms.map(b=>{const d=def(b.cls),e={Class:d.machineClass||d.id,Transform:{GridLocation:RM(b),Height:b.h*8,GridRotation:b.rot},MachineID:b.mid||++base,PaletteID:b.pid||0,DefaultName:d.id};
+    Blocks:bl.map((b,i)=>expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h*2,GridRotation:b.rot,BlockID:i+1,PaletteID:b.pid||0})),
+    DefaultMachines:ms.map(b=>{const d=def(b.cls),e={Class:d.machineClass||d.id,Transform:{GridLocation:RM(b),Height:b.h*16,GridRotation:b.rot},MachineID:b.mid||++base,PaletteID:b.pid||0,DefaultName:d.id};
       if(b.ct&&b.ct.length)e.Contents=b.ct.map(x=>({Item:x.item,Count:x.n,Infinite:!!x.inf}));
       if(b.rec)e.Recipe=b.rec;expCfg(b,d,e,UGN);return expPorts(b,e)}).concat(S.dm).map((e,i)=>({e,i,k:Number(e&&e.MachineID)})).sort((a,b)=>(isFinite(a.k)&&isFinite(b.k)?a.k-b.k:isFinite(a.k)?-1:isFinite(b.k)?1:0)||a.i-b.i).map(x=>x.e),   // keep original MachineID order
     FactoryLayout:{FloorCellsPerBlock:FC,DoorwayCells:DW,ClosedDoorways:S.closed.map(k=>{const a=k.split("|");return{Height:+a[0],X:+a[1],Y:+a[2],Edge:a[3],Seg:+a[4]}})},
@@ -147,15 +148,17 @@ function importJson(txt,quiet){
   saveOV();
   let odd=0;
   // Version 2 = game units (extract/import_station.py): block 4 units per cell, GridLocation = footprint centre;
-  // machine 2 units per floor cell, GridLocation = footprint centre, Height 8 per layer. Version 1/absent = legacy site units.
-  const v2=o.Version===2,MZ=8;
+  // machine 2 units per floor cell, GridLocation = footprint centre, Height per level: blocks 2, machines 16. Version 1/absent = legacy site units.
+  const v2=o.Version===2,MZ=16,BZ=2;   // game Height per level: blocks 2, machines 16 (sample station: blocks 0,2,4.. machines 0,16,32..)
   const n=v=>Math.round(Number(v))||0,hf=v=>{v=Number(v)||0;if(v%CU)odd++;return Math.round(v/CU)};
   const cell=(v,u,c)=>{const k=((Number(v)||0)-c)/u;if(k%1)odd++;return Math.round(k)};   // origin from centre; non-integer rounded + counted
   const rot=v=>((n(v)%4)+4)%4;
   S.blocks=o.Blocks.map(b=>{const r=rot(b.GridRotation),gx=b.GridLocation&&b.GridLocation.X,gy=b.GridLocation&&b.GridLocation.Y,cls=String(b.Class||"");
     if(!v2)return{id:uid++,cls,x:hf(gx),y:hf(gy),h:n(b.Height),rot:r,pid:n(b.PaletteID)};
     const f=dim({cls,rot:r}),sh=SHIPEND({cls}),ax=sh&&f.w===1&&DIR[r][0]<0?1:0,ay=sh&&f.h===1&&DIR[r][1]<0?1:0;   // shipEnd: 2x2 box, drawn row = station side
-    return{id:uid++,cls,x:cell(gx,4,sh?2:2*(f.w-1))+ax,y:cell(gy,4,sh?2:2*(f.h-1))+ay,h:n(b.Height),rot:r,pid:n(b.PaletteID)}});
+    const x=cell(gx,4,sh?2:2*(f.w-1))+ax,y=cell(gy,4,sh?2:2*(f.h-1))+ay,nb={id:uid++,cls,x,y,h:Math.round(n(b.Height)/BZ),rot:r,pid:n(b.PaletteID)};
+    if(4*(x-ax)+2*(sh?1:f.w-1)!==Number(gx)||4*(y-ay)+2*(sh?1:f.h-1)!==Number(gy))nb.raw={x,y,r,X:Number(gx),Y:Number(gy)};   // block never moves on round trip
+    return nb});
   S.blocks.forEach((b,i)=>impPorts(b,o.Blocks[i].Ports));
   const cd=o.FactoryLayout&&o.FactoryLayout.ClosedDoorways,lg=[];S.closed=[];
   if(Array.isArray(cd))cd.forEach(d=>{if(d&&d.Seg!=null&&"ESWN".includes(d.Edge))S.closed.push(`${n(d.Height)}|${n(d.X)}|${n(d.Y)}|${d.Edge}|${n(d.Seg)}`);else if(d)lg.push(d)});

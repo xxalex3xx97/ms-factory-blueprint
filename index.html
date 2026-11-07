@@ -30,6 +30,7 @@
   </div>
   </div>
   <div class="tg" role="group" aria-label="Tools">
+    <button id="stB" class="hbt" aria-pressed="false" aria-controls="stW" aria-label="Settings" title="Settings"><span class="ic" aria-hidden="true">&#9881;</span><span class="tx">Settings</span></button>
     <button id="lvB" class="hbt" aria-pressed="false" aria-controls="lvW" title="Level window (up/down, ghost levels)"><span class="tx">Level</span> <span id="lvN">1</span></button>
     <button id="simB" class="hbt" aria-pressed="false" aria-controls="smW" title="Simulation window"><span class="ic" aria-hidden="true">&#9654;</span><span class="tx">Simulation</span></button>
     <button id="flwB" class="hbt" aria-pressed="false" aria-controls="fwW" title="Flow window: links and bottlenecks"><span class="ic" aria-hidden="true">&#8644;</span><span class="tx">Flow</span></button>
@@ -84,6 +85,12 @@
       </div>
     </div>
     <div id="fms">
+    <div id="stW" class="fm" role="region" aria-labelledby="stWT" hidden>
+      <div class="fmh"><h3 id="stWT">Settings</h3><button id="stWX" aria-label="Close settings" title="Close">&times;</button></div>
+      <div class="fmb">
+        <label title="Refuse to place buildables outside the block floors or across a wall"><input id="strict" type="checkbox" checked aria-label="Keep buildables inside the floor"> <span class="tx">keep buildables inside the floor</span></label>
+      </div>
+    </div>
     <div id="lvW" class="fm" role="region" aria-labelledby="lvWT" hidden>
       <div class="fmh"><h3 id="lvWT">Level</h3><button id="lvWX" aria-label="Close level" title="Close">&times;</button></div>
       <div class="fmb">

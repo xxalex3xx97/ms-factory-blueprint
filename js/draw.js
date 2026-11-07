@@ -254,7 +254,7 @@ function drawUG(s){
 }
 function paint(){LKP=true;LKC=null;try{paint0()}finally{LKP=false;LKC=null}}
 function paint0(){
-  cx.setTransform(dpr,0,0,dpr,0,0);cx.clearRect(0,0,W,H);
+  cx.setTransform(dpr,0,0,dpr,0,0);cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality="high";cx.clearRect(0,0,W,H);
   const s=sc(),F=view==="F";
   RCT=null;
   if(F&&SM&&SIM&&SIM.sig!==simSig()){simReset();SIM.sig=simSig();smClkUp()}
@@ -307,7 +307,7 @@ function paint0(){
     cx.fillStyle=fill(d.category,.5);cx.fillRect(px,py,bw*s,bh*s);
     drawIcon(d,px,py,bw*s,bh*s,.8);
     if(d.directional)arrow(px,py,bw*s,bh*s,placeRot,.9);
-    cx.strokeStyle=d.kind==="m"&&noBuild([{x:hover.x,y:hover.y,w:bw,h:bh,l:layer}])?"hsl(0,85%,60%)":d.kind==="m"&&RCT&&!onArea(hover.x,hover.y,bw,bh,RCT)?"hsl(45,95%,62%)":"#fff";
+    cx.strokeStyle=d.kind==="m"&&noBuild([{id:-1,x:hover.x,y:hover.y,w:bw,h:bh,l:layer,belt:isBelt({cls:active})}])?"hsl(0,85%,60%)":d.kind==="m"&&RCT&&!onArea(hover.x,hover.y,bw,bh,RCT)?"hsl(45,95%,62%)":"#fff";
     cx.setLineDash([5,4]);cx.lineWidth=1.5;cx.strokeRect(px+.5,py+.5,bw*s-1,bh*s-1);cx.setLineDash([]);
   }
 }
