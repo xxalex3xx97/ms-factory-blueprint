@@ -4,6 +4,10 @@ const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.
 const impPorts=(b,L)=>{if(!Array.isArray(L))return;const ps=portsOf(b),off=[],xp=[];L.forEach(e=>{const p=e&&ps.find(q=>q.f===e.Face&&q.i===e.Index);if(p){if(e.Enabled===false)off.push(p.key)}else xp.push(e)});if(off.length)b.off=off;if(xp.length)b.xp=xp};
 // game-ready SerializedMachineConfig per machine (ConfigHex = exact bytes the game applies; Recipe/Ports/Filters stay for humans). Only when the machine has something to configure.
 // Underground: ONE config on the pair's entrance (Length = cells entrance..exit inclusive); the mod's paste tool merges entrance+exit into one game machine. Recipe ports: game port order (config.js gamePortMap; verified Refinery/Assembler, others rule-derived -> PortOrderUnverified).
+// Contents (containers only): totals per item, Count >= 1, duplicates summed; Infinite (site-only flag) written only when true; empty = field omitted
+function expCt(b,e){if(!isStore(b)||!b.ct)return;const m=new Map();
+  b.ct.forEach(x=>{const n=Math.max(0,Math.round(Number(x.n))||0);if(!x.item||(n<1&&!x.inf))return;const r=m.get(x.item)||{Item:x.item,Count:0};r.Count+=n;if(x.inf)r.Infinite=true;m.set(x.item,r)});
+  if(m.size)e.Contents=[...m.values()]}
 function expCfg(b,d,e,ugn){
   cfgModel(b,d,e,ugn);
   if(b.cfgKeep&&b.cfgKeep.sig===cfgSig(b)&&cfgKind(d.id)!=="underground")e.ConfigHex=b.cfgKeep.hex;   // imported bytes kept bit-for-bit while recipe/ports/filters are unchanged
@@ -34,8 +38,7 @@ function build(){
   return{Version:2,DisplayName:S.name,
     Blocks:bl.map((b,i)=>expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h*2,GridRotation:b.rot,BlockID:i+1,PaletteID:b.pid||0})),
     DefaultMachines:ms.map(b=>{const d=def(b.cls),e={Class:d.machineClass||d.id,Transform:{GridLocation:RM(b),Height:b.h*16,GridRotation:b.rot},MachineID:b.mid||++base,PaletteID:b.pid||0,DefaultName:d.id};
-      if(b.ct&&b.ct.length)e.Contents=b.ct.map(x=>({Item:x.item,Count:x.n,Infinite:!!x.inf}));
-      if(b.rec)e.Recipe=b.rec;expCfg(b,d,e,UGN);return expPorts(b,e)}).concat(S.dm).map((e,i)=>({e,i,k:Number(e&&e.MachineID)})).sort((a,b)=>(isFinite(a.k)&&isFinite(b.k)?a.k-b.k:isFinite(a.k)?-1:isFinite(b.k)?1:0)||a.i-b.i).map(x=>x.e),   // keep original MachineID order
+      if(b.rec)e.Recipe=b.rec;expCfg(b,d,e,UGN);expPorts(b,e);expCt(b,e);return e}).concat(S.dm).map((e,i)=>({e,i,k:Number(e&&e.MachineID)})).sort((a,b)=>(isFinite(a.k)&&isFinite(b.k)?a.k-b.k:isFinite(a.k)?-1:isFinite(b.k)?1:0)||a.i-b.i).map(x=>x.e),   // keep original MachineID order
     FactoryLayout:{FloorCellsPerBlock:FC,DoorwayCells:DW,ClosedDoorways:S.closed.map(k=>{const a=k.split("|");return{Height:+a[0],X:+a[1],Y:+a[2],Edge:a[3],Seg:+a[4]}})},
     Catalog:OV};
 }
