@@ -1,0 +1,44 @@
+// Planner SVG export: node positions (incl. dragged) are kept. Run: node tests/planner_svg.mjs
+import {createRequire} from 'module';
+import path from 'path';
+import fs from 'fs';
+import {fileURLToPath, pathToFileURL} from 'url';
+const require = createRequire(import.meta.url);
+const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const br = await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
+let bad = 0; const chk = (n, c, d = '') => { console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : ' ' + d)); if (!c) bad++; };
+try {
+  const pg = await (await br.newContext({viewport: {width: 1400, height: 900}, acceptDownloads: true})).newPage();
+  const errs = []; pg.on('pageerror', e => errs.push(e.message));
+  await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href);
+  await pg.waitForFunction(() => window.__fb);
+  await pg.evaluate(() => document.getElementById('plnB').click());
+  const item = 'ITEM_CobaltPlates';
+  await pg.selectOption('#plnItem', item); await pg.fill('#plnRate', '100');
+  await pg.waitForSelector('#plnOut .plnBox');
+  const plain = await pg.evaluate(() => document.querySelector('#plnOut .plnBox[data-item="ITEM_CobaltPlates"] .sub').textContent + '|' + !!document.querySelector('#plnOut .plnBox[data-item="ITEM_EnrichedCobaltOre"]'));
+  chk('enriched ores off by default: no Enriched Cobalt Ore box', plain.endsWith('|false'), plain);
+  await pg.check('#plnEnr');
+  chk('enriched ores on: Enriched Cobalt Ore box appears', await pg.evaluate(() => !!document.querySelector('#plnOut .plnBox[data-item="ITEM_EnrichedCobaltOre"]')));
+  await pg.uncheck('#plnEnr');
+  const box = pg.locator('#plnOut .plnBox').first(), bb = await box.boundingBox();
+  await pg.mouse.move(bb.x + 20, bb.y + 8); await pg.mouse.down(); await pg.mouse.move(bb.x + 20, bb.y + 168, {steps: 5}); await pg.mouse.up();
+  const want = await pg.evaluate(() => { const b = document.querySelector('#plnOut .plnBox'); return {t: getComputedStyle(b).transform, n: document.querySelectorAll('#plnOut .plnBox').length, l: document.querySelectorAll('#plnOut .plnLbl').length}; });
+  const [dl] = await Promise.all([pg.waitForEvent('download'), pg.click('#plnSv')]);
+  const f = await dl.path(), svg = fs.readFileSync(f, 'utf8');
+  fs.mkdirSync(path.join(ROOT, 'tests/shots'), {recursive: true}); fs.copyFileSync(f, path.join(ROOT, 'tests/shots/planner.svg'));
+  chk('file is .svg', dl.suggestedFilename().endsWith('-planner.svg'));
+  const r = await pg.evaluate(t => { const d = new DOMParser().parseFromString(t, 'image/svg+xml'), b = d.querySelector('.plnBox'); return {ok: !d.querySelector('parsererror') && d.documentElement.nodeName === 'svg', fo: !!d.querySelector('foreignObject'), n: d.querySelectorAll('.plnBox').length, l: d.querySelectorAll('.plnLbl').length, t: b && b.getAttribute('style').match(/(?:^|;)transform:([^;]*)/)[1].trim(), arrows: d.querySelectorAll('.plnSvg path').length, blob: /src="blob:/.test(t)}; }, svg);
+  chk('svg parses, has foreignObject', r.ok && r.fo);
+  chk('same boxes and labels as the canvas', r.n === want.n && r.l === want.l, JSON.stringify([r, want]));
+  chk('dragged box transform kept', r.t === want.t, `${r.t} vs ${want.t}`);
+  chk('arrows exported', r.arrows > 0);
+  chk('icons embedded (no blob: urls)', !r.blob);
+  const [dp] = await Promise.all([pg.waitForEvent('download'), pg.click('#plnPng')]);
+  const pb = fs.readFileSync(await dp.path()); fs.copyFileSync(await dp.path(), path.join(ROOT, 'tests/shots/planner.png'));
+  chk('png file name + PNG signature', dp.suggestedFilename().endsWith('-planner.png') && pb.slice(1, 4).toString() === 'PNG', dp.suggestedFilename());
+  chk('png is not tiny (has content)', pb.length > 5000, String(pb.length));
+  chk('no page errors', errs.length === 0, errs.join('|'));
+} finally { await br.close(); }
+process.exit(bad ? 1 : 0);

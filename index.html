@@ -12,6 +12,7 @@
   <h1>MS <span>Factory Blueprint</span></h1>
   <div class="tg" role="group" aria-label="Plan"><span class="gl">Plan</span>
   <div class="grp"><label for="name">Name</label><input id="name" type="text" value="Untitled station"></div>
+  <div class="grp" id="stG" hidden><select id="stSel" aria-label="Station in the loaded save" title="Switch to another station of the loaded save (unsaved changes are lost)"></select></div>
   <div class="grp">
     <button id="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><span class="ic" aria-hidden="true">&#8630;</span><span class="tx">Undo</span></button>
     <button id="redo" aria-label="Redo" title="Redo (Ctrl+Y)"><span class="ic" aria-hidden="true">&#8631;</span><span class="tx">Redo</span></button>
@@ -67,7 +68,7 @@
       </div>
     </div>
     <div id="pln" role="region" aria-labelledby="plnT" hidden>
-      <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
+      <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnPng" title="Export the planner diagram as a PNG image (2x)">PNG</button><button id="plnSv" title="Export the planner diagram as SVG (keeps your box positions)">SVG</button><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
       <div id="plnBody">
       <div id="plnForm">
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
@@ -80,6 +81,7 @@
       <label>Splitter <select id="plnSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
       <label>Balancer <select id="plnBal" aria-label="Balancer tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
       <div class="plnGxW"><span>View</span><button id="plnGx" type="button" aria-pressed="false" title="Grouped: one box per node. Expanded: one box per machine">Grouped</button></div>
+      <label class="chk"><input type="checkbox" id="plnEnr"> Use enriched ores</label>
       <label>Protomatter <select id="plnProto" aria-label="Protomatter use"><option value="0" selected>Don't use</option><option value="1">Use</option></select></label>
       </div></div>
       </div>

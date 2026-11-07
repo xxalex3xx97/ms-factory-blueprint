@@ -4,6 +4,12 @@ const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.
 const impPorts=(b,L)=>{if(!Array.isArray(L))return;const ps=portsOf(b),off=[],xp=[];L.forEach(e=>{const p=e&&ps.find(q=>q.f===e.Face&&q.i===e.Index);if(p){if(e.Enabled===false)off.push(p.key)}else xp.push(e)});if(off.length)b.off=off;if(xp.length)b.xp=xp};
 // game-ready SerializedMachineConfig per machine (ConfigHex = exact bytes the game applies; Recipe/Ports/Filters stay for humans). Only when the machine has something to configure.
 // Underground: ONE config on the pair's entrance (Length = cells entrance..exit inclusive); the mod's paste tool merges entrance+exit into one game machine. Recipe ports: game port order (config.js gamePortMap; verified Refinery/Assembler, others rule-derived -> PortOrderUnverified).
+// Contents (containers only): totals per item, duplicates summed, Count >= 1, empty = field omitted. Infinite sources are site/simulation only: written under SiteOnly.Infinite (the mod's parser ignores SiteOnly), never in Contents.
+function expCt(b,e){if(!isStore(b)||!b.ct)return;const m=new Map(),inf=new Map();
+  b.ct.forEach(x=>{if(!x.item)return;const n=Math.max(0,Math.round(Number(x.n))||0);
+    if(x.inf){const r=inf.get(x.item)||{Item:x.item,Count:0};r.Count+=n;inf.set(x.item,r);return}
+    if(n<1)return;const r=m.get(x.item)||{Item:x.item,Count:0,Infinite:false};r.Count+=n;m.set(x.item,r)});
+  if(m.size)e.Contents=[...m.values()];if(inf.size)e.SiteOnly={Infinite:[...inf.values()]}}
 function expCfg(b,d,e,ugn){
   cfgModel(b,d,e,ugn);
   if(b.cfgKeep&&b.cfgKeep.sig===cfgSig(b)&&cfgKind(d.id)!=="underground")e.ConfigHex=b.cfgKeep.hex;   // imported bytes kept bit-for-bit while recipe/ports/filters are unchanged
@@ -34,8 +40,7 @@ function build(){
   return{Version:2,DisplayName:S.name,
     Blocks:bl.map((b,i)=>expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h*2,GridRotation:b.rot,BlockID:i+1,PaletteID:b.pid||0})),
     DefaultMachines:ms.map(b=>{const d=def(b.cls),e={Class:d.machineClass||d.id,Transform:{GridLocation:RM(b),Height:b.h*16,GridRotation:b.rot},MachineID:b.mid||++base,PaletteID:b.pid||0,DefaultName:d.id};
-      if(b.ct&&b.ct.length)e.Contents=b.ct.map(x=>({Item:x.item,Count:x.n,Infinite:!!x.inf}));
-      if(b.rec)e.Recipe=b.rec;expCfg(b,d,e,UGN);return expPorts(b,e)}).concat(S.dm).map((e,i)=>({e,i,k:Number(e&&e.MachineID)})).sort((a,b)=>(isFinite(a.k)&&isFinite(b.k)?a.k-b.k:isFinite(a.k)?-1:isFinite(b.k)?1:0)||a.i-b.i).map(x=>x.e),   // keep original MachineID order
+      if(b.rec)e.Recipe=b.rec;expCfg(b,d,e,UGN);expPorts(b,e);expCt(b,e);return e}).concat(S.dm).map((e,i)=>({e,i,k:Number(e&&e.MachineID)})).sort((a,b)=>(isFinite(a.k)&&isFinite(b.k)?a.k-b.k:isFinite(a.k)?-1:isFinite(b.k)?1:0)||a.i-b.i).map(x=>x.e),   // keep original MachineID order
     FactoryLayout:{FloorCellsPerBlock:FC,DoorwayCells:DW,ClosedDoorways:S.closed.map(k=>{const a=k.split("|");return{Height:+a[0],X:+a[1],Y:+a[2],Edge:a[3],Seg:+a[4]}})},
     Catalog:OV};
 }
@@ -139,7 +144,8 @@ function matchM(m){
   const l=bbs.filter(d=>d.machineClass===c||d.id===c||"BPO_"+d.id.slice(4)===c||d.id===m.DefaultName||(d.category==="Undergrounds"&&"DAT_"+ug===d.id));
   return l.find(d=>d.id===m.DefaultName)||l[0]||null;
 }
-function importJson(txt,quiet){
+function importJson(txt,quiet){const ok=importJson0(txt,quiet);if(ok)stHide();return ok}
+function importJson0(txt,quiet){
   let o;try{o=JSON.parse(txt)}catch(e){toast("Invalid JSON: "+e.message);return false}
   if(!o||!Array.isArray(o.Blocks)){toast('Missing "Blocks" array');return false}
   push();
@@ -171,6 +177,7 @@ function importJson(txt,quiet){
       if(v2){const f=dim(b);b.x=cell(g.X,2,f.w-14);b.y=cell(g.Y,2,f.h-14);b.h=Math.round(n(t.Height)/MZ)}   // floor cell = (raw-W)/2+7 (fit: 2021/2290 on floors, refinery/splitter/assembler/elevator 100%)
       impCfg(b,d,m);impPorts(b,m.Ports);if(typeof m.Recipe==="string"&&m.Recipe){b.rec=m.Recipe;delete b.recn}
       if(Array.isArray(m.Contents))b.ct=m.Contents.filter(x=>x&&typeof x.Item==="string"&&x.Item).map(x=>({item:x.Item,n:Math.max(0,Math.round(Number(x.Count))||0),inf:x.Infinite===true}));
+      if(m.SiteOnly&&Array.isArray(m.SiteOnly.Infinite))b.ct=(b.ct||[]).concat(m.SiteOnly.Infinite.filter(x=>x&&typeof x.Item==="string"&&x.Item).map(x=>({item:x.Item,n:Math.max(0,Math.round(Number(x.Count))||0),inf:true})));   // site-only infinite sources
       S.blocks.push(b)}
     else S.dm.push(m);
   });
@@ -226,9 +233,16 @@ $("impFile").onchange=async e=>{
   }catch(err){SAVST=null;$("impSt").hidden=true;toast("Save read failed: "+err.message)}
 };
 $("impGo").onclick=()=>{
-  if(SAVST){if(importJson(JSON.stringify(SAVST[+$("impSt").value].json)))$("dImp").close();return}
+  if(SAVST){const l=SAVST,i=+$("impSt").value;if(importJson(JSON.stringify(l[i].json))){stShow(l,i);$("dImp").close()}return}
   if(importJson($("impTa").value))$("dImp").close();
 };
+// Header station switcher: shown after picking one station of a multi-station save, any other import hides it
+let STL=null;
+function stHide(){STL=null;$("stG").hidden=true}
+function stShow(l,i){STL=l;$("stSel").replaceChildren(...l.map((s,j)=>new Option(s.name,String(j))));$("stSel").value=String(i);$("stSel").dataset.cur=String(i);$("stG").hidden=false}
+$("stSel").onchange=()=>{const l=STL,i=+$("stSel").value,cur=+$("stSel").dataset.cur;
+  if(!l||!confirm(`Switch to station "${l[i].name}"? Unsaved changes to the current station will be lost.`)){$("stSel").value=String(cur);return}
+  if(importJson(JSON.stringify(l[i].json)))stShow(l,i);else $("stSel").value=String(cur)};
 let nameBefore=S.name;
 $("name").onfocus=()=>{nameBefore=S.name};
 $("name").oninput=e=>{S.name=e.target.value;ASH=false;asv()};
