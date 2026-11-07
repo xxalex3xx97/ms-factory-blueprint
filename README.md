@@ -27,7 +27,7 @@ Browser tool to plan a station factory for **Main Sequence**: a top-down grid of
 **What you need:** Main Sequence Demo and MSCore (installed with MSCoreManager). Install steps are in the mod's README.
 
 ## Roadmap
-- [ ] Savegame station selection: load a save and pick one of its stations to plan or edit.
+- [x] Savegame station selection: load a save and pick one of its stations to plan or edit.
 - [x] In-game blueprint construction: see the Blueprint Unit mod below.
 
 ## Notes
