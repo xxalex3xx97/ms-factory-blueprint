@@ -25,8 +25,7 @@
       <button id="fOpen" role="menuitem" aria-label="Open file" title="Open a .json file and keep it linked for Save">Open</button>
       <button id="fSaveAs" role="menuitem" aria-label="Save as" title="Save to a new file (Ctrl+Shift+S)">Save as</button>
       <button id="imp" role="menuitem" aria-label="Import JSON">Import</button>
-      <button id="fpPng" role="menuitem" title="Export the current view (whole plan, current level) as a PNG image">Floor plan PNG</button>
-      <button id="fpSvg" role="menuitem" title="Export the current view as an SVG (the image is embedded, not redrawn as vectors)">Floor plan SVG</button>
+      <button id="fShot" role="menuitem" title="Open the Screenshot panel (export PNG / SVG)">Screenshot…</button>
     </div></div>
     <button id="fSave" class="pri" aria-label="Save" title="Save to the opened file (Ctrl+S)">Save</button>
     <button id="exp" class="pri" aria-label="Export JSON">Export</button>
@@ -34,6 +33,7 @@
   </div>
   <div class="tg" role="group" aria-label="Tools">
     <button id="stB" class="hbt" aria-pressed="false" aria-controls="stW" aria-label="Settings" title="Settings"><span class="ic" aria-hidden="true">&#9881;</span><span class="tx">Settings</span></button>
+    <button id="shB" class="hbt" aria-pressed="false" aria-controls="shW" aria-label="Screenshot" title="Screenshot: export the plan as PNG or SVG"><span class="ic" aria-hidden="true">&#128247;</span><span class="tx">Screenshot</span></button>
     <button id="lvB" class="hbt" aria-pressed="false" aria-controls="lvW" title="Level window (up/down, ghost levels)"><span class="tx">Level</span> <span id="lvN">1</span></button>
     <button id="simB" class="hbt" aria-pressed="false" aria-controls="smW" title="Simulation window"><span class="ic" aria-hidden="true">&#9654;</span><span class="tx">Simulation</span></button>
     <button id="flwB" class="hbt" aria-pressed="false" aria-controls="fwW" title="Flow window: links and bottlenecks"><span class="ic" aria-hidden="true">&#8644;</span><span class="tx">Flow</span></button>
@@ -94,6 +94,16 @@
       <div class="fmh"><h3 id="stWT">Settings</h3><button id="stWX" aria-label="Close settings" title="Close">&times;</button></div>
       <div class="fmb">
         <label title="Refuse to place buildables outside the block floors or across a wall"><input id="strict" type="checkbox" checked aria-label="Keep buildables inside the floor"> <span class="tx">keep buildables inside the floor</span></label>
+      </div>
+    </div>
+    <div id="shW" class="fm" role="region" aria-labelledby="shWT" hidden>
+      <div class="fmh"><h3 id="shWT">Screenshot</h3><button id="shWX" aria-label="Close screenshot" title="Close">&times;</button></div>
+      <div class="fmb">
+        <label title="100% = full size. 100% = the largest picture this browser can make; lower = smaller picture, same content"><span class="tx">Quality</span> <input id="shQ" type="range" min="10" max="100" step="5" value="50" aria-label="Screenshot quality"> <b id="shQv">50%</b></label>
+        <div id="shPrev" class="sub" aria-live="polite"></div>
+        <div id="shLim" class="sub"></div>
+        <div id="shRef" title="Size preview: the outer square is 100%" aria-hidden="true"><div id="shBox"></div></div>
+        <div class="grp"><button id="shPng" title="Export the current view (whole plan, current level) as a PNG image">PNG</button><button id="shSvg" title="Export as an SVG (the image is embedded, not redrawn as vectors)">SVG</button></div>
       </div>
     </div>
     <div id="lvW" class="fm" role="region" aria-labelledby="lvWT" hidden>

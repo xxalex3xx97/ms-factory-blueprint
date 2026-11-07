@@ -22,17 +22,26 @@ try {
   for (const v of ['L', 'F']) {
     await pg.evaluate(v => { __fb.setView(v); __fb.fit(); }, v);
     const before = await st();
-    for (const [id, ext] of [['fpPng', 'png'], ['fpSvg', 'svg']]) {
+    for (const [id, ext] of [['shPng', 'png'], ['shSvg', 'svg']]) {
       const [dl] = await Promise.all([pg.waitForEvent('download'), pg.evaluate(id => document.getElementById(id).click(), id)]);
       const f = await dl.path(), buf = fs.readFileSync(f);
       fs.copyFileSync(f, path.join(ROOT, `tests/shots/fp-${v}.${ext}`));
       chk(`${v} ${ext}: file name`, dl.suggestedFilename().endsWith(v === 'L' ? `-layout.${ext}` : `-floor-plan.${ext}`), dl.suggestedFilename());
-      if (ext === 'png') { chk(`${v} png: signature + size`, buf.slice(1, 4).toString() === 'PNG' && buf.length > 5000, String(buf.length)); chk(`${v} png: dimensions sane`, buf.readUInt32BE(16) > 200 && buf.readUInt32BE(20) > 200 && buf.readUInt32BE(16) <= 16000 && buf.readUInt32BE(20) <= 16000, `${buf.readUInt32BE(16)}x${buf.readUInt32BE(20)}`); }
+      if (ext === 'png') { chk(`${v} png: signature + size`, buf.slice(1, 4).toString() === 'PNG' && buf.length > 5000, String(buf.length)); chk(`${v} png: dimensions sane`, buf.readUInt32BE(16) > 200 && buf.readUInt32BE(20) > 200 && buf.readUInt32BE(16) <= 16384 && buf.readUInt32BE(20) <= 16384, `${buf.readUInt32BE(16)}x${buf.readUInt32BE(20)}`); }
       if (ext === 'png') chk(`${v} png: opaque dark background (corner pixel alpha 255, dark)`, await pg.evaluate(async b64 => { const im = new Image(); im.src = 'data:image/png;base64,' + b64; await im.decode(); const c = document.createElement('canvas'); c.width = c.height = 1; const g = c.getContext('2d'); g.drawImage(im, 0, 0); const d = g.getImageData(0, 0, 1, 1).data; return d[3] === 255 && d[2] > d[0]; }, buf.toString('base64')));
       else chk(`${v} svg: parses, embeds image`, await pg.evaluate(t => { const d = new DOMParser().parseFromString(t, 'image/svg+xml'); return !d.querySelector('parsererror') && !!d.querySelector('image'); }, buf.toString('utf8')));
     }
     chk(`${v}: live view/canvas restored`, (await st()) === before, before + ' vs ' + await st());
   }
+  // quality slider: preview text matches the export, 50% is about half the side
+  await pg.evaluate(() => { document.getElementById('shB').click(); __fb.setView('L'); document.getElementById('shQ').value = 100; document.getElementById('shQ').dispatchEvent(new Event('input')); });
+  const full = await pg.evaluate(() => document.getElementById('shPrev').textContent), fw = +full.match(/^(\d+) × (\d+)/)[1];
+  await pg.evaluate(() => { document.getElementById('shQ').value = 50; document.getElementById('shQ').dispatchEvent(new Event('input')); });
+  const half = await pg.evaluate(() => document.getElementById('shPrev').textContent), hw = +half.match(/^(\d+) × (\d+)/)[1];
+  chk('screenshot panel: 50% preview is about half the side of 100%', Math.abs(hw / fw - 0.5) < 0.02, full + ' | ' + half);
+  const [dq] = await Promise.all([pg.waitForEvent('download'), pg.evaluate(() => document.getElementById('shPng').click())]);
+  const qb = fs.readFileSync(await dq.path());
+  chk('screenshot panel: exported PNG size equals the preview', qb.readUInt32BE(16) === hw && qb.readUInt32BE(20) === hw, `${qb.readUInt32BE(16)} vs ${hw}`);
   chk('no page errors', errs.length === 0, errs.join('|'));
 } finally { await br.close(); }
 process.exit(bad ? 1 : 0);

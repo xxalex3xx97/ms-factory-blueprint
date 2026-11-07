@@ -846,10 +846,10 @@ try {
   await ph.focus('#fileM');
   await ph.keyboard.press('ArrowDown');
   const ks = [await active()];
-  for (let i = 0; i < 6; i++) { await ph.keyboard.press('ArrowDown'); ks.push(await active()); }   // New, Open, Save as, Import, Floor plan PNG, Floor plan SVG, wrap
+  for (let i = 0; i < 5; i++) { await ph.keyboard.press('ArrowDown'); ks.push(await active()); }   // New, Open, Save as, Import, Screenshot, wrap
   await ph.keyboard.press('ArrowUp'); ks.push(await active());
-  chk('(H3) ArrowDown opens File and focuses New, then Open, Save as, Import, Floor plan PNG, Floor plan SVG, wraps to New; ArrowUp back to Floor plan SVG',
-    (await expanded('#fileM')) === 'true' && ks.join() === 'nw,fOpen,fSaveAs,imp,fpPng,fpSvg,nw,fpSvg', ks.join());
+  chk('(H3) ArrowDown opens File and focuses New, then Open, Save as, Import, Screenshot, wraps to New; ArrowUp back to Screenshot',
+    (await expanded('#fileM')) === 'true' && ks.join() === 'nw,fOpen,fSaveAs,imp,fShot,nw,fShot', ks.join());
   await ph.keyboard.press('Escape');
 
   // (H4) picking New from the menu still runs its normal flow (confirm, clear), and the menu closes
