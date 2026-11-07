@@ -149,11 +149,26 @@ function arrow(x,y,w,h,rot,alpha){
   cx.fillStyle=`rgba(255,255,255,${alpha})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.7})`;cx.lineWidth=1;
   cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.7,-r*.75);cx.lineTo(-r*.3,0);cx.lineTo(-r*.7,r*.75);cx.closePath();cx.fill();cx.stroke();cx.restore();
 }
+// layout view only: verified station blocks as roofless top-down plans (ROOFLESS, js/roofless.js); returns false for every other class
+function drawRoofless(b,df,x,y,w,h,alpha,cat){
+  const P=df&&ROOFLESS[df.name];if(!P||view==="F")return false;
+  const s=sc(),k=s/16,fw=P.w*k,fh=P.h*k;
+  cx.save();cx.translate(x+w/2,y+h/2);cx.rotate((b.rot||0)*Math.PI/2);cx.translate(-fw/2,-fh/2);   // plan frame: origin top-left of the unrotated hull; rot clockwise like the arrows
+  const X=v=>(v+P.w/2)*k,Y=v=>(v+P.h/2)*k;
+  if(P.solid){cx.fillStyle=cat?fill(cat,alpha*.9):`rgba(120,125,135,${alpha*.9})`;P.r.forEach(r=>cx.fillRect(X(r[0]),Y(r[1]),(r[2]-r[0])*k,(r[3]-r[1])*k))}
+  else{
+    cx.fillStyle=`rgba(40,52,70,${alpha})`;cx.fillRect(0,0,fw,fh);
+    cx.fillStyle=cat?fill(cat,alpha*.55):`rgba(150,190,230,${alpha*.1})`;cx.fillRect(0,0,fw,fh);
+    cx.fillStyle=`rgba(38,46,60,${alpha})`;cx.strokeStyle=`rgba(150,165,190,${alpha*.6})`;cx.lineWidth=1;
+    P.r.forEach(r=>{const a=X(r[0]),c=Y(r[1]),ww=(r[2]-r[0])*k,hh=(r[3]-r[1])*k;cx.fillRect(a,c,ww,hh);if(k>=2)cx.strokeRect(a+.5,c+.5,ww-1,hh-1)});
+  }
+  cx.restore();return true;
+}
 function drawBlock(b,alpha,isSel){
   const s=sc(),d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s,cat=catOf(b),df=def(b.cls),m=isM(b);
   cx.fillStyle=cat?fill(cat,alpha*.8):`rgba(120,125,135,${alpha*.8})`;
   cx.fillRect(x,y,w,h);
-  drawIcon(df,x,y,w,h,Math.min(1,alpha));
+  if(!drawRoofless(b,df,x,y,w,h,alpha,cat))drawIcon(df,x,y,w,h,Math.min(1,alpha));
   if(df&&df.directional&&s>=10)arrow(x,y,w,h,b.rot,Math.min(1,alpha));
   cx.lineWidth=1;cx.strokeStyle=cat?`hsla(${hue(cat)},70%,70%,${alpha})`:`rgba(190,195,205,${alpha})`;
   cx.strokeRect(x+.5,y+.5,w-1,h-1);
