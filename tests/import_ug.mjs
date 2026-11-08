@@ -26,7 +26,7 @@ execFileSync(process.env.PY || 'python', ['-I', path.join(ROOT, 'extract', 'impo
 const oracle = JSON.parse(fs.readFileSync(ORACLE, 'utf8'));
 const pyDup = JSON.parse(execFileSync(process.env.PY || 'python', ['-I', '-c',
   'import sys,json; sys.path.insert(0,sys.argv[1]); import import_station as S; ' +
-  'print(json.dumps(sorted(S.ug_exit_dupes([dict(MachineID=1,X=-7,Y=1,GridRotation=0),dict(MachineID=2,X=-3,Y=1,GridRotation=0),dict(MachineID=3,X=-7,Y=5,GridRotation=0)],{1:3,2:3,3:3}))))',
+  'print(json.dumps(sorted(S.ug_exit_dupes([dict(MachineID=1,X=-7,Y=1,Height=0,GridRotation=0),dict(MachineID=2,X=-3,Y=1,Height=0,GridRotation=0),dict(MachineID=3,X=-7,Y=5,Height=0,GridRotation=0)],{1:3,2:3,3:3}))))',
   path.join(ROOT, 'extract')], {encoding: 'utf8'}));
 const UGS = oracle.DefaultMachines.filter(m => /Underground/.test(m.Class));
 const byId = id => UGS.find(m => m.MachineID === id);
@@ -71,8 +71,13 @@ try {
   chk('parseSav: Length from world record for all 10 undergrounds', Object.entries(EXP_L).every(([id, L]) => jsL[id] === L), JSON.stringify(jsL));
 
   // JS dedupe helper on the same synthetic records as the python check
-  const jsDup = await pg.evaluate(() => [...__fb.ugDupes([{MID: 1, X: -7, Y: 1, R: 0}, {MID: 2, X: -3, Y: 1, R: 0}, {MID: 3, X: -7, Y: 5, R: 0}], {1: 3, 2: 3, 3: 3})].sort());
+  const jsDup = await pg.evaluate(() => [...__fb.ugDupes([{MID: 1, X: -7, Y: 1, H: 0, R: 0}, {MID: 2, X: -3, Y: 1, H: 0, R: 0}, {MID: 3, X: -7, Y: 5, H: 0, R: 0}], {1: 3, 2: 3, 3: 3})].sort());
   chk('JS dedupe: same result as python', isDeepStrictEqual(jsDup, pyDup), JSON.stringify(jsDup));
+  // Height in the key (python side: tests/ug_dupes.mjs): other layer at same XY is not a dupe; same-layer mod exit is
+  const jsH = await pg.evaluate(() => [...__fb.ugDupes([{MID: 1, X: -7, Y: 1, H: 0, R: 0}, {MID: 2, X: -3, Y: 1, H: 1, R: 0}], {1: 3, 2: 3})].sort());
+  const jsH2 = await pg.evaluate(() => [...__fb.ugDupes([{MID: 3, X: -7, Y: 9, H: 0, R: 0}, {MID: 4, X: -3, Y: 9, H: 0, R: 0}], {3: 3, 4: 3})].sort());
+  chk('JS dedupe: same XY other Height -> no dupe', jsH.length === 0, JSON.stringify(jsH));
+  chk('JS dedupe: same-Height mod exit pair -> exit deduped', isDeepStrictEqual(jsH2, [4]), JSON.stringify(jsH2));
 
   // import through the page (same importJson the Import button uses) and check the tiles
   const res = await pg.evaluate(json => {

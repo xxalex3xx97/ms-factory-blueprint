@@ -155,15 +155,16 @@ def get_underground_length(d, machine_id, _cache={}):
 
 def ug_exit_dupes(machs, ug):
     """MachineIDs of mod-built exit records: a record with the same Length sitting on entrance + (Length-1) cells (raw: 2 per cell).
-    They are kept as plain tiles (no Length, no ConfigHex) so they do not create a second tunnel."""
+    They are kept as plain tiles (no Length, no ConfigHex) so they do not create a second tunnel.
+    Key includes Height: a different layer at the same XY is a real tunnel, not an exit (Discovery save: 207 false dupes on XY only)."""
     at, dup = {}, set()
     for m in machs:
-        if m['MachineID'] in ug: at.setdefault((m['X'], m['Y']), []).append(m['MachineID'])
+        if m['MachineID'] in ug: at.setdefault((m['X'], m['Y'], m['Height']), []).append(m['MachineID'])
     for m in machs:
         L = ug.get(m['MachineID'])
         if not L or m['MachineID'] in dup: continue
         dx, dy = DIRV[m['GridRotation'] % 4]
-        dup.update(i for i in at.get((m['X'] + 2 * (L - 1) * dx, m['Y'] + 2 * (L - 1) * dy), []) if ug[i] == L and i != m['MachineID'])
+        dup.update(i for i in at.get((m['X'] + 2 * (L - 1) * dx, m['Y'] + 2 * (L - 1) * dy, m['Height']), []) if ug[i] == L and i != m['MachineID'])
     return dup
 
 def site_json(A, ug=None):
