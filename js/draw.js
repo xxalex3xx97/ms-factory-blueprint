@@ -155,6 +155,16 @@ function arrow(x,y,w,h,rot,alpha){
   cx.fillStyle=`rgba(255,255,255,${alpha})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.7})`;cx.lineWidth=1;
   cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.7,-r*.75);cx.lineTo(-r*.3,0);cx.lineTo(-r*.7,r*.75);cx.closePath();cx.fill();cx.stroke();cx.restore();
 }
+// front marker (Layout): shapes_src 'front' (edge at rot 0, block frame) -> world edge after rot; a light band on that edge + a chevron pointing out, rotates with the block
+function frontMark(b,x,y,w,h,alpha,s,cat){
+  const sh=SHAPES[(def(b.cls)||{}).name],f=sh&&sh.front;if(!f||alpha<.5||s<5)return;
+  const D=DIR[(EN.indexOf(f)+b.rot)&3],t=Math.max(2,Math.min(5,s*.12)),r=Math.max(3,Math.min(9,Math.min(w,h)*.12)),cxm=x+w/2+D[0]*(w/2-t),cym=y+h/2+D[1]*(h/2-t)+(D[1]<0&&s>=18?Math.min(12,Math.max(9,s/3))+6:0);
+  cx.save();cx.fillStyle=`hsla(${cat?hue(cat):210},90%,86%,${alpha*.85})`;
+  cx.fillRect(D[0]>0?x+w-t:x,D[1]>0?y+h-t:y,D[0]?t:w,D[1]?t:h);
+  cx.translate(cxm-D[0]*r*.6,cym-D[1]*r*.6);cx.rotate(Math.atan2(D[1],D[0]));
+  cx.fillStyle=`rgba(255,255,255,${alpha})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.7})`;cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.5,-r*.9);cx.lineTo(-r*.5,r*.9);cx.closePath();cx.fill();cx.stroke();cx.restore();
+}
 function drawBlock(b,alpha,isSel){
   const s=sc(),d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s,cat=catOf(b),df=def(b.cls),m=isM(b);
   cx.fillStyle=cat?fill(cat,alpha*.8):`rgba(120,125,135,${alpha*.8})`;
@@ -164,6 +174,7 @@ function drawBlock(b,alpha,isSel){
   cx.lineWidth=1;cx.strokeStyle=cat?`hsla(${hue(cat)},70%,70%,${alpha})`:`rgba(190,195,205,${alpha})`;
   cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
+  frontMark(b,x,y,w,h,alpha,s,cat);
   if(isSel){cx.lineWidth=2.5;cx.strokeStyle="#fff";cx.strokeRect(x+1,y+1,w-2,h-2)}
   if(s>=(m?10:18)&&alpha>.5&&(!m||Math.max(w,h)>=2*s)&&!(df&&df.directional)){
     const t=df?lab(df):shortCls(b.cls),fs=Math.min(12,Math.max(9,s/3));
@@ -279,7 +290,10 @@ function paintFloorBase(s){
     if(w>70){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
   });
   drawShapeFloor(A,s);
-  drawShapeFloor({floors:S.blocks.filter(b=>b.h===layer&&!isM(b)&&nfRect(b)).map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
+  const NF=S.blocks.filter(b=>b.h===layer&&!isM(b)&&nfRect(b));
+  NF.forEach(b=>{const r=nfRect(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
+  drawShapeFloor({floors:NF.map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
+  NF.forEach(b=>{const r=nfRect(b),w=r.w*s;if(w>70)note(`${lab(def(b.cls))}  ${r.w}×${r.h}`,V.ox+r.x*s,V.oy+r.y*s,w)});   // label like floor blocks: name + tile size, top-left
   A.floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;   // elevator: ring cells inside the door slot are open buildable floor
     cx.fillStyle="rgba(150,190,230,.08)";
     for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>{const v=ed%2===0,ring=ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q};R(ring,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))});

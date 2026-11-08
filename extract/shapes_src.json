@@ -5,6 +5,10 @@
   ],
   "blocks": {
     "BPO_Dock_2": {
+      "front": {
+        "dir": "E",
+        "evidence": "ship side = DIR[rot] (rot 0 east): shaft end of the hull (BPO_Dock_2 shaft walls x 8.5..32 on +x, ship connectors on the W/N/S hall sides, machine rot 2 at grid x 64); site rule, dock fronts the ship"
+      },
       "w": 3,
       "h": 2,
       "verified": true,
@@ -175,6 +179,10 @@
       "note": null
     },
     "BPO_MiningDroneBayBlock": {
+      "front": {
+        "dir": "E",
+        "evidence": "inferred: opposite the machine output ports and BPO_LargeConnector (west edge at rot 0), so +x; decoded hatches are on both +-y sides (DroneDocks y -+4.5, yaw -+90), so the bay has no single launch direction; +x end carries the wider nose collider [4,-3,5,3]"
+      },
       "w": 1,
       "h": 1,
       "verified": true,
@@ -188,6 +196,10 @@
       "note": "rounded: 13x8 floor cells -> 1x1 block"
     },
     "BPO_MiningDroneBayBlock_2": {
+      "front": {
+        "dir": "E",
+        "evidence": "inferred: opposite the machine output ports and BPO_LargeConnector (west edge at rot 0), so +x; decoded hatches are on both +-y sides (DroneDocks y -+4.5, yaw -+90), so the bay has no single launch direction; +x end carries the wider nose collider [10,-3,11,3]"
+      },
       "add": true,
       "label": "Mining Drone Bay Mk.2",
       "class": "/Game/Blueprints/BuildingBlocks/BPO_MiningDroneBayBlock_2.BPO_MiningDroneBayBlock_2_C",

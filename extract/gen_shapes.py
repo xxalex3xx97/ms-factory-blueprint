@@ -15,6 +15,7 @@ fill: [x0,y0,x1,y1] block frame = one solid prop, used when the BPO has no colli
 add: true = block is not in CATALOG.blocks yet: its full definition (the block's own keys) is appended to CATALOG.blocks before core.js.
 iconFile: PNG under extract/icons/, embedded as CATALOG.icons[<icon key>] (data URL). mirrorOf: shape copy of another block, no catalog entry.
 ports: optional 'bay' (numbered belt ports, dock); without 'bay' the port is drawn unnumbered.
+front: {dir, evidence}: edge that is the block's front at rot 0 (E/S/W/N, block frame) + evidence string (say 'inferred' when it is).
 A block without these keys produces the same entry as before.
 """
 import base64, json, os, sys
@@ -22,7 +23,7 @@ import base64, json, os, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 EX = os.path.join(ROOT, 'extract')
 OUT = os.path.join(ROOT, 'js', 'shapes.js')
-SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf')
+SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'front')
 
 
 def rd(name):
@@ -91,6 +92,11 @@ def build():
         entry = {'fw': round(size[0]), 'fh': round(size[1]), 'walls': walls, 'props': props, 'arms': arms, 'ports': ports}
         if p.get('polys'):
             entry['polys'] = [[[r3(x - ox), r3(y - oy)] for x, y in poly] for poly in p['polys']]
+        if p.get('front'):   # front: {dir: E|S|W|N at rot 0 in block frame, evidence}; Layout draws a marker on that edge
+            if p['front']['dir'] not in ('E', 'S', 'W', 'N') or not p['front'].get('evidence'):
+                sys.exit('bad front for ' + name)
+            entry['front'] = p['front']['dir']
+            entry['frontSrc'] = p['front']['evidence']
         shapes[name] = entry
     return shapes, patch, adds, icons
 

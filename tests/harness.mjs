@@ -2503,8 +2503,41 @@ async function s28(br) {
   chk('28 Mk.2 save: Class imports as BPO_MiningDroneBayBlock_2 (1 block)', rt.blocks.length === 1 && rt.blocks[0] === MK2, JSON.stringify(rt));
   chk('28 Mk.2 save: exports back unchanged (Class, GridLocation {40,40}, GridRotation 1)', JSON.stringify(rt.out) === JSON.stringify([{Class: MK2, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 1}]), JSON.stringify(rt.out));
   chk('28 machines BPO_MiningDroneBay_2 and BPO_MiningDroneBay both kept in "other machines" (no buildable maps them, like Mk.1)', rt.dm === 2, `dm ${rt.dm}`);
-  // screenshots: Layout + Factory floor, rot 0..3, for Mk.1, Mk.2 and Station Armour
-  for (const n of ['BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2', 'BPO_StationArmour_01']) {
+  // front key: per-block direction + evidence in shapes_src.json, honoured by gen_shapes.py (SHAPES.front/frontSrc) and drawn in Layout on the rotated edge
+  const fronts = names.filter(n => srcBlocks[n].front);
+  chk('28 front: dock + Mk.1 + Mk.2 have a front, no other block', JSON.stringify(fronts.sort()) === '["BPO_Dock_2","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2"]', JSON.stringify(fronts));
+  for (const n of names) {
+    const f = srcBlocks[n].front, g = await pg.evaluate(k => ({d: SHAPES[k].front, e: SHAPES[k].frontSrc}), n);
+    if (f) chk(`28 front ${n}: SHAPES.front === "${f.dir}" in E/S/W/N, evidence string carried`, 'ESWN'.includes(f.dir) && g.d === f.dir && g.e === f.evidence && f.evidence.length > 20, JSON.stringify(g));
+    else chk(`28 front ${n}: none in the source = none in SHAPES`, g.d === undefined && g.e === undefined, JSON.stringify(g));
+  }
+  chk('28 front: drone bays marked inferred in the evidence, dock not', /^inferred/.test(srcBlocks.BPO_MiningDroneBayBlock.front.evidence) && /^inferred/.test(srcBlocks.BPO_MiningDroneBayBlock_2.front.evidence) && !/inferred/.test(srcBlocks.BPO_Dock_2.front.evidence), '');
+  // Layout marker: light band 3px inside the front edge (front edge = DIR[(EN.indexOf(dir)+rot)&3]) is brighter than the opposite edge; none on a block without front
+  const lum = (n, r) => pg.evaluate(([cls, r]) => {
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+    __fb.setView('L'); __fb.fit(); __fb.paint();
+    const b = __fb.S.blocks[0], s = sc(), d = dim(b), x = V.ox + b.x * s, y = V.oy + b.y * s, w = d.w * s, h = d.h * s, k = devicePixelRatio, g = document.getElementById('cv').getContext('2d');
+    const at = (px, py) => { const q = g.getImageData(Math.round(px * k), Math.round(py * k), 1, 1).data; return q[0] + q[1] + q[2] };
+    return DIR.map(D => { const L = D[0] ? h : w; return at(x + w / 2 + D[0] * (w / 2 - 2) - D[1] * L * .3, y + h / 2 + D[1] * (h / 2 - 2) + D[0] * L * .3) });   // 30% along the edge: clear of the chevron at the middle
+  }, [`${P}${n}.${n}_C`, r]);
+  for (const n of ['BPO_Dock_2', 'BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) for (const r of [0, 1, 2, 3]) {
+    const L = await lum(n, r), ed = (['E', 'S', 'W', 'N'].indexOf(srcBlocks[n].front.dir) + r) & 3, others = L.filter((_, i) => i !== ed);
+    chk(`28 front marker ${n} rot ${r}: band on world edge ${'ESWN'[ed]} brighter than the other 3 (${L[ed]} vs ${Math.max(...others)})`, L[ed] > Math.max(...others) + 60, JSON.stringify(L));
+  }
+  const L0 = await lum('BPO_Station_01', 0);
+  chk('28 front marker: symmetric Station 1x1 has none (all 4 edges alike)', Math.max(...L0) - Math.min(...L0) < 30, JSON.stringify(L0));
+  // Factory floor label of a no-floor shaped block: name + tile size, like floor blocks (Station 1x1  14x14)
+  for (const n of ['BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2', 'BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01', 'BPO_StationArmour_01']) {
+    const got = await pg.evaluate(cls => {
+      __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+      __fb.setView('F'); __fb.fit(); const b = __fb.S.blocks[0]; V.z = Math.min(W, H) / (2 * FC * CELLS.F) * .9; V.ox = W / 2 - (b.x + .5) * FC * sc(); V.oy = H / 2 - (b.y + .5) * FC * sc();
+      const g = document.getElementById('cv').getContext('2d'), tx = [], o = g.fillText; g.fillText = function (t, ...a) { tx.push(t); return o.call(this, t, ...a) };
+      __fb.paint(); g.fillText = o; return {tx, want: `${lab(def(b.cls))}  ${FC}×${FC}`};
+    }, `${P}${n}.${n}_C`);
+    chk(`28 Factory floor label "${got.want}" drawn for ${n}`, got.tx.includes(got.want), JSON.stringify(got.tx));
+  }
+  // screenshots: Layout + Factory floor, rot 0..3, for Mk.1, Mk.2 and Station Armour + Station 1x1
+  for (const n of ['BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2', 'BPO_StationArmour_01', 'BPO_Station_01']) {
     const tag = n.replace('BPO_', '').replace(/[^A-Za-z0-9]+/g, '-').toLowerCase();
     for (const r of [0, 1, 2, 3]) {
       await pg.evaluate(([cls, r]) => __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []})), [`${P}${n}.${n}_C`, r]);
