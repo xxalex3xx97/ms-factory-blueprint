@@ -12,6 +12,10 @@ function floorRect(b){
   const q=d.floorInset||0;   // elevator: 12x12 buildable inside the 14x14 shell (1-cell input ring)
   return{x:fo.cx*FC+q,y:fo.cy*FC+q,w:f.w,h:f.h,known,guess:known&&!!d.floor&&d.floor.verified===false,b};
 }
+// real hull silhouette (shapes.js, floor frame: origin = floor top-left, rot 0 = ship side east) -> floor-unit coords of the block's floor rect, rotated by b.rot about the floor corner
+function shapeTf(b){const r=floorRect(b),d=def(b.cls),sh=r&&d&&SHAPES[d.name];if(!sh)return null;
+  return{sh,f:(u,v)=>{let x=u,y=v,W=d.fw,H=d.fh;for(let i=0;i<(b.rot&3);i++){[x,y]=[H-y,x];[W,H]=[H,W]}return[r.x+x,r.y+y]}}}
+const shapeRects=(b,k)=>{const t=shapeTf(b);return t?t.sh[k].map(([a,c,e,g])=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}}):[]};
 const elvRect=b=>{const d=def(b.cls),r=d&&d.elevator&&floorRect(b);return r?{x:r.x+((r.w-d.elevator.w)>>1),y:r.y+((r.h-d.elevator.h)>>1),w:d.elevator.w,h:d.elevator.h,b}:null};
 function areas(L){
   const fb=[],floors=[],doors=[],gaps=[],blocked=[],own=new Map();

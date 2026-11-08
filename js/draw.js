@@ -163,6 +163,8 @@ function drawBlock(b,alpha,isSel){
   if(df&&df.directional&&s>=10)arrow(x,y,w,h,b.rot,Math.min(1,alpha));
   cx.lineWidth=1;cx.strokeStyle=cat?`hsla(${hue(cat)},70%,70%,${alpha})`:`rgba(190,195,205,${alpha})`;
   cx.strokeRect(x+.5,y+.5,w-1,h-1);
+  const sw=m?[]:shapeRects(b,"walls");   // real hull silhouette (hall + shaft), dashed, over the icon
+  if(sw.length){const k=s/FC;cx.save();cx.setLineDash([4,3]);cx.lineWidth=1.25;cx.strokeStyle=`rgba(200,215,240,${alpha*.85})`;cx.beginPath();sw.forEach(q=>cx.rect(V.ox+q.x*k+.5,V.oy+q.y*k+.5,q.w*k,q.h*k));cx.stroke();cx.restore()}
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
   if(isSel){cx.lineWidth=2.5;cx.strokeStyle="#fff";cx.strokeRect(x+1,y+1,w-2,h-2)}
   if(s>=(m?10:18)&&alpha>.5&&(!m||Math.max(w,h)>=2*s)&&!(df&&df.directional)){
@@ -198,6 +200,18 @@ function grid(major){
   }
 }
 function pieces(a,b,cuts){const o=[];let p=a;cuts.slice().sort((u,v)=>u[0]-v[0]).forEach(c=>{if(c[0]>p)o.push([p,c[0]]);p=Math.max(p,c[1])});if(p<b)o.push([p,b]);return o}
+// shipEnd blocks with a real hull (Industrial Dock): grey hatch on the no-build part of the footprint (ship berth), roofless walls, port arms, console
+function drawShapeFloor(A,s){
+  const R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s);
+  A.floors.forEach(r=>{const b=r.b;if(!shapeTf(b))return;
+    const d=dim(b),o=fcell(b),D=DIR[b.rot&3],nb={x:(D[0]>0?o.cx+1:b.x)*FC-(D[0]>0),y:(D[1]>0?o.cy+1:b.y)*FC-(D[1]>0),w:(D[0]?d.w-1:d.w)*FC+!!D[0],h:(D[1]?d.h-1:d.h)*FC+!!D[1]};
+    R(nb,(x,y,w,h)=>{cx.fillStyle="rgba(150,160,175,.10)";cx.fillRect(x,y,w,h);hatch(x,y,w,h,"rgba(170,180,195,.28)");
+      cx.save();cx.setLineDash([5,3]);cx.strokeStyle="rgba(170,180,195,.55)";cx.strokeRect(x+.5,y+.5,w-1,h-1);cx.restore();});
+    const fill=(k,f,st)=>shapeRects(b,k).forEach(q=>R(q,(X,Y,W2,H2)=>{cx.fillStyle=f;cx.fillRect(X,Y,W2,H2);if(st){cx.strokeStyle=st;cx.strokeRect(X+.5,Y+.5,Math.max(0,W2-1),Math.max(0,H2-1))}}));
+    fill("arms","#171c26");fill("walls","#262e3c","rgba(150,165,190,.6)");fill("props","#3b4659","rgba(150,165,190,.45)");
+    R(nb,(x,y,w,h)=>{if(w>60)note("Dock: no build",x,y,w,"rgba(200,208,220,.85)")});
+  });
+}
 function paintFloorBase(s){
   const A=areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;
   // gap strips: only between two facing floor blocks; strip = the distance between their SHELLS, long axis = overlap of their shells
@@ -220,7 +234,7 @@ function paintFloorBase(s){
     cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(c)},70%,70%,.5)`;cx.strokeRect(x+.5,y+.5,w-1,h-1);
     // walls: dark band outside the floor edge, gaps at the doors
     cx.fillStyle="#262e3c";cx.strokeStyle="rgba(150,165,190,.6)";cx.lineWidth=1;
-    for(let ed=0;ed<4;ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;
+    for(let ed=0;ed<4&&!shapeTf(r.b);ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;
       pieces(a0,a1,r.wcuts[ed]).forEach(([p,q])=>{
         const b=ed===0?{x:sx+sw,y:p,w:T,h:q-p}:ed===2?{x:sx-T,y:p,w:T,h:q-p}:ed===1?{x:p,y:sy+sn,w:q-p,h:T}:{x:p,y:sy-T,w:q-p,h:T};
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
@@ -228,6 +242,7 @@ function paintFloorBase(s){
     }
     if(w>70){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
   });
+  drawShapeFloor(A,s);
   A.floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;   // elevator: ring cells inside the door slot are open buildable floor
     cx.fillStyle="rgba(150,190,230,.08)";
     for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>{const v=ed%2===0,ring=ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q};R(ring,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))});

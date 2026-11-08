@@ -2356,7 +2356,41 @@ async function s26(br) {
     chk(`26 dock rot ${r}: X=18,Y=2 round trip unchanged`, JSON.stringify(o) === JSON.stringify([`18,2,${r}`]), JSON.stringify(o));
     const fp = await pg.evaluate(() => { const b = __fb.S.blocks[0], d = dim(b); return {w: d.w, h: d.h, raw: !!b.raw} });
     const wantW = r & 1 ? 2 : 3, wantH = r & 1 ? 3 : 2;
+    // hull-cell check: BlockBounds x -16..32, y +-16 sim units (/4 = game units), rotated r*90deg about the exported origin = the dim() cells at the imported anchor (cell k spans [4k-2,4k+2])
+    const hc = await pg.evaluate(() => { const b = __fb.S.blocks[0], d = dim(b), o = dockOrg(b.rot), X = 4 * b.x + o.X, Y = 4 * b.y + o.Y;
+      let p = [[-4, -4], [8, 4]].map(([x, y]) => { for (let i = 0; i < b.rot; i++) [x, y] = [-y, x]; return [X + x, Y + y] });
+      return {hull: [Math.min(p[0][0], p[1][0]), Math.min(p[0][1], p[1][1]), Math.max(p[0][0], p[1][0]), Math.max(p[0][1], p[1][1])], cells: [4 * b.x - 2, 4 * b.y - 2, 4 * (b.x + d.w) - 2, 4 * (b.y + d.h) - 2]} });
+    chk(`26 dock rot ${r}: BlockBounds hull rect == footprint cells at the imported anchor`, JSON.stringify(hc.hull) === JSON.stringify(hc.cells), JSON.stringify(hc));
     chk(`26 dock rot ${r}: footprint ${wantW}x${wantH} cells, block not moved to raw`, fp.w === wantW && fp.h === wantH && !fp.raw, JSON.stringify(fp));
+  }
+  await ctx.close();
+}
+
+// ================= 27 Industrial Dock real shape: shapeTf per rot, Layout + Factory floor paint (screenshots)
+async function s27(br) {
+  const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's27');
+  const P = '/Game/Blueprints/BuildingBlocks/';
+  const B = (n, X, Y, h, r) => ({Class: `${P}${n}.${n}_C`, GridLocation: {X, Y}, Height: h, GridRotation: r, BlockID: 1, PaletteID: 0});
+  const sh = await pg.evaluate(() => { const s = SHAPES.BPO_Dock_2; return s && {walls: s.walls.length, props: s.props.length, arms: s.arms.length} });
+  chk('27 SHAPES.BPO_Dock_2 has walls, props (console) and port arms', !!sh && sh.walls > 0 && sh.props > 0 && sh.arms > 0, JSON.stringify(sh));
+  const sides = ['east', 'south', 'west', 'north'];
+  for (const r of [0, 1, 2, 3]) {
+    await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B('BPO_Dock_2', 18, 2, 0, r)], DefaultMachines: []}));
+    // ship side = DIR[rot]: the extreme wall edge lies on that side of the footprint, the floor box on the opposite end
+    const g = await pg.evaluate(() => { const b = __fb.S.blocks[0], w = shapeRects(b, 'walls'), d = dim(b), fl = floorRect(b);
+      const ex = [Math.min(...w.map(q => q.x)), Math.max(...w.map(q => q.x + q.w)), Math.min(...w.map(q => q.y)), Math.max(...w.map(q => q.y + q.h))];
+      return {ex, fx: [b.x * FC, (b.x + d.w) * FC, b.y * FC, (b.y + d.h) * FC], fl: [fl.x, fl.x + fl.w, fl.y, fl.y + fl.h], rot: b.rot} });
+    const [x0, x1, y0, y1] = g.ex, [fx0, fx1, fy0, fy1] = g.fx;
+    
+    const idx = [1, 3, 0, 2][r], tgt = [fx1, fy1, fx0, fy0][r], ext = g.ex[idx];
+    chk(`27 dock rot ${r}: shaft wall reaches the ship side (${sides[r]}) of the 3x2 footprint`, Math.abs(ext - tgt) <= 2, JSON.stringify(g));
+    chk(`27 dock rot ${r}: hull walls stay inside the footprint (+-1 wall unit)`, x0 >= fx0 - 1.01 && x1 <= fx1 + 1.01 && y0 >= fy0 - 1.01 && y1 <= fy1 + 1.01, JSON.stringify(g));
+    for (const v of ['L', 'F']) {
+      await pg.evaluate(v => { __fb.setView(v); __fb.fit(); const b = __fb.S.blocks[0], d = dim(b), k = v === 'F' ? FC : 1;   // F: whole footprint centred (fit() frames only the floor)
+        if (v === 'F') { V.z = Math.min(W / (d.w * k + 4), H / (d.h * k + 4)) / CELLS.F * .85; V.ox = W / 2 - (b.x + d.w / 2) * k * sc(); V.oy = H / 2 - (b.y + d.h / 2) * k * sc(); __fb.paint(); } }, v);
+      await pg.waitForTimeout(150);
+      await pg.screenshot({path: path.join(SHOTS, `dock-rot${r}-${v === 'L' ? 'layout' : 'floor'}.png`)});
+    }
   }
   await ctx.close();
 }
@@ -2462,6 +2496,7 @@ try {
   try { console.log('--- 23 U3 production'); await s23(br); } catch (e) { chk('23 U3: section ran', false, e.stack || String(e)); }
   try { console.log('--- 24 r12 user save: sim, perf, shots'); await s24(br); } catch (e) { chk('24 r12: section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
     try { console.log(`--- viewport ${vp.width}x${vp.height}`); await viewport(br, vp); }
     catch (e) { chk(`viewport ${vp.width}x${vp.height} ran`, false, e.stack || String(e)); }
