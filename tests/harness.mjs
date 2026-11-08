@@ -113,7 +113,7 @@ async function s1(C) {
     const gf = g.floor, cf = c?.floor;
     const floorOk = gf ? !!cf && cf.w === gf.w && cf.h === gf.h : cf == null;
     chk(`block ${g.name} outer ${g.w}x${g.h}, floor ${gf ? gf.w + 'x' + gf.h : 'none'}`,
-      !!c && c.w === g.w && c.h === g.h && floorOk,
+      !!c && c.w === g.w && c.h === (g.name === 'BPO_ShipyardCore_02' ? 2 : g.h) && floorOk,   // ShipyardCore_02: ground truth is a guess (1x1); h=2 inferred from a saved block at Y -2
       c ? `catalog outer ${c.w}x${c.h} floor ${cf ? cf.w + 'x' + cf.h : 'none'}` : 'missing');
   }
   const elv = C.blocks.find(b => b.name === 'BPO_ElevatorBlock_03');
@@ -317,14 +317,24 @@ async function s5(pg, C) {
   chk('closed door kept after roundtrip', a.FactoryLayout.ClosedDoorways.some(d => d.Edge === 'E' && d.X === 0) && b.FactoryLayout.ClosedDoorways.some(d => d.Edge === 'E' && d.X === 0));
   chk('bad JSON returns false', (await pg.evaluate(() => __fb.importJson('{bad'))) === false);
   chk('JSON without Blocks array returns false', (await pg.evaluate(() => __fb.importJson('{"Version":1}'))) === false);
-  // v2 station block with a guessed footprint: file coords kept verbatim (raw); a moved block recomputes from the cell model
+  // v2 station block with a guessed footprint: on-grid file coords kept verbatim (raw); off-grid ones snap; a moved block recomputes from the cell model
   await reset(pg);
   const SHIP = BLK.BPO_ShipyardCore_02 || '/Game/Blueprints/BuildingBlocks/BPO_ShipyardCore_02.BPO_ShipyardCore_02_C';
   const v2s = {Version: 2, DisplayName: 't', Blocks: [{Class: SHIP, GridLocation: {X: -8, Y: -2}, Height: -4, GridRotation: 2, BlockID: 207533, PaletteID: 0}], DefaultMachines: []};
   chk('v2 import of ShipyardCore_02 (file Y=-2) accepted', await imp(pg, v2s) === true);
-  chk('v2 import toast warns that a guessed footprint kept file positions', /guessed footprint/.test(await pg.locator('#toast').textContent()));
+  chk('v2 import of on-grid ShipyardCore_02 gives no snap warning', !/snapped/.test(await pg.locator('#toast').textContent()));
   const v2a = await pg.evaluate(() => __fb.build().Blocks[0]);
   chk('v2 export: ShipyardCore_02 GridLocation X -8, Y -2 verbatim, Height -4, rot 2, BlockID 207533', v2a.GridLocation.X === -8 && v2a.GridLocation.Y === -2 && v2a.Height === -4 && v2a.GridRotation === 2 && v2a.BlockID === 207533, JSON.stringify(v2a));
+  // old buggy export wrote Y 0: off-grid for the guessed footprint, snapped so export is Y -2
+  await reset(pg);
+  v2s.Blocks[0].GridLocation.Y = 0;
+  await imp(pg, v2s);
+  chk('off-grid ShipyardCore_02 (file Y=0) toasts a snap note', /snapped/.test(await pg.locator('#toast').textContent()));
+  const v2y = await pg.evaluate(() => __fb.build().Blocks[0].GridLocation);
+  chk('off-grid ShipyardCore_02 (file Y=0) exports Y -2', v2y.X === -8 && v2y.Y === -2, JSON.stringify(v2y));
+  await reset(pg);
+  v2s.Blocks[0].GridLocation.Y = -2;
+  await imp(pg, v2s);
   await pg.evaluate(() => { __fb.S.blocks[0].x += 1; });
   const v2m = await pg.evaluate(() => __fb.build().Blocks[0].GridLocation);
   chk('moved ShipyardCore_02: build() recomputes X from the cell model (-8 -> -4), raw not used', v2m.X === -4, JSON.stringify(v2m));

@@ -51,6 +51,7 @@ try {
       if (!b) return;
       const got = {Class: short(b.Class), X: b.GridLocation.X, Y: b.GridLocation.Y, H: b.Height, R: b.GridRotation, BlockID: b.BlockID};
       const want = {Class: short(a.Class), X: a.GridLocation.X, Y: a.GridLocation.Y, H: a.Height, R: a.GridRotation, BlockID: a.BlockID};
+      if (tag === 'Main_Base (5).json' && want.Class === 'BPO_ShipyardCore_02' && want.Y === 0 && got.Y === -2) return;   // old buggy export, snapped on purpose
       if (JSON.stringify(got) !== JSON.stringify(want)) diffs.push(`#${i} ${JSON.stringify(want)} -> ${JSON.stringify(got)}`);
     });
     chk(`${tag}: every block keeps Class, GridLocation X/Y, Height, GridRotation, BlockID`, diffs.length === 0, `${diffs.length} differ:\n     ` + diffs.slice(0, 5).join('\n     '));
@@ -64,7 +65,7 @@ try {
 
     const sc = IN.Blocks.map((a, i) => ({a, b: OUT.Blocks[i]})).filter(x => short(x.a.Class) === 'BPO_ShipyardCore_02');
     if (tag === 'Main_Base (4).json') chk(`${tag}: BPO_ShipyardCore_02 Y stays -2`, sc.length > 0 && sc.every(x => x.b.GridLocation.Y === -2), JSON.stringify(sc.map(x => x.b.GridLocation)));
-    if (tag === 'Main_Base (5).json') chk(`${tag}: BPO_ShipyardCore_02 Y stays 0 (file data)`, sc.length > 0 && sc.every(x => x.b.GridLocation.Y === 0), JSON.stringify(sc.map(x => x.b.GridLocation)));
+    if (tag === 'Main_Base (5).json') chk(`${tag}: BPO_ShipyardCore_02 Y 0 in file is snapped to -2`, sc.length > 0 && sc.every(x => x.b.GridLocation.Y === -2), JSON.stringify(sc.map(x => x.b.GridLocation)));
     console.log(`  ${tag}: blocks ${IN.Blocks.length}, ShipyardCore_02 ${sc.length}, splitters with ConfigHex ${spl.length}`);
   }
   chk('no console errors / page errors', errs.length === 0, errs.join('\n     '));

@@ -161,9 +161,11 @@ function importJson(txt,quiet){
   S.blocks=o.Blocks.map(b=>{const r=rot(b.GridRotation),gx=b.GridLocation&&b.GridLocation.X,gy=b.GridLocation&&b.GridLocation.Y,cls=String(b.Class||"");
     if(!v2)return{id:uid++,cls,x:hf(gx),y:hf(gy),h:n(b.Height),rot:r,pid:n(b.PaletteID)};
     const f=dim({cls,rot:r}),sh=SHIPEND({cls}),ax=sh&&f.w===1&&DIR[r][0]<0?1:0,ay=sh&&f.h===1&&DIR[r][1]<0?1:0;   // shipEnd: 2x2 box, drawn row = station side
+    const dd=def(cls),gs=dd&&/guess/.test(dd.source||""),o0=odd;
     const nb={id:uid++,cls,x:cell(gx,4,sh?2:2*(f.w-1))+ax,y:cell(gy,4,sh?2:2*(f.h-1))+ay,h:n(b.Height),rot:r,pid:n(b.PaletteID)};
-    nb.raw={X:gx??0,Y:gy??0,H:b.Height??0,R:b.GridRotation??0,bid:b.BlockID,sig:blkSig(nb)};   // file values kept: the cell model rounds (footprint guesses), export writes these back
-    const dd=def(cls);if(dd&&/guess/.test(dd.source||""))guessN++;
+    if(gs&&odd>o0){   // guessed footprint and the file position is off the model grid (old buggy export): snap down so export lands on the grid
+      const fl=(v,c)=>Math.floor(((Number(v)||0)-c)/4);nb.x=fl(gx,sh?2:2*(f.w-1))+ax;nb.y=fl(gy,sh?2:2*(f.h-1))+ay;guessN++;return nb}
+    nb.raw={X:gx??0,Y:gy??0,H:b.Height??0,R:b.GridRotation??0,bid:b.BlockID,sig:blkSig(nb)};   // on-grid file values kept verbatim, export writes these back
     return nb});
   S.blocks.forEach((b,i)=>impPorts(b,o.Blocks[i].Ports));
   const cd=o.FactoryLayout&&o.FactoryLayout.ClosedDoorways,lg=[];S.closed=[];
@@ -187,7 +189,7 @@ function importJson(txt,quiet){
   });
   sel=new Set();$("name").value=S.name;all();if(quiet)return true;fit();
   const unk=S.blocks.filter(b=>!BASE[b.cls]).length;
-  toast(`Imported ${S.blocks.length-nm} blocks, ${nm} buildables`+(S.dm.length?`, ${S.dm.length} other machines kept`:"")+(unk?`, ${unk} unknown class`:"")+(odd?`; ${odd} odd coordinates rounded`:"")+(guessN?`; ${guessN} blocks with a guessed footprint kept at their file positions`:"")+(spFix?`; ${spFix} splitter input port set on (input face is always open)`:""));return true;
+  toast(`Imported ${S.blocks.length-nm} blocks, ${nm} buildables`+(S.dm.length?`, ${S.dm.length} other machines kept`:"")+(unk?`, ${unk} unknown class`:"")+(odd?`; ${odd} odd coordinates rounded`:"")+(guessN?`; ${guessN} blocks with a guessed footprint were off the grid and snapped`:"")+(spFix?`; ${spFix} splitter input port set on (input face is always open)`:""));return true;
 }
 // ---- save to file (File System Access API; Chromium only, others download)
 let FH=null;const JT={types:[{description:"JSON",accept:{"application/json":[".json"]}}]};
