@@ -16,6 +16,8 @@ const SHOTS = path.join(HERE, 'shots');
 fs.mkdirSync(SHOTS, {recursive: true});
 const MB = process.env.MAINBASE || 'C:/Users/SFidelis/.claude/jobs/53e7ab72/tmp/MainBase.json';
 const LEG = process.env.LEGACY || 'C:/Users/SFidelis/Downloads/Test (8).json';
+// user-specific input (Main Base save export): SKIP when absent, do not fail. 292/293 counts are from that file, not changed here.
+if (!fs.existsSync(MB)) { console.log(`SKIP import_v2: ${MB} not found (set MAINBASE=...)`); process.exit(0); }
 
 let total = 0, pass = 0;
 const fails = [], errs = [];

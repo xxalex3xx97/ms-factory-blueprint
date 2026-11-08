@@ -36,8 +36,8 @@ function areas(L){
         if(nf&&nf!==f&&ed>1)continue;   // the E/S side owns the shared door (gap strip + door)
         const p=nf&&nf!==f,sp=DW;   // door = the 2-cell passage between the two walls only
         if(p)gaps.push(v?{x:ex,y:r.y+FC*k,w:sp,h:FC}:{x:r.x+FC*k,y:ey,w:FC,h:sp});
-        const key=`${L}|${b.x}|${b.y}|${EN[ed]}|${k}`;
-        doors.push({key,open:!S.closed.includes(key),paired:!!p,ver:dv(b)&&(!p||dv(nf.b)),ed,bx:b.x,by:b.y,k,x:ex,y:ey,w:v?sp:DOORW,h:v?DOORW:sp,
+        const key=`${L}|${fo.cx}|${fo.cy}|${EN[ed]}|${k}`;   // anchor = floor cell box (fcell): dock rot 2/3 floor is offset from the footprint anchor
+        doors.push({key,open:!S.closed.includes(key),paired:!!p,ver:dv(b)&&(!p||dv(nf.b)),ed,bx:fo.cx,by:fo.cy,k,x:ex,y:ey,w:v?sp:DOORW,h:v?DOORW:sp,
           lg:p?(ed===0?`${L}|${fo.cx+fo.cw}|${Math.max(fo.cy,fcell(nf.b).cy)}|V`:`${L}|${Math.max(fo.cx,fcell(nf.b).cx)}|${fo.cy+fo.ch}|H`):null});
       }
     }

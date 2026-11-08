@@ -220,7 +220,7 @@ function wallPlan(sh){   // walls in floor frame: bridge gaps < .5 between rects
 }
 function drawShapeFloor(A,s){
   const X=x=>Math.round(V.ox+x*s),Y=y=>Math.round(V.oy+y*s),ST="rgba(150,165,190,.6)",WF="#262e3c";
-  A.floors.forEach(r=>{const b=r.b,t=shapeTf(b);if(!t)return;
+  A.floors.forEach(r=>{const b=r.b,t=shapeTf(b);if(!t||!SHIPEND(b))return;   // dock-only drawing (partition px0 / wall plan / pods use dock magic numbers); other shapes draw nothing here yet
     const sh=t.sh,tr=(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
     const rc=(q,f,g=0)=>{cx.fillStyle=f;const x0=X(q.x),y0=Y(q.y);cx.fillRect(x0-g,y0-g,X(q.x+q.w)-x0+2*g,Y(q.y+q.h)-y0+2*g)};
     const px0=Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0]));   // partition between hall and shaft
@@ -260,7 +260,7 @@ function paintFloorBase(s){
     for(let i=0;i<d.cw;i++)put(own2.get((d.cx+i)+","+(d.cy+d.ch)),"y");
   });
   A.floors.forEach(r=>{
-    const T=.5,Q=((def(r.b.cls)||{}).floorInset)||0,sx=r.x-Q,sy=r.y-Q,sw=r.w+2*Q,sn=r.h+2*Q;   // shell = floor + inset ring (elevator 1): same 0.5 wall band as a station
+    const T=.5,Q=((def(r.b.cls)||{}).floorInset)||0,sx=r.x-Q,sy=r.y-Q,sw=r.w+2*Q,sn=r.h+2*Q,noShape=!shapeTf(r.b);   // shell = floor + inset ring (elevator 1): same 0.5 wall band as a station
     const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s,c=catOf(r.b);
     if(Q){cx.fillStyle="rgba(150,190,230,.08)";R({x:sx,y:sy,w:sw,h:sn},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}   // inset ring inside the shell: floor colour
     cx.fillStyle="rgba(150,190,230,.08)";cx.fillRect(x,y,w,h);
@@ -268,7 +268,7 @@ function paintFloorBase(s){
     cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(c)},70%,70%,.5)`;cx.strokeRect(x+.5,y+.5,w-1,h-1);
     // walls: dark band outside the floor edge, gaps at the doors
     cx.fillStyle="#262e3c";cx.strokeStyle="rgba(150,165,190,.6)";cx.lineWidth=1;
-    for(let ed=0;ed<4&&!shapeTf(r.b);ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;
+    for(let ed=0;ed<4&&noShape;ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;
       pieces(a0,a1,r.wcuts[ed]).forEach(([p,q])=>{
         const b=ed===0?{x:sx+sw,y:p,w:T,h:q-p}:ed===2?{x:sx-T,y:p,w:T,h:q-p}:ed===1?{x:p,y:sy+sn,w:q-p,h:T}:{x:p,y:sy-T,w:q-p,h:T};
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});

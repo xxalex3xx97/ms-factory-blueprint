@@ -137,7 +137,7 @@ $("undo").onclick=undo;$("redo").onclick=redo;
 function del(){if(!sel.size)return;push();S.blocks=S.blocks.filter(b=>!sel.has(b.id));sel=new Set();all()}
 // Layout move carries the floor machines inside each block's footprint, plus closed doorways of that block. Call BEFORE mutating blocks; returns (dx,dy,dh) applied relative to the originals (idempotent).
 function carryOf(bs){
-  const o=bs.map(b=>({h:b.h,x:b.x,y:b.y})),cl=S.closed.slice(),s=new Set();
+  const o=bs.map(b=>{const c=fcell(b);return{h:b.h,x:c.cx,y:c.cy}}),cl=S.closed.slice(),s=new Set();   // closed keys use the floor cell anchor (fcell), same as model.js areas()
   bs.forEach(b=>{const d=fcell(b);S.blocks.forEach(q=>{if(isM(q)&&q.h===b.h&&q.x>=d.cx*FC&&q.x<(d.cx+d.cw)*FC&&q.y>=d.cy*FC&&q.y<(d.cy+d.ch)*FC)s.add(q)})});   // floor machines only inside the floor box (shipEnd: berth cells excluded)
   const fl=[...s].map(q=>({q,x:q.x,y:q.y,h:q.h}));
   return(dx,dy,dh=0)=>{
