@@ -278,7 +278,7 @@ function drawShapeFloor(A,s){
     const rc=(q,f,g=0)=>{cx.fillStyle=f;const x0=X(q.x),y0=Y(q.y);cx.fillRect(x0-g,y0-g,X(q.x+q.w)-x0+2*g,Y(q.y+q.h)-y0+2*g)};
     if(dock&&sh.hatch)hatchShape(b,t,s);   // Industrial Dock: grey hatch inside the walls, minus the buildable floor box, behind everything
     const d=def(b.cls),R0=floorRect(b),hall=dock?tr(0,0,Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0])),d.fh):R0&&{x:R0.x,y:R0.y,w:R0.w,h:R0.h};   // dock: hall up to the partition (shaft beyond); other blocks: whole floor; no-floor blocks: no tint
-    if(hall)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
+    if(hall&&!sh.polys)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
     // pods (dock only): one per decoded port cell (1 cell, contiguous), x extent from the arm mesh rows of that cell
     const pods=!dock?[]:sh.ports.map(([bay,x,y])=>{const rs=sh.arms.filter(a=>(a[1]+a[3])/2>=y-.5&&(a[1]+a[3])/2<y+.5);if(!rs.length)return null;
       return{bay,x,y,q:tr(Math.min(...rs.map(a=>a[0])),y-.46,Math.max(...rs.map(a=>a[2])),y+.46)}}).filter(Boolean);
@@ -321,11 +321,11 @@ function paintFloorBase(s){
   });
   A.floors.forEach(r=>{
     const T=.5,Q=((def(r.b.cls)||{}).floorInset)||0,sx=r.x-Q,sy=r.y-Q,sw=r.w+2*Q,sn=r.h+2*Q,noShape=!shapeTf(r.b);   // shell = floor + inset ring (elevator 1): same 0.5 wall band as a station
-    const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s,c=catOf(r.b);
+    const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s,c=catOf(r.b),pr=polyRects(r.b);   // pr: real polygon floor (Corner): cut cells stay dark
     if(Q){cx.fillStyle="rgba(150,190,230,.08)";R({x:sx,y:sy,w:sw,h:sn},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}   // inset ring inside the shell: floor colour
-    cx.fillStyle="rgba(150,190,230,.08)";cx.fillRect(x,y,w,h);
+    cx.fillStyle="rgba(150,190,230,.08)";if(pr)pr.ok.forEach(q=>R(q,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2)));else cx.fillRect(x,y,w,h);
     if(!r.known)hatch(x,y,w,h);
-    cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(c)},70%,70%,.5)`;cx.strokeRect(x+.5,y+.5,w-1,h-1);
+    cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(c)},70%,70%,.5)`;if(!pr)cx.strokeRect(x+.5,y+.5,w-1,h-1);
     // walls: dark band outside the floor edge, gaps at the doors
     cx.fillStyle="#262e3c";cx.strokeStyle="rgba(150,165,190,.6)";cx.lineWidth=1;
     for(let ed=0;ed<4&&noShape;ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;

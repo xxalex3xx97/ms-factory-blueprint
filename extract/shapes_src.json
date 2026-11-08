@@ -656,6 +656,276 @@
         "evidence": "fit from the 20 decoded colliders: centre = BlockBounds centre (block 0,0); outer radius = mean of the outer faces of the N, S and E axis pieces (6.358, 6.358, 6.27 = 6.33), inner = mean of their inner faces (5.421, 5.421, 5.213 = 5.35); the 17 stepped ring boxes are replaced by the annulus, the 2 west entry bars (idx 0, 10) and the centre holotable (idx 19) stay boxes; ring opening = the door gap y +-2.954"
       },
       "hatch": "ring"
+    },
+    "BPO_StationCorner_01": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "ground": true,
+      "flipY": true,
+      "source": "decoded BPO_StationCorner_01 (floors.json colliders): hull 16x16 = 1x1; floor 14x14 inside 1-unit walls; doors 6 wide at offset 4 on 2 sides; the SE corner is cut by a stair-stepped diagonal wall",
+      "floorOrigin": [
+        -7,
+        -7
+      ],
+      "floor": {
+        "w": 14,
+        "h": 14,
+        "verified": true,
+        "source": "decoded colliders: inner 14x14, buildable area = polygon"
+      },
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "verified": true,
+        "sides": [
+          "N",
+          "W"
+        ],
+        "source": "decoded BPO_StationCorner_01: gaps x/y -3..3 on W and on the +y side (lintels z2.5); flipY puts that side on N"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded BPO_StationCorner_01: door gaps on W and +y side (flipY: N), x/y -3..3, lintels z2.5"
+      },
+      "polys": [
+        [
+          [
+            -7,
+            -7
+          ],
+          [
+            -2,
+            -7
+          ],
+          [
+            -2,
+            -6
+          ],
+          [
+            -1,
+            -6
+          ],
+          [
+            -1,
+            -5
+          ],
+          [
+            0,
+            -5
+          ],
+          [
+            0,
+            -4
+          ],
+          [
+            1,
+            -4
+          ],
+          [
+            1,
+            -3
+          ],
+          [
+            2,
+            -3
+          ],
+          [
+            2,
+            -2
+          ],
+          [
+            3,
+            -2
+          ],
+          [
+            3,
+            -1
+          ],
+          [
+            4,
+            -1
+          ],
+          [
+            4,
+            0
+          ],
+          [
+            5,
+            0
+          ],
+          [
+            5,
+            1
+          ],
+          [
+            6,
+            1
+          ],
+          [
+            6,
+            2
+          ],
+          [
+            7,
+            2
+          ],
+          [
+            7,
+            7
+          ],
+          [
+            -7,
+            7
+          ]
+        ]
+      ],
+      "note": null
+    },
+    "BPO_StationCorridor_01": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "floorCenter": true,
+      "source": "decoded BPO_StationCorridor_01 (floors.json colliders): two solid slabs y -7..-3 and 3..7, x -8..8; walkable strip y -3..3 = 6 wide x 16 long, open at both x ends (E/W), centred in the 16x16 tile",
+      "floorOrigin": [
+        -8,
+        -3
+      ],
+      "floor": {
+        "w": 16,
+        "h": 6,
+        "verified": true,
+        "source": "decoded colliders: strip 16x6"
+      },
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 0,
+        "flush": true,
+        "sides": [
+          "E",
+          "W"
+        ],
+        "verified": true,
+        "source": "decoded: open strip ends, door = full strip width (6)"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded BPO_StationCorridor_01: open strip ends E and W (door = full 6-wide strip)"
+      },
+      "note": null
     }
-  }
+  },
+  "buildables": {
+    "DAT_LargeConveyorBelt": {
+      "w": 3,
+      "h": 3,
+      "verified": true,
+      "source": "decoded BP_LargeConveyorBeltObject MachineDimensions X=3 Y=3 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_ReactorMachine": {
+      "w": 6,
+      "h": 6,
+      "verified": true,
+      "source": "decoded BPO_ReactorMachine MachineDimensions X=6 Y=6 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_Teleporter": {
+      "w": 4,
+      "h": 4,
+      "verified": true,
+      "source": "decoded BPO_Teleporter MachineDimensions X=4 Y=4 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_Container_2": {
+      "w": 4,
+      "h": 4,
+      "verified": true,
+      "source": "decoded BP_ContainerObject_2 MachineDimensions X=4 Y=4 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_BeltBalancer_03": {
+      "w": 1,
+      "h": 2,
+      "verified": true,
+      "source": "decoded BPO_BeltBalancer_03 MachineDimensions X=1 Y=2 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_ConveyorBelt3": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "decoded BP_ConveyorBeltObject_3 MachineDimensions X=1 Y=1 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_Splitter_3": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "decoded BP_SplitterObject_3 MachineDimensions X=1 Y=1 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_UndergroundBelt_3": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "decoded BP_UndergroundBeltObject_3 MachineDimensions X=1 Y=1 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_QuantumSciLab": {
+      "w": 9,
+      "h": 9,
+      "verified": true,
+      "source": "decoded BPO_QuantumSciLab MachineDimensions X=9 Y=9 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_RelicSynthesizer": {
+      "w": 9,
+      "h": 9,
+      "verified": true,
+      "source": "decoded BPO_RelicSynthesizer MachineDimensions X=9 Y=9 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_AdvancedAssembler": {
+      "w": 9,
+      "h": 9,
+      "verified": true,
+      "source": "decoded BPO_AdvancedAssembler MachineDimensions X=9 Y=9 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_GrowthChamber": {
+      "w": 5,
+      "h": 5,
+      "verified": true,
+      "source": "decoded BPO_GrowthChamber MachineDimensions X=5 Y=5 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_Supercomputer": {
+      "w": 5,
+      "h": 5,
+      "verified": true,
+      "source": "decoded BPO_Supercomputer MachineDimensions X=5 Y=5 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_AstroSciLab": {
+      "w": 5,
+      "h": 5,
+      "verified": true,
+      "source": "decoded BPO_AstroSciLab MachineDimensions X=5 Y=5 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_XenoSciLab": {
+      "w": 5,
+      "h": 5,
+      "verified": true,
+      "source": "decoded BPO_XenoSciLab MachineDimensions X=5 Y=5 (CUE4Parse json; DAT_ asset has no size)",
+      "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    }
+  },
+  "removeBuildables": [
+    "DAT_TradeConsole"
+  ]
 }

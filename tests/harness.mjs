@@ -2621,6 +2621,67 @@ async function s27(br) {
   await ctx.close();
 }
 
+// ================= 30 Corner (polygon floor, cut no-build), Corridor (6x16 strip, flush doors), TradeConsole removed, Teleporter 4x4
+async function s30(br) {
+  const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's30');
+  const corner = await pg.evaluate(() => {
+    const out = {};
+    const pc = polyCells(SHAPES.BPO_StationCorner_01);
+    out.okCells = pc.ok.reduce((a, r) => a + (r[2] - r[0]) * (r[3] - r[1]), 0);
+    out.cutCells = pc.cut.reduce((a, r) => a + (r[2] - r[0]) * (r[3] - r[1]), 0);
+    S.blocks = [{id: 9001, cls: '/Game/Blueprints/BuildingBlocks/BPO_StationCorner_01.BPO_StationCorner_01_C', x: 0, y: 0, h: 0, rot: 0, pid: 0}];
+    out.rects151 = (() => { const R = areas(0).rects; let n = 0; for (let i = 0; i < 14; i++) for (let j = 0; j < 14; j++) if (onArea(i, j, 1, 1, R)) n++; return n })();
+    out.rot = [0, 1].map(rot => {
+      S.blocks = [{id: 9001, cls: '/Game/Blueprints/BuildingBlocks/BPO_StationCorner_01.BPO_StationCorner_01_C', x: 0, y: 0, h: 0, rot, pid: 0}];
+      const pr = polyRects({cls: '/Game/Blueprints/BuildingBlocks/BPO_StationCorner_01.BPO_StationCorner_01_C', x: 0, y: 0, h: 0, rot}), c = pr.cut[0], o = pr.ok[0];
+      const cell = q => ({id: 1, l: 0, x: q.x, y: q.y, w: 1, h: 1});
+      const res = {cut: noBuild([cell(c)]), cutNoStrict: null, ok: noBuild([cell(o)])};
+      STRICT = false; res.cutNoStrict = noBuild([cell(c)]); STRICT = true;
+      return res;
+    });
+    return out;
+  });
+  chk('30 corner: polygon floor = 151 buildable cells, 45 cut cells (shape polys)', corner.okCells === 151 && corner.cutCells === 45, JSON.stringify(corner));
+  chk('30 corner: areas rects cover the 151 buildable cells at rot 0', corner.rects151 === 151, String(corner.rects151));
+  chk('30 corner: cut cell no-build at rot 0 and rot 1, also with STRICT off; buildable cell ok', corner.rot.every(r => r.cut && r.cutNoStrict && !r.ok), JSON.stringify(corner.rot));
+  const corr = await pg.evaluate(() => {
+    const out = {};
+    const K = '/Game/Blueprints/BuildingBlocks/BPO_StationCorridor_01.BPO_StationCorridor_01_C';
+    out.fr0 = floorRect({cls: K, x: 0, y: 0, h: 0, rot: 0}); out.fr1 = floorRect({cls: K, x: 0, y: 0, h: 0, rot: 1});
+    out.fr0 = out.fr0 && {x: out.fr0.x, y: out.fr0.y, w: out.fr0.w, h: out.fr0.h};
+    out.fr1 = out.fr1 && {x: out.fr1.x, y: out.fr1.y, w: out.fr1.w, h: out.fr1.h};
+    S.blocks = [{id: 9002, cls: K, x: 0, y: 0, h: 0, rot: 0, pid: 0}];
+    const one = (x, y) => noBuild([{id: 1, l: 0, x, y, w: 1, h: 1}]);
+    out.centre = one(4, 7); out.top = one(4, 0); out.bottom = one(4, 11);
+    out.doors = areas(0).doors.filter(d => d.bx === 0 && d.by === 0 && d.open).map(d => d.ed).sort();
+    // neighbour spacing: station 1x1 at tile x 1; count wall cells between the corridor floor and its floor on row 7
+    S.blocks.push({id: 9003, cls: '/Game/Blueprints/BuildingBlocks/BPO_Station_01.BPO_Station_01_C', x: 1, y: 0, h: 0, rot: 0, pid: 0});
+    const R = areas(0).rects, row = [];
+    for (let i = 0; i < 32; i++) row.push(onArea(i, 7, 1, 1, R) ? 1 : 0);
+    out.row7 = row.join('');
+    S.blocks = [{id: 9002, cls: K, x: 0, y: 0, h: 0, rot: 0, pid: 0}];
+    S.blocks.push({id: 9003, cls: '/Game/Blueprints/BuildingBlocks/BPO_Station_01.BPO_Station_01_C', x: 1, y: 0, h: 0, rot: 0, pid: 0});
+    out.fr1b = floorRect({cls: '/Game/Blueprints/BuildingBlocks/BPO_Station_01.BPO_Station_01_C', x: 1, y: 0, h: 0, rot: 0}).x;
+    return out;
+  });
+  chk('30 corridor: floor 16x6 at rot 0 (strip y 5..10 of the tile)', !!corr.fr0 && corr.fr0.w === 16 && corr.fr0.h === 6 && corr.fr0.y === 5 && corr.fr0.x === 0, JSON.stringify(corr.fr0));
+  chk('30 corridor: floor 6x16 at rot 1', !!corr.fr1 && corr.fr1.w === 6 && corr.fr1.h === 16 && corr.fr1.x === 5, JSON.stringify(corr.fr1));
+  chk('30 corridor: 1x1 at strip centre ok; tile y 0 and y 11 refused', corr.centre === false && corr.top === true && corr.bottom === true, JSON.stringify([corr.centre, corr.top, corr.bottom]));
+  chk('30 corridor: two open door marks (E and W = eds 0,2)', JSON.stringify(corr.doors) === '[0,2]', JSON.stringify(corr.doors));
+  // NOTE (not asserted yet): neighbour spacing. Measured row 7 of the corridor + Station_01 at x 1.
+  console.log('NOTE 30 corridor neighbour row y=7 (1 = buildable, cells x 0..31): ' + corr.row7 + '  station floor starts at x=' + corr.fr1b);
+  const tc = await pg.evaluate(() => {
+    const t = JSON.stringify({Version: 2, DisplayName: 'tc', Blocks: [], DefaultMachines: [{Class: 'BP_TradeConsoleObject', DefaultName: 'DAT_TradeConsole', MachineID: 7, PaletteID: 0, Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}}]});
+    const ok = importJson(t, true), dm = S.dm.length, ex = JSON.stringify(build());
+    const back = importJson(ex, true), ex2 = JSON.stringify(build());
+    return {ok, back, dm, has: ex.includes('DAT_TradeConsole'), same: ex === ex2, palette: CATALOG.buildables.some(b => b.id === 'DAT_TradeConsole'), def: !!def('DAT_TradeConsole'), tp: [def('DAT_Teleporter').w, def('DAT_Teleporter').h]};
+  });
+  chk('30 TradeConsole: removed from catalog buildables and def()', !tc.palette && !tc.def, JSON.stringify(tc));
+  chk('30 TradeConsole in a design: import kept as unmapped (S.dm), exported, re-imported without error', tc.ok && tc.back && tc.dm === 1 && tc.has && tc.same, JSON.stringify(tc));
+  chk('30 Teleporter 4x4', tc.tp[0] === 4 && tc.tp[1] === 4, JSON.stringify(tc.tp));
+  await ctx.close();
+}
+
 // ================= 29 icons (HD), Command Module door, Blueprint Unit round trip, shipyard sizes + doors, screenshots
 async function s29(br) {
   const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's29');
@@ -2758,7 +2819,7 @@ async function s28(br) {
   chk('28 machines BPO_MiningDroneBay_2 and BPO_MiningDroneBay both kept in "other machines" (no buildable maps them, like Mk.1)', rt.dm === 2, `dm ${rt.dm}`);
   // entrance key: shapes_src.json entrance {kind, evidence} on dock (doors) + drone bays (ports), carried to SHAPES; Layout arrows from entrances()
   const ents = names.filter(n => srcBlocks[n].entrance);
-  chk('28 entrance: dock + Command Module + Blueprint Unit + 3 shipyards (doors), Mk.1 + Mk.2 drone bays (ports); no other block', JSON.stringify(ents.sort()) === '["BPO_BlueprintUnit","BPO_CommandModule","BPO_Dock_2","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ShipyardSide"]', JSON.stringify(ents));
+  chk('28 entrance: dock + Command Module + Blueprint Unit + 3 shipyards + Corner + Corridor (doors), Mk.1 + Mk.2 drone bays (ports); no other block', JSON.stringify(ents.sort()) === '["BPO_BlueprintUnit","BPO_CommandModule","BPO_Dock_2","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ShipyardSide","BPO_StationCorner_01","BPO_StationCorridor_01"]', JSON.stringify(ents));
   for (const n of names) {
     const f = srcBlocks[n].entrance, g = await pg.evaluate(k => SHAPES[k].entrance, n);
     if (f) chk(`28 entrance ${n}: SHAPES.entrance kind "${f.kind}" + evidence carried`, ['doors', 'ports'].includes(f.kind) && g && g.kind === f.kind && g.evidence === f.evidence && f.evidence.length > 20, JSON.stringify(g));
@@ -3110,6 +3171,7 @@ try {
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 28 data-driven shapes'); await s28(br); } catch (e) { chk('28 shapes: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }
   try { console.log('--- 29 icons, Command Module, Blueprint Unit, shipyards'); await s29(br); } catch (e) { chk('29 section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
     try { console.log(`--- viewport ${vp.width}x${vp.height}`); await viewport(br, vp); }
