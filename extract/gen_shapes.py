@@ -15,7 +15,8 @@ fill: [x0,y0,x1,y1] block frame = one solid prop, used when the BPO has no colli
 add: true = block is not in CATALOG.blocks yet: its full definition (the block's own keys) is appended to CATALOG.blocks before core.js.
 iconFile: PNG under extract/icons/, embedded as CATALOG.icons[<icon key>] (data URL). mirrorOf: shape copy of another block, no catalog entry.
 ports: optional 'bay' (numbered belt ports, dock); without 'bay' the port is drawn unnumbered.
-entrance: {kind: doors|ports, evidence}: what the Layout arrows mark for this block (doors = catalog door slots, ports = side of the shape's output ports); evidence string says 'inferred' when it is.
+entrance: {kind: doors|ports, evidence}: what the Layout arrows mark for this block (doors = catalog door slots, ports = side of the shape's output ports); evidence string says 'inferred' when it is. entrance.gaps: [{side: E|S|W|N, from, to}] block-frame door gaps for no-floor blocks (one mark each, shape frame in 'gaps').
+shapeOf: take the colliders of another floors.json block (mod block with the same shape).
 A block without these keys produces the same entry as before.
 """
 import base64, json, os, sys

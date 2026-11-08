@@ -2436,6 +2436,74 @@ async function s27(br) {
   await ctx.close();
 }
 
+// ================= 29 icons (HD), Command Module door, Blueprint Unit round trip, shipyard sizes + doors, screenshots
+async function s29(br) {
+  const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's29');
+  const P = '/Game/Blueprints/BuildingBlocks/';
+  // icons: PNG width from the IHDR of each embedded data URI (block icons >= 256 px, items >= 128 px, none missing)
+  const ic = await pg.evaluate(() => {
+    const w = v => { const b = atob(v.split(',')[1].slice(0, 40)); return ((b.charCodeAt(16) << 24) | (b.charCodeAt(17) << 16) | (b.charCodeAt(18) << 8) | b.charCodeAt(19)) >>> 0 };
+    const px = k => (CATALOG.icons[k] ? w(CATALOG.icons[k]) : 0);
+    return {blocks: CATALOG.blocks.map(b => [b.name, b.icon || null, b.icon ? px(b.icon) : 0]), items: Object.keys(CATALOG.items).map(k => [k, px(k)]), dat: Object.keys(CATALOG.icons).filter(k => k.startsWith('DAT_')).map(k => [k, px(k)])};
+  });
+  const blkBad = ic.blocks.filter(([, k, p]) => !k || p < 256).map(x => x[0]);
+  chk(`29 every catalog block has an embedded icon >= 256 px (${ic.blocks.length} blocks)`, blkBad.length === 0, blkBad.join(', '));
+  const itBad = ic.items.filter(([, p]) => p < 128).map(x => x[0]);
+  chk(`29 every item has an embedded icon >= 128 px (${ic.items.length} items)`, itBad.length === 0, itBad.join(', '));
+  const datBad = ic.dat.filter(([, p]) => p < 256).map(x => x[0]);
+  chk(`29 every DAT_ buildable icon >= 256 px (${ic.dat.length})`, datBad.length === 0, datBad.join(', '));
+  const sp = ic.blocks.find(x => x[0] === 'BPO_SolarPanelBlock');
+  chk('29 Solar Panels Mk.1 (BPO_SolarPanelBlock): icon key set and embedded at 256 px', !!sp && sp[1] === 'BPO_SolarPanelBlock' && sp[2] === 256, JSON.stringify(sp));
+  const bp6 = ['ITEM_BackpackMk1', 'ITEM_BackpackMk2', 'ITEM_BackpackMk3', 'ITEM_ExoskeletonMk1', 'ITEM_ExoskeletonMk2', 'ITEM_ExoskeletonMk3'].map(k => ic.items.find(x => x[0] === k));
+  chk('29 Backpack Mk1-3 and Exoskeleton Mk1-3 have 128+ px icons', bp6.every(x => x && x[1] >= 128), JSON.stringify(bp6));
+  // Command Module: catalog door sides W only, no floor, verified, note dropped
+  const cm = await pg.evaluate(() => { const b = CATALOG.blocks.find(x => x.name === 'BPO_CommandModule'); return {w: b.w, h: b.h, v: b.verified, nf: !!b.nofloor, floor: b.floor, sides: b.door && b.door.sides, dv: b.door && b.door.verified, note: b.note}; });
+  chk('29 Command Module: 1x1, verified, nofloor, door.sides === [W], door verified, note dropped', cm.w === 1 && cm.h === 1 && cm.v === true && cm.nf && cm.floor === null && JSON.stringify(cm.sides) === '["W"]' && cm.dv === true && cm.note === null, JSON.stringify(cm));
+  // Blueprint Unit: label, class, category, cost, icon, 1x1, W door (shape = Command Module)
+  const bpu = await pg.evaluate(() => { const b = CATALOG.blocks.find(x => x.name === 'BPO_BlueprintUnit'); return b && {label: b.label, cls: b.class, cat: b.category, w: b.w, h: b.h, cost: b.cost, icon: b.icon, v: b.verified, sides: b.door && b.door.sides}; });
+  chk('29 Blueprint Unit catalog: label, class, Functional Blocks, 1x1, cost HullPlates 5 + LightweightFrame 10, icon, W door', !!bpu && bpu.label === 'Blueprint Unit' && bpu.cls === `${P}BPO_BlueprintUnit.BPO_BlueprintUnit_C` && bpu.cat === 'Functional Blocks' && bpu.w === 1 && bpu.h === 1 && JSON.stringify(bpu.cost) === '[["ITEM_HullPlates",5],["ITEM_LightweightFrame",10]]' && bpu.icon === 'BPO_BlueprintUnit' && bpu.v === true && JSON.stringify(bpu.sides) === '["W"]', JSON.stringify(bpu));
+  const palBpu = await pg.evaluate(() => { const b = [...document.querySelectorAll('#palList button.item')].find(x => x.querySelector('.n') && x.querySelector('.n').textContent === 'Blueprint Unit'); return b ? b.outerHTML : null; });
+  chk('29 Blueprint Unit palette entry present, no "!?"', palBpu !== null && !palBpu.includes('!?'), String(palBpu).slice(0, 200));
+  // save round trip: class imports as the block and exports back unchanged, rot 0..3, not raw
+  const rtb = [];
+  for (const r of [0, 1, 2, 3]) {
+    const inp = {Class: `${P}BPO_BlueprintUnit.BPO_BlueprintUnit_C`, GridLocation: {X: 40, Y: -24}, Height: -4, GridRotation: r, BlockID: 1, PaletteID: 0};
+    const o = await pg.evaluate(t => { __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [t], DefaultMachines: []})); const b = __fb.S.blocks[0], e = __fb.build().Blocks[0]; return {raw: !!b.raw, out: e}; }, inp);
+    rtb.push(o.out.Class === inp.Class && o.out.GridLocation.X === 40 && o.out.GridLocation.Y === -24 && o.out.Height === -4 && o.out.GridRotation === r && !o.raw);
+  }
+  chk('29 Blueprint Unit save round trip: Class/GridLocation/Height/Rotation identical at rot 0..3, not raw', rtb.every(Boolean), JSON.stringify(rtb));
+  // shipyards: sizes, doors (W only), Core Mk.2 1x2 with two gaps
+  const sy = await pg.evaluate(() => ['BPO_ShipyardSide', 'BPO_ShipyardCore', 'BPO_ShipyardCore_02'].map(n => { const b = CATALOG.blocks.find(x => x.name === n); return {n, w: b.w, h: b.h, v: b.verified, nf: !!b.nofloor, floor: b.floor, sides: b.door && b.door.sides, dv: b.door && b.door.verified}; }));
+  chk('29 Shipyard Side 1x1 (9x16 rounded), Core 1x1, Core Mk.2 1x2: verified, nofloor, door sides W', sy[0].w === 1 && sy[0].h === 1 && sy[1].w === 1 && sy[1].h === 1 && sy[2].w === 1 && sy[2].h === 2 && sy.every(x => x.v && x.nf && x.floor === null && JSON.stringify(x.sides) === '["W"]' && x.dv), JSON.stringify(sy));
+  const mk2 = await pg.evaluate(P => {
+    const out = {};
+    for (const r of [0, 1, 2, 3]) {
+      __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: `${P}BPO_ShipyardCore_02.BPO_ShipyardCore_02_C`, GridLocation: {X: -8, Y: -2}, Height: -4, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+      const b = __fb.S.blocks[0], d = dim(b), e = entrances(b, true);
+      out['r' + r] = {dim: [d.w, d.h], raw: !!b.raw, marks: e.map(q => [q.ed, +(q.x - b.x).toFixed(2), +(q.y - b.y).toFixed(2)]), out: __fb.build().Blocks[0].GridLocation};   // relative to the block cell
+    }
+    return out;
+  }, P);
+  chk('29 Core Mk.2 at grid (-8,-2) (as in the real save Main_Base.json, Height -4, rot 2): not raw, exports -8,-2', mk2.r2.raw === false && mk2.r2.out.X === -8 && mk2.r2.out.Y === -2, JSON.stringify(mk2.r2));
+  chk('29 Core Mk.2 footprint 1x2 at rot 0 and 2x1 at rot 1', mk2.r0.dim[0] === 1 && mk2.r0.dim[1] === 2 && mk2.r1.dim[0] === 2 && mk2.r1.dim[1] === 1, JSON.stringify([mk2.r0.dim, mk2.r1.dim]));
+  const g0 = mk2.r0.marks.filter(m => m[0] === 2).map(m => m[2]).sort((a, b) => a - b);
+  chk('29 Core Mk.2 rot 0: two west door marks at the true gap centres (y 0.5 and 1.5 cells, +-0.01)', mk2.r0.marks.length === 2 && g0.length === 2 && Math.abs(g0[0] - 0.5) < .01 && Math.abs(g0[1] - 1.5) < .01, JSON.stringify(mk2.r0.marks));
+  // screenshots: Factory floor + Layout, rot 0..3, for the five new/changed shapes
+  const shots = [['BPO_CommandModule', 1], ['BPO_BlueprintUnit', 1], ['BPO_ShipyardSide', 1], ['BPO_ShipyardCore', 1], ['BPO_ShipyardCore_02', 2]];
+  for (const [n, h] of shots) {
+    const cls = await pg.evaluate(k => CATALOG.blocks.find(x => x.name === k).class, n);
+    for (const r of [0, 1, 2, 3]) for (const v of ['F', 'L']) {
+      await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 0, Y: h === 2 && !(r & 1) ? 2 : 0}, Height: 0, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+      await pg.evaluate(v => { __fb.setView(v); __fb.fit(); const b = __fb.S.blocks[0], d = dim(b), k = v === 'F' ? FC : 1;   // F: no floor on these blocks, so centre the footprint by hand (as s27)
+        if (v === 'F') { V.z = Math.min(W / (d.w * k + 4), H / (d.h * k + 4)) / CELLS.F * .85; V.ox = W / 2 - (b.x + d.w / 2) * k * sc(); V.oy = H / 2 - (b.y + d.h / 2) * k * sc(); }
+        __fb.paint(); }, v);
+      await pg.waitForTimeout(120);
+      await pg.screenshot({path: path.join(SHOTS, `s29-${n}-rot${r}-${v === 'L' ? 'layout' : 'floor'}.png`)});
+    }
+  }
+  await ctx.close();
+}
+
 // ================= 28 data-driven shapes: every block in extract/shapes_src.json (SHAPES entry, catalog verified, no '!?', collider counts)
 async function s28(br) {
   const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's28');
@@ -2743,6 +2811,7 @@ try {
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 28 data-driven shapes'); await s28(br); } catch (e) { chk('28 shapes: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 29 icons, Command Module, Blueprint Unit, shipyards'); await s29(br); } catch (e) { chk('29 section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
     try { console.log(`--- viewport ${vp.width}x${vp.height}`); await viewport(br, vp); }
     catch (e) { chk(`viewport ${vp.width}x${vp.height} ran`, false, e.stack || String(e)); }
