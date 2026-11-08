@@ -79,5 +79,6 @@ const catOf=b=>def(b.cls)?def(b.cls).category:null;
 const isM=b=>kindOf(b.cls)==="m";
 const inView=b=>isM(b)===(view==="F");
 const DIR=[[1,0],[0,1],[-1,0],[0,-1]];   // rot 0..3 = east, south, west, north (unverified vs game)
-const SHIPEND=b=>{const d=def(b.cls);return !!(d&&d.shipEnd)};   // Industrial Dock: game box 2x2, drawn station row, rot = ship direction
+const SHIPEND=b=>{const d=def(b.cls);return !!(d&&d.shipEnd)};   // shipEnd: footprint 3x2, floor on the station side (rot = ship direction)
+const dockOrg=rot=>({X:2+((rot&3)===2?4:0),Y:2+((rot&3)===3?4:0)});   // game-coord offset of the footprint's top-left cell (shipEnd); game coords unchanged
 

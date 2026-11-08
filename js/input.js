@@ -138,7 +138,7 @@ function del(){if(!sel.size)return;push();S.blocks=S.blocks.filter(b=>!sel.has(b
 // Layout move carries the floor machines inside each block's footprint, plus closed doorways of that block. Call BEFORE mutating blocks; returns (dx,dy,dh) applied relative to the originals (idempotent).
 function carryOf(bs){
   const o=bs.map(b=>({h:b.h,x:b.x,y:b.y})),cl=S.closed.slice(),s=new Set();
-  bs.forEach(b=>{const d=dim(b);S.blocks.forEach(q=>{if(isM(q)&&q.h===b.h&&q.x>=b.x*FC&&q.x<(b.x+d.w)*FC&&q.y>=b.y*FC&&q.y<(b.y+d.h)*FC)s.add(q)})});
+  bs.forEach(b=>{const d=fcell(b);S.blocks.forEach(q=>{if(isM(q)&&q.h===b.h&&q.x>=d.cx*FC&&q.x<(d.cx+d.cw)*FC&&q.y>=d.cy*FC&&q.y<(d.cy+d.ch)*FC)s.add(q)})});   // floor machines only inside the floor box (shipEnd: berth cells excluded)
   const fl=[...s].map(q=>({q,x:q.x,y:q.y,h:q.h}));
   return(dx,dy,dh=0)=>{
     fl.forEach(f=>{f.q.x=f.x+dx*FC;f.q.y=f.y+dy*FC;f.q.h=f.h+dh});

@@ -110,27 +110,39 @@ try {
     const fl = {}, dr = {};
     for (let L = -4; L <= 8; L++) { const a = __fb.areas(L); fl[L] = a.floors; dr[L] = a.doors; }
     for (const b of docks) {
-      const d = __fb.dim(b), st = (b.rot + 2) % 4, sd = DIRS[st];
+      const fc = fcell(b), st = (b.rot + 2) % 4, sd = DIRS[st];
       const fr = (fl[b.h] || []).find(r => r.b && r.b.x === b.x && r.b.y === b.y);
       const want = b.rot % 2 === 0 ? [14, 30] : [30, 14];
       if (!fr || fr.w !== want[0] || fr.h !== want[1]) res.floorBad.push(`${b.x},${b.y} r${b.rot} ${fr ? fr.w + 'x' + fr.h : 'none'}`);
       // station-side neighbour cells must hold a non-dock block on the same layer
       let touch = false;
-      for (let i = 0; i < d.w; i++) for (let j = 0; j < d.h; j++) {
-        const cx = b.x + i + sd[0], cy = b.y + j + sd[1];
+      for (let i = 0; i < fc.cw; i++) for (let j = 0; j < fc.ch; j++) {
+        const cx = fc.cx + i + sd[0], cy = fc.cy + j + sd[1];
         const hit = S.blocks.some(o => o !== b && !isM(o) && o.h === b.h && (__fb.dim(o), true) && (() => { const od = __fb.dim(o); return cx >= o.x && cx < o.x + od.w && cy >= o.y && cy < o.y + od.h; })());
         if (hit) touch = true;
       }
       if (!touch) res.touchBad.push(`${b.x},${b.y} r${b.rot}`);
-      for (const dd of dr[b.h]) if (dd.bx === b.x && dd.by === b.y && dd.ed !== st) { res.doorBad.push(`${b.x},${b.y} r${b.rot} ed${dd.ed}`); }
-      res.shipDoors += (dr[b.h] || []).filter(dd => dd.bx === b.x && dd.by === b.y && dd.ed === st).length;
+      // doors: every side except the ship side (edge index = rot), see model.js areas()
+      for (const dd of dr[b.h]) if (dd.bx === b.x && dd.by === b.y && dd.ed === b.rot) { res.doorBad.push(`${b.x},${b.y} r${b.rot} ed${dd.ed}`); }
+      res.shipDoors += (dr[b.h] || []).filter(dd => dd.bx === b.x && dd.by === b.y && dd.ed !== b.rot).length;
     }
     return res;
   });
   chk(`all ${dk.n} docks: floor 30x14 along the station edge (14x30 when rot even)`, dk.n === 14 && dk.floorBad.length === 0, dk.floorBad.join(' '));
   chk('all docks touch a station block on their station side', dk.touchBad.length === 0, dk.touchBad.join(' '));
-  chk('docks: no doors on ship side or short sides', dk.doorBad.length === 0, dk.doorBad.join(' '));
-  chk(`docks: station-side door slots present (${dk.shipDoors})`, dk.shipDoors > 0);
+  chk('docks: no door on the ship side (rot)', dk.doorBad.length === 0, dk.doorBad.join(' '));
+  chk(`docks: door slots on the non-ship sides present (${dk.shipDoors})`, dk.shipDoors > 0);
+  // footprints of all blocks on the same layer must not overlap; Main Base = 292 blocks
+  const ov = await pg.evaluate(() => {
+    const bl = __fb.S.blocks.filter(b => (__fb.def(b.cls) || {}).kind !== 'm'), seen = new Map(), over = [];
+    bl.forEach(b => { const d = __fb.dim(b); for (let i = 0; i < d.w; i++) for (let j = 0; j < d.h; j++) {
+      const k = b.h + '|' + (b.x + i) + ',' + (b.y + j);
+      if (seen.has(k)) over.push(`${b.cls} @${b.x},${b.y} h${b.h} vs id${seen.get(k)}`); else seen.set(k, b.id);
+    } });
+    return {n: bl.length, over};
+  });
+  chk(`all ${ov.n} blocks: no footprint overlap on the same layer`, ov.over.length === 0, ov.over.slice(0, 10).join(' ; '));
+  chk(`block count ${ov.n} == 293 (Main Base, import_station --list)`, ov.n === 293, String(ov.n));
 
 
   // ---- elevator belt ports: 8 on the inner wall of the 12x12 floor (N/E/S/W x 2 door edges); belt on the ring cell links

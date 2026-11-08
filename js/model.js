@@ -1,14 +1,16 @@
 // ---- floor model: block floors + doors (per layer). Door = 6 wide, 2 deep, 4 cells from the wall, one per 14-cell segment per side
 const DOORW=6,DOFF=4,EN=["E","S","W","N"];
 const dv=b=>{const d=def(b.cls);return !!(d&&d.door&&d.door.verified)};
+// floor cell box of a block (cell units): shipEnd = the end opposite the ship direction (rot); else the whole footprint
+function fcell(b){const o=dim(b);if(!SHIPEND(b))return{cx:b.x,cy:b.y,cw:o.w,ch:o.h};const D=DIR[b.rot&3];return{cx:b.x+(D[0]<0?o.w-1:0),cy:b.y+(D[1]<0?o.h-1:0),cw:D[0]?1:o.w,ch:D[1]?1:o.h}}
 function floorRect(b){
   const d=def(b.cls);if(!d||d.nofloor)return null;   // nofloor: shipyard blocks, BPO_Dock (callers handle null)
-  const o=dim(b),known=d.fw!=null&&d.fh!=null;
+  const o=dim(b),known=d.fw!=null&&d.fh!=null,fo=fcell(b);
   // catalog floor "14x30" for a 2x1 block: long side follows the block's long axis
   const lo=known?Math.min(d.fw,d.fh):0,hi=known?Math.max(d.fw,d.fh):0;
-  const f=!known?{w:FC*o.w-2,h:FC*o.h-2}:o.w===o.h?dimOf({w:d.fw,h:d.fh},b.rot):o.w>o.h?{w:hi,h:lo}:{w:lo,h:hi};
+  const f=SHIPEND(b)?dimOf({w:d.fw,h:d.fh},b.rot):!known?{w:FC*o.w-2,h:FC*o.h-2}:o.w===o.h?dimOf({w:d.fw,h:d.fh},b.rot):o.w>o.h?{w:hi,h:lo}:{w:lo,h:hi};
   const q=d.floorInset||0;   // elevator: 12x12 buildable inside the 14x14 shell (1-cell input ring)
-  return{x:b.x*FC+q,y:b.y*FC+q,w:f.w,h:f.h,known,guess:known&&!!d.floor&&d.floor.verified===false,b};
+  return{x:fo.cx*FC+q,y:fo.cy*FC+q,w:f.w,h:f.h,known,guess:known&&!!d.floor&&d.floor.verified===false,b};
 }
 const elvRect=b=>{const d=def(b.cls),r=d&&d.elevator&&floorRect(b);return r?{x:r.x+((r.w-d.elevator.w)>>1),y:r.y+((r.h-d.elevator.h)>>1),w:d.elevator.w,h:d.elevator.h,b}:null};
 function areas(L){
@@ -16,23 +18,23 @@ function areas(L){
   S.blocks.filter(b=>b.h===L&&!isM(b)).forEach(b=>{
     const r=floorRect(b);if(!r)return;
     const f={b,d:dim(b),r};r.cuts=[[],[],[],[]];r.wcuts=[[],[],[],[]];floors.push(r);fb.push(f);   // cuts: ring floor in door slots; wcuts: band cut only where a door passage joins two blocks
-    for(let i=0;i<f.d.w;i++)for(let j=0;j<f.d.h;j++)own.set((b.x+i)+","+(b.y+j),f);
+    const fo=fcell(b);for(let i=0;i<fo.cw;i++)for(let j=0;j<fo.ch;j++)own.set((fo.cx+i)+","+(fo.cy+j),f);
     const e=elvRect(b);if(e)blocked.push(e);
   });
-  fb.forEach(f=>{const{b,d,r}=f,QI=(def(b.cls)||{}).floorInset||0;   // QI: floor inset inside the shell (elevator 1)
+  fb.forEach(f=>{const{b,r}=f,QI=(def(b.cls)||{}).floorInset||0,fo=fcell(b);   // QI: floor inset inside the shell (elevator 1); fo: floor cell box (shipEnd: station side only)
     for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot)continue;   // Industrial Dock: doors on every side except the ship side (rot = ship direction); user screenshot 2026-11-07: station side 2 doors, both short ends 1 each; positions = station rule, unverified
-      const v=ed%2===0,n=v?d.h:d.w;
+      const v=ed%2===0,n=v?fo.ch:fo.cw;
       for(let k=0;k<n;k++){
         const t0=(v?r.y:r.x)+FC*k+DOFF-QI,ex=ed===0?r.x+r.w+QI:ed===2?r.x-QI-DW:t0,ey=ed===1?r.y+r.h+QI:ed===3?r.y-QI-DW:t0;
         r.cuts[ed].push([t0,t0+DOORW]);
-        const nf=own.get((ed===0?b.x+d.w:ed===2?b.x-1:b.x+k)+","+(ed===1?b.y+d.h:ed===3?b.y-1:b.y+k));
+        const nf=own.get((ed===0?fo.cx+fo.cw:ed===2?fo.cx-1:fo.cx+k)+","+(ed===1?fo.cy+fo.ch:ed===3?fo.cy-1:fo.cy+k));
         if(nf&&nf!==f)r.wcuts[ed].push([t0,t0+DOORW]);   // passage between two real blocks: both walls open here
         if(nf&&nf!==f&&ed>1)continue;   // the E/S side owns the shared door (gap strip + door)
         const p=nf&&nf!==f,sp=DW;   // door = the 2-cell passage between the two walls only
         if(p)gaps.push(v?{x:ex,y:r.y+FC*k,w:sp,h:FC}:{x:r.x+FC*k,y:ey,w:FC,h:sp});
         const key=`${L}|${b.x}|${b.y}|${EN[ed]}|${k}`;
         doors.push({key,open:!S.closed.includes(key),paired:!!p,ver:dv(b)&&(!p||dv(nf.b)),ed,bx:b.x,by:b.y,k,x:ex,y:ey,w:v?sp:DOORW,h:v?DOORW:sp,
-          lg:p?(ed===0?`${L}|${b.x+d.w}|${Math.max(b.y,nf.b.y)}|V`:`${L}|${Math.max(b.x,nf.b.x)}|${b.y+d.h}|H`):null});
+          lg:p?(ed===0?`${L}|${fo.cx+fo.cw}|${Math.max(fo.cy,fcell(nf.b).cy)}|V`:`${L}|${Math.max(fo.cx,fcell(nf.b).cx)}|${fo.cy+fo.ch}|H`):null});
       }
     }
   });

@@ -2349,6 +2349,15 @@ async function s26(br) {
   await pg.evaluate(() => { const b = __fb.S.blocks.find(q => q.raw); b.x += 1; });
   const moved = await pg.evaluate(() => __fb.build().Blocks.filter(b => b.Class.includes('ShipyardCore_02')).map(b => b.GridLocation.X + ',' + b.GridLocation.Y));
   chk('26 round trip: a block moved in the editor is exported at its new cell', !moved.includes('-8,-2') || moved.length === 2 && moved.filter(m => m === '-8,-2').length === 0, moved.join(' ; '));
+  // Industrial Dock (shipEnd, 3x2 / 2x3): X=18,Y=2 imports and exports unchanged at all four rotations
+  for (const r of [0, 1, 2, 3]) {
+    await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B('BPO_Dock_2', 18, 2, 0, r)], DefaultMachines: []}));
+    const o = await pg.evaluate(() => __fb.build().Blocks.filter(b => b.Class.includes('BPO_Dock_2')).map(b => `${b.GridLocation.X},${b.GridLocation.Y},${b.GridRotation}`));
+    chk(`26 dock rot ${r}: X=18,Y=2 round trip unchanged`, JSON.stringify(o) === JSON.stringify([`18,2,${r}`]), JSON.stringify(o));
+    const fp = await pg.evaluate(() => { const b = __fb.S.blocks[0], d = dim(b); return {w: d.w, h: d.h, raw: !!b.raw} });
+    const wantW = r & 1 ? 2 : 3, wantH = r & 1 ? 3 : 2;
+    chk(`26 dock rot ${r}: footprint ${wantW}x${wantH} cells, block not moved to raw`, fp.w === wantW && fp.h === wantH && !fp.raw, JSON.stringify(fp));
+  }
   await ctx.close();
 }
 

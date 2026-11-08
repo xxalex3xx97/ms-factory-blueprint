@@ -202,14 +202,14 @@ function paintFloorBase(s){
   const A=areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;
   // gap strips: only between two facing floor blocks; strip = the distance between their SHELLS, long axis = overlap of their shells
   const SH=A.floors.map(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;return{r,x:r.x-Q,y:r.y-Q,w:r.w+2*Q,h:r.h+2*Q}});
-  const own2=new Map();SH.forEach(e=>{const d=dim(e.r.b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)own2.set((e.r.b.x+i)+","+(e.r.b.y+j),e)});
+  const own2=new Map();SH.forEach(e=>{const d=fcell(e.r.b);for(let i=0;i<d.cw;i++)for(let j=0;j<d.ch;j++)own2.set((d.cx+i)+","+(d.cy+j),e)});
   cx.fillStyle="rgba(70,80,100,.5)";
-  SH.forEach(e=>{const d=dim(e.r.b),seen=new Set();
+  SH.forEach(e=>{const d=fcell(e.r.b),seen=new Set();
     const put=(nb,ax)=>{if(!nb||nb===e||seen.has(nb))return;seen.add(nb);
       if(ax==="x"){if(nb.x<=e.x+e.w)return;const y0=Math.max(e.y,nb.y),y1=Math.min(e.y+e.h,nb.y+nb.h);if(y1<=y0)return;R({x:e.x+e.w,y:y0,w:nb.x-(e.x+e.w),h:y1-y0},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}
       else{if(nb.y<=e.y+e.h)return;const x0=Math.max(e.x,nb.x),x1=Math.min(e.x+e.w,nb.x+nb.w);if(x1<=x0)return;R({x:x0,y:e.y+e.h,w:x1-x0,h:nb.y-(e.y+e.h)},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}};
-    for(let j=0;j<d.h;j++)put(own2.get((e.r.b.x+d.w)+","+(e.r.b.y+j)),"x");
-    for(let i=0;i<d.w;i++)put(own2.get((e.r.b.x+i)+","+(e.r.b.y+d.h)),"y");
+    for(let j=0;j<d.ch;j++)put(own2.get((d.cx+d.cw)+","+(d.cy+j)),"x");
+    for(let i=0;i<d.cw;i++)put(own2.get((d.cx+i)+","+(d.cy+d.ch)),"y");
   });
   A.floors.forEach(r=>{
     const T=.5,Q=((def(r.b.cls)||{}).floorInset)||0,sx=r.x-Q,sy=r.y-Q,sw=r.w+2*Q,sn=r.h+2*Q;   // shell = floor + inset ring (elevator 1): same 0.5 wall band as a station

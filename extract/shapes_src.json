@@ -1,0 +1,11 @@
+{
+  "floorOrigin": [-15, -15],
+  "blocks": {
+    "BPO_Dock_2": {
+      "w": 3,
+      "h": 2,
+      "verified": true,
+      "door": {"verified": true, "source": "BPO_Dock_2 colliders: W gaps y-11..-5,5..11; N/S gaps x-11..-5 (6 wide, offset 4)"}
+    }
+  }
+}

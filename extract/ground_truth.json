@@ -181,10 +181,10 @@
       "label": "Industrial Dock",
       "name": "BPO_Dock_2",
       "category": "Functional Blocks",
-      "w": 1,
+      "w": 3,
       "h": 2,
-      "size": "user addendum 2026-11-06",
-      "note": "2x1 block; 14x30 floor (user addendum)",
+      "size": "colliders BlockBounds 48x32 sim units + user 2026-11-08",
+      "note": "3x2 hull; buildable floor 14x30 on the station-side column",
       "floor": {
         "w": 14,
         "h": 30
