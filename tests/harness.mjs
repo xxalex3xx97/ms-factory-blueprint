@@ -1667,6 +1667,78 @@ function toolkit(pg) {
   return {nm, relPair, placed, leg, portsAt, resetMid: () => { mid = 1; }};
 }
 
+// ================= 16e. elevator item transfer (all levels in one run)
+async function s16e(br) {
+  const TP = 'ITEM_TitaniumPlates', ELV = 'BPO_ElevatorBlock_03';
+  const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's16e');
+  const T = toolkit(pg);
+  const INF = [{Item: TP, Count: 0, Infinite: true}], FULL = [{Item: TP, Count: 16000, Infinite: false}];
+  const run = n => pg.evaluate(n => { __fb.simInit({}); __fb.simRun(n); return __fb.SIM.t; }, n);
+  const conts = () => pg.evaluate(() => { const st = __fb.SIM.stat; return {full: st.full.size, c: [...st.cont].map(([id, c]) => { const b = __fb.S.blocks.find(q => q.id === id); return {h: b.h, in: c.in, out: c.out, have: c.have, inf: c.rows.some(r => r.inf)}; })}; });
+  const at = (s, h) => s.c.find(c => c.h === h);
+  // elevator at block (2,2): north port (same on every level, rot 0)
+  await imp(pg, bp([blk(ELV, 2, 2, {h: 0})]));
+  const P = await pg.evaluate(() => { const e = __fb.S.blocks.find(b => /ElevatorBlock_03/.test(b.cls) && b.h === 0), p = __fb.portsOf(e).find(q => q.en && q.nx === 0 && q.ny === -1); return {x: p.x, y: p.y, nx: p.nx, ny: p.ny, key: p.key}; });
+  // scene: elevators on `levels`, legs = [{h, kind: 'in' (belt into port) | 'out' (belt leaving port), contents, noCont}] each 3 belts + container on that level
+  const scene = async (levels, spec) => {
+    T.resetMid();
+    const ms = [];
+    for (const s of spec) (await T.leg({x: P.x, y: P.y}, [[[P.nx, P.ny], 3]], s.kind, s.contents, s.noCont)).forEach(m => ms.push({...m, Transform: {...m.Transform, Height: s.h}}));   // v1 blueprint: Height = level
+    await imp(pg, bp(levels.map(h => blk(ELV, 2, 2, {h})), ms));   // v1 blueprint: Height = level
+  };
+  // a) up: source L0 -> elevator L0 -> elevator L1 -> sink L1
+  await scene([0, 1], [{h: 0, kind: 'in', contents: INF}, {h: 1, kind: 'out'}]);
+  {
+    await run(300); const s = await conts(), src = at(s, 0), snk = at(s, 1);
+    chk('16e up: sink on level 1 fills (in > 0, stock > 0)', snk.in > 0 && snk.have > 0, JSON.stringify(snk));
+    chk('16e up: infinite source on level 0 outputs', src.out > 0 && src.inf, JSON.stringify(src));
+    chk('16e up: no splitter routers created for elevator ports', await pg.evaluate(() => __fb.SIM.R.size === 0));
+  }
+  // b) down: source L1 -> elevator L1 -> elevator L0 -> sink L0
+  await scene([0, 1], [{h: 1, kind: 'in', contents: INF}, {h: 0, kind: 'out'}]);
+  {
+    await run(300); const s = await conts(), snk = at(s, 0);
+    chk('16e down: sink on level 0 fills (in > 0, stock > 0)', snk.in > 0 && snk.have > 0, JSON.stringify(snk));
+  }
+  // c) belt into a port with no paired elevator (single level) still blocks
+  await scene([0], [{h: 0, kind: 'in', contents: INF}]);
+  {
+    await run(120); const s = await conts(), src = at(s, 0);
+    chk('16e no paired elevator: source out 0, belts full (blocked)', src.out === 0 && s.full > 0, JSON.stringify([src.out, s.full]));
+  }
+  // d) paired elevator exists on level 1 but no belt leaves its matching port: still blocked
+  await scene([0, 1], [{h: 0, kind: 'in', contents: INF}]);
+  {
+    await run(120); const s = await conts(), src = at(s, 0);
+    chk('16e elevator above without output belt: blocked (source out 0)', src.out === 0 && s.full > 0, JSON.stringify([src.out, s.full]));
+  }
+  // e) 3 levels, input on middle level: round-robin between level 0 and level 2 (both outputs)
+  await scene([0, 1, 2], [{h: 1, kind: 'in', contents: INF}, {h: 0, kind: 'out'}, {h: 2, kind: 'out'}]);
+  {
+    await run(600); const s = await conts(), a = at(s, 0), b = at(s, 2);
+    chk('16e 3 levels: middle input feeds both neighbours (both sinks fill)', a.have > 0 && b.have > 0, JSON.stringify([a.have, b.have]));
+    chk('16e 3 levels: split is even (round-robin, +-5%)', Math.abs(a.have - b.have) <= 0.05 * (a.have + b.have) + 2, JSON.stringify([a.have, b.have]));
+  }
+  // f) 3 levels, neighbour below has no output belt on the matching port: all items go up
+  await scene([0, 1, 2], [{h: 1, kind: 'in', contents: INF}, {h: 2, kind: 'out'}]);
+  {
+    await run(600); const s = await conts(), src = at(s, 1), b = at(s, 2);
+    chk('16e no output belt below: all items go to level 2 (in ~ source out)', b.in > 0 && Math.abs(b.in - src.out) <= 1, JSON.stringify([b.in, src.out]));
+  }
+  // g) 3 levels, neighbour below full: all items go up
+  await scene([0, 1, 2], [{h: 1, kind: 'in', contents: INF}, {h: 0, kind: 'out', contents: FULL}, {h: 2, kind: 'out'}]);
+  {
+    await run(600); const s = await conts(), src = at(s, 1), a = at(s, 0), b = at(s, 2);
+    chk('16e full destination below: stays full, all items go to level 2', a.have === 16000 && Math.abs(b.in - src.out) <= 1, JSON.stringify([a.have, b.in, src.out]));
+  }
+  // h) every level runs in one sim; simSig covers every level
+  {
+    const r = await pg.evaluate(() => { const a = __fb.simSig(), b1 = __fb.S.blocks.find(q => q.h === 1); const same = a === __fb.simSig(); b1.rot = ((b1.rot || 0) + 1) & 3; return {same, changed: a !== __fb.simSig()}; });
+    chk('16e simSig changes on an edit on a non-selected level', r.changed && r.same, JSON.stringify(r));
+  }
+  await ctx.close();
+}
+
 async function s16ui(br) {
   const HK = 'ITEM_TitaniumPlates>ITEM_HullPlates', TP = 'ITEM_TitaniumPlates';
   const INF = [{Item: TP, Count: 0, Infinite: true}];
@@ -1742,11 +1814,12 @@ async function s16ui(br) {
   await stopSim(pg);
   await pg.click('#simB');
   chk('16ui toggling Simulate off clears SIM', await pg.evaluate(() => __fb.SIM === null && !__fb.SM));
-  // view/layer change resets + pauses
+  // view change resets + pauses; layer change keeps the run (all levels run together)
   cells = await asmScene(pg, tk, {src: INF});
   await startSim(pg, 'sm60'); await pg.waitForTimeout(700);
+  const tL0 = await T(pg);
   await pg.click('#lUp'); await pg.waitForTimeout(150);
-  chk('16ui layer change while on: paused and reset', await pg.getAttribute('#smPlay', 'aria-pressed') === 'false' && (await T(pg)) === 0, `t=${await T(pg)}`);
+  chk('16ui layer change while on: sim keeps running, not reset (all levels in one run)', await pg.getAttribute('#smPlay', 'aria-pressed') === 'true' && (await T(pg)) > tL0, `t=${tL0} -> ${await T(pg)}`);
   await pg.click('#lDn'); await pg.waitForTimeout(150);
   await startSim(pg, 'sm60'); await pg.waitForTimeout(500);
   await pg.evaluate(() => __fb.setView('L')); await pg.waitForTimeout(100);
@@ -2443,6 +2516,7 @@ try {
   try { console.log('--- 14 storage scenes'); await s14(br); } catch (e) { chk('14 storage scenes: section ran', false, e.stack || String(e)); }
   try { console.log('--- 15 right-click + hotbar'); await s15(br); } catch (e) { chk('15 right-click + hotbar: section ran', false, e.stack || String(e)); }
   try { console.log('--- 16 simulation engine'); await s16(br); } catch (e) { chk('16 simulation engine: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 16e elevator transfer'); await s16e(br); } catch (e) { chk('16e elevator transfer: section ran', false, e.stack || String(e)); }
   try { console.log('--- 16ui simulation UI'); await s16ui(br); } catch (e) { chk('16ui simulation UI: section ran', false, e.stack || String(e)); }
   try { console.log('--- 17 autosave'); await s17(br); } catch (e) { chk('17 autosave: section ran', false, e.stack || String(e)); }
   try { console.log('--- 18 links off + simulated bottleneck colours'); await s18(br); } catch (e) { chk('18 links off + sim colours: section ran', false, e.stack || String(e)); }

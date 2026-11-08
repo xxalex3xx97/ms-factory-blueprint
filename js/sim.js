@@ -1,11 +1,13 @@
-// ---- live simulation engine (pure: no DOM, never writes S). Fixed step = SIM_DT game seconds; snapshot of links(layer) taken at simInit.
+// ---- live simulation engine (pure: no DOM, never writes S). Fixed step = SIM_DT game seconds; snapshot of ALL levels (simLinks) taken at simInit; the level selector only changes the view.
 const SIM_DT=1,SIM_WIN=60,SIM_MAXSTEPS=240,SIM_SMW=30,SIM_SMI=5;
 const SIM_NOTES="Approximate, informational. Fixed 1 s steps. Containers start from their configured Contents (Infinite = unlimited); a container only outputs items it holds (a pull belt carries the first stocked item, preferring one a machine downstream needs). "+
   "Belts have no buffer: items move instantly, limited per step by the slowest belt of the connected chain (items/min). Machines keep an input and an output buffer of 2 cycles, run a cycle only when all inputs are present and the output buffer has room, and are blocked when the output cannot be delivered. Recipes without inputs never run. "+
   "Items flow downstream only: producer to machines that need them, then containers, then through splitters/balancers. Splitter = round-robin over ENABLED output ports, skipping an output that is full or saturated so the rest takes more. Balancer = items from all enabled inputs evened across all enabled outputs. "+
-  "Merge (T-join) = producers sharing a belt alternate each step. Undergrounds pass items unchanged. Splitter/balancer throughput is capped by its Mk speed (60/120/180 per min). Corners and elevators are plain belts/pass-through (no extra model).";
+  "Merge (T-join) = producers sharing a belt alternate each step. Undergrounds pass items unchanged. Splitter/balancer throughput is capped by its Mk speed (60/120/180 per min). Corners are plain belts. "+
+  "Elevators: a belt INTO an elevator port (belt leaving = output, as for machines) sends items to the SAME-numbered port of the elevator at the same x,y on the level above or below, when a belt leaves that port; no such belt = input blocked. Items move at belt speed, no elevator speed limit. "+
+  "DEFAULT (not specified by the user): with both neighbours valid, items alternate round-robin between them, skipping a full destination. The whole factory runs on all levels in one simulation.";
 let SIM=null;
-const simSig=()=>JSON.stringify(S.blocks.filter(b=>b.h===layer));
+const simSig=()=>JSON.stringify(S.blocks);
 const simOk=c=>SIM.cr.get(c)>1-1e-9;
 const simInc=(m,a,b)=>{let x=m.get(a);if(!x){x=new Map();m.set(a,x)}x.set(b,(x.get(b)||0)+1)};
 const simPath=(eb,xb)=>{const nx=SIM.nx,p=[],seen=new Set();for(let i=eb;i!=null&&!seen.has(i);i=nx.get(i)){seen.add(i);p.push(i);if(i===xb)break}return p};
@@ -13,21 +15,33 @@ const simDn=eb=>{let s=SIM.dn.get(eb);if(!s){s=new Set(simPath(eb,null));SIM.dn.
 const simCanM=(M,item)=>{const q=M.r.i.find(x=>x[0]===item);return !!q&&(M.inb[item]||0)<2*q[1]};
 const simHave=cn=>{let n=0;cn.st.forEach(r=>{if(!r.inf)n+=r.n});return n};
 const simCanC=(cn,item)=>{const r=cn.st.get(item);return !!(r&&r.inf)||cn.cap==null||simHave(cn)<cn.cap};
+// one graph over every level: belts/ports/nx/cp joined (ids are global); chain = per-level union-find root, unique across levels
+function simLinks(){
+  const K={belts:[],ports:[],nx:new Map(),cp:new Map()},ch=new Map();
+  [...new Set(S.blocks.map(b=>b.h))].forEach(L=>{const k=links(L);
+    K.belts.push(...k.belts);K.ports.push(...k.ports);k.nx.forEach((v,a)=>K.nx.set(a,v));k.cp.forEach((v,a)=>K.cp.set(a,v));k.belts.forEach(b=>ch.set(b.id,k.chain(b.id)))});
+  K.chain=id=>ch.get(id);return K;
+}
 function simInit(o={}){
-  const K=links(layer),capMul=o.capMul!=null?o.capMul:1;
+  const K=simLinks(),capMul=o.capMul!=null?o.capMul:1;
   const Z=SIM={opts:o,capMul,K,nx:K.nx,t:0,acc:0,ring:[],cr:new Map(),rate:new Map(),fl:new Set(),lastFl:new Set(),dn:new Map(),
-    M:new Map(),C:new Map(),R:new Map(),mS:new Map(),cS:new Map(),rI:new Map(),prod:[],pull:[],ev:null,stat:null,sm:null,sh:new Map(),ser:[],tot:new Map(),mt:new Map()};
+    M:new Map(),C:new Map(),R:new Map(),E:new Map(),mS:new Map(),cS:new Map(),rI:new Map(),prod:[],pull:[],ev:null,stat:null,sm:null,sh:new Map(),ser:[],tot:new Map(),mt:new Map()};
   K.belts.forEach(b=>{const c=K.chain(b.id),v=K.cp.get(b.id);if(!Z.rate.has(c))Z.rate.set(c,Infinity);if(v)Z.rate.set(c,Math.min(Z.rate.get(c),v/60*capMul))});
-  S.blocks.filter(b=>b.h===layer&&isM(b)&&!isBelt(b)).forEach(b=>{
+  S.blocks.filter(b=>isM(b)&&!isBelt(b)).forEach(b=>{
     if(isStore(b)){const st=new Map(),d=(def(b.cls)||{}).stats||{};
       (b.ct||[]).forEach(x=>{if(x.item&&!st.has(x.item))st.set(x.item,{n:Math.max(0,+x.n||0),inf:!!x.inf})});
       Z.C.set(b.id,{b,st,slots:d.StoresItems||null,stack:d.StackSize||null,cap:d.StoresItems&&d.StackSize?d.StoresItems*d.StackSize:null});return}
     const r=recOf(b);if(r)Z.M.set(b.id,{b,r,inb:{},out:0,cycles:0,run:false,prog:0,st:"idle",T:r.t/30,pb:[]});
   });
   const add=(mp,k,v)=>{if(!mp.has(k))mp.set(k,[]);const l=mp.get(k);if(!l.includes(v))l.push(v)};
+  const elvO=new Map();   // elevator output ports (belt leaving the port) keyed x,y,h,port
   K.ports.forEach(e=>{const m=e.m,p=e.port,d=DIR[e.b.rot],c=K.chain(e.b.id),into=d[0]===-p.nx&&d[1]===-p.ny,away=d[0]===p.nx&&d[1]===p.ny;
     const cn=Z.C.get(m.id);
     if(cn){if(!into)Z.pull.push({cn,belt:e.b,c});else add(Z.cS,c,{m,belt:e.b});return}/* belt beside a container port not pointing into it (away or sideways bend) = pulls from it */
+    if((def(m.cls)||{}).elevator){const k=[m.x,m.y,m.h,p.key].join();   // elevator port: belt into it = input router, else output (same rule as machines)
+      if(into){let r=Z.E.get(k);if(!r){r={id:"e"+k,x:m.x,y:m.y,h:m.h,pk:p.key,ins:[],outs:[],rr:0};Z.E.set(k,r);Z.rate.set(r.id,Infinity)}r.ins.push({belt:e.b,c});add(Z.rI,c,r)}
+      else elvO.set(k,{belt:e.b,c});
+      return}
     const cat=(def(m.cls)||{}).category;
     if(cat==="Splitters"||cat==="Balancers"){let r=Z.R.get(m.id);if(!r){r={m,id:m.id,ins:[],outs:[],rr:0};Z.R.set(m.id,r);
         const v=((def(m.cls)||{}).speed||{}).itemsPerMin;Z.rate.set(m.id,v?v/60*capMul:Infinity)}
@@ -36,6 +50,7 @@ function simInit(o={}){
     if(into)add(Z.mS,c,{M,belt:e.b});else M.pb.push({belt:e.b,c});
   });
   Z.M.forEach(M=>{if(M.pb.length)Z.prod.push(M)});
+  Z.E.forEach(r=>[r.h+1,r.h-1].forEach(h=>{const o=elvO.get([r.x,r.y,h,r.pk].join());if(o)r.outs.push(o)}));   // destinations: adjacent levels up/down (round-robin via simRoute)
   Z.stat=simCalc();Z.sm=Object.assign(simCalc(SIM_SMW),{t:0,steady:false,stId:new Set()});return true;
 }
 const simReset=()=>SIM?simInit(SIM.opts):false;
