@@ -423,6 +423,62 @@
           }
         ]
       }
+    },
+    "BPO_BlueprintUnit": {
+      "add": true,
+      "label": "Blueprint Unit",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_BlueprintUnit.BPO_BlueprintUnit_C",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "mod pak pakchunk100-BlueprintUnit_P, decoded 2026-11-08: DisplayName 'Blueprint Unit', ItemCost HullPlates 5 + LightweightFrame 10, Hull 30, Weight 10; BlockBounds 16x16 = 1x1; colliders identical to Command Module (shape = Command Module per user); one west door",
+      "description": "Imports a factory blueprint from the clipboard and builds it on your station.",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          5
+        ],
+        [
+          "ITEM_LightweightFrame",
+          10
+        ]
+      ],
+      "research": [],
+      "researchNote": "no research decoded for this mod block",
+      "confidence": "decoded from the mod pak (untested in game)",
+      "icon": "BPO_BlueprintUnit",
+      "iconFile": "BPO_BlueprintUnit.png",
+      "shapeOf": "BPO_CommandModule",
+      "nofloor": true,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "floor": null,
+      "note": null,
+      "floorNote": null,
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "sides": [
+          "W"
+        ],
+        "verified": true,
+        "source": "decoded BPO_BlueprintUnit (mod pak): same colliders as Command Module: single entry gap y -2.95..2.95 on the west edge (rot 0)"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded BPO_BlueprintUnit (mod pak): one door gap on the west edge (rot 0), y -2.954..2.954 (shape = Command Module per user); Layout mark at the true gap centre",
+        "gaps": [
+          {
+            "side": "W",
+            "from": -2.954,
+            "to": 2.954
+          }
+        ]
+      }
     }
   }
 }

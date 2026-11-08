@@ -108,7 +108,7 @@ async function s1(C) {
   for (const [id, v] of [['DAT_UndergroundBelt', 8], ['DAT_UndergroundBelt_2', 10], ['DAT_UndergroundBelt_3', 12]]) {
     chk(`maxApart ${id} = ${v}`, bm[id]?.maxApart === v, `catalog ${bm[id]?.maxApart}`);
   }
-  chk('19 station blocks in catalog (18 + Mining Drone Bay Mk.2 add:true)', C.blocks.length === 19, `have ${C.blocks.length}`);
+  chk('20 station blocks in catalog (18 + Mining Drone Bay Mk.2 + Blueprint Unit add:true)', C.blocks.length === 20, `have ${C.blocks.length}`);
   for (const g of G.blocks) {
     const c = C.blocks.find(b => b.name === g.name);
     const gf = g.floor, cf = c?.floor;
@@ -2466,7 +2466,7 @@ async function s28(br) {
     chk(`28 ${n}: catalog verified===true, ${c && c.w}x${c && c.h} block, source string set`, !!c && c.verified === true && typeof c.source === 'string' && c.source.length > 0, JSON.stringify(c));
     if (c && c.hasFloor) chk(`28 ${n}: floor.verified and door.verified`, c.floorV === true && c.doorV === true, JSON.stringify(c));
     if (c && c.nofloor) chk(`28 ${n}: nofloor (no floor, no buildable area)`, !c.hasFloor, JSON.stringify(c));
-    const cols = floors[n].colliders_raw || [], overhead = src.ground ? cols.filter(q => q[0][2] >= 1).length : 0, fill = src.fill ? 1 : 0;
+    const cols = floors[src.shapeOf || n].colliders_raw || [], overhead = src.ground ? cols.filter(q => q[0][2] >= 1).length : 0, fill = src.fill ? 1 : 0;
     const want = cols.length - overhead + fill, got = sh ? sh.walls + sh.props : -1;
     chk(`28 ${n}: walls+props (${got}) == colliders_raw (${cols.length}) minus overhead (${overhead}) plus fill (${fill}) = ${want}`, got === want, `walls ${sh && sh.walls} props ${sh && sh.props}`);
     const pal = await palHtml(c && c.label);
@@ -2505,7 +2505,7 @@ async function s28(br) {
   chk('28 machines BPO_MiningDroneBay_2 and BPO_MiningDroneBay both kept in "other machines" (no buildable maps them, like Mk.1)', rt.dm === 2, `dm ${rt.dm}`);
   // entrance key: shapes_src.json entrance {kind, evidence} on dock (doors) + drone bays (ports), carried to SHAPES; Layout arrows from entrances()
   const ents = names.filter(n => srcBlocks[n].entrance);
-  chk('28 entrance: dock + Command Module + 3 shipyards (doors), Mk.1 + Mk.2 drone bays (ports); no other block', JSON.stringify(ents.sort()) === '["BPO_CommandModule","BPO_Dock_2","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ShipyardSide"]', JSON.stringify(ents));
+  chk('28 entrance: dock + Command Module + Blueprint Unit + 3 shipyards (doors), Mk.1 + Mk.2 drone bays (ports); no other block', JSON.stringify(ents.sort()) === '["BPO_BlueprintUnit","BPO_CommandModule","BPO_Dock_2","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ShipyardSide"]', JSON.stringify(ents));
   for (const n of names) {
     const f = srcBlocks[n].entrance, g = await pg.evaluate(k => SHAPES[k].entrance, n);
     if (f) chk(`28 entrance ${n}: SHAPES.entrance kind "${f.kind}" + evidence carried`, ['doors', 'ports'].includes(f.kind) && g && g.kind === f.kind && g.evidence === f.evidence && f.evidence.length > 20, JSON.stringify(g));
@@ -2522,7 +2522,7 @@ async function s28(br) {
     return {eds: E.map(e => e.ed).sort(), ports: E.map(e => e.port), txt: entText(b), diff: E.map(e => { const D = DIR[e.ed], ex = V.ox + e.x * s, ey = V.oy + e.y * s,
       m = at(ex - D[0] * 1.5, ey - D[1] * 1.5), ref = D[0] ? at(ex - D[0] * 1.5, y0 + 3) : at(x0 + 3, ey - D[1] * 1.5); return Math.abs(m - ref) }), s};
   }, [`${P}${n}.${n}_C`, r]);
-  const want = {BPO_Dock_2: r => [0, 1, 2, 3].filter(e => e !== r), BPO_Station_2x1: r => [0, 2].map(e => (e + r) & 3), BPO_Station_01: () => [0, 1, 2, 3], BPO_MiningDroneBayBlock: r => [(2 + r) & 3], BPO_MiningDroneBayBlock_2: r => [(2 + r) & 3], BPO_CommandModule: r => [(2 + r) & 3], BPO_ShipyardSide: r => [(2 + r) & 3], BPO_ShipyardCore: r => [(2 + r) & 3], BPO_ShipyardCore_02: r => [(2 + r) & 3]};
+  const want = {BPO_Dock_2: r => [0, 1, 2, 3].filter(e => e !== r), BPO_Station_2x1: r => [0, 2].map(e => (e + r) & 3), BPO_Station_01: () => [0, 1, 2, 3], BPO_MiningDroneBayBlock: r => [(2 + r) & 3], BPO_MiningDroneBayBlock_2: r => [(2 + r) & 3], BPO_CommandModule: r => [(2 + r) & 3], BPO_BlueprintUnit: r => [(2 + r) & 3], BPO_ShipyardSide: r => [(2 + r) & 3], BPO_ShipyardCore: r => [(2 + r) & 3], BPO_ShipyardCore_02: r => [(2 + r) & 3]};
   for (const n of Object.keys(want)) for (const r of [0, 1, 2, 3]) {
     const o = await probe(n, r), w = want[n](r).sort(), ports = n.includes('Drone');
     chk(`28 entrance marks ${n} rot ${r}: world edges ${w.map(e => 'ESWN'[e]).join('')}${n === 'BPO_Dock_2' ? ' (none on the ship side)' : ''}, ${ports ? 'ports side' : 'doors'}`, JSON.stringify(o.eds.filter((e, i, a) => a.indexOf(e) === i)) === JSON.stringify(w) && o.ports.every(p => p === ports), JSON.stringify(o));

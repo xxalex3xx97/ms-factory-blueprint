@@ -9,7 +9,7 @@ Inputs: extract/floors.json (colliders_raw, hull), extract/shapes_src.json (allo
 Shape coords: block units (1 unit = 1 site cell = 100 cm; machine grid units are 50 cm), relative to the floor top-left (floorOrigin).
 Walls: collider z-size >= 1.9, else props. Port arms: cm * cm2unit + originBlock, mirrorY, then shifted by floorOrigin.
 Per block (shapes_src.json): floorOrigin [x,y] overrides the global one; polys [[[x,y],...],...] (floor cells, block frame like
-colliders_raw) are copied into the shape entry as 'polys' (floor frame). Shape-only keys (floorOrigin, polys) never reach the catalog patch.
+colliders_raw) are copied into the shape entry as 'polys' (floor frame). Shape-only keys (floorOrigin, polys, shapeOf) never reach the catalog patch. shapeOf: colliders taken from another block in floors.json (add:true mod block).
 ground: true = ground-level plan (colliders with z0 >= 1 are overhead: skipped; walls need z0 < 1). solid: true = every collider is a prop.
 fill: [x0,y0,x1,y1] block frame = one solid prop, used when the BPO has no colliders (Station Armour); hull size then comes from fill.
 add: true = block is not in CATALOG.blocks yet: its full definition (the block's own keys) is appended to CATALOG.blocks before core.js.
@@ -23,7 +23,7 @@ import base64, json, os, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 EX = os.path.join(ROOT, 'extract')
 OUT = os.path.join(ROOT, 'js', 'shapes.js')
-SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance')
+SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'shapeOf')
 
 
 def rd(name):
@@ -74,10 +74,11 @@ def build():
         if p.get('iconFile'):
             with open(os.path.join(EX, 'icons', p['iconFile']), 'rb') as f:
                 icons[p['icon']] = 'data:image/png;base64,' + base64.b64encode(f.read()).decode('ascii')
-        if name not in fl:
-            sys.exit('no floors.json entry for ' + name)
+        src_name = p.get('shapeOf', name)   # shapeOf: same colliders as another decoded block (mod block with a cloned shape)
+        if src_name not in fl:
+            sys.exit('no floors.json entry for ' + src_name)
         ox, oy = p.get('floorOrigin', [gox, goy])   # per-block floor origin overrides the global one
-        f = fl[name]
+        f = fl[src_name]
         cols = f.get('colliders_raw', [])
         size = f['hull']['size'] if 'hull' in f else None
         walls, props, arms = [], [], []
