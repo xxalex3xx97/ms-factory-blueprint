@@ -82,5 +82,61 @@
       "flag": "INF"
     },
     "evidence": "scale corrected 2026-11-08 from user screenshot (real belts): vault rea-industrial-dock.md SCALE CORRECTION. machine grid (66,-11..11 step 2)/2 -> block x=32-33=-1, y=-5.5..5.5. facing W OBSERVED live."
+  },
+  "BPO_MiningDroneBayBlock": {
+    "unit": "block/collider units, block frame, 1 unit = 1 floor cell = 100 cm (machine grid units are 50 cm = half). Port = floor cell edge x -8 (block west edge), cell centre y +-0.5",
+    "machine": {
+      "cls": "BPO_MiningDroneBay",
+      "grid": [
+        0,
+        0
+      ],
+      "rot": 0
+    },
+    "ports": [
+      {
+        "idx": 1,
+        "x": -8,
+        "y": 0.5,
+        "inout": "out",
+        "facing": "W"
+      },
+      {
+        "idx": 2,
+        "x": -8,
+        "y": -0.5,
+        "inout": "out",
+        "facing": "W"
+      }
+    ],
+    "evidence": "BPO_MiningDroneBay Outputs [(-16,1),(-16,-1)] machine grid /2; no Inputs. inout=out OBS; facing W INF (west edge, connector BPO_LargeConnector grid (-2,0) rot 2 west, body at +x), no live probe. No bay numbers. Rev 2026-11-08 rea-drone-bay.md"
+  },
+  "BPO_MiningDroneBayBlock_2": {
+    "unit": "same as BPO_MiningDroneBayBlock",
+    "machine": {
+      "cls": "BPO_MiningDroneBay_2",
+      "grid": [
+        0,
+        0
+      ],
+      "rot": 0
+    },
+    "ports": [
+      {
+        "idx": 1,
+        "x": -8,
+        "y": 0.5,
+        "inout": "out",
+        "facing": "W"
+      },
+      {
+        "idx": 2,
+        "x": -8,
+        "y": -0.5,
+        "inout": "out",
+        "facing": "W"
+      }
+    ],
+    "evidence": "BPO_MiningDroneBay_2 Outputs identical to Mk1; bLockedInDemo, decoded from paks, untested in game. facing W INF as Mk1."
   }
 }

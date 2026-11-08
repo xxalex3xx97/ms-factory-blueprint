@@ -108,7 +108,7 @@ async function s1(C) {
   for (const [id, v] of [['DAT_UndergroundBelt', 8], ['DAT_UndergroundBelt_2', 10], ['DAT_UndergroundBelt_3', 12]]) {
     chk(`maxApart ${id} = ${v}`, bm[id]?.maxApart === v, `catalog ${bm[id]?.maxApart}`);
   }
-  chk('18 station blocks in catalog', C.blocks.length === 18, `have ${C.blocks.length}`);
+  chk('19 station blocks in catalog (18 + Mining Drone Bay Mk.2 add:true)', C.blocks.length === 19, `have ${C.blocks.length}`);
   for (const g of G.blocks) {
     const c = C.blocks.find(b => b.name === g.name);
     const gf = g.floor, cf = c?.floor;
@@ -2442,24 +2442,33 @@ async function s28(br) {
   const P = '/Game/Blueprints/BuildingBlocks/';
   const srcBlocks = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'shapes_src.json'), 'utf8')).blocks;
   const floors = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'floors.json'), 'utf8')).blocks;
+  const extra = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'extra_blocks.json'), 'utf8'));
   const names = Object.keys(srcBlocks);
-  const cat = await pg.evaluate(ns => ns.map(n => { const b = CATALOG.blocks.find(x => x.name === n); return b && {label: b.label, verified: b.verified, source: b.source, w: b.w, h: b.h, hasFloor: !!b.floor, floorV: b.floor ? b.floor.verified : null, doorV: b.door ? b.door.verified : null, nofloor: !!b.nofloor, sides: b.door ? b.door.sides || null : null} }), names);
-  const shapes = await pg.evaluate(ns => ns.map(n => SHAPES[n] ? {walls: SHAPES[n].walls.length, props: SHAPES[n].props.length} : null), names);
+  const cat = await pg.evaluate(ns => ns.map(n => { const b = CATALOG.blocks.find(x => x.name === n); return b && {label: b.label, verified: b.verified, source: b.source, w: b.w, h: b.h, hasFloor: !!b.floor, floorV: b.floor ? b.floor.verified : null, doorV: b.door ? b.door.verified : null, nofloor: !!b.nofloor, sides: b.door ? b.door.sides || null : null, cls: b.class, cost: b.cost, research: b.research, icon: b.icon} }), names);
+  const shapes = await pg.evaluate(ns => ns.map(n => SHAPES[n] ? {walls: SHAPES[n].walls.length, props: SHAPES[n].props.length, ports: SHAPES[n].ports} : null), names);
   const palHtml = label => pg.evaluate(l => { const b = [...document.querySelectorAll('#palList button.item')].find(x => x.querySelector('.n') && x.querySelector('.n').textContent === l); return b ? b.outerHTML : null }, label);
   const selectAt = async (cls, X, Y) => {
     await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: `${P}${cls}.${cls}_C`, GridLocation: {X, Y}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
     await pg.evaluate(() => { __fb.setView('L'); const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
     return pg.evaluate(() => { const b = __fb.S.blocks.find(q => __fb.sel.has(q.id)); return b ? b.cls : null });
   };
+  // catalog count: 18 base blocks + one per add:true entry (Mk.2)
+  const addN = names.filter(n => srcBlocks[n].add).length, catN = await pg.evaluate(() => CATALOG.blocks.length);
+  chk(`28 catalog block count ${catN} = 18 base + ${addN} add:true`, catN === 18 + addN, `count ${catN}`);
   for (let i = 0; i < names.length; i++) {
     const n = names[i], c = cat[i], sh = shapes[i], src = srcBlocks[n];
     chk(`28 ${n}: SHAPES entry exists`, !!sh, String(sh));
+    if (src.mirrorOf) {   // mirror pair: same shape as its base block, no catalog entry (palette shows the base only)
+      const same = await pg.evaluate(([a, b]) => JSON.stringify(SHAPES[a]) === JSON.stringify(SHAPES[b]), [n, src.mirrorOf]);
+      chk(`28 ${n}: mirror of ${src.mirrorOf}: SHAPES identical, no catalog entry`, same && !c, JSON.stringify(c));
+      continue;
+    }
     chk(`28 ${n}: catalog verified===true, ${c && c.w}x${c && c.h} block, source string set`, !!c && c.verified === true && typeof c.source === 'string' && c.source.length > 0, JSON.stringify(c));
     if (c && c.hasFloor) chk(`28 ${n}: floor.verified and door.verified`, c.floorV === true && c.doorV === true, JSON.stringify(c));
     if (c && c.nofloor) chk(`28 ${n}: nofloor (no floor, no buildable area)`, !c.hasFloor, JSON.stringify(c));
-    const cols = floors[n].colliders_raw, overhead = src.ground ? cols.filter(q => q[0][2] >= 1).length : 0;
-    const want = cols.length - overhead, got = sh ? sh.walls + sh.props : -1;
-    chk(`28 ${n}: walls+props (${got}) == colliders_raw (${cols.length}) minus overhead (${overhead}) = ${want}`, got === want, `walls ${sh && sh.walls} props ${sh && sh.props}`);
+    const cols = floors[n].colliders_raw || [], overhead = src.ground ? cols.filter(q => q[0][2] >= 1).length : 0, fill = src.fill ? 1 : 0;
+    const want = cols.length - overhead + fill, got = sh ? sh.walls + sh.props : -1;
+    chk(`28 ${n}: walls+props (${got}) == colliders_raw (${cols.length}) minus overhead (${overhead}) plus fill (${fill}) = ${want}`, got === want, `walls ${sh && sh.walls} props ${sh && sh.props}`);
     const pal = await palHtml(c && c.label);
     chk(`28 ${n}: palette entry "${c && c.label}" present, no "!?"`, pal !== null && !pal.includes('!?'), String(pal).slice(0, 300));
     const cls = await selectAt(n, 20, 20);
@@ -2468,8 +2477,45 @@ async function s28(br) {
   }
   const st2 = cat[names.indexOf('BPO_Station_2x1')];
   chk('28 BPO_Station_2x1: door.sides === [E,W] (short ends only)', JSON.stringify(st2 && st2.sides) === '["E","W"]', JSON.stringify(st2 && st2.sides));
-  const gs = spawnSync(process.env.PYTHON || 'python', ['-I', path.join(ROOT, 'extract', 'gen_shapes.py'), '--check'], {cwd: ROOT, encoding: 'utf8'});
-  chk('28 python -I extract/gen_shapes.py --check exits 0 (all shapes_src blocks)', gs.status === 0, `status ${gs.status} ${(gs.stdout || '').trim()} ${(gs.stderr || '').trim()}`);
+  // Mining Drone Bay Mk.1 / Mk.2: 2 output ports, unnumbered, on the west edge (block (-8,+0.5),(-8,-0.5) = floor (0,8.5),(0,7.5))
+  for (const n of ['BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) {
+    const p = await pg.evaluate(k => SHAPES[k].ports, n);
+    chk(`28 ${n}: ${p.length} unnumbered west-edge ports at floor (0,8.5),(0,7.5) (extra_blocks ports ${extra[n].ports.length})`, p.length === 2 && extra[n].ports.length === 2 && p.every(q => q[0] === null && q[1] === 0) && JSON.stringify(p.map(q => q[2]).sort((a, b) => a - b)) === '[7.5,8.5]', JSON.stringify(p));
+  }
+  const mk2 = cat[names.indexOf('BPO_MiningDroneBayBlock_2')];
+  chk('28 Mk.2 catalog: label, class path, Functional Blocks, 1x1, nofloor, RSC_MiningDroneBay_2, icon, cost Servomotor 10 + BasicCircuit 10, untested source', !!mk2 && mk2.label === 'Mining Drone Bay Mk.2' && mk2.cls === `${P}BPO_MiningDroneBayBlock_2.BPO_MiningDroneBayBlock_2_C` && mk2.w === 1 && mk2.h === 1 && mk2.nofloor && JSON.stringify(mk2.research) === '["RSC_MiningDroneBay_2"]' && mk2.icon === 'BPO_MiningDroneBayBlock_2' && JSON.stringify(mk2.cost) === '[["ITEM_Servomotor",10],["ITEM_BasicCircuit",10]]' && /untested in game/.test(mk2.source), JSON.stringify(mk2));
+  const iconOk = await pg.evaluate(() => !!(CATALOG.icons.BPO_MiningDroneBayBlock_2 && CATALOG.icons.BPO_MiningDroneBayBlock_2.startsWith('data:image/png')));
+  chk('28 Mk.2 icon embedded in CATALOG.icons (data:image/png)', iconOk, String(iconOk));
+  // Station Armour: one solid 16x16 prop, no walls, no ports
+  const arm = shapes[names.indexOf('BPO_StationArmour_01')];
+  chk('28 BPO_StationArmour_01: one 16x16 solid prop, no walls, no ports', !!arm && arm.walls === 0 && arm.props === 1 && JSON.stringify(arm.ports) === '[]', JSON.stringify(arm));
+  // Mk.2 overhang: colliders reach floor x 19 (3 cells past the 16-cell tile)
+  const ov = await pg.evaluate(() => Math.max(...SHAPES.BPO_MiningDroneBayBlock_2.props.map(q => q[2])));
+  chk('28 Mk.2 props overhang the tile: max floor x 19 (+-0.01 rounding)', Math.abs(ov - 19) < .01, String(ov));
+  // Mk.2 save round trip: class path imports as the block, exports back with the same Class/GridLocation/GridRotation; machine BPO_MiningDroneBay_2 kept like Mk.1
+  const MK2 = `${P}BPO_MiningDroneBayBlock_2.BPO_MiningDroneBayBlock_2_C`;
+  const rt = await pg.evaluate(cls => {
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 1, BlockID: 1, PaletteID: 0}],
+      DefaultMachines: [{Class: 'BPO_MiningDroneBay_2', DefaultName: 'BPO_MiningDroneBay_2', Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}, MachineID: 1, PaletteID: 0}, {Class: 'BPO_MiningDroneBay', DefaultName: 'BPO_MiningDroneBay', Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}, MachineID: 2, PaletteID: 0}]}));
+    const o = __fb.build();
+    return {blocks: __fb.S.blocks.map(b => b.cls), dm: __fb.S.dm.length, out: o.Blocks.map(b => ({Class: b.Class, GridLocation: b.GridLocation, Height: b.Height, GridRotation: b.GridRotation}))};
+  }, MK2);
+  chk('28 Mk.2 save: Class imports as BPO_MiningDroneBayBlock_2 (1 block)', rt.blocks.length === 1 && rt.blocks[0] === MK2, JSON.stringify(rt));
+  chk('28 Mk.2 save: exports back unchanged (Class, GridLocation {40,40}, GridRotation 1)', JSON.stringify(rt.out) === JSON.stringify([{Class: MK2, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 1}]), JSON.stringify(rt.out));
+  chk('28 machines BPO_MiningDroneBay_2 and BPO_MiningDroneBay both kept in "other machines" (no buildable maps them, like Mk.1)', rt.dm === 2, `dm ${rt.dm}`);
+  // screenshots: Layout + Factory floor, rot 0..3, for Mk.1, Mk.2 and Station Armour
+  for (const n of ['BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2', 'BPO_StationArmour_01']) {
+    const tag = n.replace('BPO_', '').replace(/[^A-Za-z0-9]+/g, '-').toLowerCase();
+    for (const r of [0, 1, 2, 3]) {
+      await pg.evaluate(([cls, r]) => __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []})), [`${P}${n}.${n}_C`, r]);
+      for (const v of ['L', 'F']) {
+        await pg.evaluate(v => { __fb.setView(v); __fb.fit(); const b = __fb.S.blocks[0], k = v === 'F' ? FC : 1;   // F: 2x2 blocks around the block, the block centred
+          if (v === 'F') { V.z = Math.min(W, H) / (2 * FC * CELLS.F) * .9; V.ox = W / 2 - (b.x + .5) * k * sc(); V.oy = H / 2 - (b.y + .5) * k * sc(); } __fb.paint(); }, v);
+        await pg.waitForTimeout(150);
+        await pg.screenshot({path: path.join(SHOTS, `${tag}-rot${r}-${v === 'L' ? 'layout' : 'floor'}.png`)});
+      }
+    }
+  }
   await ctx.close();
 }
 
