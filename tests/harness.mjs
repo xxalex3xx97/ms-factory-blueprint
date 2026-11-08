@@ -2560,6 +2560,13 @@ async function s28(br) {
     const [lo, hi] = g.door || [0, 0], mid = (lo + hi) / 2;
     chk(`28 ${n} rot ${r}: both port cells inside the neighbouring station door slot [${lo},${hi}], symmetric about ${mid}, ports on the tile edge ${g.edge}`, !!g.door && g.al.every(a => a > lo && a < hi) && Math.abs((g.al[0] + g.al[1]) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - g.edge) < 1e-6), JSON.stringify(g));
   }
+  // no ports (solar, turret, armour): shape frame = the tile exactly, no shift, all rot
+  for (const n of ['BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01', 'BPO_StationArmour_01']) for (const r of [0, 1, 2, 3]) {
+    const g = await pg.evaluate(([cls, r]) => { __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+      const b = __fb.S.blocks[0], t = shapeTf(b), q = nfRect(b), c = [t.f(0, 0), t.f(16, 16)]; return {c, tile: [q.x, q.y, q.x + q.w, q.y + q.h]} }, [`${P}${n}.${n}_C`, r]);
+    const xs = g.c.map(p => p[0]).sort((a, b) => a - b), ys = g.c.map(p => p[1]).sort((a, b) => a - b);
+    chk(`28 ${n} rot ${r}: shape frame corners == tile corners (no shift)`, xs[0] === g.tile[0] && xs[1] === g.tile[2] && ys[0] === g.tile[1] && ys[1] === g.tile[3], JSON.stringify(g));
+  }
   // mark size caps: entrance bars (door on Station 1x1, ports side on drone bay) keep the same on-screen size for s above the cap; door marks hidden below s 44
   const bars = (n, s) => pg.evaluate(([cls, s]) => {
     __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
