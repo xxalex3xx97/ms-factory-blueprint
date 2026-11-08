@@ -19,7 +19,7 @@ entrance: {kind: doors|ports, evidence}: what the Layout arrows mark for this bl
 shapeOf: take the colliders of another floors.json block (mod block with the same shape).
 top-level 'buildables': {DAT_id: patch} merged into CATALOG.buildables (matched by b.id), e.g. hidden: true = kept for import/export but not offered in the palette (DAT_TradeConsole).
 wallsOverride: [[x0,y0,x1,y1]] block-frame wall rects appended to walls (use with drop on the replaced colliders; corridor: 1-unit walls on the strip edges, user "walls THIN").
-drop: [collider indices] not drawn. clip: clip walls/props to the tile on N/S. chain: {group, edges {N, S}, evidence} closing walls for open lateral edges. hatch: interior|ring.
+floorCenter (catalog key, read by model.js floorRect): floor centred in the tile with the station hull convention (corridor: strip 16x6 at tile (-1,4)). drop: [collider indices] not drawn. clip: clip walls/props to the tile on N/S. chain: {group, edges {N, S}, evidence} closing walls for open lateral edges. hatch: interior|ring.
 wallIdx: [collider indices] low colliders drawn as walls (joined outline + chamfered corners). ring: {c [x,y] block frame, rOut, rIn, gap {side, half}, idx [collider indices drawn as the ring instead of boxes], evidence}.
 A block without these keys produces the same entry as before.
 """
