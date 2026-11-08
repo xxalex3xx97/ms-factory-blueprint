@@ -2518,7 +2518,7 @@ async function s28(br) {
     __fb.setView('L'); __fb.fit(); __fb.paint();
     const b = __fb.S.blocks[0], s = sc(), k = devicePixelRatio, g = document.getElementById('cv').getContext('2d'), d = dim(b), x0 = V.ox + b.x * s, y0 = V.oy + b.y * s;
     const at = (px, py) => { const q = g.getImageData(Math.round(px * k), Math.round(py * k), 1, 1).data; return q[0] + q[1] + q[2] };
-    const E = entrances(b);
+    const E = entrances(b, true);
     return {eds: E.map(e => e.ed).sort(), ports: E.map(e => e.port), txt: entText(b), diff: E.map(e => { const D = DIR[e.ed], ex = V.ox + e.x * s, ey = V.oy + e.y * s,
       m = at(ex - D[0] * 1.5, ey - D[1] * 1.5), ref = D[0] ? at(ex - D[0] * 1.5, y0 + 3) : at(x0 + 3, ey - D[1] * 1.5); return Math.abs(m - ref) }), s};
   }, [`${P}${n}.${n}_C`, r]);
@@ -2567,19 +2567,39 @@ async function s28(br) {
     const xs = g.c.map(p => p[0]).sort((a, b) => a - b), ys = g.c.map(p => p[1]).sort((a, b) => a - b);
     chk(`28 ${n} rot ${r}: shape frame corners == tile corners (no shift)`, xs[0] === g.tile[0] && xs[1] === g.tile[2] && ys[0] === g.tile[1] && ys[1] === g.tile[3], JSON.stringify(g));
   }
-  // mark size caps: entrance bars (door on Station 1x1, ports side on drone bay) keep the same on-screen size for s above the cap; door marks hidden below s 44
-  const bars = (n, s) => pg.evaluate(([cls, s]) => {
-    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
-    __fb.setView('L'); const b = __fb.S.blocks[0]; V.z = s / CELLS.L; V.ox = W / 2 - (b.x + .5) * s; V.oy = H / 2 - (b.y + .5) * s;
-    const g = document.getElementById('cv').getContext('2d'), o = g.fillRect, got = []; g.fillRect = function (x, y, w, h) { const a = Math.min(w, h), c = Math.max(w, h); if (a <= 3.01 && c >= 5 && c <= 20) got.push(a.toFixed(2) + 'x' + c.toFixed(2)); return o.call(this, x, y, w, h) };
-    __fb.paint(); g.fillRect = o; return [...new Set(got)].sort();
-  }, [`${P}${n}.${n}_C`, s]);
-  for (const n of ['BPO_Station_01', 'BPO_MiningDroneBayBlock']) {
-    const a = await bars(n, 100), c = await bars(n, 200);
-    chk(`28 ${n}: entrance bar size identical at s=100 and s=200 (capped) and non-empty`, a.length > 0 && JSON.stringify(a) === JSON.stringify(c), JSON.stringify([a, c]));
+  // Layout marks: bar = full door slot length (scales with zoom), thickness min(5, .12 s), chevron radius capped at 9; centred on the TRUE tile edge middle
+  const lay = (blocks, s, rot) => pg.evaluate(([bl, s]) => {
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: bl.map((q, i) => ({Class: q[0], GridLocation: {X: q[1], Y: q[2]}, Height: 0, GridRotation: q[3], BlockID: i + 1, PaletteID: 0})), DefaultMachines: []}));
+    __fb.setView('L'); const bs = __fb.S.blocks; V.z = s / CELLS.L;
+    const x0 = Math.min(...bs.map(b => b.x)), y0 = Math.min(...bs.map(b => b.y)); V.ox = 300 - x0 * s; V.oy = 200 - y0 * s;
+    const g = document.getElementById('cv').getContext('2d'), fr = g.fillRect, mv = g.moveTo, bars = [], rad = [];
+    const t = Math.max(2, Math.min(5, s * .12)), L = Math.max(5, 6 / 16 * s);
+    g.fillRect = function (x, y, w, h) { if (Math.abs(Math.min(w, h) - t) < .01 && Math.abs(Math.max(w, h) - L) < .01) bars.push([x + w / 2, y + h / 2, w > h]); return fr.call(this, x, y, w, h) };
+    g.moveTo = function (x, y) { if (y === 0 && x >= 3 && x <= 40) rad.push(x); return mv.call(this, x, y) };
+    __fb.paint(); g.fillRect = fr; g.moveTo = mv;
+    return {bars, rad: [...new Set(rad)], t, L, blocks: bs.map(b => { const d = dim(b); return {cls: b.cls, x: V.ox + b.x * s, y: V.oy + b.y * s, w: d.w * s, h: d.h * s} })};
+  }, [blocks.map(([n, x, y, r]) => [`${P}${n}.${n}_C`, x, y, r]), s]);
+  const mid = (b, ed) => [[b.x + b.w, b.y + b.h / 2], [b.x + b.w / 2, b.y + b.h], [b.x, b.y + b.h / 2], [b.x + b.w / 2, b.y]][ed];
+  const hasPt = (bars, p) => bars.some(q => (q[2] ? Math.abs(q[0] - p[0]) < .5 && Math.abs(q[1] - p[1]) <= 3 : Math.abs(q[1] - p[1]) < .5 && Math.abs(q[0] - p[0]) <= 3));   // along the edge: +-0.5 px; normal: the bar sits inside the edge (thickness/2)
+  const cases = [['BPO_Station_01', 'all', [0, 1, 2, 3]], ['BPO_Station_2x1', 'ends', null], ['BPO_MiningDroneBayBlock', 'ports', null], ['BPO_MiningDroneBayBlock_2', 'ports', null]];
+  for (const [n, kind] of cases) for (const r of [0, 1, 2, 3]) {
+    const o = await lay([[n, 40, 40, r]], 100), b = o.blocks[0];
+    const eds = kind === 'all' ? [0, 1, 2, 3] : kind === 'ends' ? [0, 2].map(e => (e + r) & 3) : [(2 + r) & 3];
+    chk(`28 Layout ${n} rot ${r}: ${eds.length} mark(s) centred on the footprint edge middle (+-0.5 px)`, o.bars.length === eds.length && eds.every(e => hasPt(o.bars, mid(b, e))), JSON.stringify({bars: o.bars, want: eds.map(e => mid(b, e))}));
   }
-  const lowDoor = await bars('BPO_Station_01', 30), lowPort = await bars('BPO_MiningDroneBayBlock', 30);
-  chk('28 door marks hidden below s 44 (Station 1x1 at s=30), port marks still shown (drone bay)', lowDoor.length === 0 && lowPort.length > 0, JSON.stringify([lowDoor, lowPort]));
+  for (const r of [0, 1, 2, 3]) {   // dock: 4 door marks (W x2, N, S at rot 0), none on the ship side, symmetric about the ship axis through the footprint centre
+    const o = await lay([['BPO_Dock_2', 40, 40, r]], 100), b = o.blocks[0], sx = [1, 0, -1, 0][r] !== 0, c = sx ? b.y + b.h / 2 : b.x + b.w / 2;
+    const per = o.bars.map(q => sx ? q[1] : q[0]), ship = mid(b, r);
+    chk(`28 Layout dock rot ${r}: 4 marks, symmetric about the ship axis, none on the ship side`, o.bars.length === 4 && per.every(p => per.some(q => Math.abs(p + q - 2 * c) < .5)) && !o.bars.some(q => Math.hypot(q[0] - ship[0], q[1] - ship[1]) < 3), JSON.stringify({bars: o.bars, c}));
+  }
+  for (const s of [100, 200]) {
+    const o = await lay([['BPO_Station_01', 40, 40, 0]], s);
+    chk(`28 Layout door bar at s=${s}: length == door slot (${6 / 16 * s} px), thickness ${o.t}, chevron radius capped (<= 9)`, o.bars.length === 4 && o.rad.length > 0 && Math.max(...o.rad) <= 9.001 && o.L === 6 / 16 * s, JSON.stringify(o));
+  }
+  const c1 = await lay([['BPO_Station_01', 40, 40, 0]], 100), c2 = await lay([['BPO_Station_01', 40, 40, 0]], 200);
+  chk('28 chevron radius identical at s=100 and s=200 (capped), bar length doubles', JSON.stringify(c1.rad) === JSON.stringify(c2.rad) && Math.abs(c2.L - 2 * c1.L) < 1e-9, JSON.stringify([c1.rad, c2.rad, c1.L, c2.L]));
+  const lowDoor = await lay([['BPO_Station_01', 40, 40, 0]], 30), lowPort = await lay([['BPO_MiningDroneBayBlock', 40, 40, 0]], 30);
+  chk('28 door marks hidden below s 44 (Station 1x1 at s=30), port marks still shown (drone bay)', lowDoor.bars.length === 0 && lowPort.bars.length === 1, JSON.stringify([lowDoor.bars, lowPort.bars]));
   // view sync: switching Layout <-> Factory floor keeps the centre world point and the on-screen size of a block cell (1 block cell = FC floor cells)
   const sync = await pg.evaluate(() => {
     __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [], DefaultMachines: []}));

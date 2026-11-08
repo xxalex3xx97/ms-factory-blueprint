@@ -21,21 +21,22 @@ function nfRect(b){const d=def(b.cls);if(!d||!d.nofloor||!SHAPES[d.name])return 
 const NFQ=1;
 function shapeTf(b){const fl=floorRect(b),r=fl||nfRect(b),d=def(b.cls),sh=r&&d&&SHAPES[d.name];if(!sh)return null;
   const f0=(u,v)=>{let x=u,y=v,W=b.rot&1?r.h:r.w,H=b.rot&1?r.w:r.h;for(let i=0;i<(b.rot&3);i++){[x,y]=[H-y,x];[W,H]=[H,W]}return[r.x+x,r.y+y]};   // unrotated shape-frame size: rot 1/3 swap the rotated floor's w/h
-  if(fl)return{sh,f:f0};
-  if(!(sh.entrance&&sh.entrance.kind==="ports"&&sh.ports.length))return{sh,f:f0};   // no ports (solar, turret, armour): exact tile placement, no shift
+  if(fl)return{sh,f:f0,f0};
+  if(!(sh.entrance&&sh.entrance.kind==="ports"&&sh.ports.length))return{sh,f:f0,f0};   // no ports (solar, turret, armour): exact tile placement, no shift
   let dx=-NFQ,dy=-NFQ;
   {const P=sh.ports.map(p=>f0(p[1],p[2])),px=P.reduce((a,p)=>a+p[0],0)/P.length,py=P.reduce((a,p)=>a+p[1],0)/P.length,dist=[r.x+r.w-px,r.y+r.h-py,px-r.x,py-r.y],ed=dist.indexOf(Math.min(...dist));if(ed%2===0)dx=0;else dy=0}
-  return{sh,f:(u,v)=>{const[p,q]=f0(u,v);return[p+dx,q+dy]}}}
+  return{sh,f0,f:(u,v)=>{const[p,q]=f0(u,v);return[p+dx,q+dy]}}}   // f0 = unshifted (real tile frame), f = site floor model frame (Factory floor)
 // entrances (Layout marks + inspector): real door slots (same geometry as areas(): per cell along each open side of the floor cell box, none on the dock's ship side)
 // or, for a no-floor shaped block whose SHAPES entry says entrance.kind==="ports", the side of its output ports. Points in cell units on the footprint edge; ed = world edge 0..3 (E,S,W,N)
-function entrances(b){
+// real=true (Layout): TRUE block-frame positions (door slot +NFQ along the edge = middle of a station tile edge; ports unshifted); default = site floor model positions
+function entrances(b,real){
   const d=def(b.cls),sh=d&&SHAPES[d.name],o=[];if(!d)return o;
-  if(floorRect(b)&&dv(b)){const fo=fcell(b),al=(DOFF+DOORW/2)/FC;
+  if(floorRect(b)&&dv(b)){const fo=fcell(b),al=(DOFF+DOORW/2+(real?NFQ:0))/FC;
     for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot||!sideOpen(b,ed))continue;const n=ed%2===0?fo.ch:fo.cw;
       for(let k=0;k<n;k++)o.push({ed,x:ed===0?fo.cx+fo.cw:ed===2?fo.cx:fo.cx+k+al,y:ed===1?fo.cy+fo.ch:ed===3?fo.cy:fo.cy+k+al,port:false})}
     return o}
   const t=sh&&sh.entrance&&sh.entrance.kind==="ports"&&sh.ports.length&&shapeTf(b),r=t&&(floorRect(b)||nfRect(b));if(!t)return o;
-  const P=sh.ports.map(p=>t.f(p[1],p[2])),px=P.reduce((a,p)=>a+p[0],0)/P.length,py=P.reduce((a,p)=>a+p[1],0)/P.length,
+  const P=sh.ports.map(p=>(real?t.f0:t.f)(p[1],p[2])),px=P.reduce((a,p)=>a+p[0],0)/P.length,py=P.reduce((a,p)=>a+p[1],0)/P.length,
     dist=[r.x+r.w-px,r.y+r.h-py,px-r.x,py-r.y],ed=dist.indexOf(Math.min(...dist));
   o.push({ed,x:(ed===0?r.x+r.w:ed===2?r.x:px)/FC,y:(ed===1?r.y+r.h:ed===3?r.y:py)/FC,port:true});return o}
 const entText=b=>{const e=entrances(b);return e.length?{kind:e[0].port?"Outputs":"Entrances",sides:[...new Set(e.map(q=>EN[q.ed]))].sort((a,c)=>EN.indexOf(a)-EN.indexOf(c))}:null};

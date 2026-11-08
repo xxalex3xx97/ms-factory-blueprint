@@ -158,8 +158,8 @@ function arrow(x,y,w,h,rot,alpha){
 // entrance marks (Layout, model.js entrances()): door slot = light bar on the edge + white chevron pointing INTO the block; ports side (no doors) = mint bar + chevron pointing out to the ports. Rotates with the block
 const ENT_DOOR_S=44;
 function entMark(b,x,y,alpha,s,w,h){
-  if(alpha<.5||s<5)return;const E=entrances(b);if(!E.length)return;   // marks grow with zoom only up to a cap (size constant for s >= ~75), door marks (many on stations) only when a cell is >= ENT_DOOR_S px
-  const t=Math.min(3,Math.max(2,s*.08)),r=Math.min(9,Math.max(3,s*.12)),L=Math.min(12,Math.max(5,DOORW/FC*s)),lh=s>=18?Math.min(12,Math.max(9,s/3))+6:0;
+  if(alpha<.5||s<5)return;const E=entrances(b,true);if(!E.length)return;   // bar = full door slot length (scales with zoom); only the chevron is capped (r <= 9); door marks (many on stations) only when a cell is >= ENT_DOOR_S px
+  const t=Math.max(2,Math.min(5,s*.12)),r=Math.min(9,Math.max(3,s*.12)),L=Math.max(5,DOORW/FC*s),lh=s>=18?Math.min(12,Math.max(9,s/3))+6:0;
   E.forEach(e=>{if(!e.port&&s<ENT_DOOR_S)return;const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,bw=hz?L:t,bh=hz?t:L,
     bx=D[0]>0?ex-t:D[0]<0?ex:ex-L/2,by=D[1]>0?ey-t:D[1]<0?ey:ey-L/2,sg=e.port?1:-1,   // door: chevron looks inward, port: outward
     dd=r+t+(D[1]<0?lh:0),cx0=ex-D[0]*dd,cy0=ey-D[1]*dd;
