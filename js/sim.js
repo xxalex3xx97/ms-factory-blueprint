@@ -4,7 +4,7 @@ const SIM_NOTES="Approximate, informational. Fixed 1 s steps. Containers start f
   "Belts have no buffer: items move instantly, limited per step by the slowest belt of the connected chain (items/min). Machines keep an input and an output buffer of 2 cycles, run a cycle only when all inputs are present and the output buffer has room, and are blocked when the output cannot be delivered. Recipes without inputs never run. "+
   "Items flow downstream only: producer to machines that need them, then containers, then through splitters/balancers. Splitter = round-robin over ENABLED output ports, skipping an output that is full or saturated so the rest takes more. Balancer = items from all enabled inputs evened across all enabled outputs. "+
   "Merge (T-join) = producers sharing a belt alternate each step. Undergrounds pass items unchanged. Splitter/balancer throughput is capped by its Mk speed (60/120/180 per min). Corners are plain belts. "+
-  "Elevators: a belt INTO an elevator port (belt leaving = output, as for machines) sends items to the SAME-numbered port of the elevator at the same x,y on the level above or below, when a belt leaves that port; no such belt = input blocked. Items move at belt speed, no elevator speed limit. "+
+  "Elevator ports sit on the lateral edges of the door slots. A belt pointing ALONG the wall INTO the port edge is an input; any other belt beside the port (pointing away, or sideways) is an output, as for machines. An input sends items to the SAME-numbered port of the elevator at the same x,y on the level above or below, when an output belt is attached to that port; no such belt = input blocked. A splitter whose output face touches an elevator port edge is an input of that port; a splitter input (back) face touching it takes the elevator output. Items move at belt speed, no elevator speed limit. "+
   "DEFAULT (not specified by the user): with both neighbours valid, items alternate round-robin between them, skipping a full destination. The whole factory runs on all levels in one simulation.";
 let SIM=null;
 const simSig=()=>JSON.stringify(S.blocks);
@@ -35,10 +35,10 @@ function simInit(o={}){
   });
   const add=(mp,k,v)=>{if(!mp.has(k))mp.set(k,[]);const l=mp.get(k);if(!l.includes(v))l.push(v)};
   const elvO=new Map();   // elevator output ports (belt leaving the port) keyed x,y,h,port
-  K.ports.forEach(e=>{const m=e.m,p=e.port,d=DIR[e.b.rot],c=K.chain(e.b.id),into=d[0]===-p.nx&&d[1]===-p.ny,away=d[0]===p.nx&&d[1]===p.ny;
+  K.ports.forEach(e=>{const m=e.m,p=e.port,d=DIR[e.b.rot],c=K.chain(e.b.id),elv=(def(m.cls)||{}).elevator,into=elv?d[0]===p.io[0]&&d[1]===p.io[1]:d[0]===-p.nx&&d[1]===-p.ny,away=d[0]===p.nx&&d[1]===p.ny;
     const cn=Z.C.get(m.id);
     if(cn){if(!into)Z.pull.push({cn,belt:e.b,c});else add(Z.cS,c,{m,belt:e.b});return}/* belt beside a container port not pointing into it (away or sideways bend) = pulls from it */
-    if((def(m.cls)||{}).elevator){const k=[m.x,m.y,m.h,p.key].join();   // elevator port: belt into it = input router, else output (same rule as machines)
+    if(elv){const k=[m.x,m.y,m.h,p.key].join();   // elevator port: belt pointing at the port edge (p.io) = input router; any other belt beside it = output (same as machine outputs)
       if(into){let r=Z.E.get(k);if(!r){r={id:"e"+k,x:m.x,y:m.y,h:m.h,pk:p.key,ins:[],outs:[],rr:0};Z.E.set(k,r);Z.rate.set(r.id,Infinity)}r.ins.push({belt:e.b,c});add(Z.rI,c,r)}
       else elvO.set(k,{belt:e.b,c});
       return}

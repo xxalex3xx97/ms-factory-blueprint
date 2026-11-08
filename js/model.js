@@ -90,9 +90,10 @@ function portsOf(b){
     const f=q.face,fi=FN.indexOf(f);if(fi<0)return;
     const len=fi&1?H:W,ET=DOFF-((d&&d.floorInset)||0),c=q.pos==='start'?ET:q.pos==='end'?ET+DOORW-1:Math.max(0,Math.min(len-1,(parseInt(q.pos,10)||1)-1));   // door slot ends (elevator)
     let x=fi===1?W-1:fi===3?0:c,y=fi===2?H-1:fi===0?0:c,w=W,h=H,nx=NRM[fi][0],ny=NRM[fi][1];
-    for(let r=0;r<(b.rot&3);r++){[x,y]=[h-1-y,x];[w,h]=[h,w];[nx,ny]=[-ny,nx]}
+    let ix=0,iy=0;const is=q.pos==='start'?-1:1;if(fi&1)iy=is;else ix=is;   // elevator io: unit step of a belt entering the port along the wall (N/S: start -1,0 end 1,0; E/W: start 0,-1 end 0,1)
+    for(let r=0;r<(b.rot&3);r++){[x,y]=[h-1-y,x];[w,h]=[h,w];[nx,ny]=[-ny,nx];[ix,iy]=[-iy,ix]}
     // splitter input (back) face is not a game port: never toggleable, always enabled
-    const key=f+i,tg=!!L.toggleable&&!(q.dir==="in"&&isSplitterCls(b.cls));o.push({key,f,i,pos:q.pos,dir:q.dir||null,tg,en:!tg||!off.includes(key),wf:(fi+(b.rot&3))%4,x:ox+x,y:oy+y,nx,ny,line:!!L.line});
+    const key=f+i,tg=!!L.toggleable&&!(q.dir==="in"&&isSplitterCls(b.cls));o.push({key,f,i,pos:q.pos,dir:q.dir||null,tg,en:!tg||!off.includes(key),wf:(fi+(b.rot&3))%4,x:ox+x,y:oy+y,nx,ny,line:!!L.line,io:d&&d.elevator?[ix,iy]:null});
   });
   return o;
 }
@@ -144,9 +145,15 @@ function links(L){
   const ms=S.blocks.filter(b=>b.h===L&&isM(b)),belts=ms.filter(isBelt),occ=new Map();
   ms.forEach(b=>{const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)occ.set((b.x+i)+","+(b.y+j),b)});
   // 0) splitter/balancer OUTPUT port touching another machine's matching enabled port directly (no belt between): synthetic 1-cell belt (negative id, never in S.blocks) so sim + estimate treat it as a belt
-  const vb=[];
+  const vb=[],elvP=S.blocks.filter(b=>b.h===L&&!isM(b)&&def(b.cls)&&def(b.cls).elevator).flatMap(e=>portsOf(e).filter(q=>q.en).map(q=>({t:e,q})));   // elevator ports are not in occ: matched here
+  const vr=v=>DIR.findIndex(d=>d[0]===v[0]&&d[1]===v[1]);
   ms.forEach(sp=>{const c=(def(sp.cls)||{}).category;if(c!=="Splitters"&&c!=="Balancers")return;
-    portsOf(sp).forEach(p=>{if(!p.en||p.dir==="in")return;const tx=p.x+p.nx,ty=p.y+p.ny,t=occ.get(tx+","+ty);if(!t||t===sp||isBelt(t))return;
+    portsOf(sp).forEach(p=>{if(!p.en)return;const tx=p.x+p.nx,ty=p.y+p.ny,t=occ.get(tx+","+ty);
+      if(!t){   // splitter face on an elevator port edge: output face pushes along the wall (elevator io = input); input (back) face takes the elevator output (flow = its own into direction, not io)
+        elvP.forEach(({t:e,q})=>{if(q.x!==tx||q.y!==ty||q.nx!==-p.nx||q.ny!==-p.ny)return;
+          const rot=p.dir==="in"?vr([-p.nx,-p.ny]):vr(q.io);
+          vb.push({v:{id:-(sp.id*4+p.i+1),cls:"__v",x:tx,y:ty,h:L,rot},sp,p,t:e,q})});return}
+      if(p.dir==="in"||t===sp||isBelt(t))return;
       const q=portsOf(t).find(q=>q.en&&q.dir!=="out"&&q.x===tx&&q.y===ty&&q.nx===-p.nx&&q.ny===-p.ny);if(!q)return;
       vb.push({v:{id:-(sp.id*4+p.i+1),cls:"__v",x:tx,y:ty,h:L,rot:DIR.findIndex(d=>d[0]===p.nx&&d[1]===p.ny)},sp,p,t,q})})});
   vb.forEach(e=>belts.push(e.v));
