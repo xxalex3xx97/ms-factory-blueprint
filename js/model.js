@@ -2,6 +2,13 @@
 const DOORW=6,DOFF=4,EN=["E","S","W","N"];
 const dv=b=>{const d=def(b.cls);return !!(d&&d.door&&d.door.verified)};
 const sideOpen=(b,ed)=>{const s=((def(b.cls)||{}).door||{}).sides;return !s||s.some(c=>(EN.indexOf(c)+(b.rot&3))%4===ed)};   // door.sides (block frame, E/S/W/N) -> world side after rot; no sides key = all sides
+// door slots of floor block b on world side ed: [t0,t1] along that edge (same formula as areas()); none on the shipEnd side or on a closed side
+function slotIvs(b,ed){const r=floorRect(b);if(!r||SHIPEND(b)&&ed===b.rot||!sideOpen(b,ed))return[];const d=def(b.cls),QI=d.floorInset||0,fo=fcell(b),v=ed%2===0,n=v?fo.ch:fo.cw,fl=d.door&&d.door.flush;
+  return Array.from({length:n},(_,k)=>{const t0=(v?r.y:r.x)+FC*k+(fl?0:DOFF)-QI;return[t0,t0+DOORW]})}
+// door passage between b and the floor block nb on b's world side ed: opens only where BOTH blocks have a door over the same slot (else the wall stays)
+function passage(b,nb,ed){const o=slotIvs(nb,(ed+2)%4);return slotIvs(b,ed).some(([a,c])=>o.some(([p,q])=>a<q&&p<c))}
+// floor block covering cell (x,y) on level L (cell units), or undefined
+function floorAt(L,x,y){return S.blocks.find(o=>{if(o.h!==L||isM(o)||!floorRect(o))return false;const c=fcell(o);return x>=c.cx&&x<c.cx+c.cw&&y>=c.cy&&y<c.cy+c.ch})}
 // floor cell box of a block (cell units): shipEnd = the end opposite the ship direction (rot); else the whole footprint
 function fcell(b){const o=dim(b);if(!SHIPEND(b))return{cx:b.x,cy:b.y,cw:o.w,ch:o.h};const D=DIR[b.rot&3];return{cx:b.x+(D[0]<0?o.w-1:0),cy:b.y+(D[1]<0?o.h-1:0),cw:D[0]?1:o.w,ch:D[1]?1:o.h}}
 function floorRect(b){
@@ -36,6 +43,7 @@ function entrances(b){
   if(floorRect(b)&&dv(b)){const fo=fcell(b),r=floorRect(b),QI=d.floorInset||0,fl=d.door&&d.door.flush;
     for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot||!sideOpen(b,ed))continue;const v=ed%2===0,n=v?fo.ch:fo.cw;
       for(let k=0;k<n;k++){const c=((v?r.y:r.x)+FC*k+(fl?0:DOFF)-QI+DOORW/2)/FC;   // door slot centre along the edge (cell units), same slot as areas()
+        const nb=floorAt(b.h,ed===0?fo.cx+fo.cw:ed===2?fo.cx-1:fo.cx+k,ed===1?fo.cy+fo.ch:ed===3?fo.cy-1:fo.cy+k);if(nb&&nb!==b&&!passage(b,nb,ed))continue;   // no matching door on the neighbour: a wall, no mark
         o.push({ed,x:ed===0?fo.cx+fo.cw:ed===2?fo.cx:c,y:ed===1?fo.cy+fo.ch:ed===3?fo.cy:c,port:false})}}
     return o}
   const t=sh&&sh.entrance&&sh.entrance.kind==="ports"&&sh.ports.length&&shapeTf(b),r=t&&(floorRect(b)||nfRect(b));if(!t)return o;
@@ -61,11 +69,13 @@ function areas(L){
       const v=ed%2===0,n=v?fo.ch:fo.cw;
       for(let k=0;k<n;k++){
         const t0=(v?r.y:r.x)+FC*k+(((def(b.cls)||{}).door||{}).flush?0:DOFF)-QI,ex=ed===0?r.x+r.w+QI:ed===2?r.x-QI-DW:t0,ey=ed===1?r.y+r.h+QI:ed===3?r.y-QI-DW:t0;
-        r.cuts[ed].push([t0,t0+DOORW]);
         const nf=own.get((ed===0?fo.cx+fo.cw:ed===2?fo.cx-1:fo.cx+k)+","+(ed===1?fo.cy+fo.ch:ed===3?fo.cy-1:fo.cy+k));
-        if(nf&&nf!==f)r.wcuts[ed].push([t0,t0+DOORW]);   // passage between two real blocks: both walls open here
-        if(nf&&nf!==f&&ed>1)continue;   // the E/S side owns the shared door (gap strip + door)
-        const p=nf&&nf!==f,sp=DW;   // door = the 2-cell passage between the two walls only
+        const p=!!nf&&nf!==f&&passage(b,nf.b,ed);   // real neighbour: door passage only if it has a door over this slot too
+        if(nf&&nf!==f&&!p)continue;   // neighbour with no matching door (corridor long side, corner/dock open side): the wall stays, no ring, no door
+        r.cuts[ed].push([t0,t0+DOORW]);
+        if(p)r.wcuts[ed].push([t0,t0+DOORW]);   // passage between two real blocks: both walls open here
+        if(p&&ed>1)continue;   // the E/S side owns the shared door (gap strip + door)
+        const sp=DW;   // door = the 2-cell passage between the two walls only
         if(p)gaps.push(v?{x:ex,y:r.y+FC*k,w:sp,h:FC}:{x:r.x+FC*k,y:ey,w:FC,h:sp});
         const key=`${L}|${fo.cx}|${fo.cy}|${EN[ed]}|${k}`;   // anchor = floor cell box (fcell): dock rot 2/3 floor is offset from the footprint anchor
         doors.push({key,open:!S.closed.includes(key),paired:!!p,ver:dv(b)&&(!p||dv(nf.b)),ed,bx:fo.cx,by:fo.cy,k,x:ex,y:ey,w:v?sp:DOORW,h:v?DOORW:sp,

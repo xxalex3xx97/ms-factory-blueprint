@@ -2736,6 +2736,74 @@ async function s30(br) {
   await ctx.close();
 }
 
+// ================= 32 door passage needs a matching door on both blocks (corridor long side = wall); underground link hidden below the arrow zoom
+async function s32(br) {
+  const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's32');
+  const r = await pg.evaluate(() => {
+    const K = n => CATALOG.blocks.find(b => b.name === n).class;
+    const C = K('BPO_StationCorridor_01'), ST = K('BPO_Station_02A'), S1 = K('BPO_Station_01');
+    const place = (...bl) => { S.blocks = bl.map((b, i) => ({id: 9100 + i, cls: b.c, x: b.x, y: b.y, h: 0, rot: b.r || 0, pid: 0})); };
+    const R0 = () => areas(0).rects;
+    // empty strip between two floors (walls included): the gap on the side where B faces A
+    const gapOf = (A, B) => {
+      const ox0 = Math.max(A.x, B.x), ox1 = Math.min(A.x + A.w, B.x + B.w), oy0 = Math.max(A.y, B.y), oy1 = Math.min(A.y + A.h, B.y + B.h);
+      if (ox1 > ox0 && B.y >= A.y + A.h) return {x: ox0, y: A.y + A.h, w: ox1 - ox0, h: B.y - (A.y + A.h)};
+      if (ox1 > ox0 && B.y + B.h <= A.y) return {x: ox0, y: B.y + B.h, w: ox1 - ox0, h: A.y - (B.y + B.h)};
+      if (oy1 > oy0 && B.x >= A.x + A.w) return {x: A.x + A.w, y: oy0, w: B.x - (A.x + A.w), h: oy1 - oy0};
+      if (oy1 > oy0 && B.x + B.w <= A.x) return {x: B.x + B.w, y: oy0, w: A.x - (B.x + B.w), h: oy1 - oy0};
+      return null;
+    };
+    const out = {side: [], end: [], matched: null};
+    for (let rot = 0; rot < 4; rot++) {
+      const even = rot % 2 === 0;
+      // long sides: rot 0/2 = N and S, rot 1/3 = E and W; open ends are the other two
+      for (const [x, y] of even ? [[4, 5], [4, 2]] : [[5, 4], [2, 4]]) {
+        place({c: C, x: 4, y: 4, r: rot}, {c: ST, x, y});
+        const A = floorRect(S.blocks[0]), B = floorRect(S.blocks[1]), R = R0(), g = gapOf(A, B);
+        let cells = 0, hit = 0;
+        if (g) {
+          hit = R.filter(q => q.x < g.x + g.w && q.x + q.w > g.x && q.y < g.y + g.h && q.y + q.h > g.y).length;
+          for (let i = g.x; i < g.x + g.w; i++) for (let j = g.y; j < g.y + g.h; j++) if (onArea(i, j, 1, 1, R)) cells++;
+        }
+        out.side.push({rot, at: [x, y], gap: g, hit, cells});
+      }
+      // open ends: station on the end, the cell just outside the corridor floor end must be buildable (door passage open)
+      for (const [x, y, d] of even ? [[5, 4, 'E'], [2, 4, 'W']] : [[4, 2, 'N'], [4, 5, 'S']]) {
+        place({c: C, x: 4, y: 4, r: rot}, {c: ST, x, y});
+        const A = floorRect(S.blocks[0]), R = R0();
+        const cell = {E: [A.x + A.w, A.y + A.h / 2], W: [A.x - 1, A.y + A.h / 2], N: [A.x + A.w / 2, A.y - 1], S: [A.x + A.w / 2, A.y + A.h]}[d];
+        out.end.push({rot, d, open: onArea(cell[0], cell[1], 1, 1, R)});
+      }
+    }
+    // regression: Station 1x1 next to Station 1x1 (both doors face each other): passage still open
+    place({c: S1, x: 4, y: 4, r: 0}, {c: S1, x: 5, y: 4, r: 0});
+    const R1 = R0();
+    out.matched = [onArea(79, 72, 1, 1, R1), onArea(80, 72, 1, 1, R1)];
+    return out;
+  });
+  for (const rot of [0, 1, 2, 3]) {
+    const cs = r.side.filter(c => c.rot === rot);
+    chk(`32 corridor side-on to Station 2x2 A (rot ${rot}, both long sides): no passage rect and no buildable cell in the strip between the walls`, cs.length === 2 && cs.every(c => c.gap && c.hit === 0 && c.cells === 0), JSON.stringify(cs));
+    const es = r.end.filter(c => c.rot === rot);
+    chk(`32 corridor end-on to Station 2x2 A (rot ${rot}, both open ends): passage opens (cell outside the end buildable)`, es.length === 2 && es.every(c => c.open), JSON.stringify(es));
+  }
+  chk('32 regression: Station 1x1 next to Station 1x1 (matching doors): passage cells buildable', r.matched.every(Boolean), JSON.stringify(r.matched));
+  // underground link: hidden when zoomed out, shown at the belt arrow zoom (same ARROW_MIN_S)
+  await reset(pg);
+  await imp(pg, bp([], [mac('DAT_UndergroundBelt', 0, 0, {mid: 1}), mac('DAT_UndergroundBelt', 4, 0, {mid: 2})]));
+  const ug = await pg.evaluate(() => {
+    __fb.setView('F');
+    const orig = window.ugLine, calls = {n: 0};
+    window.ugLine = (...a) => { calls.n++; return orig(...a) };
+    const at = px => { V.z = px / CELLS[view]; calls.n = 0; __fb.paint(); return calls.n };
+    const out = {pairs: ugPairs(S.blocks.filter(b => isM(b) && b.h === layer)).length, low: at(4), high: at(ARROW_MIN_S), edge: at(ARROW_MIN_S - .5)};
+    window.ugLine = orig;
+    return out;
+  });
+  chk('32 underground link: drawn at the belt arrow zoom, hidden below it (same threshold)', ug.pairs === 1 && ug.low === 0 && ug.edge === 0 && ug.high === 1, JSON.stringify(ug));
+  await ctx.close();
+}
+
 // ================= 29 icons (HD), Command Module door, Blueprint Unit round trip, shipyard sizes + doors, screenshots
 async function s29(br) {
   const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's29');
@@ -3227,6 +3295,7 @@ try {
   try { console.log('--- 28 data-driven shapes'); await s28(br); } catch (e) { chk('28 shapes: section ran', false, e.stack || String(e)); }
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }
   try { console.log('--- 31 ground floors centred'); await s31(br); } catch (e) { chk('31 section ran', false, e.stack || String(e)); }
+  try { console.log('--- 32 door passage rule, underground link zoom'); await s32(br); } catch (e) { chk('32 section ran', false, e.stack || String(e)); }
   try { console.log('--- 29 icons, Command Module, Blueprint Unit, shipyards'); await s29(br); } catch (e) { chk('29 section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
     try { console.log(`--- viewport ${vp.width}x${vp.height}`); await viewport(br, vp); }
