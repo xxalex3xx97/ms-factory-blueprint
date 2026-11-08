@@ -162,7 +162,7 @@ async function s2(pg, C) {
     if (id === 'DAT_Container') continue;   // truth file holds old 4-port guess; REA says 8, checked above
     const got = P(id).map(p => `${p.f}${p.pos}${p.dir ? ':' + p.dir : ''}`).sort();
     const exp = g.ports.map(q => `${q[0]}${q[1]}${q[2] ? ':' + q[2] : ''}`).sort();
-    const tgOk = P(id).length === 0 || P(id).every(p => p.tg === !!g.t);
+    const tgOk = P(id).length === 0 || P(id).every(p => p.tg === (!!g.t && !(/^DAT_Splitter(_\d+)?$/.test(id) && p.dir === 'in')));   // splitter back (input) face is never toggleable
     chk(`ports ${id} match ground_truth.json (${exp.length}, toggleable=${g.t})`,
       JSON.stringify(got) === JSON.stringify(exp) && tgOk,
       `page [${got.join(' ')}] truth [${exp.join(' ')}] toggleable page=${P(id)[0]?.tg} truth=${g.t}`);
