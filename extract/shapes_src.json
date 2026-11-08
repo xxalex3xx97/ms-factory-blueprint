@@ -787,8 +787,6 @@
       "w": 1,
       "h": 1,
       "verified": true,
-      "floorCenter": true,
-      "floorShift": -1,
       "drop": [0, 1],
       "wallsOverride": [[-8, -4, 8, -3], [-8, 3, 8, 4]],
       "source": "decoded BPO_StationCorridor_01 (floors.json colliders): two solid slabs y -7..-3 and 3..7, x -8..8; walkable strip y -3..3 = 6 wide x 16 long, open at both x ends (E/W), centred in the 16x16 tile. Walls: user 2026-11-08 'walls THIN, 1 square': the slabs are replaced by 1-unit walls on the outer edges of the strip (y -4..-3, 3..4), strip stays 6 wide",
@@ -926,9 +924,10 @@
       "verified": true,
       "source": "decoded BPO_XenoSciLab MachineDimensions X=5 Y=5 (CUE4Parse json; DAT_ asset has no size)",
       "evidence": "calibrated vs Assembler 5x5, Refinery 3x3, EnrichmentChamber 9x9, Armoury 4x4 (same MachineDimensions key)"
+    },
+    "DAT_TradeConsole": {
+      "hidden": true,
+      "source": "user 2026-11-08: player cannot place it; hidden from the palette only, import/export mapping as on main"
     }
-  },
-  "removeBuildables": [
-    "DAT_TradeConsole"
-  ]
+  }
 }

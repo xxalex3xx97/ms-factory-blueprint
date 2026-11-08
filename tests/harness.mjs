@@ -227,8 +227,8 @@ async function s4(pg, C) {
       blocked: a.blocked.map(e => ({x: e.x, y: e.y, w: e.w, h: e.h})),
     };
   });
-  const alongOK = d => { const v = d.ed % 2 === 0; const s = v ? d.y : d.x, e = v ? d.y + d.h : d.x + d.w; return s === 4 && e === 10; };
-  const outOK = d => ({0: d.x === 14, 1: d.y === 14, 2: d.x === -2, 3: d.y === -2})[d.ed];
+  const alongOK = d => { const v = d.ed % 2 === 0; const s = v ? d.y : d.x, e = v ? d.y + d.h : d.x + d.w; return s === 5 && e === 11; };   // floor 1..15 (centred), door slot 4 from floor edge = 5..11
+  const outOK = d => ({0: d.x === 15, 1: d.y === 15, 2: d.x === -1, 3: d.y === -1})[d.ed];
 
   // single 1x1 station at (0,0)
   await reset(pg);
@@ -248,12 +248,12 @@ async function s4(pg, C) {
   const paired = A.doors.filter(d => d.paired);
   chk('two adjacent 1x1: 2 floors', A.floors.length === 2);
   chk('two adjacent 1x1: exactly one shared doorway (one paired door)', paired.length === 1, `paired ${paired.length}`);
-  chk('two adjacent 1x1: shared strip is 2 wide x 6 long at x=14,y=4', A.rects.some(r => r.x === 14 && r.y === 4 && r.w === 2 && r.h === 6), JSON.stringify(A.rects));
+  chk('two adjacent 1x1: shared strip is 2 wide x 6 long at x=15,y=5', A.rects.some(r => r.x === 15 && r.y === 5 && r.w === 2 && r.h === 6), JSON.stringify(A.rects));
   // doors are not interactive: clicking one changes nothing
   await pg.evaluate(() => __fb.setView('F'));
   const dr = paired[0];
   await pg.evaluate(([x, y]) => __fb.click(x, y), [dr.x, dr.y]);
-  chk('click on a door does not close it', (await pg.evaluate(() => __fb.S.closed.length)) === 0 && (await areas()).rects.some(r => r.x === 14 && r.y === 4 && r.w === 2 && r.h === 6));
+  chk('click on a door does not close it', (await pg.evaluate(() => __fb.S.closed.length)) === 0 && (await areas()).rects.some(r => r.x === 15 && r.y === 5 && r.w === 2 && r.h === 6));
 
   // strict placement: on floor ok, across the wall / outside refused, overlap refused, switch off allows outside
   const nb = (x, y, w, h, id = 999) => pg.evaluate(a => noBuild([{id: a[4], x: a[0], y: a[1], w: a[2], h: a[3], l: layer}]), [x, y, w, h, id]);
@@ -268,32 +268,32 @@ async function s4(pg, C) {
   A = await areas();
   chk('2x1 station: 30x14 floor (14x30 along block long axis)', A.floors.length === 1 && A.floors[0].w === 30 && A.floors[0].h === 14, JSON.stringify(A.floors));
   chk('2x1 station: 2 doors, both on the short ends (E,W), centred in the 14-cell end, none on the long sides',
-    A.doors.length === 2 && A.doors.every(d => d.ed % 2 === 0 && d.y % 16 === 4), `doors ${JSON.stringify(A.doors.map(d => [d.ed, d.x, d.y]))}`);
+    A.doors.length === 2 && A.doors.every(d => d.ed % 2 === 0 && d.y % 16 === 5), `doors ${JSON.stringify(A.doors.map(d => [d.ed, d.x, d.y]))}`);
   await imp(pg, bp([blk('BPO_Station_2x1', 0, 0, {rot: 1})]));
   A = await areas();
-  chk('2x1 station rot 1: 2 doors on the N,S short ends (door.sides follow rot)', A.doors.length === 2 && A.doors.every(d => d.ed % 2 === 1 && d.x % 16 === 4), `doors ${JSON.stringify(A.doors.map(d => [d.ed, d.x, d.y]))}`);
+  chk('2x1 station rot 1: 2 doors on the N,S short ends (door.sides follow rot)', A.doors.length === 2 && A.doors.every(d => d.ed % 2 === 1 && d.x % 16 === 5), `doors ${JSON.stringify(A.doors.map(d => [d.ed, d.x, d.y]))}`);
 
   // 2x2 A: 30x30 floor, 2 doors per side
   await imp(pg, bp([blk('BPO_Station_02A', 0, 0)]));
   A = await areas();
   chk('2x2 A: 30x30 floor', A.floors.length === 1 && A.floors[0].w === 30 && A.floors[0].h === 30, JSON.stringify(A.floors));
   chk('2x2 A: 8 doors (2 per side), each 6x2 and centred per 14-cell segment',
-    A.doors.length === 8 && A.doors.every(d => Math.max(d.w, d.h) === 6 && (d.ed % 2 === 0 ? d.y : d.x) % 16 === 4), `doors ${A.doors.length}`);
+    A.doors.length === 8 && A.doors.every(d => Math.max(d.w, d.h) === 6 && (d.ed % 2 === 0 ? d.y : d.x) % 16 === 5), `doors ${A.doors.length}`);
 
   // elevator block: blocked centre 4x4 at (5,5) on the 14x14 floor; machines refused there
   await imp(pg, bp([blk('BPO_ElevatorBlock_03', 0, 0)]));
   A = await areas();
-  chk('elevator block: blocked centre 4x4 at (5,5)', A.blocked.length === 1 && A.blocked[0].x === 5 && A.blocked[0].y === 5 && A.blocked[0].w === 4 && A.blocked[0].h === 4, JSON.stringify(A.blocked));
+  chk('elevator block: blocked centre 4x4 at (6,6)', A.blocked.length === 1 && A.blocked[0].x === 6 && A.blocked[0].y === 6 && A.blocked[0].w === 4 && A.blocked[0].h === 4, JSON.stringify(A.blocked));
   await pg.evaluate(() => __fb.setView('F'));
   await pg.click('#palList .item[data-cls="DAT_ConveyorBelt"]');
   await pg.evaluate(() => __fb.click(6, 6));
   const toast = await pg.locator('#toast').textContent();
   chk('placing a machine on the elevator centre is refused with warning', toast.includes('Cannot build here') && (await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls.startsWith("DAT_")).length)) === 0, `toast "${toast}"`);
-  await pg.evaluate(() => __fb.click(1, 1));
+  await pg.evaluate(() => __fb.click(2, 2));
   chk('placing next to the elevator centre (inside block floor) is allowed', (await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls.startsWith("DAT_")).length)) === 1);
-  // elevator ring (x=13, y 4..10 = open door slot E) buildable; unpaired open door strip (x=14) buildable; shaft cell refused
-  const ringOK = await nb(13, 5, 1, 1);
-  const doorOK = await nb(14, 5, 1, 1);
+  // elevator ring (x=14, y 5..11 = open door slot E) buildable; unpaired open door strip (x=15) buildable; shaft cell refused
+  const ringOK = await nb(14, 5, 1, 1);
+  const doorOK = await nb(15, 5, 1, 1);
   const shaftOK = await nb(6, 6, 1, 1);
   chk('elevator ring cell inside open door slot: buildable', ringOK === false, `noBuild ${ringOK}`);
   chk('unpaired open door strip: buildable', doorOK === false, `noBuild ${doorOK}`);
@@ -2187,17 +2187,17 @@ async function s20(br) {
   const V = [blk('BPO_Station_01', 0, 0), blk('BPO_Station_01', 1, 0)], H = [blk('BPO_Station_01', 0, 0), blk('BPO_Station_01', 0, 1)];
   let r = await test(1, 0, 0, []);
   chk('20 SignWall rot1 dim is 6x2', r.dim.w === 6 && r.dim.h === 2, JSON.stringify(r));
-  r = await test(0, 14, 4, V);
+  r = await test(0, 15, 5, V);
   chk('20 SignWall rot0 on a vertical paired door gap: not outside (no warn)', r.dim.w === 2 && r.dim.h === 6 && !r.out, JSON.stringify(r));
-  r = await test(0, 14, 5, V);
+  r = await test(0, 15, 6, V);
   chk('20 SignWall shifted off the gap: outside (warn)', r.out, JSON.stringify(r));
-  r = await test(1, 4, 14, H);
+  r = await test(1, 5, 15, H);
   chk('20 SignWall rot1 on a horizontal paired door gap: not outside', r.dim.w === 6 && r.dim.h === 2 && !r.out, JSON.stringify(r));
-  r = await test(1, 5, 14, H);
+  r = await test(1, 6, 15, H);
   chk('20 SignWall rot1 shifted off the gap: outside', r.out, JSON.stringify(r));
-  await imp(pg, bp(V, [mac('DAT_SignWall', 14, 4, {rot: 1, mid: 1})]));
+  await imp(pg, bp(V, [mac('DAT_SignWall', 15, 5, {rot: 1, mid: 1})]));
   const rt = await pg.evaluate(() => { const t = __fb.build(); __fb.importJson(JSON.stringify(t)); const b = __fb.S.blocks.find(q => q.cls === 'DAT_SignWall'); return b && {rot: b.rot, x: b.x, y: b.y}; });
-  chk('20 SignWall export/import round trip keeps class, rotation and position', !!rt && rt.rot === 1 && rt.x === 14 && rt.y === 4, JSON.stringify(rt));
+  chk('20 SignWall export/import round trip keeps class, rotation and position', !!rt && rt.rot === 1 && rt.x === 15 && rt.y === 5, JSON.stringify(rt));
   await ctx.close();
 }
 
@@ -2625,6 +2625,37 @@ async function s27(br) {
   await ctx.close();
 }
 
+// ================= 31 ground floors centred in the tile: hull (walls) inside the 16x16 tile, floor centred (Station_01, Corner, Corridor, Elevator, Dock)
+async function s31(br) {
+  const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's31');
+  const g = await pg.evaluate(() => {
+    const K = n => '/Game/Blueprints/BuildingBlocks/BPO_' + n + '.BPO_' + n + '_C';
+    const out = {};
+    for (const n of ['Station_01', 'StationCorner_01', 'StationCorridor_01', 'ElevatorBlock_03']) out[n] = [0, 1, 2, 3].map(rot => {
+      const b = {cls: K(n), x: 0, y: 0, h: 0, rot}, f = floorRect(b), W = shapeRects(b, 'walls'), P = shapeRects(b, 'props');
+      const pr = polyRects(b);
+      const box = l => l.length ? [Math.min(...l.map(r => r.x)), Math.min(...l.map(r => r.y)), Math.max(...l.map(r => r.x + r.w)), Math.max(...l.map(r => r.y + r.h))] : null;
+      const all = [...W, ...P, ...(pr ? pr.ok.concat(pr.cut) : [])];
+      return {rot, floor: [f.x, f.y, f.w, f.h], centred: f.x === (16 - f.w) / 2 && f.y === (16 - f.h) / 2, wallBox: box(W), inTile: all.every(r => r.x >= 0 && r.y >= 0 && r.x + r.w <= 16 && r.y + r.h <= 16)};
+    });
+    // dock: floor centred in its station-side cell, hull inside its 3x2 footprint (48x32)
+    const D = K('Dock_2'), dk = [0, 1, 2, 3].map(rot => {
+      const b = {cls: D, x: 0, y: 0, h: 0, rot}, f = floorRect(b), W = shapeRects(b, 'walls');
+      const fw = rot & 1 ? 32 : 48, fh = rot & 1 ? 48 : 32;   // footprint 3x2 cells (48x32), rot 1/3 turned
+      return {rot, floor: [f.x, f.y, f.w, f.h], walls: W.length, inBox: W.every(r => r.x >= 0 && r.y >= 0 && r.x + r.w <= fw && r.y + r.h <= fh)};
+    });
+    out.dock = dk;
+    return out;
+  });
+  for (const n of ['Station_01', 'StationCorner_01', 'ElevatorBlock_03']) {
+    chk(`31 ${n}: floor centred in the tile (offset (16-w)/2), rot 0..3`, g[n].every(r => r.centred), JSON.stringify(g[n].map(r => r.floor)));
+    chk(`31 ${n}: walls, floor and polys inside [0,16) of the tile, rot 0..3`, g[n].every(r => r.inTile), JSON.stringify(g[n].map(r => r.wallBox)));
+    chk(`31 ${n}: wall ring spans the whole tile (0..16), rot 0..3`, g[n].every(r => r.wallBox && r.wallBox.join() === '0,0,16,16'), JSON.stringify(g[n].map(r => r.wallBox)));
+  }
+  chk('31 Corridor: strip centred in the tile (y 5..11 at rot 0, x 5..11 at rot 1), long axis 0..16, inside tile, rot 0..3', g.StationCorridor_01.every(r => r.centred && r.inTile), JSON.stringify(g.StationCorridor_01.map(r => r.floor)));
+  chk('31 Dock: floor starts at tile 1 (hall x -15 = tile 1), walls inside the 3x2 footprint, rot 0..3', g.dock.every(r => r.inBox && r.walls > 0) && g.dock[0].floor[0] === 1 && g.dock[0].floor[1] === 1, JSON.stringify(g.dock));
+}
+
 // ================= 30 Corner (polygon floor, cut no-build), Corridor (6x16 strip, flush doors), TradeConsole removed, Teleporter 4x4
 async function s30(br) {
   const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's30');
@@ -2634,7 +2665,7 @@ async function s30(br) {
     out.okCells = pc.ok.reduce((a, r) => a + (r[2] - r[0]) * (r[3] - r[1]), 0);
     out.cutCells = pc.cut.reduce((a, r) => a + (r[2] - r[0]) * (r[3] - r[1]), 0);
     S.blocks = [{id: 9001, cls: '/Game/Blueprints/BuildingBlocks/BPO_StationCorner_01.BPO_StationCorner_01_C', x: 0, y: 0, h: 0, rot: 0, pid: 0}];
-    out.rects151 = (() => { const R = areas(0).rects; let n = 0; for (let i = 0; i < 14; i++) for (let j = 0; j < 14; j++) if (onArea(i, j, 1, 1, R)) n++; return n })();
+    out.rects151 = (() => { const R = areas(0).rects; let n = 0; for (let i = 1; i < 15; i++) for (let j = 1; j < 15; j++) if (onArea(i, j, 1, 1, R)) n++; return n })();
     out.rot = [0, 1].map(rot => {
       S.blocks = [{id: 9001, cls: '/Game/Blueprints/BuildingBlocks/BPO_StationCorner_01.BPO_StationCorner_01_C', x: 0, y: 0, h: 0, rot, pid: 0}];
       const pr = polyRects({cls: '/Game/Blueprints/BuildingBlocks/BPO_StationCorner_01.BPO_StationCorner_01_C', x: 0, y: 0, h: 0, rot}), c = pr.cut[0], o = pr.ok[0];
@@ -2668,8 +2699,8 @@ async function s30(br) {
     out.fr1b = floorRect({cls: '/Game/Blueprints/BuildingBlocks/BPO_Station_01.BPO_Station_01_C', x: 1, y: 0, h: 0, rot: 0}).x;
     return out;
   });
-  chk('30 corridor: floor 16x6 at rot 0 (strip y 5..10 of the tile, long axis shifted -1 = one wall cell to a 1x1 station)', !!corr.fr0 && corr.fr0.w === 16 && corr.fr0.h === 6 && corr.fr0.y === 5 && corr.fr0.x === -1, JSON.stringify(corr.fr0));
-  chk('30 corridor: floor 6x16 at rot 1 (long axis shifted -1 on y)', !!corr.fr1 && corr.fr1.w === 6 && corr.fr1.h === 16 && corr.fr1.x === 5 && corr.fr1.y === -1, JSON.stringify(corr.fr1));
+  chk('30 corridor: floor 16x6 at rot 0 (strip y 5..11 of the tile, centred, long axis from x 0 to 16)', !!corr.fr0 && corr.fr0.w === 16 && corr.fr0.h === 6 && corr.fr0.y === 5 && corr.fr0.x === 0, JSON.stringify(corr.fr0));
+  chk('30 corridor: floor 6x16 at rot 1 (strip x 5..11, centred, long axis from y 0 to 16)', !!corr.fr1 && corr.fr1.w === 6 && corr.fr1.h === 16 && corr.fr1.x === 5 && corr.fr1.y === 0, JSON.stringify(corr.fr1));
   chk('30 corridor: 1x1 at strip centre ok; tile y 0 and y 11 refused', corr.centre === false && corr.top === true && corr.bottom === true, JSON.stringify([corr.centre, corr.top, corr.bottom]));
   chk('30 corridor: two open door marks (E and W = eds 0,2)', JSON.stringify(corr.doors) === '[0,2]', JSON.stringify(corr.doors));
   // neighbour spacing + thin walls, rot 0..3: a Corridor with a 1x1 Station_01 on each open end
@@ -2694,10 +2725,13 @@ async function s30(br) {
     const t = JSON.stringify({Version: 2, DisplayName: 'tc', Blocks: [], DefaultMachines: [{Class: 'BP_TradeConsoleObject', DefaultName: 'DAT_TradeConsole', MachineID: 7, PaletteID: 0, Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}}]});
     const ok = importJson(t, true), dm = S.dm.length, ex = JSON.stringify(build());
     const back = importJson(ex, true), ex2 = JSON.stringify(build());
-    return {ok, back, dm, has: ex.includes('DAT_TradeConsole'), same: ex === ex2, palette: CATALOG.buildables.some(b => b.id === 'DAT_TradeConsole'), def: !!def('DAT_TradeConsole'), tp: [def('DAT_Teleporter').w, def('DAT_Teleporter').h]};
+    return {ok, back, dm, has: ex.includes('DAT_TradeConsole'), same: ex === ex2, palette: CATALOG.buildables.some(b => b.id === 'DAT_TradeConsole'), def: !!def('DAT_TradeConsole'), hidden: def('DAT_TradeConsole').hidden, tp: [def('DAT_Teleporter').w, def('DAT_Teleporter').h]};
   });
-  chk('30 TradeConsole: removed from catalog buildables and def()', !tc.palette && !tc.def, JSON.stringify(tc));
-  chk('30 TradeConsole in a design: import kept as unmapped (S.dm), exported, re-imported without error', tc.ok && tc.back && tc.dm === 1 && tc.has && tc.same, JSON.stringify(tc));
+  chk('30 TradeConsole: kept in catalog buildables and def() with hidden flag (import/export as main)', tc.palette && tc.def && tc.hidden === true, JSON.stringify(tc));
+  chk('30 TradeConsole in a design: import maps to TradeConsole (not unmapped S.dm), exported as DAT_TradeConsole, re-import stable', tc.ok && tc.back && tc.dm === 0 && tc.has && tc.same, JSON.stringify(tc));
+  await pg.evaluate(() => { __fb.setView('F'); palette(); });
+  const pal = await pg.evaluate(() => { const q = document.getElementById('search'); q.value = 'trade'; q.dispatchEvent(new Event('input')); const n1 = document.querySelectorAll('#palList .item[data-cls="DAT_TradeConsole"]').length; q.value = ''; q.dispatchEvent(new Event('input')); const n2 = document.querySelectorAll('#palList .item[data-cls="DAT_TradeConsole"]').length; return {search: n1, all: n2} });
+  chk('30 TradeConsole: not in the palette (no item, search finds none)', pal.search === 0 && pal.all === 0, JSON.stringify(pal));
   chk('30 Teleporter 4x4', tc.tp[0] === 4 && tc.tp[1] === 4, JSON.stringify(tc.tp));
   await ctx.close();
 }
@@ -2745,7 +2779,7 @@ async function s29(br) {
     const out = {};
     for (const r of [0, 1, 2, 3]) {
       __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: `${P}BPO_ShipyardCore_02.BPO_ShipyardCore_02_C`, GridLocation: {X: -8, Y: -2}, Height: -4, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
-      const b = __fb.S.blocks[0], d = dim(b), e = entrances(b, true);
+      const b = __fb.S.blocks[0], d = dim(b), e = entrances(b);
       out['r' + r] = {dim: [d.w, d.h], raw: !!b.raw, marks: e.map(q => [q.ed, +(q.x - b.x).toFixed(2), +(q.y - b.y).toFixed(2)]), out: __fb.build().Blocks[0].GridLocation};   // relative to the block cell
     }
     return out;
@@ -2852,7 +2886,7 @@ async function s28(br) {
     __fb.setView('L'); __fb.fit(); __fb.paint();
     const b = __fb.S.blocks[0], s = sc(), k = devicePixelRatio, g = document.getElementById('cv').getContext('2d'), d = dim(b), x0 = V.ox + b.x * s, y0 = V.oy + b.y * s;
     const at = (px, py) => { const q = g.getImageData(Math.round(px * k), Math.round(py * k), 1, 1).data; return q[0] + q[1] + q[2] };
-    const E = entrances(b, true);
+    const E = entrances(b);
     return {eds: E.map(e => e.ed).sort(), ports: E.map(e => e.port), txt: entText(b), diff: E.map(e => { const D = DIR[e.ed], ex = V.ox + e.x * s, ey = V.oy + e.y * s,
       m = at(ex - D[0] * 1.5, ey - D[1] * 1.5), ref = D[0] ? at(ex - D[0] * 1.5, y0 + 3) : at(x0 + 3, ey - D[1] * 1.5); return Math.abs(m - ref) }), s};
   }, [`${P}${n}.${n}_C`, r]);
@@ -2926,7 +2960,7 @@ async function s28(br) {
       return {door: door && (v ? [door.y, door.y + door.h] : [door.x, door.x + door.w]), lo: v ? Math.min(y0, y1) : Math.min(x0, x1), hi: v ? Math.max(y0, y1) : Math.max(x0, x1), nrm: v ? [x0, x1] : [y0, y1], edge};
     }, [`${P}${n}.${n}_C`, `${P}${nb}.${nb}_C`, r]);
     const [lo, hi] = g.door || [0, 0], mid = (lo + hi) / 2;
-    chk(`28 ${n} rot ${r} next to ${nb.replace('BPO_', '')}: gap centred on the neighbour door slot, gap on the shifted tile edge (edge - 1)`, !!g.door && Math.abs((g.lo + g.hi) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - (g.edge - 1)) < 1e-6), JSON.stringify(g));
+    chk(`28 ${n} rot ${r} next to ${nb.replace('BPO_', '')}: gap centred on the neighbour door slot, gap on the tile edge (no shift: floors are centred)`, !!g.door && Math.abs((g.lo + g.hi) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - g.edge) < 1e-6), JSON.stringify(g));
   }
   // grey no-build hatch layer: canvas diff with NBH on/off
   const hatchDiff = (cls, rot) => pg.evaluate(([cls, rot]) => {
@@ -3192,6 +3226,7 @@ try {
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 28 data-driven shapes'); await s28(br); } catch (e) { chk('28 shapes: section ran', false, e.stack || String(e)); }
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }
+  try { console.log('--- 31 ground floors centred'); await s31(br); } catch (e) { chk('31 section ran', false, e.stack || String(e)); }
   try { console.log('--- 29 icons, Command Module, Blueprint Unit, shipyards'); await s29(br); } catch (e) { chk('29 section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
     try { console.log(`--- viewport ${vp.width}x${vp.height}`); await viewport(br, vp); }
