@@ -113,7 +113,7 @@ async function s1(C) {
     const gf = g.floor, cf = c?.floor;
     const floorOk = gf ? !!cf && cf.w === gf.w && cf.h === gf.h : cf == null;
     chk(`block ${g.name} outer ${g.w}x${g.h}, floor ${gf ? gf.w + 'x' + gf.h : 'none'}`,
-      !!c && c.w === g.w && c.h === (g.name === 'BPO_ShipyardCore_02' ? 2 : g.h) && floorOk,   // ShipyardCore_02: ground truth is a guess (1x1); h=2 inferred from a saved block at Y -2
+      !!c && c.w === g.w && c.h === g.h && floorOk,
       c ? `catalog outer ${c.w}x${c.h} floor ${cf ? cf.w + 'x' + cf.h : 'none'}` : 'missing');
   }
   const elv = C.blocks.find(b => b.name === 'BPO_ElevatorBlock_03');
@@ -248,18 +248,19 @@ async function s4(pg, C) {
   chk('two adjacent 1x1: 2 floors', A.floors.length === 2);
   chk('two adjacent 1x1: exactly one shared doorway (one paired door)', paired.length === 1, `paired ${paired.length}`);
   chk('two adjacent 1x1: shared strip is 2 wide x 6 long at x=14,y=4', A.rects.some(r => r.x === 14 && r.y === 4 && r.w === 2 && r.h === 6), JSON.stringify(A.rects));
-  // close it by clicking the door on the factory floor (UI path)
+  // doors are not interactive: clicking one changes nothing
   await pg.evaluate(() => __fb.setView('F'));
   const dr = paired[0];
   await pg.evaluate(([x, y]) => __fb.click(x, y), [dr.x, dr.y]);
-  const closedKeys = await pg.evaluate(() => __fb.S.closed.slice());
-  const A2 = await areas();
-  chk('click closes the shared door: S.closed has 0|0|0|E|0', closedKeys.includes('0|0|0|E|0'), JSON.stringify(closedKeys));
-  chk('closed door removes its strip from buildable rects', !A2.rects.some(r => r.x === 14 && r.y === 4 && r.w === 2 && r.h === 6));
-  chk('closed door reported as closed', A2.doors.some(d => d.paired && !d.open));
-  await pg.evaluate(([x, y]) => __fb.click(x, y), [dr.x, dr.y]);
-  const A3 = await areas();
-  chk('click again re-opens the door and strip', A3.rects.some(r => r.x === 14 && r.y === 4 && r.w === 2 && r.h === 6) && (await pg.evaluate(() => __fb.S.closed.length)) === 0);
+  chk('click on a door does not close it', (await pg.evaluate(() => __fb.S.closed.length)) === 0 && (await areas()).rects.some(r => r.x === 14 && r.y === 4 && r.w === 2 && r.h === 6));
+
+  // strict placement: on floor ok, across the wall / outside refused, overlap refused, switch off allows outside
+  const nb = (x, y, w, h, id = 999) => pg.evaluate(a => noBuild([{id: a[4], x: a[0], y: a[1], w: a[2], h: a[3], l: layer}]), [x, y, w, h, id]);
+  chk('strict: machine on the floor allowed', !(await nb(2, 2, 2, 2)));
+  chk('strict: machine outside the floor refused', await nb(-5, -5, 2, 2));
+  await pg.evaluate(() => { STRICT = false; });
+  chk('switch off: outside allowed', !(await nb(-5, -5, 2, 2)));
+  await pg.evaluate(() => { STRICT = true; });
 
   // 2x1 block: 14x30 floor (long side follows block axis), 6 doors
   await imp(pg, bp([blk('BPO_Station_2x1', 0, 0)]));
@@ -283,9 +284,16 @@ async function s4(pg, C) {
   await pg.click('#palList .item[data-cls="DAT_ConveyorBelt"]');
   await pg.evaluate(() => __fb.click(6, 6));
   const toast = await pg.locator('#toast').textContent();
-  chk('placing a machine on the elevator centre is refused with warning', toast.includes('Elevator shaft') && (await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls.startsWith("DAT_")).length)) === 0, `toast "${toast}"`);
+  chk('placing a machine on the elevator centre is refused with warning', toast.includes('Cannot build here') && (await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls.startsWith("DAT_")).length)) === 0, `toast "${toast}"`);
   await pg.evaluate(() => __fb.click(1, 1));
   chk('placing next to the elevator centre (inside block floor) is allowed', (await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls.startsWith("DAT_")).length)) === 1);
+  // elevator ring (x=13, y 4..10 = open door slot E) buildable; unpaired open door strip (x=14) buildable; shaft cell refused
+  const ringOK = await nb(13, 5, 1, 1);
+  const doorOK = await nb(14, 5, 1, 1);
+  const shaftOK = await nb(6, 6, 1, 1);
+  chk('elevator ring cell inside open door slot: buildable', ringOK === false, `noBuild ${ringOK}`);
+  chk('unpaired open door strip: buildable', doorOK === false, `noBuild ${doorOK}`);
+  chk('elevator shaft cell: refused', shaftOK === true, `noBuild ${shaftOK}`);
   await pg.evaluate(() => __fb.setView('L'));
 }
 
@@ -317,27 +325,6 @@ async function s5(pg, C) {
   chk('closed door kept after roundtrip', a.FactoryLayout.ClosedDoorways.some(d => d.Edge === 'E' && d.X === 0) && b.FactoryLayout.ClosedDoorways.some(d => d.Edge === 'E' && d.X === 0));
   chk('bad JSON returns false', (await pg.evaluate(() => __fb.importJson('{bad'))) === false);
   chk('JSON without Blocks array returns false', (await pg.evaluate(() => __fb.importJson('{"Version":1}'))) === false);
-  // v2 station block with a guessed footprint: on-grid file coords kept verbatim (raw); off-grid ones snap; a moved block recomputes from the cell model
-  await reset(pg);
-  const SHIP = BLK.BPO_ShipyardCore_02 || '/Game/Blueprints/BuildingBlocks/BPO_ShipyardCore_02.BPO_ShipyardCore_02_C';
-  const v2s = {Version: 2, DisplayName: 't', Blocks: [{Class: SHIP, GridLocation: {X: -8, Y: -2}, Height: -4, GridRotation: 2, BlockID: 207533, PaletteID: 0}], DefaultMachines: []};
-  chk('v2 import of ShipyardCore_02 (file Y=-2) accepted', await imp(pg, v2s) === true);
-  chk('v2 import of on-grid ShipyardCore_02 gives no snap warning', !/snapped/.test(await pg.locator('#toast').textContent()));
-  const v2a = await pg.evaluate(() => __fb.build().Blocks[0]);
-  chk('v2 export: ShipyardCore_02 GridLocation X -8, Y -2 verbatim, Height -4, rot 2, BlockID 207533', v2a.GridLocation.X === -8 && v2a.GridLocation.Y === -2 && v2a.Height === -4 && v2a.GridRotation === 2 && v2a.BlockID === 207533, JSON.stringify(v2a));
-  // old buggy export wrote Y 0: off-grid for the guessed footprint, snapped so export is Y -2
-  await reset(pg);
-  v2s.Blocks[0].GridLocation.Y = 0;
-  await imp(pg, v2s);
-  chk('off-grid ShipyardCore_02 (file Y=0) toasts a snap note', /snapped/.test(await pg.locator('#toast').textContent()));
-  const v2y = await pg.evaluate(() => __fb.build().Blocks[0].GridLocation);
-  chk('off-grid ShipyardCore_02 (file Y=0) exports Y -2', v2y.X === -8 && v2y.Y === -2, JSON.stringify(v2y));
-  await reset(pg);
-  v2s.Blocks[0].GridLocation.Y = -2;
-  await imp(pg, v2s);
-  await pg.evaluate(() => { __fb.S.blocks[0].x += 1; });
-  const v2m = await pg.evaluate(() => __fb.build().Blocks[0].GridLocation);
-  chk('moved ShipyardCore_02: build() recomputes X from the cell model (-8 -> -4), raw not used', v2m.X === -4, JSON.stringify(v2m));
 }
 
 // ================= 6. underground warnings
@@ -366,7 +353,7 @@ async function s6b(pg, C) {
   // canvas pixels in a strip across the cell centre: differs from an empty cell when the tunnel line is drawn there
   const snap = async (x, y) => { const [cx, cy] = await px(x, y); return pg.evaluate(([cx, cy]) => { const c = document.getElementById('cv'), r = c.getBoundingClientRect(), k = c.width / r.width, g = c.getContext('2d'); return Array.from(g.getImageData(Math.round((cx - r.left - 12) * k), Math.round((cy - r.top - 2) * k), Math.round(24 * k), Math.round(4 * k)).data); }, [cx, cy]); };
   const diff = (a, b) => a.reduce((s, v, i) => s + Math.abs(v - b[i]), 0);
-  const start = async cls => { await reset(pg); await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); }); await pg.evaluate(c => { active = c; all(); }, cls); };
+  const start = async cls => { await reset(pg); await pg.evaluate(() => { STRICT = false; __fb.setView('F'); __fb.fit(); }); await pg.evaluate(c => { active = c; all(); }, cls); };
   const clickAt = async a => { const [x, y] = await px(a[0], a[1]); await pg.mouse.move(x, y); await pg.mouse.down(); await pg.mouse.up(); };
   const moveTo = async a => { const [x, y] = await px(a[0], a[1]); await pg.mouse.move(x, y, {steps: 6}); };
   const press = async (a, b) => { await clickAt(a); await moveTo(b); await pg.mouse.down(); await pg.mouse.up(); };   // click entrance, move, click exit
@@ -1034,7 +1021,7 @@ async function s13(pg, C) {
   await scene({...mac('DAT_Container_2', 10, 10, {mid: 1}), Contents: ct});
   const b1 = await pg.evaluate(() => __fb.build());
   const e1 = b1.DefaultMachines.find(m => m.MachineID === 1) || {};
-  chk('a: build() DefaultMachines Contents JSON-equal to input', JSON.stringify(e1.Contents) === JSON.stringify(ct), JSON.stringify(e1.Contents));
+  chk('a: build() Contents = finite items only; infinite sources under SiteOnly.Infinite', JSON.stringify(e1.Contents) === JSON.stringify(ct.filter(x => !x.Infinite)) && JSON.stringify(e1.SiteOnly) === JSON.stringify({Infinite: ct.filter(x => x.Infinite).map(x => ({Item: x.Item, Count: x.Count}))}), JSON.stringify(e1.Contents));
   await imp(pg, b1);
   const b2 = await pg.evaluate(() => __fb.build());
   chk('a: re-import build() output, build again equal', JSON.stringify(b2) === JSON.stringify(b1), firstDiff(b1, b2));
@@ -2346,6 +2333,25 @@ async function s23(br) {
   await m.ctx.close();
 }
 
+// ================= 26 round trip: Version 2 game blocks must export with identical Class/X/Y/Height/Rotation (no re-snapping)
+async function s26(br) {
+  const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's26');
+  const P = '/Game/Blueprints/BuildingBlocks/';
+  const B = (n, X, Y, h, r) => ({Class: `${P}${n}.${n}_C`, GridLocation: {X, Y}, Height: h, GridRotation: r, BlockID: 1, PaletteID: 0});
+  const inp = [B('BPO_ShipyardCore_02', -8, -2, -4, 2), B('BPO_ShipyardCore_02', 6, 4, -4, 0), B('BPO_ShipyardCore', -8, 6, -4, 1), B('BPO_Station_01', 2, 2, 0, 0), B('BPO_Station_02A', 10, 6, 0, 3), B('BPO_Dock_2', 18, 2, 0, 2), B('BPO_ShipyardSide', 3, 9, -4, 3)];
+  await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: inp, DefaultMachines: []}));
+  const out = await pg.evaluate(() => __fb.build().Blocks);
+  const key = b => `${b.Class}|${b.GridLocation.X}|${b.GridLocation.Y}|${b.Height}|${b.GridRotation}`;
+  const diff = inp.map(key).filter(k => !out.map(key).includes(k));
+  chk('26 round trip: every block identical after import+export (ShipyardCore_02 at -8,-2,-4 r2)', diff.length === 0, diff.join(' ; '));
+  const lv = await pg.evaluate(() => [...new Set(__fb.S.blocks.map(b => b.h))].sort((x, y) => x - y));
+  chk('26 levels: game Heights -4,0,-4.. become consecutive levels', JSON.stringify(lv) === JSON.stringify([-2, 0]), JSON.stringify(lv));
+  await pg.evaluate(() => { const b = __fb.S.blocks.find(q => q.raw); b.x += 1; });
+  const moved = await pg.evaluate(() => __fb.build().Blocks.filter(b => b.Class.includes('ShipyardCore_02')).map(b => b.GridLocation.X + ',' + b.GridLocation.Y));
+  chk('26 round trip: a block moved in the editor is exported at its new cell', !moved.includes('-8,-2') || moved.length === 2 && moved.filter(m => m === '-8,-2').length === 0, moved.join(' ; '));
+  await ctx.close();
+}
+
 // ================= 24 r12: user save (Test (8).json): sim outcome, storage pulls, perf, shots
 async function s24(br) {
   const txt = fs.readFileSync('C:/Users/SFidelis/Downloads/Test (8).json', 'utf8');
@@ -2446,6 +2452,7 @@ try {
   try { console.log('--- 22 U2 inspector'); await s22(br); } catch (e) { chk('22 U2: section ran', false, e.stack || String(e)); }
   try { console.log('--- 23 U3 production'); await s23(br); } catch (e) { chk('23 U3: section ran', false, e.stack || String(e)); }
   try { console.log('--- 24 r12 user save: sim, perf, shots'); await s24(br); } catch (e) { chk('24 r12: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
     try { console.log(`--- viewport ${vp.width}x${vp.height}`); await viewport(br, vp); }
     catch (e) { chk(`viewport ${vp.width}x${vp.height} ran`, false, e.stack || String(e)); }

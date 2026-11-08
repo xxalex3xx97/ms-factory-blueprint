@@ -20,7 +20,7 @@ function areas(L){
     const e=elvRect(b);if(e)blocked.push(e);
   });
   fb.forEach(f=>{const{b,d,r}=f,QI=(def(b.cls)||{}).floorInset||0;   // QI: floor inset inside the shell (elevator 1)
-    for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed!==(b.rot+2)%4)continue;   // ship side and short sides: no doors
+    for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot)continue;   // Industrial Dock: doors on every side except the ship side (rot = ship direction); user screenshot 2026-11-07: station side 2 doors, both short ends 1 each; positions = station rule, unverified
       const v=ed%2===0,n=v?d.h:d.w;
       for(let k=0;k<n;k++){
         const t0=(v?r.y:r.x)+FC*k+DOFF-QI,ex=ed===0?r.x+r.w+QI:ed===2?r.x-QI-DW:t0,ey=ed===1?r.y+r.h+QI:ed===3?r.y-QI-DW:t0;
@@ -36,12 +36,22 @@ function areas(L){
       }
     }
   });
-  return{floors,doors,gaps,blocked,rects:floors.concat(doors.filter(d=>d.open&&d.paired))};
+  // elevator ring: inset strip (floorInset Q) inside each open door slot, same geometry as draw.js paintFloorBase
+  const ring=[];floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;
+    for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>ring.push(ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q}))});
+  return{floors,doors,gaps,blocked,rects:floors.concat(doors.filter(d=>d.open),ring)};
 }
 // elevator shaft (blocked 4x4 centre): machines may not overlap it
-function noBuild(it){const c={};return it.some(i=>(c[i.l]=c[i.l]||areas(i.l).blocked).some(e=>i.x<e.x+e.w&&i.x+i.w>e.x&&i.y<e.y+e.h&&i.y+i.h>e.y))}
-const mItem=b=>{const d=dim(b);return{x:b.x,y:b.y,w:d.w,h:d.h,l:b.h}};
-const NOBUILD="Elevator shaft: cannot build here";
+let STRICT=true;   // Settings: keep buildables on the floor (no outside / across walls); overlaps are always refused
+const hitR=(i,e)=>i.x<e.x+e.w&&i.x+i.w>e.x&&i.y<e.y+e.h&&i.y+i.h>e.y;
+function noBuild(it){const c={},ids=new Set(it.map(i=>i.id).filter(x=>x!=null));
+  return it.some(i=>{const a=c[i.l]=c[i.l]||areas(i.l);
+    if(a.blocked.some(e=>hitR(i,e)))return true;
+    if(i.id==null)return false;   // preview-only probes without id: shaft check only
+    if(STRICT&&!onArea(i.x,i.y,i.w,i.h,a.rects))return true;
+    return S.blocks.some(o=>o.h===i.l&&isM(o)&&!ids.has(o.id)&&!(i.belt&&isBelt(o))&&hitR(i,mItem(o)))})}
+const mItem=b=>{const d=dim(b);return{id:b.id,x:b.x,y:b.y,w:d.w,h:d.h,l:b.h,belt:isBelt(b)}};
+const NOBUILD="Cannot build here: overlap, elevator shaft, or off the floor / across a wall";
 function onArea(x,y,w,h,R){
   for(let i=x;i<x+w;i++)for(let j=y;j<y+h;j++)
     if(!R.some(r=>i>=r.x&&i<r.x+r.w&&j>=r.y&&j<r.y+r.h))return false;

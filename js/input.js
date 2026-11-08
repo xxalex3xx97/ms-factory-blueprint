@@ -36,8 +36,6 @@ cv.addEventListener("pointerdown",e=>{
     drag={k:"move",dx:0,dy:0,c0:c,orig:new Map(S.blocks.filter(q=>sel.has(q.id)).map(q=>[q.id,{x:q.x,y:q.y}])),moved:false,cr:view==="L"?carryOf(S.blocks.filter(q=>sel.has(q.id)&&!isM(q))):null};
     panel();draw();
   }else{
-    const dr=view==="F"&&doorAt(c);
-    if(dr){push();S.closed=dr.open?S.closed.concat(dr.key):S.closed.filter(k=>k!==dr.key);toast(dr.open?"Door closed":"Door open");all();return}
     drag={k:"box",sx:p.x,sy:p.y,px:p.x,py:p.y,add:e.shiftKey,base:new Set(sel)};
     if(!e.shiftKey)sel=new Set();
     panel();draw();
@@ -64,7 +62,7 @@ cv.addEventListener("pointermove",e=>{
       else{const b=hit(c);w=!!(b&&outside(b,R))}
     }
     cv.title=w?WARN:"";
-    if(view==="F"&&!active&&!hit(c)){const dr=doorAt(c);if(dr)cv.title=`Door (${dr.ver&&dr.paired?"verified position":"position not confirmed"}${dr.paired?"":", leads outside, nothing buildable beyond"}): ${dr.open?"open":"closed"}. Click to ${dr.open?"close":"open"}.`}
+    if(view==="F"&&!active&&!hit(c)){const dr=doorAt(c);if(dr)cv.title=`Door (${dr.ver&&dr.paired?"verified position":"position not confirmed"}${dr.paired?"":", leads outside, nothing buildable beyond"}): ${dr.open?"open":"closed"}. `}
     {const b=view==="F"&&!active?hit(c):null,belt=b&&isBelt(b),pl=b&&LK&&(links(layer).nb.get(b.id)||[]).some(e=>e.k==="port");
       if(belt)btip(b,pl,e,w);else{btip(null);if(pl&&!w)cv.title=PORTLINK}}
     if(view==="F"&&!active){const q=portAt(p);if(q){btip(null);cv.title=`Port ${q.p.key} (faces ${FN[q.p.wf]}): ${q.p.en?"enabled":"disabled"}. Click to toggle.`}}

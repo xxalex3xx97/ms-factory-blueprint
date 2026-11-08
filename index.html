@@ -12,6 +12,7 @@
   <h1>MS <span>Factory Blueprint</span></h1>
   <div class="tg" role="group" aria-label="Plan"><span class="gl">Plan</span>
   <div class="grp"><label for="name">Name</label><input id="name" type="text" value="Untitled station"></div>
+  <div class="grp" id="stG" hidden><select id="stSel" aria-label="Station in the loaded save" title="Switch to another station of the loaded save (unsaved changes are lost)"></select></div>
   <div class="grp">
     <button id="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><span class="ic" aria-hidden="true">&#8630;</span><span class="tx">Undo</span></button>
     <button id="redo" aria-label="Redo" title="Redo (Ctrl+Y)"><span class="ic" aria-hidden="true">&#8631;</span><span class="tx">Redo</span></button>
@@ -24,12 +25,15 @@
       <button id="fOpen" role="menuitem" aria-label="Open file" title="Open a .json file and keep it linked for Save">Open</button>
       <button id="fSaveAs" role="menuitem" aria-label="Save as" title="Save to a new file (Ctrl+Shift+S)">Save as</button>
       <button id="imp" role="menuitem" aria-label="Import JSON">Import</button>
+      <button id="fShot" role="menuitem" title="Open the Screenshot panel (export PNG / SVG)">Screenshot…</button>
     </div></div>
     <button id="fSave" class="pri" aria-label="Save" title="Save to the opened file (Ctrl+S)">Save</button>
     <button id="exp" class="pri" aria-label="Export JSON">Export</button>
   </div>
   </div>
   <div class="tg" role="group" aria-label="Tools">
+    <button id="stB" class="hbt" aria-pressed="false" aria-controls="stW" aria-label="Settings" title="Settings"><span class="ic" aria-hidden="true">&#9881;</span><span class="tx">Settings</span></button>
+    <button id="shB" class="hbt" aria-pressed="false" aria-controls="shW" aria-label="Screenshot" title="Screenshot: export the plan as PNG or SVG"><span class="ic" aria-hidden="true">&#128247;</span><span class="tx">Screenshot</span></button>
     <button id="lvB" class="hbt" aria-pressed="false" aria-controls="lvW" title="Level window (up/down, ghost levels)"><span class="tx">Level</span> <span id="lvN">1</span></button>
     <button id="simB" class="hbt" aria-pressed="false" aria-controls="smW" title="Simulation window"><span class="ic" aria-hidden="true">&#9654;</span><span class="tx">Simulation</span></button>
     <button id="flwB" class="hbt" aria-pressed="false" aria-controls="fwW" title="Flow window: links and bottlenecks"><span class="ic" aria-hidden="true">&#8644;</span><span class="tx">Flow</span></button>
@@ -37,6 +41,7 @@
   </div>
   <div class="tg" role="group" aria-label="View"><span class="gl">View</span>
   <div class="grp seg" id="vw" role="group" aria-label="View level"><button id="vwL" class="on" aria-pressed="true" title="Block layout">Layout</button><button id="vwF" aria-pressed="false" title="Factory floor (F)"><span class="lg">Factory </span><span class="fl">floor</span> <kbd>F</kbd></button></div>
+  <button id="comp" title="Companion mod: Blueprint Unit builds this factory in the game (opens GitHub)" onclick="window.open('https://github.com/xxalex3xx97/MSBlueprintUnit','_blank','noopener')">Companion mod</button>
   <button id="help" aria-label="Help" title="Help: how to, controls, simulation rules, legend">?</button>
   </div>
 </header>
@@ -65,7 +70,7 @@
       </div>
     </div>
     <div id="pln" role="region" aria-labelledby="plnT" hidden>
-      <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
+      <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnPng" title="Export the planner diagram as a PNG image (2x)">PNG</button><button id="plnSv" title="Export the planner diagram as SVG (keeps your box positions)">SVG</button><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
       <div id="plnBody">
       <div id="plnForm">
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
@@ -78,12 +83,29 @@
       <label>Splitter <select id="plnSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
       <label>Balancer <select id="plnBal" aria-label="Balancer tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
       <div class="plnGxW"><span>View</span><button id="plnGx" type="button" aria-pressed="false" title="Grouped: one box per node. Expanded: one box per machine">Grouped</button></div>
+      <label class="chk"><input type="checkbox" id="plnEnr"> Use enriched ores</label>
       <label>Protomatter <select id="plnProto" aria-label="Protomatter use"><option value="0" selected>Don't use</option><option value="1">Use</option></select></label>
       </div></div>
       </div>
       </div>
     </div>
     <div id="fms">
+    <div id="stW" class="fm" role="region" aria-labelledby="stWT" hidden>
+      <div class="fmh"><h3 id="stWT">Settings</h3><button id="stWX" aria-label="Close settings" title="Close">&times;</button></div>
+      <div class="fmb">
+        <label title="Refuse to place buildables outside the block floors or across a wall"><input id="strict" type="checkbox" checked aria-label="Keep buildables inside the floor"> <span class="tx">keep buildables inside the floor</span></label>
+      </div>
+    </div>
+    <div id="shW" class="fm" role="region" aria-labelledby="shWT" hidden>
+      <div class="fmh"><h3 id="shWT">Screenshot</h3><button id="shWX" aria-label="Close screenshot" title="Close">&times;</button></div>
+      <div class="fmb">
+        <label title="100% = full size. 100% = the largest picture this browser can make; lower = smaller picture, same content"><span class="tx">Quality</span> <input id="shQ" type="range" min="10" max="100" step="5" value="50" aria-label="Screenshot quality"> <b id="shQv">50%</b></label>
+        <div id="shPrev" class="sub" aria-live="polite"></div>
+        <div id="shLim" class="sub"></div>
+        <div id="shRef" title="Size preview: the outer square is 100%" aria-hidden="true"><div id="shBox"></div></div>
+        <div class="grp"><button id="shPng" title="Export the current view (whole plan, current level) as a PNG image">PNG</button><button id="shSvg" title="Export as an SVG (the image is embedded, not redrawn as vectors)">SVG</button></div>
+      </div>
+    </div>
     <div id="lvW" class="fm" role="region" aria-labelledby="lvWT" hidden>
       <div class="fmh"><h3 id="lvWT">Level</h3><button id="lvWX" aria-label="Close level" title="Close">&times;</button></div>
       <div class="fmb">
@@ -119,6 +141,8 @@
 
 <dialog id="dHelp" aria-labelledby="dHelpT">
   <h3 id="dHelpT">Help</h3>
+  <h4>Build it in the game</h4>
+  <p>The <a href="https://github.com/xxalex3xx97/MSBlueprintUnit" target="_blank" rel="noopener">Blueprint Unit</a> mod adds a station block that builds this factory for you. Export the JSON here, paste it into the unit's window in the game, check the modification cost, and it builds the factory on your station. Needs MSCore (install with MSCoreManager).</p>
   <h4>How to</h4>
   <ul>
     <li>Blocks sit on a grid; open the factory floor (<kbd>F</kbd> or double-click a block) to place machines and belts inside.</li>

@@ -65,7 +65,7 @@ try {
 
     const sc = IN.Blocks.map((a, i) => ({a, b: OUT.Blocks[i]})).filter(x => short(x.a.Class) === 'BPO_ShipyardCore_02');
     if (tag === 'Main_Base (4).json') chk(`${tag}: BPO_ShipyardCore_02 Y stays -2`, sc.length > 0 && sc.every(x => x.b.GridLocation.Y === -2), JSON.stringify(sc.map(x => x.b.GridLocation)));
-    if (tag === 'Main_Base (5).json') chk(`${tag}: BPO_ShipyardCore_02 Y 0 in file is snapped to -2`, sc.length > 0 && sc.every(x => x.b.GridLocation.Y === -2), JSON.stringify(sc.map(x => x.b.GridLocation)));
+    if (tag === 'Main_Base (5).json') chk(`${tag}: BPO_ShipyardCore_02 Y stays 0 (file data)`, sc.length > 0 && sc.every(x => x.b.GridLocation.Y === 0), JSON.stringify(sc.map(x => x.b.GridLocation)));
     console.log(`  ${tag}: blocks ${IN.Blocks.length}, ShipyardCore_02 ${sc.length}, splitters with ConfigHex ${spl.length}`);
   }
   chk('no console errors / page errors', errs.length === 0, errs.join('\n     '));
