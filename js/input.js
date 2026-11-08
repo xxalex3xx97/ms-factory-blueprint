@@ -109,7 +109,7 @@ cv.addEventListener("dblclick",e=>{
   frame(r.x,r.y,r.x+r.w,r.y+r.h);
 });
 
-function setLayer(n){smStop();layer=n;sel=new Set([...sel].filter(i=>S.blocks.find(b=>b.id===i&&b.h===n)));all()}
+function setLayer(n){layer=n;sel=new Set([...sel].filter(i=>S.blocks.find(b=>b.id===i&&b.h===n)));all()}
 $("lay").onchange=e=>{const v=parseInt(e.target.value,10);if(isFinite(v)&&v-1!==layer)setLayer(v-1);else e.target.value=layer+1};$("lUp").onclick=()=>setLayer(layer+1);$("lDn").onclick=()=>setLayer(layer-1);
 $("ghost").onchange=draw;
 function setView(v){

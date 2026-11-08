@@ -1671,6 +1671,190 @@ function toolkit(pg) {
   return {nm, relPair, placed, leg, portsAt, resetMid: () => { mid = 1; }};
 }
 
+// ================= 16e. elevator item transfer (all levels in one run)
+// Port rule (model.js portsOf .io, sim.js): belt on the port's connection cell (p + n) pointing along the wall INTO the port edge (p.io) = INPUT.
+// Any other belt on that cell (pointing away from the edge, or sideways = across the wall) = OUTPUT, same as machine outputs.
+// Splitter on the connection cell: its output face toward the elevator = input; its input (back) face toward the elevator = output (model.js links() virtual belt).
+async function s16e(br) {
+  const TP = 'ITEM_TitaniumPlates', ELV = 'BPO_ElevatorBlock_03';
+  const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's16e');
+  const T = toolkit(pg);
+  const INF = [{Item: TP, Count: 0, Infinite: true}], FULL = [{Item: TP, Count: 16000, Infinite: false}];
+  const run = n => pg.evaluate(n => { __fb.simInit({}); __fb.simRun(n); return __fb.SIM.t; }, n);
+  const conts = () => pg.evaluate(() => { const st = __fb.SIM.stat; return {full: st.full.size, c: [...st.cont].map(([id, c]) => { const b = __fb.S.blocks.find(q => q.id === id); return {h: b.h, in: c.in, out: c.out, have: c.have, inf: c.rows.some(r => r.inf)}; })}; });
+  const at = (s, h) => s.c.find(c => c.h === h);
+  const routers = () => pg.evaluate(() => [...__fb.SIM.E.values()].map(r => ({h: r.h, pk: r.pk, ins: r.ins.length, outs: r.outs.length})));
+  // ports of an elevator at block cell (bx,by), rotation rot (imports one block)
+  const elvPorts = async (rot, bx = 2, by = 2) => { await imp(pg, bp([blk(ELV, bx, by, {rot})])); return pg.evaluate(() => __fb.portsOf(__fb.S.blocks[0]).map(p => ({key: p.key, x: p.x, y: p.y, nx: p.nx, ny: p.ny, io: p.io}))); };
+  const portOf = (ps, key) => ps.find(p => p.key === key);
+  const cell = p => ({x: p.x + p.nx, y: p.y + p.ny});   // connection cell = the belt/splitter cell linked to the port
+  // legs for a port: 'in' = belts along the wall pointing into the edge (io); 'out' = belts along the wall pointing away (-io); 'side' = belts across the wall pointing away from the elevator
+  const legFor = (p, kind, contents, noCont) => {
+    const c = cell(p), [ix, iy] = p.io;
+    if (kind === 'side') return T.leg({x: c.x - p.nx, y: c.y - p.ny}, [[[p.nx, p.ny], 3]], 'out', contents, noCont);
+    return T.leg({x: c.x + ix, y: c.y + iy}, [[[-ix, -iy], 3]], kind, contents, noCont);
+  };
+  const ROT = v => [[1, 0], [0, 1], [-1, 0], [0, -1]].findIndex(d => d[0] === v[0] && d[1] === v[1]);
+  const withH = (ms, h) => ms.map(m => ({...m, Transform: {...m.Transform, Height: h}}));
+  // scene: elevators (rot) on `levels`; spec = [{key ('N0' default), h, kind, contents, noCont}]
+  const scene = async (levels, spec, rot = 0) => {
+    T.resetMid();
+    const ps = await elvPorts(rot);
+    const ms = [];
+    for (const s of spec) ms.push(...withH(await legFor(portOf(ps, s.key || 'N0'), s.kind, s.contents, s.noCont), s.h));
+    await imp(pg, bp(levels.map(h => blk(ELV, 2, 2, {h, rot})), ms));
+  };
+  // splitter rot on cell c whose port facing n has dir want ('in' = back face, 'out' = front); returns {rot, f, i, key}
+  const splRot = async (c, n, want) => {
+    for (let rot = 0; rot < 4; rot++) {
+      await imp(pg, bp([], [mac('DAT_Splitter', c.x, c.y, {rot})]));
+      const q = await pg.evaluate(([x, y, nx, ny, w]) => { const s = __fb.S.blocks[0]; const p = __fb.portsOf(s).find(q => q.x === x && q.y === y && q.nx === nx && q.ny === ny && (w === 'in' ? q.dir === 'in' : q.dir !== 'in')); const ip = __fb.portsOf(s).find(q => q.dir === 'in'), op = __fb.portsOf(s).find(q => q.dir !== 'in' && !(q.nx === nx && q.ny === ny)); return p ? {f: p.f, i: p.i, key: p.key, inN: [ip.nx, ip.ny], outN: [op.nx, op.ny]} : null; }, [c.x, c.y, n[0], n[1], want]);
+      if (q) return {rot, ...q};
+    }
+    throw new Error('no splitter rotation for port');
+  };
+  // 0) io rotates with the block: 8 ports x 4 rotations
+  {
+    const PRE = {N0: [-1, 0], N1: [1, 0], E2: [0, -1], E3: [0, 1], S4: [-1, 0], S5: [1, 0], W6: [0, -1], W7: [0, 1]};
+    const bad = [];
+    for (let rot = 0; rot < 4; rot++) {
+      const ps = await elvPorts(rot);
+      for (const [key, v0] of Object.entries(PRE)) {
+        let v = v0; for (let r = 0; r < rot; r++) v = [-v[1], v[0]];
+        const p = portOf(ps, key); if (!p || p.io[0] !== v[0] || p.io[1] !== v[1]) bad.push(key + '@' + rot + '=' + (p && p.io));
+      }
+    }
+    chk('16e io: rotates with the block (8 ports x 4 rotations)', bad.length === 0, bad.join(' '));
+  }
+  // a) up: source L0 -> elevator L0 -> elevator L1 -> sink L1
+  await scene([0, 1], [{h: 0, kind: 'in', contents: INF}, {h: 1, kind: 'out'}]);
+  {
+    await run(300); const s = await conts(), src = at(s, 0), snk = at(s, 1);
+    chk('16e up: sink on level 1 fills (in > 0, stock > 0)', snk.in > 0 && snk.have > 0, JSON.stringify(snk));
+    chk('16e up: infinite source on level 0 outputs', src.out > 0 && src.inf, JSON.stringify(src));
+    chk('16e up: no splitter routers created for elevator ports', await pg.evaluate(() => __fb.SIM.R.size === 0));
+    const r = await routers();
+    chk('16e up: one input router (level 0, N0) with one output (level 1)', r.length === 1 && r[0].h === 0 && r[0].ins === 1 && r[0].outs === 1, JSON.stringify(r));
+  }
+  // b) down: source L1 -> elevator L1 -> elevator L0 -> sink L0 (output belt = the reversed one, pointing away)
+  await scene([0, 1], [{h: 1, kind: 'in', contents: INF}, {h: 0, kind: 'out'}]);
+  {
+    await run(300); const s = await conts(), snk = at(s, 0);
+    chk('16e down: sink on level 0 fills (in > 0, stock > 0)', snk.in > 0 && snk.have > 0, JSON.stringify(snk));
+  }
+  // c) belt into a port with no paired elevator (single level) still blocks
+  await scene([0], [{h: 0, kind: 'in', contents: INF}]);
+  {
+    await run(120); const s = await conts(), src = at(s, 0);
+    chk('16e no paired elevator: source out 0, belts full (blocked)', src.out === 0 && s.full > 0, JSON.stringify([src.out, s.full]));
+  }
+  // d) paired elevator exists on level 1 but no belt leaves its matching port: still blocked
+  await scene([0, 1], [{h: 0, kind: 'in', contents: INF}]);
+  {
+    await run(120); const s = await conts(), src = at(s, 0);
+    chk('16e elevator above without output belt: blocked (source out 0)', src.out === 0 && s.full > 0, JSON.stringify([src.out, s.full]));
+  }
+  // e) 3 levels, input on middle level: round-robin between level 0 and level 2 (both outputs)
+  await scene([0, 1, 2], [{h: 1, kind: 'in', contents: INF}, {h: 0, kind: 'out'}, {h: 2, kind: 'out'}]);
+  {
+    await run(600); const s = await conts(), a = at(s, 0), b = at(s, 2);
+    chk('16e 3 levels: middle input feeds both neighbours (both sinks fill)', a.have > 0 && b.have > 0, JSON.stringify([a.have, b.have]));
+    chk('16e 3 levels: split is even (round-robin, +-5%)', Math.abs(a.have - b.have) <= 0.05 * (a.have + b.have) + 2, JSON.stringify([a.have, b.have]));
+  }
+  // f) 3 levels, neighbour below has no output belt on the matching port: all items go up
+  await scene([0, 1, 2], [{h: 1, kind: 'in', contents: INF}, {h: 2, kind: 'out'}]);
+  {
+    await run(600); const s = await conts(), src = at(s, 1), b = at(s, 2);
+    chk('16e no output belt below: all items go to level 2 (in ~ source out)', b.in > 0 && Math.abs(b.in - src.out) <= 1, JSON.stringify([b.in, src.out]));
+  }
+  // g) 3 levels, neighbour below full: all items go up
+  await scene([0, 1, 2], [{h: 1, kind: 'in', contents: INF}, {h: 0, kind: 'out', contents: FULL}, {h: 2, kind: 'out'}]);
+  {
+    await run(600); const s = await conts(), src = at(s, 1), a = at(s, 0), b = at(s, 2);
+    chk('16e full destination below: stays full, all items go to level 2', a.have === 16000 && Math.abs(b.in - src.out) <= 1, JSON.stringify([a.have, b.in, src.out]));
+  }
+  // h) every level runs in one sim; simSig covers every level
+  {
+    const r = await pg.evaluate(() => { const a = __fb.simSig(), b1 = __fb.S.blocks.find(q => q.h === 1); const same = a === __fb.simSig(); b1.rot = ((b1.rot || 0) + 1) & 3; return {same, changed: a !== __fb.simSig()}; });
+    chk('16e simSig changes on an edit on a non-selected level', r.changed && r.same, JSON.stringify(r));
+  }
+  // i) sideways output: belt across the wall at the connection cell on level 1 (pointing away from the elevator) takes items
+  await scene([0, 1], [{h: 0, kind: 'in', contents: INF}, {h: 1, kind: 'side'}]);
+  {
+    await run(300); const s = await conts(), snk = at(s, 1);
+    chk('16e sideways output on level 1 fills its sink (in > 0, stock > 0)', snk.in > 0 && snk.have > 0, JSON.stringify(snk));
+  }
+  // j) all 4 rotations: input on L0 at N0 (io rotates with the block), output on L1 at N0 -> sink L1 fills
+  for (let rot = 0; rot < 4; rot++) {
+    await scene([0, 1], [{h: 0, kind: 'in', contents: INF}, {h: 1, kind: 'out'}], rot);
+    await run(300); const s = await conts(), snk = at(s, 1);
+    chk('16e rot ' + rot + ': input N0 on L0 reaches sink on L1 (in > 0)', snk.in > 0, JSON.stringify(snk));
+  }
+  // k) splitter on the N0 connection cell: front faces the elevator -> elevator INPUT; back face fed by a source belt; L1 output at N0 -> sink L1
+  const splitterFront = async (rot, bx = 2, by = 2) => {
+    T.resetMid();
+    const ps = await elvPorts(rot, bx, by), p = portOf(ps, 'N0'), c = cell(p), n = [p.nx, p.ny];
+    const sp = await splRot(c, [-n[0], -n[1]], 'out');
+    const ms = [mac('DAT_Splitter', c.x, c.y, {rot: sp.rot, mid: T.nm()}), ...(await T.leg(c, [[sp.inN, 3]], 'in', INF))];
+    ms.push(...withH(await legFor(p, 'out'), 1));
+    await imp(pg, bp([0, 1].map(h => blk(ELV, bx, by, {h, rot})), ms));
+  };
+  await splitterFront(0);
+  {
+    await run(300); const s = await conts(), snk = at(s, 1), r = await routers();
+    chk('16e splitter front -> elevator: sink on L1 fills (splitter output = elevator input)', snk.in > 0 && snk.have > 0, JSON.stringify([snk, r]));
+  }
+  // l) same with the splitter port facing the elevator disabled: no link, nothing reaches L1
+  {
+    T.resetMid();
+    const ps = await elvPorts(0), p = portOf(ps, 'N0'), c = cell(p), n = [p.nx, p.ny];
+    const sp = await splRot(c, [-n[0], -n[1]], 'out');
+    const ms = [mac('DAT_Splitter', c.x, c.y, {rot: sp.rot, mid: T.nm(), off: [{Face: sp.f, Index: sp.i, Enabled: false}]}), ...(await T.leg(c, [[sp.inN, 3]], 'in', INF))];
+    ms.push(...withH(await legFor(p, 'out'), 1));
+    await imp(pg, bp([blk(ELV, 2, 2, {h: 0}), blk(ELV, 2, 2, {h: 1})], ms));
+    await run(200); const s = await conts(), snk = at(s, 1), r = await routers();
+    chk('16e disabled splitter port facing elevator: no link (no router, sink L1 empty)', snk.in === 0 && r.length === 0, JSON.stringify([snk, r]));
+  }
+  // m) splitter front on all 4 elevator rotations
+  for (let rot = 0; rot < 4; rot++) {
+    await splitterFront(rot);
+    await run(300); const s = await conts(), snk = at(s, 1);
+    chk('16e splitter front, elevator rot ' + rot + ': sink on L1 fills', snk.in > 0, JSON.stringify(snk));
+  }
+  // n) splitter back face toward the elevator = OUTPUT: L1 input at N0 -> elevator L0 -> splitter back -> front -> sink on L0
+  {
+    T.resetMid();
+    const ps = await elvPorts(0), p = portOf(ps, 'N0'), c = cell(p), n = [p.nx, p.ny];
+    const sp = await splRot(c, [-n[0], -n[1]], 'in');
+    const ms = [mac('DAT_Splitter', c.x, c.y, {rot: sp.rot, mid: T.nm()})];
+    ms.push(...withH(await T.leg(c, [[sp.outN, 3]], 'out', null), 0));   // L0 belts leave the splitter front (+n side) into a sink
+    ms.push(...withH(await legFor(p, 'in', INF), 1));              // L1 input into N0
+    await imp(pg, bp([blk(ELV, 2, 2, {h: 0}), blk(ELV, 2, 2, {h: 1})], ms));
+    await run(300); const s = await conts(), snk = at(s, 0), r = await routers();
+    chk('16e splitter back face -> elevator: sink on L0 fills (elevator output into splitter)', snk.in > 0 && snk.have > 0, JSON.stringify([snk, r]));
+  }
+  // o) user's h=2 layout (Main Base): elevator block cell (-1,4) on L0 and L1; splitter on the N0 end cell (into elevator); L1 output at N0 -> sink L1
+  await splitterFront(0, -1, 4);
+  {
+    await run(400); const s = await conts(), snk = at(s, 1), r = await routers();
+    chk('16e user shaft (-1,4): splitter feeds elevator, items reach L1 sink', snk.in > 0 && snk.have > 0, JSON.stringify([snk, r]));
+  }
+  // p) user's shaft as belts (Main Base cell -1,4): L0 west end belt into N0 (io), east end belt into N1, source container east of the row feeding west;
+  //    L1 output belt at N0 pointing away (east) -> sink L1. (A belt pointing west at N0 is an input, so the L1 output points away.)
+  {
+    T.resetMid();
+    const ps = await elvPorts(0, -1, 4), n0 = portOf(ps, 'N0'), n1 = portOf(ps, 'N1');
+    const c0 = cell(n0), c1 = cell(n1);
+    const ms = [mac('DAT_ConveyorBelt', c0.x, c0.y, {rot: ROT(n0.io), mid: T.nm()}), mac('DAT_ConveyorBelt', c1.x, c1.y, {rot: ROT(n1.io), mid: T.nm()})];
+    ms.push(...await T.leg(c0, [[[1, 0], 3]], 'in', INF));
+    ms.push(...withH(await legFor(n0, 'out'), 1));
+    await imp(pg, bp([blk(ELV, -1, 4, {h: 0}), blk(ELV, -1, 4, {h: 1})], ms));
+    await run(400); const s = await conts(), snk = at(s, 1), src = at(s, 0), r = await routers();
+    chk('16e user shaft belts (-1,4): row into N0 reaches L1 sink (in > 0, stock > 0)', snk.in > 0 && snk.have > 0, JSON.stringify([snk, src, r, {c0, c1, row: c1.x - c0.x, sameRow: c0.y === c1.y}]));
+  }
+  await ctx.close();
+}
+
 async function s16ui(br) {
   const HK = 'ITEM_TitaniumPlates>ITEM_HullPlates', TP = 'ITEM_TitaniumPlates';
   const INF = [{Item: TP, Count: 0, Infinite: true}];
@@ -1746,11 +1930,12 @@ async function s16ui(br) {
   await stopSim(pg);
   await pg.click('#simB');
   chk('16ui toggling Simulate off clears SIM', await pg.evaluate(() => __fb.SIM === null && !__fb.SM));
-  // view/layer change resets + pauses
+  // view change resets + pauses; layer change keeps the run (all levels run together)
   cells = await asmScene(pg, tk, {src: INF});
   await startSim(pg, 'sm60'); await pg.waitForTimeout(700);
+  const tL0 = await T(pg);
   await pg.click('#lUp'); await pg.waitForTimeout(150);
-  chk('16ui layer change while on: paused and reset', await pg.getAttribute('#smPlay', 'aria-pressed') === 'false' && (await T(pg)) === 0, `t=${await T(pg)}`);
+  chk('16ui layer change while on: sim keeps running, not reset (all levels in one run)', await pg.getAttribute('#smPlay', 'aria-pressed') === 'true' && (await T(pg)) > tL0, `t=${tL0} -> ${await T(pg)}`);
   await pg.click('#lDn'); await pg.waitForTimeout(150);
   await startSim(pg, 'sm60'); await pg.waitForTimeout(500);
   await pg.evaluate(() => __fb.setView('L')); await pg.waitForTimeout(100);
@@ -2912,6 +3097,7 @@ try {
   try { console.log('--- 14 storage scenes'); await s14(br); } catch (e) { chk('14 storage scenes: section ran', false, e.stack || String(e)); }
   try { console.log('--- 15 right-click + hotbar'); await s15(br); } catch (e) { chk('15 right-click + hotbar: section ran', false, e.stack || String(e)); }
   try { console.log('--- 16 simulation engine'); await s16(br); } catch (e) { chk('16 simulation engine: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 16e elevator transfer'); await s16e(br); } catch (e) { chk('16e elevator transfer: section ran', false, e.stack || String(e)); }
   try { console.log('--- 16ui simulation UI'); await s16ui(br); } catch (e) { chk('16ui simulation UI: section ran', false, e.stack || String(e)); }
   try { console.log('--- 17 autosave'); await s17(br); } catch (e) { chk('17 autosave: section ran', false, e.stack || String(e)); }
   try { console.log('--- 18 links off + simulated bottleneck colours'); await s18(br); } catch (e) { chk('18 links off + sim colours: section ran', false, e.stack || String(e)); }
