@@ -8,6 +8,7 @@ Browser tool to plan a station factory for **Main Sequence**: a top-down grid of
 - Station block layout with the in-game palette, rotation, move, copy, delete.
 - Internal factory floor per block (14x14, 14x30, 30x30) with doorways.
 - Machines and belts with toggleable ports, belt link overlay, underground length warnings.
+- Splitters: the input side is drawn as a small chevron (not a port); the three output ports (right, front, left, rotating with the machine) are toggleable and exported in the game's byte order. Importing a station block file keeps the block positions as in the file.
 - Recipe selection per machine, items/min rates and belt speed (Mk1-3) checks.
 - Live simulation: play/pause, 1x/10x/60x; containers, machines (idle/working/starved/blocked), splitters, balancers, merges and undergrounds.
 - Bottlenecks view: Flow / Blockage colours from the plan or the live simulation.
@@ -22,9 +23,10 @@ Browser tool to plan a station factory for **Main Sequence**: a top-down grid of
 - Adds a **Blueprint Unit** station block (researched under Computation Science).
 - You export the JSON here (File > Export), open the unit in the game and paste it in.
 - The window shows the net **modification cost** before anything is built.
-- **Build** places the blocks, machines, belts and ports on your station. Parts that already match are kept, different ones are changed in place, stale ones are removed and refunded to the unit.
+- **Build** places the machines, belts and ports on your station. Parts that already match are kept, different ones are changed in place, stale ones are removed and refunded to the unit. A splitter whose ports differ is replaced.
+- With the optional **Station Build** checkbox the unit also places the station blocks of the JSON first (a block in the way is removed, research and cost are checked).
 
-**What you need:** Main Sequence Demo and MSCore (installed with MSCoreManager). Install steps are in the mod's README.
+**What you need:** Main Sequence Demo and MSCore (installed with MSCoreManager): MSCore 0.7.6 or newer, 0.8.0 for Station Build, 0.8.1 so hand deconstruction refunds into your own inventory. Install steps are in the mod's README.
 
 ## Roadmap
 - [x] Savegame station selection: load a save and pick one of its stations to plan or edit.
