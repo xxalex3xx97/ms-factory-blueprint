@@ -15,7 +15,8 @@
       "entrance": {
         "kind": "doors",
         "evidence": "doors on every hall side except the ship berth (DIR[rot], rot 0 east = shaft end): W, N, S at rot 0, slots by the station door rule (BPO_Dock_2 colliders: W gaps y-11..-5,5..11; N/S gaps x-11..-5); the ship side gets no entrance mark"
-      }
+      },
+      "hatch": "interior"
     },
     "BPO_Station_01": {
       "w": 1,
@@ -357,7 +358,8 @@
           18
         ],
         "evidence": "fit from the 20 decoded colliders: centre = BlockBounds centre (block 0,0); outer radius = mean of the outer faces of the N, S and E axis pieces (6.358, 6.358, 6.27 = 6.33), inner = mean of their inner faces (5.421, 5.421, 5.213 = 5.35); the 17 stepped ring boxes are replaced by the annulus, the 2 west entry bars (idx 0, 10) and the centre holotable (idx 19) stay boxes; ring opening = the door gap y +-2.954"
-      }
+      },
+      "hatch": "ring"
     },
     "BPO_ShipyardSide": {
       "w": 1,
@@ -394,11 +396,33 @@
       },
       "wallIdx": [
         0,
-        1,
         2,
-        3,
         4
-      ]
+      ],
+      "drop": [
+        1,
+        3
+      ],
+      "chain": {
+        "group": "shipyard",
+        "edges": {
+          "N": [
+            -8,
+            -8,
+            0.264,
+            -7
+          ],
+          "S": [
+            -8,
+            7,
+            0.264,
+            8
+          ]
+        },
+        "evidence": "shipyard strip: the west wall bars and the east rail end flush at the block N/S edges (no wall there, same on Side and Core), so a Side or Core attaches on those two lateral edges; with no such neighbour the edge is closed by a wall as thick as the west bars (1) between the west bar and the rail"
+      },
+      "hatch": "interior",
+      "clip": true
     },
     "BPO_ShipyardCore": {
       "w": 1,
@@ -436,15 +460,37 @@
       "wallIdx": [
         0,
         1,
-        2,
         3,
         4,
         6,
         7,
-        8,
         9,
         10
-      ]
+      ],
+      "drop": [
+        2,
+        8
+      ],
+      "chain": {
+        "group": "shipyard",
+        "edges": {
+          "N": [
+            -8,
+            -8,
+            0.264,
+            -7
+          ],
+          "S": [
+            -8,
+            7,
+            0.264,
+            8
+          ]
+        },
+        "evidence": "shipyard strip: the west wall bars and the east rail end flush at the block N/S edges (no wall there, same on Side and Core), so a Side or Core attaches on those two lateral edges; with no such neighbour the edge is closed by a wall as thick as the west bars (1) between the west bar and the rail"
+      },
+      "hatch": "interior",
+      "clip": true
     },
     "BPO_ShipyardCore_02": {
       "w": 1,
@@ -487,16 +533,38 @@
       "wallIdx": [
         0,
         1,
-        2,
         3,
         4,
         6,
         7,
-        8,
         9,
         10,
         11
-      ]
+      ],
+      "drop": [
+        2,
+        8
+      ],
+      "chain": {
+        "group": "shipyard",
+        "edges": {
+          "N": [
+            -8,
+            -16,
+            0.264,
+            -15
+          ],
+          "S": [
+            -8,
+            15,
+            0.264,
+            16
+          ]
+        },
+        "evidence": "shipyard strip: the west wall bars and the east rail end flush at the block N/S edges (no wall there, same on Side and Core), so a Side or Core attaches on those two lateral edges; with no such neighbour the edge is closed by a wall as thick as the west bars (1) between the west bar and the rail"
+      },
+      "hatch": "interior",
+      "clip": true
     },
     "BPO_BlueprintUnit": {
       "add": true,
@@ -584,7 +652,8 @@
           18
         ],
         "evidence": "fit from the 20 decoded colliders: centre = BlockBounds centre (block 0,0); outer radius = mean of the outer faces of the N, S and E axis pieces (6.358, 6.358, 6.27 = 6.33), inner = mean of their inner faces (5.421, 5.421, 5.213 = 5.35); the 17 stepped ring boxes are replaced by the annulus, the 2 west entry bars (idx 0, 10) and the centre holotable (idx 19) stay boxes; ring opening = the door gap y +-2.954"
-      }
+      },
+      "hatch": "ring"
     }
   }
 }

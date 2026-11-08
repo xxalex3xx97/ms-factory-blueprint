@@ -2535,7 +2535,7 @@ async function s28(br) {
     if (c && c.hasFloor) chk(`28 ${n}: floor.verified and door.verified`, c.floorV === true && c.doorV === true, JSON.stringify(c));
     if (c && c.nofloor) chk(`28 ${n}: nofloor (no floor, no buildable area)`, !c.hasFloor, JSON.stringify(c));
     const cols = floors[src.shapeOf || n].colliders_raw || [], overhead = src.ground ? cols.filter(q => q[0][2] >= 1).length : 0, fill = src.fill ? 1 : 0;
-    const want = cols.length - overhead + fill, got = sh ? sh.walls + sh.props + sh.ring : -1;   // ring: stepped boxes replaced by the fitted circle
+    const want = cols.length - overhead + fill - (src.drop || []).length, got = sh ? sh.walls + sh.props + sh.ring : -1;   // ring: stepped boxes replaced by the fitted circle
     chk(`28 ${n}: walls+props (${got}) == colliders_raw (${cols.length}) minus overhead (${overhead}) plus fill (${fill}) = ${want}`, got === want, `walls ${sh && sh.walls} props ${sh && sh.props}`);
     const pal = await palHtml(c && c.label);
     chk(`28 ${n}: palette entry "${c && c.label}" present, no "!?"`, pal !== null && !pal.includes('!?'), String(pal).slice(0, 300));
@@ -2645,7 +2645,7 @@ async function s28(br) {
     } return out });
   chk('28 drone bay Mk.1/Mk.2: 3 wall bars + 2 chamfer corners = ONE connected outline', [comp.BPO_MiningDroneBayBlock, comp.BPO_MiningDroneBayBlock_2].every(c => c.rects === 3 && c.comps === 1 && c.corners === 2), JSON.stringify(comp));
   chk('28 Elevator 1x1: 4 chamfered outer corners added by the wall union (like a station corner)', comp.BPO_ElevatorBlock_03.corners === 4 && comp.BPO_Station_01.corners === 4, JSON.stringify([comp.BPO_ElevatorBlock_03, comp.BPO_Station_01]));
-  chk('28 shipyards: touching colliders are joined (Side 5 pieces, Core 10 -> 6, Core Mk.2 11 -> 7 after union)', comp.BPO_ShipyardSide.comps === 5 && comp.BPO_ShipyardCore.comps === 6 && comp.BPO_ShipyardCore_02.comps === 7 && comp.BPO_ShipyardCore.rects === 10 && comp.BPO_ShipyardCore_02.rects === 11, JSON.stringify(comp));
+  chk('28 shipyards: touching colliders are joined (Side 3 pieces, Core 8 -> 4, Core Mk.2 9 -> 5 after union; posts dropped)', comp.BPO_ShipyardSide.comps === 3 && comp.BPO_ShipyardCore.comps === 4 && comp.BPO_ShipyardCore_02.comps === 5 && comp.BPO_ShipyardCore.rects === 8 && comp.BPO_ShipyardCore_02.rects === 9, JSON.stringify(comp));
   const gapOk = await pg.evaluate(() => ['BPO_ShipyardSide', 'BPO_ShipyardCore', 'BPO_ShipyardCore_02', 'BPO_CommandModule'].map(n => { const s = SHAPES[n], R = s.walls.concat(s.props);
     return [n, s.gaps.length === (n === 'BPO_ShipyardCore_02' ? 2 : 1) && s.gaps.every(g => { const cx = (g[1] + g[3]) / 2, cy = (g[2] + g[4]) / 2; return !R.some(r => cx > r[0] && cx < r[2] && cy > r[1] && cy < r[3]) && R.some(r => Math.abs(r[3] - g[2]) < .2 && r[0] <= g[1] + .01) && R.some(r => Math.abs(r[1] - g[4]) < .2 && r[0] <= g[1] + .01) })] }));
   chk('28 door gaps kept open: nothing covers the gap centre, wall bars on both gap edges', gapOk.every(g => g[1]), JSON.stringify(gapOk));
@@ -2660,7 +2660,7 @@ async function s28(br) {
       return {door: door && (v ? [door.y, door.y + door.h] : [door.x, door.x + door.w]), lo: v ? Math.min(y0, y1) : Math.min(x0, x1), hi: v ? Math.max(y0, y1) : Math.max(x0, x1), nrm: v ? [x0, x1] : [y0, y1], edge};
     }, [`${P}${n}.${n}_C`, `${P}${nb}.${nb}_C`, r]);
     const [lo, hi] = g.door || [0, 0], mid = (lo + hi) / 2;
-    chk(`28 ${n} rot ${r} next to ${nb.replace('BPO_', '')}: gap centred on the neighbour door slot, gap on the tile edge`, !!g.door && Math.abs((g.lo + g.hi) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - g.edge) < 1e-6), JSON.stringify(g));
+    chk(`28 ${n} rot ${r} next to ${nb.replace('BPO_', '')}: gap centred on the neighbour door slot, gap on the shifted tile edge (edge - 1)`, !!g.door && Math.abs((g.lo + g.hi) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - (g.edge - 1)) < 1e-6), JSON.stringify(g));
   }
   // grey no-build hatch layer: canvas diff with NBH on/off
   const hatchDiff = (cls, rot) => pg.evaluate(([cls, rot]) => {
@@ -2671,12 +2671,12 @@ async function s28(br) {
     let n = 0, inFloor = 0, outside = 0; const bx0 = (V.ox + b.x * FC * s) * k, by0 = (V.oy + b.y * FC * s) * k, bx1 = bx0 + d.w * FC * s * k, by1 = by0 + d.h * FC * s * k;
     for (let i = 0; i < a.length; i += 4) if (a[i] !== c[i] || a[i + 1] !== c[i + 1] || a[i + 2] !== c[i + 2]) { n++; const p = i / 4, x = p % cvs.width, y = (p - x) / cvs.width;
       if (fr && x > (V.ox + fr.x * s) * k + 1 && x < (V.ox + (fr.x + fr.w) * s) * k - 1 && y > (V.oy + fr.y * s) * k + 1 && y < (V.oy + (fr.y + fr.h) * s) * k - 1) inFloor++;
-      if (x < bx0 - 3 || x > bx1 + 3 || y < by0 - 3 || y > by1 + 3) outside++ }
+      const mg = SHIPEND(b) ? s * k + 3 : 3; if (x < bx0 - mg || x > bx1 + mg || y < by0 - mg || y > by1 + mg) outside++ }   // dock: the hull walls overshoot the footprint by up to 1 wall unit (see dock rot checks)
     return {n, inFloor, outside};
   }, [cls, rot]);
   for (const n of ['BPO_CommandModule', 'BPO_BlueprintUnit', 'BPO_ShipyardSide', 'BPO_ShipyardCore', 'BPO_ShipyardCore_02', 'BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01', 'BPO_StationArmour_01', 'BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) {
     const h = await hatchDiff(`${P}${n}.${n}_C`, 0);
-    chk(`28 ${n}: grey no-build hatch drawn, clipped to its tile`, h.n > 100 && h.outside === 0, JSON.stringify(h));
+    chk(`28 ${n}: grey no-build hatch drawn${/Shipyard|Command|Blueprint/.test(n) ? ' (clipped to the wall interior, tested below)' : ', clipped to its tile'}`, h.n > 100 && (h.outside === 0 || /Shipyard|Command|Blueprint/.test(n)), JSON.stringify(h));
   }
   const hs = await hatchDiff(`${P}BPO_Station_01.BPO_Station_01_C`, 0), he = await hatchDiff(`${P}BPO_ElevatorBlock_03.BPO_ElevatorBlock_03_C`, 0);
   chk('28 floor blocks (Station 1x1, Elevator 1x1): no grey hatch layer', hs.n === 0 && he.n === 0, JSON.stringify([hs, he]));
@@ -2689,6 +2689,47 @@ async function s28(br) {
       const g = document.getElementById('cv').getContext('2d'), o = g.arc, got = []; g.arc = function (x, y, r, ...q) { got.push([r, x, y]); return o.call(this, x, y, r, ...q) }; __fb.paint(); g.arc = o;
       const rg = SHAPES[cls.includes('Blueprint') ? 'BPO_BlueprintUnit' : 'BPO_CommandModule'].ring, s = sc(); return {got, ro: rg.ro * s, ri: rg.ri * s, n: rg.n} }, `${P}${n}.${n}_C`);
     chk(`28 ${n}: ring drawn with arc() at the fitted outer and inner radius (no stepped boxes), 17 boxes replaced`, a.got.some(q => Math.abs(q[0] - a.ro) < .01) && a.got.some(q => Math.abs(q[0] - a.ri) < .01) && a.n === 17, JSON.stringify(a.got.slice(0, 4)));
+  }
+  // ---- group 2 round 2: closing walls, hatch strictly inside the walls, posts gone, edges meet on one line
+  const openE = (cls, r, nbs) => pg.evaluate(([cls, r, nbs]) => {
+    const B = (c, x, y, rot, i) => ({Class: c, GridLocation: {X: x, Y: y}, Height: 0, GridRotation: rot, BlockID: i, PaletteID: 0});
+    const bl = [B(cls, 40, 40, r, 1)]; nbs.forEach(([c, ed], i) => { const D = DIR[(ed + r) & 3]; bl.push(B(c, 40 + 4 * D[0], 40 + 4 * D[1], r, i + 2)) });
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: bl, DefaultMachines: []})); return chainOpenEdges(__fb.S.blocks[0]).sort().join('') }, [cls, r, nbs]);
+  const CORE = `${P}BPO_ShipyardCore.BPO_ShipyardCore_C`, SIDE = `${P}BPO_ShipyardSide.BPO_ShipyardSide_C`;
+  for (const r of [0, 1, 2, 3]) {
+    const a = await openE(CORE, r, []), bN = await openE(CORE, r, [[SIDE, 3]]), bS = await openE(CORE, r, [[SIDE, 1]]), c = await openE(CORE, r, [[SIDE, 1], [CORE, 3]]), d = await openE(SIDE, r, [[CORE, 1]]);
+    chk(`28 shipyard rot ${r}: Core alone closes both lateral edges (NS); a Side on the S edge leaves only N closed; Side/Core on both edges leave none; Side with a Core on S closes N`, a === 'NS' && bN === 'S' && bS === 'N' && c === '' && d === 'N', JSON.stringify([a, bN, bS, c, d]));
+  }
+  const nonChain = await openE(`${P}BPO_Station_01.BPO_Station_01_C`, 0, []);
+  chk('28 non-shipyard blocks have no closing walls', nonChain === '', nonChain);
+  const sy = await pg.evaluate(() => Object.fromEntries(['BPO_ShipyardSide', 'BPO_ShipyardCore', 'BPO_ShipyardCore_02'].map(n => { const s = SHAPES[n], all = s.walls.concat(s.props), top = s.walls.reduce((m, q) => Math.max(m, q[3]), 0);
+    return [n, {n: all.length, tiny: all.filter(r => r[2] - r[0] < 1 && r[3] - r[1] < 1 && (r[1] < .5 || r[3] > top - .5)).length, over: all.filter(r => r[1] < -1e-9 || r[3] > (n.endsWith('_02') ? 32 : 16) + 1e-9).length,
+      closes: Object.keys(s.chain.closing).length, wp: wallPlan(s, false, [s.chain.closing.N]).w.some(r => r.join() === s.chain.closing.N.join())}]})));
+  chk('28 shipyards: the 2 loose posts at the N/S tile edges are gone (Side 3, Core 9, Core Mk.2 10 rects) and nothing overshoots the tile (clipped)', sy.BPO_ShipyardSide.n === 3 && sy.BPO_ShipyardCore.n === 9 && sy.BPO_ShipyardCore_02.n === 10 && Object.values(sy).every(v => v.tiny === 0 && v.over === 0 && v.closes === 2 && v.wp), JSON.stringify(sy));
+  // hatch strictly inside the walls: every pixel the hatch layer changes lies inside the interior rects (or the ring circle), +-1.5 px
+  const inside = (cls, rot) => pg.evaluate(([cls, rot]) => {
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: rot, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+    __fb.setView('F'); const b = __fb.S.blocks[0], d = dim(b); V.z = Math.min(W, H) / ((d.w + 1.5) * FC * CELLS.F); V.ox = W / 2 - (b.x + d.w / 2) * FC * sc(); V.oy = H / 2 - (b.y + d.h / 2) * FC * sc();
+    const g = document.getElementById('cv').getContext('2d'), k = devicePixelRatio, cvs = document.getElementById('cv'), grab = () => g.getImageData(0, 0, cvs.width, cvs.height).data;
+    NBH = false; __fb.paint(); const a = grab().slice(); NBH = true; __fb.paint(); const c = grab(), s = sc(), t = shapeTf(b), P = (u, v) => t.f(u, v).map((n, i) => i ? V.oy + n * s : V.ox + n * s);
+    const rg = t.sh.hatch === 'ring' ? t.sh.ring : null, rects = rg ? [] : interiorRects(t.sh, SHIPEND(b)).map(r => { const p = P(r[0], r[1]), q = P(r[2], r[3]); return [Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1])] }), cc = rg && P(rg.c[0], rg.c[1]);
+    let n = 0, bad = 0; for (let i = 0; i < a.length; i += 4) if (a[i] !== c[i] || a[i + 1] !== c[i + 1] || a[i + 2] !== c[i + 2]) { n++; const p = i / 4, x = (p % cvs.width) / k, y = Math.floor(p / cvs.width) / k;
+      const ok = rg ? Math.hypot(x - cc[0], y - cc[1]) <= rg.ri * s + 1.5 : rects.some(r => x >= r[0] - 1.5 && x <= r[2] + 1.5 && y >= r[1] - 1.5 && y <= r[3] + 1.5); if (!ok) bad++ }
+    return {n, bad};
+  }, [cls, rot]);
+  for (const n of ['BPO_Dock_2', 'BPO_CommandModule', 'BPO_BlueprintUnit', 'BPO_ShipyardSide', 'BPO_ShipyardCore', 'BPO_ShipyardCore_02']) for (const r of [0, 1, 2, 3]) {
+    const h = await inside(`${P}${n}.${n}_C`, r);
+    chk(`28 ${n} rot ${r}: hatch (${h.n} px) only inside the closed wall interior`, h.n > 100 && h.bad === 0, JSON.stringify(h));
+  }
+  // hull edges meet on one line: wall on the door side vs the neighbour wall outer face (Station 1x1, Elevator 1x1), rot 0..3
+  for (const n of ['BPO_ShipyardCore', 'BPO_ShipyardSide', 'BPO_CommandModule', 'BPO_BlueprintUnit']) for (const nb of ['BPO_Station_01', 'BPO_ElevatorBlock_03']) for (const r of [0, 1, 2, 3]) {
+    const g = await pg.evaluate(([dc, nc, r]) => {
+      const ed = (2 + r) & 3, DD = DIR[ed], B = (c, x, y, rot, i) => ({Class: c, GridLocation: {X: x, Y: y}, Height: 0, GridRotation: rot, BlockID: i, PaletteID: 0});
+      __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(dc, 40, 40, r, 1), B(nc, 40 + 4 * DD[0], 40 + 4 * DD[1], 0, 2)], DefaultMachines: []}));
+      const a = __fb.S.blocks[0], c = __fb.S.blocks[1], ra = shapeRects(a, 'walls').concat(shapeRects(a, 'props')), rc = shapeRects(c, 'walls'), h = ed % 2 === 0 ? 'x' : 'y', sz = h === 'x' ? 'w' : 'h';
+      const lo = R => Math.min(...R.map(q => q[h])), hi = R => Math.max(...R.map(q => q[h] + q[sz]));
+      return ed === 2 || ed === 3 ? [lo(ra), hi(rc)] : [hi(ra), lo(rc)] }, [`${P}${n}.${n}_C`, `${P}${nb}.${nb}_C`, r]);
+    chk(`28 ${n} rot ${r} next to ${nb.replace('BPO_', '')}: wall outer face ${g[0]} == neighbour wall outer face ${g[1]} (one line)`, Math.abs(g[0] - g[1]) < 0.0101, JSON.stringify(g));   // Command Module entry bars start at 0.006 (decoded collider)
   }
   // Layout marks: bar = full door slot length (scales with zoom), thickness min(5, .12 s), chevron radius capped at 9; centred on the TRUE tile edge middle
   const lay = (blocks, s, rot) => pg.evaluate(([bl, s]) => {
