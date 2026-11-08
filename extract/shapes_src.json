@@ -200,7 +200,8 @@
         0,
         1,
         2
-      ]
+      ],
+      "hatch": "interior"
     },
     "BPO_MiningDroneBayBlock_2": {
       "add": true,
@@ -250,7 +251,8 @@
         0,
         1,
         2
-      ]
+      ],
+      "hatch": "interior"
     },
     "BPO_StationArmour_01": {
       "w": 1,

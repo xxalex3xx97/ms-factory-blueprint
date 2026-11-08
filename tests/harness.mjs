@@ -2676,7 +2676,7 @@ async function s28(br) {
   }, [cls, rot]);
   for (const n of ['BPO_CommandModule', 'BPO_BlueprintUnit', 'BPO_ShipyardSide', 'BPO_ShipyardCore', 'BPO_ShipyardCore_02', 'BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01', 'BPO_StationArmour_01', 'BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) {
     const h = await hatchDiff(`${P}${n}.${n}_C`, 0);
-    chk(`28 ${n}: grey no-build hatch drawn${/Shipyard|Command|Blueprint/.test(n) ? ' (clipped to the wall interior, tested below)' : ', clipped to its tile'}`, h.n > 100 && (h.outside === 0 || /Shipyard|Command|Blueprint/.test(n)), JSON.stringify(h));
+    chk(`28 ${n}: grey no-build hatch drawn${/Shipyard|Command|Blueprint|Drone/.test(n) ? ' (clipped to the wall interior, tested below)' : ', clipped to its tile'}`, h.n > 100 && (h.outside === 0 || /Shipyard|Command|Blueprint|Drone/.test(n)), JSON.stringify(h));
   }
   const hs = await hatchDiff(`${P}BPO_Station_01.BPO_Station_01_C`, 0), he = await hatchDiff(`${P}BPO_ElevatorBlock_03.BPO_ElevatorBlock_03_C`, 0);
   chk('28 floor blocks (Station 1x1, Elevator 1x1): no grey hatch layer', hs.n === 0 && he.n === 0, JSON.stringify([hs, he]));
@@ -2717,7 +2717,7 @@ async function s28(br) {
       const ok = rg ? Math.hypot(x - cc[0], y - cc[1]) <= rg.ri * s + 1.5 : rects.some(r => x >= r[0] - 1.5 && x <= r[2] + 1.5 && y >= r[1] - 1.5 && y <= r[3] + 1.5); if (!ok) bad++ }
     return {n, bad};
   }, [cls, rot]);
-  for (const n of ['BPO_Dock_2', 'BPO_CommandModule', 'BPO_BlueprintUnit', 'BPO_ShipyardSide', 'BPO_ShipyardCore', 'BPO_ShipyardCore_02']) for (const r of [0, 1, 2, 3]) {
+  for (const n of ['BPO_Dock_2', 'BPO_CommandModule', 'BPO_BlueprintUnit', 'BPO_ShipyardSide', 'BPO_ShipyardCore', 'BPO_ShipyardCore_02', 'BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) for (const r of [0, 1, 2, 3]) {
     const h = await inside(`${P}${n}.${n}_C`, r);
     chk(`28 ${n} rot ${r}: hatch (${h.n} px) only inside the closed wall interior`, h.n > 100 && h.bad === 0, JSON.stringify(h));
   }
