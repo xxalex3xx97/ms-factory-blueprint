@@ -104,12 +104,12 @@ cv.addEventListener("wheel",e=>{
 cv.addEventListener("dblclick",e=>{
   if(view!=="L"||active)return;
   const p=pt(e),b=hit(toCell(p.x,p.y));if(!b)return;
-  layer=b.h;setView("F");
+  layer=b.h;if(SIM&&SIM.opts.cur)SIM.sig=null;setView("F");
   const r=floorRect(b)||{x:b.x*FC,y:b.y*FC,w:FC,h:FC};
   frame(r.x,r.y,r.x+r.w,r.y+r.h);
 });
 
-function setLayer(n){layer=n;sel=new Set([...sel].filter(i=>S.blocks.find(b=>b.id===i&&b.h===n)));all()}
+function setLayer(n){layer=n;if(SIM&&SIM.opts.cur)SIM.sig=null;sel=new Set([...sel].filter(i=>S.blocks.find(b=>b.id===i&&b.h===n)));all()}
 $("lay").onchange=e=>{const v=parseInt(e.target.value,10);if(isFinite(v)&&v-1!==layer)setLayer(v-1);else e.target.value=layer+1};$("lUp").onclick=()=>setLayer(layer+1);$("lDn").onclick=()=>setLayer(layer-1);
 $("ghost").onchange=draw;
 function setView(v){
