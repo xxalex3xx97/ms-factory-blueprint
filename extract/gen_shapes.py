@@ -1,4 +1,4 @@
-"""Generate js/shapes.js: real hull shapes (walls / props / port arms) + catalog patch for allowlisted blocks.
+"""Generate js/shapes.js: real hull shapes (walls / props / port arms / optional outline polys) + catalog patch for allowlisted blocks.
 
 usage:
   python -I extract/gen_shapes.py           write js/shapes.js
@@ -8,12 +8,16 @@ Inputs: extract/floors.json (colliders_raw, hull), extract/shapes_src.json (allo
         extract/extra_blocks.json (portsMesh), extract/sm2_industrial_dock_ports_outline.json (mesh rows, cm).
 Shape coords: block units (1 unit = 1 site cell = 100 cm; machine grid units are 50 cm), relative to the floor top-left (floorOrigin).
 Walls: collider z-size >= 1.9, else props. Port arms: cm * cm2unit + originBlock, mirrorY, then shifted by floorOrigin.
+Per block (shapes_src.json): floorOrigin [x,y] overrides the global one; polys [[[x,y],...],...] (floor cells, block frame like
+colliders_raw) are copied into the shape entry as 'polys' (floor frame). Shape-only keys (floorOrigin, polys) never reach the catalog patch.
+A block without these keys produces the same entry as before.
 """
 import json, os, sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 EX = os.path.join(ROOT, 'extract')
 OUT = os.path.join(ROOT, 'js', 'shapes.js')
+SHAPE_ONLY = ('floorOrigin', 'polys')
 
 
 def rd(name):
@@ -41,12 +45,13 @@ def build():
     src = rd('shapes_src.json')
     fl = rd('floors.json')['blocks']
     eb = rd('extra_blocks.json')
-    ox, oy = src['floorOrigin']
+    gox, goy = src['floorOrigin']
     shapes, patch = {}, {}
     for name, p in src['blocks'].items():
-        patch[name] = {k: v for k, v in p.items()}
+        patch[name] = {k: v for k, v in p.items() if k not in SHAPE_ONLY}
         if name not in fl:
             sys.exit('no floors.json entry for ' + name)
+        ox, oy = p.get('floorOrigin', [gox, goy])   # per-block floor origin overrides the global one
         f = fl[name]
         size = f['hull']['size']
         walls, props, arms = [], [], []
@@ -64,7 +69,10 @@ def build():
                         ys = [-ys[1], -ys[0]]
                     arms.append([r3(x0 * k + bx - ox), r3(ys[0] - oy), r3(x1 * k + bx - ox), r3(ys[1] - oy)])
         ports = [[q['bay'], r3(q['x'] - ox), r3(q['y'] - oy)] for q in (eb.get(name) or {}).get('ports', [])]   # bay, x, y of the port cell centre (floor frame)
-        shapes[name] = {'fw': round(size[0]), 'fh': round(size[1]), 'walls': walls, 'props': props, 'arms': arms, 'ports': ports}
+        entry = {'fw': round(size[0]), 'fh': round(size[1]), 'walls': walls, 'props': props, 'arms': arms, 'ports': ports}
+        if p.get('polys'):
+            entry['polys'] = [[[r3(x - ox), r3(y - oy)] for x, y in poly] for poly in p['polys']]
+        shapes[name] = entry
     return shapes, patch
 
 

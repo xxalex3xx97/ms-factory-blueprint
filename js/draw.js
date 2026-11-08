@@ -199,14 +199,15 @@ function grid(major){
 }
 function pieces(a,b,cuts){const o=[];let p=a;cuts.slice().sort((u,v)=>u[0]-v[0]).forEach(c=>{if(c[0]>p)o.push([p,c[0]]);p=Math.max(p,c[1])});if(p<b)o.push([p,b]);return o}
 // blocks with a real hull (Industrial Dock): ONE roofless plan from the collider/mesh data: hall tint, port pods (green ports + bay numbers, display only), console, one connected wall outline with joined corners
-function wallPlan(sh){   // walls in floor frame: bridge gaps < .5 between rects (flush end caps), add the missing corner squares (outer vertex chamfered)
+function wallPlan(sh,dock){   // walls in floor frame: bridge gaps < .5 between rects (flush end caps), add the missing corner squares (outer vertex chamfered)
   if(sh._wp)return sh._wp;
   let w=sh.walls.map(a=>a.slice());const ov=(a0,a1,b0,b1)=>Math.min(a1,b1)-Math.max(a0,b0),E=.5;
-  // drawing clean-up of the long shaft bars (wide walls): small end caps merge into one flush, identical end; inner end runs to the partition's inner face (closes the doorway gap)
-  const bars=w.filter(a=>a[2]-a[0]>=15),small=a=>a[2]-a[0]<3&&a[3]-a[1]<3,part=Math.min(...w.filter(a=>a[0]>=20&&a[0]<24&&a[3]-a[1]>=8).map(a=>a[0]));
-  bars.forEach(b=>w.filter(small).forEach(c=>{if(c[0]>=b[2]-E&&c[0]-b[2]<E&&ov(b[1],b[3],c[1],c[3])>.3)b[2]=Math.max(b[2],c[2])}));
-  const endX=Math.max(...bars.map(b=>b[2]));bars.forEach(b=>{b[2]=endX;if(b[0]>part&&b[0]-part<2)b[0]=part});
-  w=w.filter(a=>!small(a)||a[0]<endX-3);   // caps are now part of the bars
+  if(dock){   // dock-only clean-up of the long shaft bars (dock magic numbers: bar >= 15 wide, partition at x 20..24): small end caps merge into one flush, identical end; inner end runs to the partition's inner face (closes the doorway gap)
+    const bars=w.filter(a=>a[2]-a[0]>=15),small=a=>a[2]-a[0]<3&&a[3]-a[1]<3,part=Math.min(...w.filter(a=>a[0]>=20&&a[0]<24&&a[3]-a[1]>=8).map(a=>a[0]));
+    bars.forEach(b=>w.filter(small).forEach(c=>{if(c[0]>=b[2]-E&&c[0]-b[2]<E&&ov(b[1],b[3],c[1],c[3])>.3)b[2]=Math.max(b[2],c[2])}));
+    const endX=Math.max(...bars.map(b=>b[2]));bars.forEach(b=>{b[2]=endX;if(b[0]>part&&b[0]-part<2)b[0]=part});
+    w=w.filter(a=>!small(a)||a[0]<endX-3);   // caps are now part of the bars
+  }
   for(let i=0;i<w.length;i++)for(let j=0;j<w.length;j++){if(i===j)continue;const A=w[i],B=w[j];
     if(B[0]>A[2]&&B[0]-A[2]<E&&ov(A[1],A[3],B[1],B[3])>.3){A[2]=B[0];if(Math.abs(A[1]-B[1])<.7&&Math.abs(A[3]-B[3])<.7){B[1]=A[1];B[3]=A[3]}}
     else if(B[1]>A[3]&&B[1]-A[3]<E&&ov(A[0],A[2],B[0],B[2])>.3)A[3]=B[1]}
@@ -220,19 +221,19 @@ function wallPlan(sh){   // walls in floor frame: bridge gaps < .5 between rects
 }
 function drawShapeFloor(A,s){
   const X=x=>Math.round(V.ox+x*s),Y=y=>Math.round(V.oy+y*s),ST="rgba(150,165,190,.6)",WF="#262e3c";
-  A.floors.forEach(r=>{const b=r.b,t=shapeTf(b);if(!t||!SHIPEND(b))return;   // dock-only drawing (partition px0 / wall plan / pods use dock magic numbers); other shapes draw nothing here yet
-    const sh=t.sh,tr=(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
+  A.floors.forEach(r=>{const b=r.b,t=shapeTf(b);if(!t)return;
+    const sh=t.sh,dock=SHIPEND(b),tr=(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
     const rc=(q,f,g=0)=>{cx.fillStyle=f;const x0=X(q.x),y0=Y(q.y);cx.fillRect(x0-g,y0-g,X(q.x+q.w)-x0+2*g,Y(q.y+q.h)-y0+2*g)};
-    const px0=Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0]));   // partition between hall and shaft
-    rc(tr(0,0,px0,def(b.cls).fh),"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
-    // pods: one per decoded port cell (1 cell, contiguous), x extent from the arm mesh rows of that cell
-    const pods=sh.ports.map(([bay,x,y])=>{const rs=sh.arms.filter(a=>(a[1]+a[3])/2>=y-.5&&(a[1]+a[3])/2<y+.5);if(!rs.length)return null;
+    const d=def(b.cls),hall=dock?tr(0,0,Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0])),d.fh):tr(0,0,d.fw,d.fh);   // dock: hall up to the partition (shaft beyond); other blocks: whole floor
+    rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
+    // pods (dock only): one per decoded port cell (1 cell, contiguous), x extent from the arm mesh rows of that cell
+    const pods=!dock?[]:sh.ports.map(([bay,x,y])=>{const rs=sh.arms.filter(a=>(a[1]+a[3])/2>=y-.5&&(a[1]+a[3])/2<y+.5);if(!rs.length)return null;
       return{bay,x,y,q:tr(Math.min(...rs.map(a=>a[0])),y-.46,Math.max(...rs.map(a=>a[2])),y+.46)}}).filter(Boolean);
     const props=sh.props.map(a=>tr(...a));
     props.forEach(q=>rc(q,ST,1));props.forEach(q=>rc(q,"#3b4659"));
     pods.forEach(p=>rc(p.q,ST,1));pods.forEach(p=>rc(p.q,"#2c3648"));
     // walls: strokes (grown 1px) under all fills = outline of the union only
-    const wp=wallPlan(sh),wr=wp.w.map(a=>tr(...a)),poly=wp.corners.map(c=>{const[x0,y0,x1,y1]=c.box,o=c.out,k=Math.min(x1-x0,y1-y0)*.6;
+    const wp=wallPlan(sh,dock),wr=wp.w.map(a=>tr(...a)),poly=wp.corners.map(c=>{const[x0,y0,x1,y1]=c.box,o=c.out,k=Math.min(x1-x0,y1-y0)*.6;
       return[[x0,y0],[x1,y0],[x1,y1],[x0,y1]].flatMap(v=>{if(v[0]!==o[0]||v[1]!==o[1])return[v];const dx=v[0]===x0?1:-1,dy=v[1]===y0?1:-1;const pr=[[v[0]+dx*k,v[1]],[v[0],v[1]+dy*k]];return dx===dy?pr.reverse():pr}).map(v=>t.f(...v).map((n,i)=>Math.round(i?V.oy+n*s:V.ox+n*s)))});
     const path=pg=>{cx.beginPath();pg.forEach((v,i)=>i?cx.lineTo(v[0],v[1]):cx.moveTo(v[0],v[1]));cx.closePath()};
     wr.forEach(q=>rc(q,ST,1));poly.forEach(pg=>{path(pg);cx.fillStyle=ST;cx.strokeStyle=ST;cx.lineWidth=2;cx.stroke();cx.fill()});
