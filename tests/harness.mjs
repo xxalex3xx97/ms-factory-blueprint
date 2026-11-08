@@ -2800,6 +2800,19 @@ async function s32(br) {
     return out;
   });
   chk('32 underground link: drawn at the belt arrow zoom, hidden below it (same threshold)', ug.pairs === 1 && ug.low === 0 && ug.edge === 0 && ug.high === 1, JSON.stringify(ug));
+  // links layer on: drawLinks draws the entry-exit link too, same gate (count dashed strokes in the link colour; drawUG stubbed)
+  const lk = await pg.evaluate(() => {
+    __fb.setView('F'); LK = true;
+    const ref = document.createElement('canvas').getContext('2d'); ref.strokeStyle = 'hsl(210,80%,72%)';
+    const UG = ref.strokeStyle, st = cx.stroke, calls = {n: 0}, orig = window.ugLine;
+    window.ugLine = () => {};
+    cx.stroke = function () { if (this.strokeStyle === UG && this.getLineDash().length) calls.n++; return st.call(this) };
+    const at = px => { V.z = px / CELLS[view]; calls.n = 0; __fb.paint(); return calls.n };
+    const out = {s4: at(4), s95: at(ARROW_MIN_S - .5), s10: at(ARROW_MIN_S)};
+    delete cx.stroke; window.ugLine = orig;
+    return out;
+  });
+  chk('32 underground link, links layer on (F view): entry-exit link not stroked at s=4 or 9.5, stroked once at s=10', lk.s4 === 0 && lk.s95 === 0 && lk.s10 === 1, JSON.stringify(lk));
   await ctx.close();
 }
 

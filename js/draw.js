@@ -44,7 +44,7 @@ function drawLinks(s){
       if(merge){cx.beginPath();cx.arc(b[0],b[1],Math.max(3,s*.18),0,7);cx.stroke()}
       const e=BNK.load.get(u.id);if(e&&e.mixed)mixMark((a[0]+b[0])/2,(a[1]+b[1])/2,s)});
     cx.setLineDash([4,3]);cx.lineWidth=lw;
-    K.ug.forEach(({u,t})=>{const{a,b,g}=seg(u,t);cx.strokeStyle=g;cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke();
+    if(s>=ARROW_MIN_S)K.ug.forEach(({u,t})=>{const{a,b,g}=seg(u,t);cx.strokeStyle=g;cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke();
       const e=BNK.load.get(u.id);if(e&&e.mixed){cx.setLineDash([]);mixMark((a[0]+b[0])/2,(a[1]+b[1])/2,s);cx.setLineDash([4,3])}});
     cx.setLineDash([]);
   }
@@ -56,7 +56,7 @@ function drawLinks(s){
     if(merge){cx.beginPath();cx.arc(b[0],b[1],Math.max(3,s*.18),0,7);cx.stroke()}
   });
   cx.setLineDash([4,3]);cx.strokeStyle="hsl(210,80%,72%)";cx.lineWidth=lw;
-  K.ug.forEach(({u,t})=>{const a=c(u.x,u.y),b=c(t.x,t.y);cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke()});
+  if(s>=ARROW_MIN_S)K.ug.forEach(({u,t})=>{const a=c(u.x,u.y),b=c(t.x,t.y);cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke()});
   cx.setLineDash([]);
   }
   K.off.forEach(e=>{const p=e.port,a=c(p.x,p.y);cx.strokeStyle="rgba(255,90,90,.5)";cx.lineWidth=lw;cx.beginPath();cx.moveTo(a[0]+p.nx*.5*s,a[1]+p.ny*.5*s);cx.lineTo(a[0]+p.nx*.85*s,a[1]+p.ny*.85*s);cx.stroke()});
