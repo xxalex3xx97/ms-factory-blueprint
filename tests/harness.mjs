@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
 import {isDeepStrictEqual} from 'util';
+import {spawnSync} from 'child_process';
 
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
@@ -2373,6 +2374,36 @@ async function s27(br) {
   const B = (n, X, Y, h, r) => ({Class: `${P}${n}.${n}_C`, GridLocation: {X, Y}, Height: h, GridRotation: r, BlockID: 1, PaletteID: 0});
   const sh = await pg.evaluate(() => { const s = SHAPES.BPO_Dock_2; return s && {walls: s.walls.length, props: s.props.length, arms: s.arms.length} });
   chk('27 SHAPES.BPO_Dock_2 has walls, props (console) and port arms', !!sh && sh.walls > 0 && sh.props > 0 && sh.arms > 0, JSON.stringify(sh));
+  // (1) catalog patch (js/shapes.js merges into CATALOG before core.js): dock verified; negative: an unverified block stays unverified
+  const cat = await pg.evaluate(() => { const d = CATALOG.blocks.find(b => b.name === 'BPO_Dock_2'), u = CATALOG.blocks.find(b => b.name === 'BPO_ShipyardCore_02'); return {dock: d && {verified: d.verified, door: d.door && d.door.verified}, unverified: u && u.verified} });
+  chk('27 catalog patch: BPO_Dock_2 verified===true and door.verified===true', !!cat.dock && cat.dock.verified === true && cat.dock.door === true, JSON.stringify(cat));
+  chk('27 catalog negative: BPO_ShipyardCore_02 still verified===false', cat.unverified === false, JSON.stringify(cat));
+  // (2) '!?' badge: select the dock -> inspector and palette entry clean; select an unverified block -> both still show '!?'
+  const palHtml = label => pg.evaluate(l => { const b = [...document.querySelectorAll('#palList button.item')].find(x => x.querySelector('.n') && x.querySelector('.n').textContent === l); return b ? b.outerHTML : null }, label);
+  const selectAt = async (cls, X, Y) => {
+    await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(cls, X, Y, 0, 0)], DefaultMachines: []}));
+    await pg.evaluate(() => { __fb.setView('L'); const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
+    return pg.evaluate(() => { const b = __fb.S.blocks.find(q => __fb.sel.has(q.id)); return b ? b.cls : null });
+  };
+  const dockSel = await selectAt('BPO_Dock_2', 18, 2);
+  chk('27 dock selected in Layout', !!dockSel && dockSel.includes('BPO_Dock_2'), String(dockSel));
+  const dockInsp = await pg.locator('#insp').innerHTML();
+  chk('27 dock inspector HTML has no "!?"', !dockInsp.includes('!?'), dockInsp.slice(0, 300));
+  const dockPal = await palHtml('Industrial Dock');
+  chk('27 palette entry "Industrial Dock" present and has no "!?"', dockPal !== null && !dockPal.includes('!?'), String(dockPal).slice(0, 400));
+  const coreSel = await selectAt('BPO_ShipyardCore_02', 30, 2);
+  chk('27 unverified block selected in Layout', !!coreSel && coreSel.includes('ShipyardCore_02'), String(coreSel));
+  const coreInsp = await pg.locator('#insp').innerHTML();
+  chk('27 unverified block inspector still shows "!?"', coreInsp.includes('!?'), coreInsp.slice(0, 300));
+  const corePal = await palHtml('Shipyard Core Mk.2');
+  chk('27 unverified block palette entry still shows "!?"', corePal !== null && corePal.includes('!?'), String(corePal).slice(0, 400));
+  // (3) gen_shapes.py --check: js/shapes.js up to date with extract/shapes_src.json + floors.json
+  const gs = spawnSync(process.env.PYTHON || 'python', ['-I', path.join(ROOT, 'extract', 'gen_shapes.py'), '--check'], {cwd: ROOT, encoding: 'utf8'});
+  chk('27 python -I extract/gen_shapes.py --check exits 0', gs.status === 0, `status ${gs.status} ${(gs.stdout || '').trim()} ${(gs.stderr || '').trim()} ${gs.error || ''}`);
+  // (4) SHAPES walls+props == colliders_raw count in extract/floors.json for BPO_Dock_2 (18)
+  const nCol = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'floors.json'), 'utf8')).blocks.BPO_Dock_2.colliders_raw.length;
+  const nSh = await pg.evaluate(() => SHAPES.BPO_Dock_2.walls.length + SHAPES.BPO_Dock_2.props.length);
+  chk(`27 SHAPES BPO_Dock_2 walls+props (${nSh}) == floors.json colliders_raw (${nCol})`, nSh === nCol, `walls+props ${nSh}, colliders_raw ${nCol}`);
   const sides = ['east', 'south', 'west', 'north'];
   for (const r of [0, 1, 2, 3]) {
     await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B('BPO_Dock_2', 18, 2, 0, r)], DefaultMachines: []}));
