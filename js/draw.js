@@ -75,7 +75,7 @@ function drawPorts(s){
     portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.max(3,s*.2),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
       cx.strokeStyle="rgba(230,240,255,.45)";cx.lineWidth=Math.max(1.5,s*.08);cx.beginPath();
       cx.moveTo(ex-ix*r+qx*r,ey-iy*r+qy*r);cx.lineTo(ex+ix*r,ey+iy*r);cx.lineTo(ex-ix*r-qx*r,ey-iy*r-qy*r);cx.stroke()});
-    cx.lineWidth=1;
+    cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
     bars.forEach(p=>{
     if(p.line){   // elevator: short tick on the outer edge of the ring cell behind the port (pos 4 = low side, pos 9 = high side)
       const low=p.pos==='start',rx=p.x+p.nx,ry=p.y+p.ny,k=(low?0:1);

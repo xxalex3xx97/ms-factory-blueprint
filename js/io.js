@@ -162,7 +162,7 @@ function importJson(txt,quiet){
     if(!v2)return{id:uid++,cls,x:hf(gx),y:hf(gy),h:n(b.Height),rot:r,pid:n(b.PaletteID)};
     const f=dim({cls,rot:r}),sh=SHIPEND({cls}),ax=sh&&f.w===1&&DIR[r][0]<0?1:0,ay=sh&&f.h===1&&DIR[r][1]<0?1:0;   // shipEnd: 2x2 box, drawn row = station side
     const nb={id:uid++,cls,x:cell(gx,4,sh?2:2*(f.w-1))+ax,y:cell(gy,4,sh?2:2*(f.h-1))+ay,h:n(b.Height),rot:r,pid:n(b.PaletteID)};
-    nb.raw={X:gx??0,Y:gy??0,H:b.Height,R:b.GridRotation,bid:b.BlockID,sig:blkSig(nb)};   // file values kept: the cell model rounds (footprint guesses), export writes these back
+    nb.raw={X:gx??0,Y:gy??0,H:b.Height??0,R:b.GridRotation??0,bid:b.BlockID,sig:blkSig(nb)};   // file values kept: the cell model rounds (footprint guesses), export writes these back
     const dd=def(cls);if(dd&&/guess/.test(dd.source||""))guessN++;
     return nb});
   S.blocks.forEach((b,i)=>impPorts(b,o.Blocks[i].Ports));
