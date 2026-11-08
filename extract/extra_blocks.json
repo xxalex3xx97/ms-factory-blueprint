@@ -1,19 +1,86 @@
 {
   "BPO_Dock_2": {
-    "unit": "sim units, block frame, 16=1 cell, 1 unit=50cm",
-    "machine": {"cls": "BPO_IndustrialDock", "grid": [64, 0], "rot": 2},
+    "unit": "block/collider units, block frame, 1 unit = 1 site cell = 100 cm (machine grid units are 50 cm = half)",
+    "machine": {
+      "cls": "BPO_IndustrialDock",
+      "grid": [
+        64,
+        0
+      ],
+      "rot": 2
+    },
     "ports": [
-      {"bay": 1, "x": -2, "y": -11, "inout": "both", "facing": "W"},
-      {"bay": 2, "x": -2, "y": -9, "inout": "both", "facing": "W"},
-      {"bay": 3, "x": -2, "y": -7, "inout": "both", "facing": "W"},
-      {"bay": 4, "x": -2, "y": -5, "inout": "both", "facing": "W"},
-      {"bay": 5, "x": -2, "y": 5, "inout": "both", "facing": "W"},
-      {"bay": 6, "x": -2, "y": 7, "inout": "both", "facing": "W"},
-      {"bay": 7, "x": -2, "y": 9, "inout": "both", "facing": "W"},
-      {"bay": 8, "x": -2, "y": 11, "inout": "both", "facing": "W"}
+      {
+        "bay": 1,
+        "x": -1,
+        "y": -5.5,
+        "inout": "both",
+        "facing": "W"
+      },
+      {
+        "bay": 2,
+        "x": -1,
+        "y": -4.5,
+        "inout": "both",
+        "facing": "W"
+      },
+      {
+        "bay": 3,
+        "x": -1,
+        "y": -3.5,
+        "inout": "both",
+        "facing": "W"
+      },
+      {
+        "bay": 4,
+        "x": -1,
+        "y": -2.5,
+        "inout": "both",
+        "facing": "W"
+      },
+      {
+        "bay": 5,
+        "x": -1,
+        "y": 2.5,
+        "inout": "both",
+        "facing": "W"
+      },
+      {
+        "bay": 6,
+        "x": -1,
+        "y": 3.5,
+        "inout": "both",
+        "facing": "W"
+      },
+      {
+        "bay": 7,
+        "x": -1,
+        "y": 4.5,
+        "inout": "both",
+        "facing": "W"
+      },
+      {
+        "bay": 8,
+        "x": -1,
+        "y": 5.5,
+        "inout": "both",
+        "facing": "W"
+      }
     ],
-    "portsMesh": {"file": "sm2_industrial_dock_ports_outline.json", "cm2unit": 0.02, "originBlock": [-2, 0], "mirrorY": true, "flag": "INF"},
-    "bayNumbering": {"rule": "array order: bay 1 at y=-11 ... bay 8 at y=+11", "flag": "INF"},
-    "evidence": "facing W OBSERVED live 2026-11-08: belts attached to the 8 pods run along machine-local +x = block -x; see vault rea-industrial-dock.md LIVE PROBE. Bay numbering = array order, flag INF. Ports not rendered this pass."
+    "portsMesh": {
+      "file": "sm2_industrial_dock_ports_outline.json",
+      "cm2unit": 0.01,
+      "originBlock": [
+        -1,
+        0
+      ],
+      "mirrorY": true,
+      "flag": "INF"
+    },
+    "bayNumbering": {
+      "rule": "array order: bay 1 at y=-5.5 ... bay 8 at y=+5.5",
+      "flag": "INF"
+    },
+    "evidence": "scale corrected 2026-11-08 from user screenshot (real belts): vault rea-industrial-dock.md SCALE CORRECTION. machine grid (66,-11..11 step 2)/2 -> block x=32-33=-1, y=-5.5..5.5. facing W OBSERVED live."
   }
 }

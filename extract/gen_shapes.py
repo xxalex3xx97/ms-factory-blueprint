@@ -6,7 +6,7 @@ usage:
 
 Inputs: extract/floors.json (colliders_raw, hull), extract/shapes_src.json (allowlist, patch, floorOrigin),
         extract/extra_blocks.json (portsMesh), extract/sm2_industrial_dock_ports_outline.json (mesh rows, cm).
-Shape coords: sim units (16 per cell, 1 unit = 50 cm), relative to the floor top-left (floorOrigin).
+Shape coords: block units (1 unit = 1 site cell = 100 cm; machine grid units are 50 cm), relative to the floor top-left (floorOrigin).
 Walls: collider z-size >= 1.9, else props. Port arms: cm * cm2unit + originBlock, mirrorY, then shifted by floorOrigin.
 """
 import json, os, sys
@@ -63,7 +63,8 @@ def build():
                     if pm.get('mirrorY'):
                         ys = [-ys[1], -ys[0]]
                     arms.append([r3(x0 * k + bx - ox), r3(ys[0] - oy), r3(x1 * k + bx - ox), r3(ys[1] - oy)])
-        shapes[name] = {'fw': round(size[0]), 'fh': round(size[1]), 'walls': walls, 'props': props, 'arms': arms}
+        ports = [[q['bay'], r3(q['x'] - ox), r3(q['y'] - oy)] for q in (eb.get(name) or {}).get('ports', [])]   # bay, x, y of the port cell centre (floor frame)
+        shapes[name] = {'fw': round(size[0]), 'fh': round(size[1]), 'walls': walls, 'props': props, 'arms': arms, 'ports': ports}
     return shapes, patch
 
 

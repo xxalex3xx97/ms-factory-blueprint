@@ -2404,6 +2404,9 @@ async function s27(br) {
   const nCol = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'floors.json'), 'utf8')).blocks.BPO_Dock_2.colliders_raw.length;
   const nSh = await pg.evaluate(() => SHAPES.BPO_Dock_2.walls.length + SHAPES.BPO_Dock_2.props.length);
   chk(`27 SHAPES BPO_Dock_2 walls+props (${nSh}) == floors.json colliders_raw (${nCol})`, nSh === nCol, `walls+props ${nSh}, colliders_raw ${nCol}`);
+  const pr = await pg.evaluate(() => { const s = SHAPES.BPO_Dock_2; return s.ports.map(([bay, x, y]) => { const rs = s.arms.filter(a => (a[1] + a[3]) / 2 >= y - .5 && (a[1] + a[3]) / 2 < y + .5); return {bay, x, y, n: rs.length, ax: rs.length ? Math.min(...rs.map(a => a[0])) : null, ymin: rs.length ? Math.min(...rs.map(a => a[1])) : null, ymax: rs.length ? Math.max(...rs.map(a => a[3])) : null} }) });
+  chk('27 dock ports: 8, bays 1..8, centres y -5.5..-2.5 and 2.5..5.5 (block) = floor frame 9.5..12.5 / 17.5..20.5, x on the floor edge (14)', pr.length === 8 && pr.every((p, i) => p.bay === i + 1 && p.x === 14) && JSON.stringify(pr.map(p => p.y)) === JSON.stringify([9.5, 10.5, 11.5, 12.5, 17.5, 18.5, 19.5, 20.5]), JSON.stringify(pr));
+  chk('27 dock pods: every port cell has arm mesh rows, 1 cell tall, starting at the port x (aligned to the belt rows)', pr.every(p => p.n > 0 && Math.abs(p.ax - p.x) < .1 && p.ymin >= p.y - .55 && p.ymax <= p.y + .55), JSON.stringify(pr));
   const sides = ['east', 'south', 'west', 'north'];
   for (const r of [0, 1, 2, 3]) {
     await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B('BPO_Dock_2', 18, 2, 0, r)], DefaultMachines: []}));
@@ -2421,6 +2424,10 @@ async function s27(br) {
         if (v === 'F') { V.z = Math.min(W / (d.w * k + 4), H / (d.h * k + 4)) / CELLS.F * .85; V.ox = W / 2 - (b.x + d.w / 2) * k * sc(); V.oy = H / 2 - (b.y + d.h / 2) * k * sc(); __fb.paint(); } }, v);
       await pg.waitForTimeout(150);
       await pg.screenshot({path: path.join(SHOTS, `dock-rot${r}-${v === 'L' ? 'layout' : 'floor'}.png`)});
+      if (v === 'F') {   // zoom check: ~2.5x on the hall/ports end
+        await pg.evaluate(() => { const b = __fb.S.blocks[0], f = floorRect(b); V.z *= 2.5; V.ox = W / 2 - (f.x + f.w / 2) * sc(); V.oy = H / 2 - (f.y + f.h / 2) * sc(); __fb.paint(); });
+        await pg.screenshot({path: path.join(SHOTS, `dock-rot${r}-floor-zoom.png`)});
+      }
     }
   }
   await ctx.close();
