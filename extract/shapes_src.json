@@ -662,6 +662,7 @@
       "h": 1,
       "verified": true,
       "ground": true,
+      "doorMatch": true,
       "flipY": true,
       "source": "decoded BPO_StationCorner_01 (floors.json colliders): hull 16x16 = 1x1; floor 14x14 inside 1-unit walls; doors 6 wide at offset 4 on 2 sides; the SE corner is cut by a stair-stepped diagonal wall",
       "floorOrigin": [
@@ -788,6 +789,7 @@
       "h": 1,
       "verified": true,
       "floorCenter": true,
+      "doorMatch": true,
       "drop": [0, 1],
       "wallsOverride": [[-8, -4, 8, -3], [-8, 3, 8, 4]],
       "source": "decoded BPO_StationCorridor_01 (floors.json colliders): two solid slabs y -7..-3 and 3..7, x -8..8; walkable strip y -3..3 = 6 wide x 16 long, open at both x ends (E/W), centred in the 16x16 tile. Walls: user 2026-11-08 'walls THIN, 1 square': the slabs are replaced by 1-unit walls on the outer edges of the strip (y -4..-3, 3..4), strip stays 6 wide",

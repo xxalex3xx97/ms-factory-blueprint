@@ -14,7 +14,7 @@ ground: true = ground-level plan (colliders with z0 >= 1 are overhead: skipped; 
 fill: [x0,y0,x1,y1] block frame = one solid prop, used when the BPO has no colliders (Station Armour); hull size then comes from fill.
 add: true = block is not in CATALOG.blocks yet: its full definition (the block's own keys) is appended to CATALOG.blocks before core.js.
 iconFile: PNG under extract/icons/, embedded as CATALOG.icons[<icon key>] (data URL). mirrorOf: shape copy of another block, no catalog entry.
-flipY: true = mirror the collider and polys y (shape-only). ports: optional 'bay' (numbered belt ports, dock); without 'bay' the port is drawn unnumbered.
+flipY: true = mirror the collider and polys y (shape-only). doorMatch: true = catalog flag for model.js door-match rule (Corner/Corridor pairs only: a neighbour without a door over the same slot keeps the wall). ports: optional 'bay' (numbered belt ports, dock); without 'bay' the port is drawn unnumbered.
 entrance: {kind: doors|ports, evidence}: what the Layout arrows mark for this block (doors = catalog door slots, ports = side of the shape's output ports); evidence string says 'inferred' when it is. entrance.gaps: [{side: E|S|W|N, from, to}] block-frame door gaps for no-floor blocks (one mark each, shape frame in 'gaps').
 shapeOf: take the colliders of another floors.json block (mod block with the same shape).
 top-level 'buildables': {DAT_id: patch} merged into CATALOG.buildables (matched by b.id), e.g. hidden: true = kept for import/export but not offered in the palette (DAT_TradeConsole).
