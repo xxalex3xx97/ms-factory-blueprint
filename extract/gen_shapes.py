@@ -18,6 +18,8 @@ flipY: true = mirror the collider and polys y (shape-only). ports: optional 'bay
 entrance: {kind: doors|ports, evidence}: what the Layout arrows mark for this block (doors = catalog door slots, ports = side of the shape's output ports); evidence string says 'inferred' when it is. entrance.gaps: [{side: E|S|W|N, from, to}] block-frame door gaps for no-floor blocks (one mark each, shape frame in 'gaps').
 shapeOf: take the colliders of another floors.json block (mod block with the same shape).
 top-level 'buildables': {DAT_id: patch} merged into CATALOG.buildables (matched by b.id); shape-only, no other use. top-level 'removeBuildables': [DAT_id] dropped from CATALOG.buildables (not placeable; imports of them go to S.dm).
+wallsOverride: [[x0,y0,x1,y1]] block-frame wall rects appended to walls (use with drop on the replaced colliders; corridor: 1-unit walls on the strip edges, user "walls THIN").
+floorShift (catalog key, read by model.js floorRect): units along the long axis; corridor -1 = one wall cell between its floor and a 1x1 Station_01 floor on either open end.
 drop: [collider indices] not drawn. clip: clip walls/props to the tile on N/S. chain: {group, edges {N, S}, evidence} closing walls for open lateral edges. hatch: interior|ring.
 wallIdx: [collider indices] low colliders drawn as walls (joined outline + chamfered corners). ring: {c [x,y] block frame, rOut, rIn, gap {side, half}, idx [collider indices drawn as the ring instead of boxes], evidence}.
 A block without these keys produces the same entry as before.
@@ -27,7 +29,7 @@ import base64, json, os, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 EX = os.path.join(ROOT, 'extract')
 OUT = os.path.join(ROOT, 'js', 'shapes.js')
-SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'drop', 'chain', 'hatch', 'clip', 'shapeOf', 'flipY')
+SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'drop', 'chain', 'hatch', 'clip', 'shapeOf', 'flipY', 'wallsOverride')
 
 
 def rd(name):
@@ -99,6 +101,8 @@ def build():
                 rect = [max(0, rect[0]), max(0, rect[1]), rect[2], min(p['h'] * 16, rect[3])]
             wall = (z1 - z0 >= 1.9 and not p.get('solid')) or ci in p.get('wallIdx', [])   # wallIdx: low colliders that are really wall bars (drone bay) -> one joined outline
             (walls if wall else props).append(rect)   # solid: one solid collider = no-build prop
+        for x0, y0, x1, y1 in p.get('wallsOverride', []):   # wallsOverride: block-frame wall rects appended (with drop on the replaced colliders)
+            walls.append([r3(x0 - ox), r3(y0 - oy), r3(x1 - ox), r3(y1 - oy)])
         if p.get('fill'):
             fx0, fy0, fx1, fy1 = p['fill']
             props.append([r3(fx0 - ox), r3(fy0 - oy), r3(fx1 - ox), r3(fy1 - oy)])

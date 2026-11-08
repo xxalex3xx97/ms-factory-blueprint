@@ -2326,7 +2326,9 @@ async function s21(br) {
   await pg.screenshot({path: path.join(SHOTS, 'u1-help-1400.png')});
   await pg.click('#helpX');
   chk('21 Help Close button closes it', (await pg.locator('#dHelp[open]').count()) === 0);
+  await pg.evaluate(() => __fb.setView('L'));   // unverified item = BPO_Dock block (blocks palette = Layout); no unverified buildable left
   chk('21 palette: no "guessed size" text, "!?" tag present on unverified', !(await pg.evaluate(() => document.getElementById('palList').textContent.includes('guessed'))) && await pg.evaluate(() => { document.querySelectorAll('#palList details').forEach(d => d.open = true); return !!document.querySelector('#palList .bq'); }));
+  await pg.evaluate(() => __fb.setView('F'));
   chk('21 toolbar groups Plan / Tools / View (Round 5: Simulate group is now header toggles)', await pg.evaluate(() => [...document.querySelectorAll('header .tg')].map(g => g.getAttribute('aria-label')).join() === 'Plan,Tools,View'));
   // collapse / expand all
   await pg.click('#palExp');
@@ -2374,10 +2376,11 @@ async function s22(br) {
   const reload = async () => { await pg.reload(); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); };
   await ctx.addInitScript(k => { if (window.name.startsWith('INJ:')) { localStorage.setItem(k, window.name.slice(4)); window.name = ''; } }, KEY);
   const inject = async fn => { const o = await pg.evaluate(k => JSON.parse(localStorage.getItem(k)), KEY); fn(o); await pg.evaluate(v => { window.name = 'INJ:' + v; }, JSON.stringify(o)); await reload(); };
-  const unv = Object.values(BMAP).find(b => b.verified === false && b.w && !/Elevator/i.test(b.id));
-  const design = [mac('DAT_Refinery', 40, 40, {mid: 1, rec: KT}), mac('DAT_Container', 50, 40, {mid: 2}), mac(unv.id, 60, 40, {mid: 3})];
+  // no unverified buildable is left (TradeConsole removed): the unverified item is the BPO_Dock block (verified false, Layout palette)
+  const unv = {id: '/Game/Blueprints/BuildingBlocks/BPO_Dock.BPO_Dock_C'};
+  const design = [mac('DAT_Refinery', 40, 40, {mid: 1, rec: KT}), mac('DAT_Container', 50, 40, {mid: 2})];
   design[1].Contents = [{Item: 'ITEM_TitaniumOre', Count: 100, Infinite: true}];
-  await imp(pg, bp([blk('Station 1x1', 0, 0)], design));
+  await imp(pg, bp([blk('Station 1x1', 0, 0), blk('BPO_Dock', 60, 40)], design));
   await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); __fb.click(40, 40); });
   const sec = n => `#insp details[data-sec=${n}]`, isOpen = n => pg.evaluate(s => document.querySelector(s).open, sec(n));
   chk('22 refinery: Position, Ports and Size & data sections exist and are closed by default', (await Promise.all(['pos', 'ports', 'size'].map(async n => (await pg.locator(sec(n)).count()) === 1 && !(await pg.locator(sec(n)).getAttribute('open') !== null)))).every(Boolean));
@@ -2408,13 +2411,14 @@ async function s22(br) {
   await inject(o => { o.u.io = 'x'; });
   chk('22 non-array u.io ignored, page works', await pg.evaluate(() => document.getElementById('insp') !== null));
   // guessed text
-  await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); __fb.click(60, 40); });
+  await pg.evaluate(() => { __fb.setView('L'); __fb.fit(); __fb.click(60, 40); });   // Dock block: select it in Layout
   await pg.evaluate(() => document.querySelectorAll('#palList details').forEach(d => d.open = true));
   chk('22 no "guessed" anywhere in the visible page (palette + inspector, unverified item selected)', !(await pg.evaluate(() => /guess/i.test(document.body.innerText))));
   const bqU = await pg.evaluate(() => document.querySelectorAll('#insp .bq').length);
   chk('22 unverified item: !? tag in the inspector, no guessed-size pill', bqU >= 1 && (await pg.locator('#insp .badge').count()) === 0, 'bq ' + bqU);
   await pg.evaluate(() => __fb.click(50, 40));
   chk('22 verified item (Container): no !? tag in the inspector', (await pg.evaluate(() => document.querySelectorAll('#insp .bq').length)) === 0);
+  await pg.evaluate(() => __fb.setView('L'));   // blocks palette (BPO_Dock) shows in Layout
   chk('22 unverified palette tooltip says !? size not confirmed', await pg.evaluate(id => /!\? size not confirmed/.test(document.querySelector(`#palList .item[data-cls="${id}"]`).title), unv.id));
   // sim running, container selected
   if (!(await pg.evaluate(() => __fb.SM))) await pg.click('#simB');
@@ -2664,12 +2668,28 @@ async function s30(br) {
     out.fr1b = floorRect({cls: '/Game/Blueprints/BuildingBlocks/BPO_Station_01.BPO_Station_01_C', x: 1, y: 0, h: 0, rot: 0}).x;
     return out;
   });
-  chk('30 corridor: floor 16x6 at rot 0 (strip y 5..10 of the tile)', !!corr.fr0 && corr.fr0.w === 16 && corr.fr0.h === 6 && corr.fr0.y === 5 && corr.fr0.x === 0, JSON.stringify(corr.fr0));
-  chk('30 corridor: floor 6x16 at rot 1', !!corr.fr1 && corr.fr1.w === 6 && corr.fr1.h === 16 && corr.fr1.x === 5, JSON.stringify(corr.fr1));
+  chk('30 corridor: floor 16x6 at rot 0 (strip y 5..10 of the tile, long axis shifted -1 = one wall cell to a 1x1 station)', !!corr.fr0 && corr.fr0.w === 16 && corr.fr0.h === 6 && corr.fr0.y === 5 && corr.fr0.x === -1, JSON.stringify(corr.fr0));
+  chk('30 corridor: floor 6x16 at rot 1 (long axis shifted -1 on y)', !!corr.fr1 && corr.fr1.w === 6 && corr.fr1.h === 16 && corr.fr1.x === 5 && corr.fr1.y === -1, JSON.stringify(corr.fr1));
   chk('30 corridor: 1x1 at strip centre ok; tile y 0 and y 11 refused', corr.centre === false && corr.top === true && corr.bottom === true, JSON.stringify([corr.centre, corr.top, corr.bottom]));
   chk('30 corridor: two open door marks (E and W = eds 0,2)', JSON.stringify(corr.doors) === '[0,2]', JSON.stringify(corr.doors));
-  // NOTE (not asserted yet): neighbour spacing. Measured row 7 of the corridor + Station_01 at x 1.
-  console.log('NOTE 30 corridor neighbour row y=7 (1 = buildable, cells x 0..31): ' + corr.row7 + '  station floor starts at x=' + corr.fr1b);
+  // neighbour spacing + thin walls, rot 0..3: a Corridor with a 1x1 Station_01 on each open end
+  const cg = await pg.evaluate(() => {
+    const K = '/Game/Blueprints/BuildingBlocks/BPO_StationCorridor_01.BPO_StationCorridor_01_C', S1 = '/Game/Blueprints/BuildingBlocks/BPO_Station_01.BPO_Station_01_C';
+    return [0, 1, 2, 3].map(rot => {
+      const sta = rot & 1 ? [[0, 1], [0, -1]] : [[1, 0], [-1, 0]];
+      const c = floorRect({cls: K, x: 0, y: 0, h: 0, rot}), long = rot & 1 ? 'y' : 'x', lo = rot & 1 ? 'h' : 'w';
+      const gaps = sta.map(([x, y]) => { const s = floorRect({cls: S1, x, y, h: 0, rot: 0}); return s[long] > c[long] ? s[long] - (c[long] + c[lo]) : c[long] - (s[long] + s[lo]); });
+      const t = shapeTf({cls: K, x: 0, y: 0, h: 0, rot});
+      const walls = t.sh.walls.map(a => { const [p, q] = t.f(a[0], a[1]), [u, v] = t.f(a[2], a[3]); return {x0: Math.min(p, u), y0: Math.min(q, v), x1: Math.max(p, u), y1: Math.max(q, v)}; });
+      return {rot, gaps, c: {x0: c.x, y0: c.y, x1: c.x + c.w, y1: c.y + c.h}, walls};
+    });
+  });
+  chk('30 corridor: exactly 1 wall cell between the floor and a 1x1 Station_01 floor, both open ends, rot 0..3', cg.every(g => g.gaps.length === 2 && g.gaps.every(v => v === 1)), JSON.stringify(cg.map(g => g.gaps)));
+  chk('30 corridor: 2 walls per rot, 1 unit thick, touching the strip long edges, outside the strip', cg.every(g => g.walls.length === 2 && g.walls.every(w => {
+    const c = g.c, cw = g.rot & 1 ? 'x' : 'y';   // cross axis: the walls sit on the strip edges across the long axis
+    const th = w[cw + '1'] - w[cw + '0'], touch = w[cw + '1'] === c[cw + '0'] || w[cw + '0'] === c[cw + '1'];
+    return th === 1 && touch;
+  })), JSON.stringify(cg.map(g => g.walls)));
   const tc = await pg.evaluate(() => {
     const t = JSON.stringify({Version: 2, DisplayName: 'tc', Blocks: [], DefaultMachines: [{Class: 'BP_TradeConsoleObject', DefaultName: 'DAT_TradeConsole', MachineID: 7, PaletteID: 0, Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}}]});
     const ok = importJson(t, true), dm = S.dm.length, ex = JSON.stringify(build());
@@ -2781,7 +2801,7 @@ async function s28(br) {
     if (c && c.hasFloor) chk(`28 ${n}: floor.verified and door.verified`, c.floorV === true && c.doorV === true, JSON.stringify(c));
     if (c && c.nofloor) chk(`28 ${n}: nofloor (no floor, no buildable area)`, !c.hasFloor, JSON.stringify(c));
     const cols = floors[src.shapeOf || n].colliders_raw || [], overhead = src.ground ? cols.filter(q => q[0][2] >= 1).length : 0, fill = src.fill ? 1 : 0;
-    const want = cols.length - overhead + fill - (src.drop || []).length, got = sh ? sh.walls + sh.props + sh.ring : -1;   // ring: stepped boxes replaced by the fitted circle
+    const want = cols.length - overhead + fill - (src.drop || []).length + (src.wallsOverride || []).length, got = sh ? sh.walls + sh.props + sh.ring : -1;   // ring: stepped boxes replaced by the fitted circle
     chk(`28 ${n}: walls+props (${got}) == colliders_raw (${cols.length}) minus overhead (${overhead}) plus fill (${fill}) = ${want}`, got === want, `walls ${sh && sh.walls} props ${sh && sh.props}`);
     const pal = await palHtml(c && c.label);
     chk(`28 ${n}: palette entry "${c && c.label}" present, no "!?"`, pal !== null && !pal.includes('!?'), String(pal).slice(0, 300));

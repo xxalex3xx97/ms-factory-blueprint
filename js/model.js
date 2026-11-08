@@ -11,7 +11,8 @@ function floorRect(b){
   const lo=known?Math.min(d.fw,d.fh):0,hi=known?Math.max(d.fw,d.fh):0;
   const f=SHIPEND(b)?dimOf({w:d.fw,h:d.fh},b.rot):!known?{w:FC*o.w-2,h:FC*o.h-2}:o.w===o.h?dimOf({w:d.fw,h:d.fh},b.rot):o.w>o.h?{w:hi,h:lo}:{w:lo,h:hi};
   const q=d.floorInset||0;   // elevator: 12x12 buildable inside the 14x14 shell (1-cell input ring)
-  return{x:fo.cx*FC+q+(d.floorCenter?((FC*o.w-f.w)>>1):0),y:fo.cy*FC+q+(d.floorCenter?((FC*o.h-f.h)>>1):0),w:f.w,h:f.h,known,guess:known&&!!d.floor&&d.floor.verified===false,b};
+  const sft=d.floorShift||0,ln=b.rot&1;   // floorShift: units along the long axis (corridor -1: one wall cell between it and a 1x1 station)
+  return{x:fo.cx*FC+q+(d.floorCenter?((FC*o.w-f.w)>>1):0)+(ln?0:sft),y:fo.cy*FC+q+(d.floorCenter?((FC*o.h-f.h)>>1):0)+(ln?sft:0),w:f.w,h:f.h,known,guess:known&&!!d.floor&&d.floor.verified===false,b};
 }
 // real hull silhouette (shapes.js, floor frame: origin = floor top-left, rot 0 = ship side east) -> floor-unit coords of the block's floor rect, rotated by b.rot about the floor corner
 // nofloor block (solar, turret, drone bay): its own tile is the shape frame (origin = tile top-left); no floor, no buildable area
