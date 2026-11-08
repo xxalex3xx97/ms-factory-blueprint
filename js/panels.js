@@ -36,7 +36,8 @@ function smFrame(ts){
 }
 const smGo=()=>{if(SMP&&!smRaf&&!document.hidden){smLast=0;smRaf=requestAnimationFrame(smFrame)}};
 document.addEventListener("visibilitychange",smGo);
-function smSet(on){if(on){toF();if(!SM){SM=true;smHalt();simInit();SIM.sig=simSig();smPh=0;all()}}else if(SM){SM=false;smHalt();SIM=null;all()}}
+function smSet(on){if(on){toF();if(!SM){SM=true;smHalt();simInit({cur:$("smCur").checked});SIM.sig=simSig();smPh=0;all()}}else if(SM){SM=false;smHalt();SIM=null;all()}}
+$("smCur").onchange=()=>{if(SIM){SIM.opts.cur=$("smCur").checked;$("smRst").onclick()}};
 $("smPlay").onclick=()=>{if(!SM||!SIM)return;SMP=!SMP;if(SMP)smGo();else smHalt();smSync();simLiveUp()};
 $("smRst").onclick=()=>{if(!SIM)return;simReset();SIM.sig=simSig();smPh=0;smClkUp();paint();simLiveUp()};
 [1,10,60].forEach(v=>$("sm"+v).onclick=()=>{SPD=v;smSync();asv()});

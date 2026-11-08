@@ -5,7 +5,7 @@ const SIM_NOTES="Approximate, informational. Fixed 1 s steps. Containers start f
   "Items flow downstream only: producer to machines that need them, then containers, then through splitters/balancers. Splitter = round-robin over ENABLED output ports, skipping an output that is full or saturated so the rest takes more. Balancer = items from all enabled inputs evened across all enabled outputs. "+
   "Merge (T-join) = producers sharing a belt alternate each step. Undergrounds pass items unchanged. Splitter/balancer throughput is capped by its Mk speed (60/120/180 per min). Corners are plain belts. "+
   "Elevator ports sit on the lateral edges of the door slots. A belt pointing ALONG the wall INTO the port edge is an input; any other belt beside the port (pointing away, or sideways) is an output, as for machines. An input sends items to the SAME-numbered port of the elevator at the same x,y on the level above or below, when an output belt is attached to that port; no such belt = input blocked. A splitter whose output face touches an elevator port edge is an input of that port; a splitter input (back) face touching it takes the elevator output. Items move at belt speed, no elevator speed limit. "+
-  "DEFAULT (not specified by the user): with both neighbours valid, items alternate round-robin between them, skipping a full destination. The whole factory runs on all levels in one simulation.";
+  "DEFAULT (not specified by the user): with both neighbours valid, items alternate round-robin between them, skipping a full destination. The whole factory runs on all levels in one simulation. With 'Simulate only current floor' on, only the shown floor runs; elevator inputs there discard their items and elevator outputs receive nothing.";
 let SIM=null;
 const simSig=()=>JSON.stringify(S.blocks);
 const simOk=c=>SIM.cr.get(c)>1-1e-9;
@@ -16,18 +16,18 @@ const simCanM=(M,item)=>{const q=M.r.i.find(x=>x[0]===item);return !!q&&(M.inb[i
 const simHave=cn=>{let n=0;cn.st.forEach(r=>{if(!r.inf)n+=r.n});return n};
 const simCanC=(cn,item)=>{const r=cn.st.get(item);return !!(r&&r.inf)||cn.cap==null||simHave(cn)<cn.cap};
 // one graph over every level: belts/ports/nx/cp joined (ids are global); chain = per-level union-find root, unique across levels
-function simLinks(){
+function simLinks(fl){
   const K={belts:[],ports:[],nx:new Map(),cp:new Map()},ch=new Map();
-  [...new Set(S.blocks.map(b=>b.h))].forEach(L=>{const k=links(L);
+  [...new Set(S.blocks.map(b=>b.h))].filter(L=>fl==null||L===fl).forEach(L=>{const k=links(L);
     K.belts.push(...k.belts);K.ports.push(...k.ports);k.nx.forEach((v,a)=>K.nx.set(a,v));k.cp.forEach((v,a)=>K.cp.set(a,v));k.belts.forEach(b=>ch.set(b.id,k.chain(b.id)))});
   K.chain=id=>ch.get(id);return K;
 }
 function simInit(o={}){
-  const K=simLinks(),capMul=o.capMul!=null?o.capMul:1;
+  const fl=o.cur?layer:null,K=simLinks(fl),capMul=o.capMul!=null?o.capMul:1;
   const Z=SIM={opts:o,capMul,K,nx:K.nx,t:0,acc:0,ring:[],cr:new Map(),rate:new Map(),fl:new Set(),lastFl:new Set(),dn:new Map(),
     M:new Map(),C:new Map(),R:new Map(),E:new Map(),mS:new Map(),cS:new Map(),rI:new Map(),prod:[],pull:[],ev:null,stat:null,sm:null,sh:new Map(),ser:[],tot:new Map(),mt:new Map()};
   K.belts.forEach(b=>{const c=K.chain(b.id),v=K.cp.get(b.id);if(!Z.rate.has(c))Z.rate.set(c,Infinity);if(v)Z.rate.set(c,Math.min(Z.rate.get(c),v/60*capMul))});
-  S.blocks.filter(b=>isM(b)&&!isBelt(b)).forEach(b=>{
+  S.blocks.filter(b=>(fl==null||b.h===fl)&&isM(b)&&!isBelt(b)).forEach(b=>{
     if(isStore(b)){const st=new Map(),d=(def(b.cls)||{}).stats||{};
       (b.ct||[]).forEach(x=>{if(x.item&&!st.has(x.item))st.set(x.item,{n:Math.max(0,+x.n||0),inf:!!x.inf})});
       Z.C.set(b.id,{b,st,slots:d.StoresItems||null,stack:d.StackSize||null,cap:d.StoresItems&&d.StackSize?d.StoresItems*d.StackSize:null});return}
@@ -51,6 +51,7 @@ function simInit(o={}){
   });
   Z.M.forEach(M=>{if(M.pb.length)Z.prod.push(M)});
   Z.E.forEach(r=>[r.h+1,r.h-1].forEach(h=>{const o=elvO.get([r.x,r.y,h,r.pk].join());if(o)r.outs.push(o)}));   // destinations: adjacent levels up/down (round-robin via simRoute)
+  if(fl!=null)Z.E.forEach(r=>r.outs.push({sink:1}));   // floor-only mode: elevator = sink
   Z.stat=simCalc();Z.sm=Object.assign(simCalc(SIM_SMW),{t:0,steady:false,stId:new Set()});return true;
 }
 const simReset=()=>SIM?simInit(SIM.opts):false;
@@ -64,8 +65,8 @@ function simRoute(c,item,eb,src,vis){
     const ib=r.ins.find(q=>q.c===c&&dn.has(q.belt.id));
     if(!ib||!r.outs.length||vis.has(r.id)||!simOk(r.id))continue;
     vis.add(r.id);let res=null;
-    for(let k=0;k<r.outs.length&&!res;k++){const j=(r.rr+k)%r.outs.length,o=r.outs[j],sub=simRoute(o.c,item,o.belt.id,src,vis);
-      if(sub)res=[{c,eb,xb:ib.belt.id,rt:r,j,ob:o.belt.id}].concat(sub)}
+    for(let k=0;k<r.outs.length&&!res;k++){const j=(r.rr+k)%r.outs.length,o=r.outs[j],sub=o.sink?[]:simRoute(o.c,item,o.belt.id,src,vis);
+      if(sub)res=[{c,eb,xb:ib.belt.id,rt:r,j,ob:o.belt&&o.belt.id}].concat(sub)}
     vis.delete(r.id);if(res)return res;
   }
   Z.fl.add(c);return null;
@@ -74,7 +75,7 @@ function simEmit(c,item,eb,src){
   const Z=SIM,hops=simRoute(c,item,eb,src,new Set());if(!hops)return false;
   hops.forEach(h=>{Z.cr.set(h.c,Z.cr.get(h.c)-1);
     simPath(h.eb,h.xb).forEach(id=>simInc(Z.ev.l,id,item));
-    if(h.rt){Z.cr.set(h.rt.id,Z.cr.get(h.rt.id)-1);h.rt.rr=(h.j+1)%h.rt.outs.length;simInc(Z.ev.ro,h.rt.id,h.ob)}
+    if(h.rt){Z.cr.set(h.rt.id,Z.cr.get(h.rt.id)-1);h.rt.rr=(h.j+1)%h.rt.outs.length;if(h.ob)simInc(Z.ev.ro,h.rt.id,h.ob)}
     if(h.mk)h.mk.inb[item]=(h.mk.inb[item]||0)+1;
     if(h.ck){const r=h.ck.st.get(item);if(!r)h.ck.st.set(item,{n:1,inf:false});else if(!r.inf)r.n++;simInc(Z.ev.ci,h.ck.b.id,item)}});
   return true;
