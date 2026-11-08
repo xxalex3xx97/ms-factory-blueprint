@@ -17,6 +17,7 @@ iconFile: PNG under extract/icons/, embedded as CATALOG.icons[<icon key>] (data 
 ports: optional 'bay' (numbered belt ports, dock); without 'bay' the port is drawn unnumbered.
 entrance: {kind: doors|ports, evidence}: what the Layout arrows mark for this block (doors = catalog door slots, ports = side of the shape's output ports); evidence string says 'inferred' when it is. entrance.gaps: [{side: E|S|W|N, from, to}] block-frame door gaps for no-floor blocks (one mark each, shape frame in 'gaps').
 shapeOf: take the colliders of another floors.json block (mod block with the same shape).
+wallIdx: [collider indices] low colliders drawn as walls (joined outline + chamfered corners). ring: {c [x,y] block frame, rOut, rIn, gap {side, half}, idx [collider indices drawn as the ring instead of boxes], evidence}.
 A block without these keys produces the same entry as before.
 """
 import base64, json, os, sys
@@ -24,7 +25,7 @@ import base64, json, os, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 EX = os.path.join(ROOT, 'extract')
 OUT = os.path.join(ROOT, 'js', 'shapes.js')
-SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'shapeOf')
+SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'shapeOf')
 
 
 def rd(name):
@@ -83,11 +84,15 @@ def build():
         cols = f.get('colliders_raw', [])
         size = f['hull']['size'] if 'hull' in f else None
         walls, props, arms = [], [], []
-        for (x0, y0, z0), (x1, y1, z1) in cols:
+        ring_idx = set((p.get('ring') or {}).get('idx', []))
+        for ci, ((x0, y0, z0), (x1, y1, z1)) in enumerate(cols):
             if p.get('ground') and z0 >= 1:
                 continue   # ground plan: overhead boxes (lintels over doors, balcony) are not drawn
+            if ci in ring_idx:
+                continue   # drawn as a true circle (ring), not as boxes
             rect = [r3(x0 - ox), r3(y0 - oy), r3(x1 - ox), r3(y1 - oy)]
-            (walls if z1 - z0 >= 1.9 and not p.get('solid') else props).append(rect)   # solid: one solid collider = no-build prop
+            wall = (z1 - z0 >= 1.9 and not p.get('solid')) or ci in p.get('wallIdx', [])   # wallIdx: low colliders that are really wall bars (drone bay) -> one joined outline
+            (walls if wall else props).append(rect)   # solid: one solid collider = no-build prop
         if p.get('fill'):
             fx0, fy0, fx1, fy1 = p['fill']
             props.append([r3(fx0 - ox), r3(fy0 - oy), r3(fx1 - ox), r3(fy1 - oy)])
@@ -112,6 +117,9 @@ def build():
             entry['entrance'] = p['entrance']
             if p['entrance'].get('gaps'):   # no-floor doors: [side, x0, y0, x1, y1] gap rects on the block edge, shape frame (Layout marks)
                 entry['gaps'] = [gap_rect(g, p['w'], p['h'], ox, oy) for g in p['entrance']['gaps']]
+        if p.get('ring'):   # circular ring (Command Module / Blueprint Unit): centre + radii fitted in shapes_src (see ring.evidence), gap = door opening on one side
+            rg = p['ring']
+            entry['ring'] = {'c': [r3(rg['c'][0] - ox), r3(rg['c'][1] - oy)], 'ro': rg['rOut'], 'ri': rg['rIn'], 'gap': rg['gap'], 'n': len(ring_idx)}
         shapes[name] = entry
     return shapes, patch, adds, icons
 

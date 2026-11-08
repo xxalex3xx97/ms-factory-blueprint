@@ -16,15 +16,18 @@ function floorRect(b){
 // real hull silhouette (shapes.js, floor frame: origin = floor top-left, rot 0 = ship side east) -> floor-unit coords of the block's floor rect, rotated by b.rot about the floor corner
 // nofloor block (solar, turret, drone bay): its own tile is the shape frame (origin = tile top-left); no floor, no buildable area
 function nfRect(b){const d=def(b.cls);if(!d||!d.nofloor||!SHAPES[d.name])return null;const o=dim(b);return{x:b.x*FC,y:b.y*FC,w:FC*o.w,h:FC*o.h,b}}
-// NFQ (only no-floor blocks WITH ports, i.e. drone bays): the site draws a station floor at tile cells 0..14 (floorRect = tile origin), the real floor is 1..15 (hull wall 1 thick: Station_01 floorOrigin -7 vs hull -8). A no-floor block's shape sits in the REAL tile frame, so it is moved by the same (-NFQ,-NFQ) to line up with the neighbours as the site draws them; world frame, no rot dependence (floorRect has none).
+// NFQ (only no-floor blocks WITH ports or a door gap: drone bays, Command Module, Blueprint Unit, shipyards): the site draws a station floor at tile cells 0..14 (floorRect = tile origin), the real floor is 1..15 (hull wall 1 thick: Station_01 floorOrigin -7 vs hull -8). A no-floor block's shape sits in the REAL tile frame, so it is moved by the same (-NFQ,-NFQ) to line up with the neighbours as the site draws them; world frame, no rot dependence (floorRect has none).
 // A block with output ports keeps its ports ON the tile edge: the shift component normal to the ports side is dropped (only the along-edge part, which centres the ports on the neighbour's door slot, stays).
 const NFQ=1;
 function shapeTf(b){const fl=floorRect(b),r=fl||nfRect(b),d=def(b.cls),sh=r&&d&&SHAPES[d.name];if(!sh)return null;
   const f0=(u,v)=>{let x=u,y=v,W=b.rot&1?r.h:r.w,H=b.rot&1?r.w:r.h;for(let i=0;i<(b.rot&3);i++){[x,y]=[H-y,x];[W,H]=[H,W]}return[r.x+x,r.y+y]};   // unrotated shape-frame size: rot 1/3 swap the rotated floor's w/h
   if(fl)return{sh,f:f0,f0};
-  if(!(sh.entrance&&sh.entrance.kind==="ports"&&sh.ports.length))return{sh,f:f0,f0};   // no ports (solar, turret, armour): exact tile placement, no shift
-  let dx=-NFQ,dy=-NFQ;
-  {const P=sh.ports.map(p=>f0(p[1],p[2])),px=P.reduce((a,p)=>a+p[0],0)/P.length,py=P.reduce((a,p)=>a+p[1],0)/P.length,dist=[r.x+r.w-px,r.y+r.h-py,px-r.x,py-r.y],ed=dist.indexOf(Math.min(...dist));if(ed%2===0)dx=0;else dy=0}
+  const gp=sh.gaps&&sh.gaps.length,pt=sh.entrance&&sh.entrance.kind==="ports"&&sh.ports.length;
+  if(!pt&&!gp)return{sh,f:f0,f0};   // no ports and no door (solar, turret, armour): exact tile placement, no shift
+  let dx=-NFQ,dy=-NFQ,ed;
+  if(gp)ed=(EN.indexOf(sh.gaps[0][0])+(b.rot&3))%4;   // door gap side (block frame -> world)
+  else{const P=sh.ports.map(p=>f0(p[1],p[2])),px=P.reduce((a,p)=>a+p[0],0)/P.length,py=P.reduce((a,p)=>a+p[1],0)/P.length,dist=[r.x+r.w-px,r.y+r.h-py,px-r.x,py-r.y];ed=dist.indexOf(Math.min(...dist))}
+  if(ed%2===0)dx=0;else dy=0;
   return{sh,f0,f:(u,v)=>{const[p,q]=f0(u,v);return[p+dx,q+dy]}}}   // f0 = unshifted (real tile frame), f = site floor model frame (Factory floor)
 // entrances (Layout marks + inspector): real door slots (same geometry as areas(): per cell along each open side of the floor cell box, none on the dock's ship side)
 // or, for a no-floor shaped block whose SHAPES entry says entrance.kind==="ports", the side of its output ports. Points in cell units on the footprint edge; ed = world edge 0..3 (E,S,W,N)

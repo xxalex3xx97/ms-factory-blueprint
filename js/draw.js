@@ -196,6 +196,12 @@ function hatch(x,y,w,h,c){
   for(let k=-h;k<w;k+=9){cx.moveTo(x+k,y+h);cx.lineTo(x+k+h,y)}
   cx.stroke();cx.restore();
 }
+let NBH=true;   // no-build hatch layer on/off (tests)
+// grey no-build hatch (same pattern as the red elevator-shaft hatch): faint fill + diagonal lines (+ dashed border when bd)
+function nbHatch(x,y,w,h,bd){
+  if(!NBH)return;cx.fillStyle="rgba(150,160,175,.07)";cx.fillRect(x,y,w,h);hatch(x,y,w,h,"rgba(170,180,195,.3)");
+  if(bd){cx.save();cx.setLineDash([5,3]);cx.lineWidth=1.5;cx.strokeStyle="rgba(170,180,195,.5)";cx.strokeRect(x+.5,y+.5,w-1,h-1);cx.restore()}
+}
 function note(t,x,y,w,c){
   cx.save();cx.beginPath();cx.rect(x+2,y+2,w-4,40);cx.clip();
   cx.fillStyle=c||"rgba(255,255,255,.75)";cx.font="11px system-ui,sans-serif";cx.textBaseline="top";cx.fillText(t,x+5,y+4);cx.restore();
@@ -226,12 +232,16 @@ function wallPlan(sh,dock){   // walls in floor frame: bridge gaps < .5 between 
   for(let i=0;i<w.length;i++)for(let j=0;j<w.length;j++){if(i===j)continue;const A=w[i],B=w[j];
     if(B[0]>A[2]&&B[0]-A[2]<E&&ov(A[1],A[3],B[1],B[3])>.3){A[2]=B[0];if(Math.abs(A[1]-B[1])<.7&&Math.abs(A[3]-B[3])<.7){B[1]=A[1];B[3]=A[3]}}
     else if(B[1]>A[3]&&B[1]-A[3]<E&&ov(A[0],A[2],B[0],B[2])>.3)A[3]=B[1]}
-  const corners=[],T=1e-3;
+  const corners=[],T=1.5e-3;
   w.forEach(H=>w.forEach(V=>{if(H===V||H[3]-H[1]>=H[2]-H[0]||V[3]-V[1]<=V[2]-V[0])return;
     const left=Math.abs(H[2]-V[0])<T,right=Math.abs(H[0]-V[2])<T,above=Math.abs(H[3]-V[1])<T,below=Math.abs(H[1]-V[3])<T;
     if(!(left||right)||!(above||below))return;
     const tx=left?V[0]:V[2],ty=above?H[3]:H[1],bx=[V[0],H[1],V[2],H[3]];
     corners.push({box:bx,out:[bx[0]+bx[2]-tx,bx[1]+bx[3]-ty]})}));
+  if(!dock)w.forEach(H=>w.forEach(V=>{if(H===V||H[3]-H[1]>=H[2]-H[0]||V[3]-V[1]<=V[2]-V[0])return;   // overlapping wall bars (elevator): the missing outer corner square, chamfered like a station corner
+    const e=.01;if(Math.min(H[2],V[2])-Math.max(H[0],V[0])<=e||Math.min(H[3],V[3])-Math.max(H[1],V[1])<=e)return;
+    const xr=V[0]<H[0]-e?[V[0],H[0],V[0]]:V[2]>H[2]+e?[H[2],V[2],V[2]]:null,yr=H[1]<V[1]-e?[H[1],V[1],H[1]]:H[3]>V[3]+e?[V[3],H[3],H[3]]:null;
+    if(xr&&yr)corners.push({box:[xr[0],yr[0],xr[1],yr[1]],out:[xr[2],yr[2]]})}));
   return sh._wp={w,corners};
 }
 function drawShapeFloor(A,s){
@@ -239,6 +249,9 @@ function drawShapeFloor(A,s){
   A.floors.forEach(r=>{const b=r.b,t=shapeTf(b);if(!t)return;
     const sh=t.sh,dock=SHIPEND(b),tr=(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
     const rc=(q,f,g=0)=>{cx.fillStyle=f;const x0=X(q.x),y0=Y(q.y);cx.fillRect(x0-g,y0-g,X(q.x+q.w)-x0+2*g,Y(q.y+q.h)-y0+2*g)};
+    if(dock&&NBH){const o=dim(b),R1=floorRect(b);   // Industrial Dock: grey hatch on the non-buildable part of the footprint (footprint minus the buildable floor box), behind everything
+      cx.save();cx.beginPath();cx.rect(X(b.x*FC),Y(b.y*FC),X((b.x+o.w)*FC)-X(b.x*FC),Y((b.y+o.h)*FC)-Y(b.y*FC));cx.rect(X(R1.x),Y(R1.y),X(R1.x+R1.w)-X(R1.x),Y(R1.y+R1.h)-Y(R1.y));cx.clip("evenodd");
+      nbHatch(X(b.x*FC),Y(b.y*FC),X((b.x+o.w)*FC)-X(b.x*FC),Y((b.y+o.h)*FC)-Y(b.y*FC),false);cx.restore()}
     const d=def(b.cls),R0=floorRect(b),hall=dock?tr(0,0,Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0])),d.fh):R0&&{x:R0.x,y:R0.y,w:R0.w,h:R0.h};   // dock: hall up to the partition (shaft beyond); other blocks: whole floor; no-floor blocks: no tint
     if(hall)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
     // pods (dock only): one per decoded port cell (1 cell, contiguous), x extent from the arm mesh rows of that cell
@@ -246,7 +259,12 @@ function drawShapeFloor(A,s){
       return{bay,x,y,q:tr(Math.min(...rs.map(a=>a[0])),y-.46,Math.max(...rs.map(a=>a[2])),y+.46)}}).filter(Boolean);
     const marks=dock?pods:sh.ports.map(([bay,x,y])=>({bay,x,y}));   // port markers: dock = one per pod (numbered); other shapes = one per SHAPES port (unnumbered)
     const props=sh.props.map(a=>tr(...a));
+    // ring (Command Module / Blueprint Unit): true annulus with the door opening cut flush at the gap edges (horizontal ends), from the fitted circle radii
+    const rg=sh.ring,ringPath=()=>{const[ccx,ccy]=t.f(rg.c[0],rg.c[1]).map((n,i)=>i?V.oy+n*s:V.ox+n*s),base=({E:0,S:1,W:2,N:3})[rg.gap.side]*Math.PI/2+(b.rot&3)*Math.PI/2,ao=Math.asin(rg.gap.half/rg.ro),ai=Math.asin(rg.gap.half/rg.ri);
+      cx.beginPath();cx.arc(ccx,ccy,rg.ro*s,base+ao,base-ao+2*Math.PI);cx.arc(ccx,ccy,rg.ri*s,base-ai+2*Math.PI,base+ai,true);cx.closePath()};
+    if(rg){ringPath();cx.fillStyle=ST;cx.strokeStyle=ST;cx.lineWidth=2;cx.stroke();cx.fill()}
     props.forEach(q=>rc(q,ST,1));props.forEach(q=>rc(q,"#3b4659"));
+    if(rg){ringPath();cx.fillStyle="#3b4659";cx.fill()}
     pods.forEach(p=>rc(p.q,ST,1));pods.forEach(p=>rc(p.q,"#2c3648"));
     // walls: strokes (grown 1px) under all fills = outline of the union only
     const wp=wallPlan(sh,dock),wr=wp.w.map(a=>tr(...a)),poly=wp.corners.map(c=>{const[x0,y0,x1,y1]=c.box,o=c.out,k=Math.min(x1-x0,y1-y0)*.6;
@@ -296,6 +314,7 @@ function paintFloorBase(s){
   drawShapeFloor(A,s);
   const NF=S.blocks.filter(b=>b.h===layer&&!isM(b)&&nfRect(b));
   NF.forEach(b=>{const r=nfRect(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
+  NF.forEach(b=>{const r=nfRect(b);nbHatch(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s,true)});   // grey no-build hatch on the whole tile, behind the shape
   drawShapeFloor({floors:NF.map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
   NF.forEach(b=>{const r=nfRect(b),w=r.w*s;if(w>70)note(`${lab(def(b.cls))}  ${r.w}×${r.h}`,V.ox+r.x*s,V.oy+r.y*s,w)});   // label like floor blocks: name + tile size, top-left
   A.floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;   // elevator: ring cells inside the door slot are open buildable floor

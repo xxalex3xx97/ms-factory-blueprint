@@ -194,7 +194,12 @@
       "entrance": {
         "kind": "ports",
         "evidence": "inferred: the 2 output ports (decoded machine Outputs) and the BPO_LargeConnector are on the west edge at rot 0, no doors; ports facing W is inferred, no live belt probe"
-      }
+      },
+      "wallIdx": [
+        0,
+        1,
+        2
+      ]
     },
     "BPO_MiningDroneBayBlock_2": {
       "add": true,
@@ -239,7 +244,12 @@
       "entrance": {
         "kind": "ports",
         "evidence": "inferred: the 2 output ports (decoded machine Outputs) and the BPO_LargeConnector are on the west edge at rot 0, no doors; ports facing W is inferred, no live belt probe"
-      }
+      },
+      "wallIdx": [
+        0,
+        1,
+        2
+      ]
     },
     "BPO_StationArmour_01": {
       "w": 1,
@@ -315,6 +325,38 @@
             "to": 2.954
           }
         ]
+      },
+      "ring": {
+        "c": [
+          0,
+          0
+        ],
+        "rOut": 6.33,
+        "rIn": 5.35,
+        "gap": {
+          "side": "W",
+          "half": 2.954
+        },
+        "idx": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ],
+        "evidence": "fit from the 20 decoded colliders: centre = BlockBounds centre (block 0,0); outer radius = mean of the outer faces of the N, S and E axis pieces (6.358, 6.358, 6.27 = 6.33), inner = mean of their inner faces (5.421, 5.421, 5.213 = 5.35); the 17 stepped ring boxes are replaced by the annulus, the 2 west entry bars (idx 0, 10) and the centre holotable (idx 19) stay boxes; ring opening = the door gap y +-2.954"
       }
     },
     "BPO_ShipyardSide": {
@@ -349,7 +391,14 @@
             "to": 2.986
           }
         ]
-      }
+      },
+      "wallIdx": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
     },
     "BPO_ShipyardCore": {
       "w": 1,
@@ -383,7 +432,19 @@
             "to": 2.986
           }
         ]
-      }
+      },
+      "wallIdx": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        6,
+        7,
+        8,
+        9,
+        10
+      ]
     },
     "BPO_ShipyardCore_02": {
       "w": 1,
@@ -422,7 +483,20 @@
             "to": 10.986
           }
         ]
-      }
+      },
+      "wallIdx": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ]
     },
     "BPO_BlueprintUnit": {
       "add": true,
@@ -478,6 +552,38 @@
             "to": 2.954
           }
         ]
+      },
+      "ring": {
+        "c": [
+          0,
+          0
+        ],
+        "rOut": 6.33,
+        "rIn": 5.35,
+        "gap": {
+          "side": "W",
+          "half": 2.954
+        },
+        "idx": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ],
+        "evidence": "fit from the 20 decoded colliders: centre = BlockBounds centre (block 0,0); outer radius = mean of the outer faces of the N, S and E axis pieces (6.358, 6.358, 6.27 = 6.33), inner = mean of their inner faces (5.421, 5.421, 5.213 = 5.35); the 17 stepped ring boxes are replaced by the annulus, the 2 west entry bars (idx 0, 10) and the centre holotable (idx 19) stay boxes; ring opening = the door gap y +-2.954"
       }
     }
   }
