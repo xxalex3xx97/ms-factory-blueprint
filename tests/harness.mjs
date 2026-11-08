@@ -2540,6 +2540,20 @@ async function s28(br) {
   }
   const leg = await pg.evaluate(() => document.getElementById('helpDlg') ? 1 : document.body.innerHTML.includes('Layout arrows: entrances'));
   chk('28 help legend explains the Layout arrows', !!leg, String(leg));
+  // view sync: switching Layout <-> Factory floor keeps the centre world point and the on-screen size of a block cell (1 block cell = FC floor cells)
+  const sync = await pg.evaluate(() => {
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [], DefaultMachines: []}));
+    __fb.setView('L'); const VL = __fb.V; VL.ox = 123.4; VL.oy = -77.7; VL.z = .83; const w = innerWidth, o = {};
+    const ctr = () => { const s = sc(), k = view === 'F' ? FC : 1; return [(W / 2 - V.ox) / s / k, (H / 2 - V.oy) / s / k, s * k] };   // centre in block cells, px per block cell
+    const a = ctr(); __fb.setView('F'); const f = ctr(); __fb.setView('L'); const b = ctr();
+    const vl = JSON.stringify([__fb.V.ox, __fb.V.oy, __fb.V.z]);
+    __fb.setView('F'); const F = __fb.V; F.z = 2.5; F.ox = -310; F.oy = 95; const c = ctr(); __fb.setView('L'); const d = ctr(); __fb.setView('F');
+    return {a, f, b, c, d, back: [F.ox, F.oy, F.z], vl, z: [__fb.VF.z]};
+  });
+  const near = (p, q, e = 1e-6) => p.every((v, i) => Math.abs(v - q[i]) < e);
+  chk('28 view sync L->F: same centre world point and same px per block cell', near(sync.a, sync.f, 1e-6), JSON.stringify([sync.a, sync.f]));
+  chk('28 view sync L->F->L round trip returns the same Layout viewport', near(sync.a, sync.b, 1e-6) && near(JSON.parse(sync.vl), [123.4, -77.7, .83], 1e-6), sync.vl);
+  chk('28 view sync F->L: centre and px per block cell preserved (floor zoom 2.5)', near(sync.c, sync.d, 1e-6), JSON.stringify([sync.c, sync.d]));
   // Factory floor label of a no-floor shaped block: name + tile size, like floor blocks (Station 1x1  14x14)
   for (const n of ['BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2', 'BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01', 'BPO_StationArmour_01']) {
     const got = await pg.evaluate(cls => {

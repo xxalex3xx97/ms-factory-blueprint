@@ -99,7 +99,8 @@ const end=e=>{
 };
 cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end);
 cv.addEventListener("wheel",e=>{
-  e.preventDefault();const p=pt(e),z0=V.z,z=Math.min(6,Math.max(.1,z0*(e.deltaY<0?1.12:1/1.12)));
+  // wide zoom range: the Layout<->Factory floor sync maps a Layout zoom to a 10x smaller floor zoom
+  e.preventDefault();const p=pt(e),z0=V.z,z=Math.min(60,Math.max(.01,z0*(e.deltaY<0?1.12:1/1.12)));
   V.ox=p.x-(p.x-V.ox)*(z/z0);V.oy=p.y-(p.y-V.oy)*(z/z0);V.z=z;draw();
 },{passive:false});
 cv.addEventListener("dblclick",e=>{
@@ -115,8 +116,11 @@ $("lay").onchange=e=>{const v=parseInt(e.target.value,10);if(isFinite(v)&&v-1!==
 $("ghost").onchange=draw;
 function setView(v){
   if(v===view)return;
-  smStop();pasting=null;view=v;V=v==="F"?VF:VL;tab=v==="F"?"m":"b";active=null;sel=new Set();drag=null;
-  if(v==="F"&&!VF.init){VF.init=true;fit()}
+  smStop();pasting=null;
+  // sync: the world point under the viewport centre stays under it, and a block cell keeps its on-screen size (Layout cell = CELLS.L*z px, Factory floor block cell = FC floor cells = FC*CELLS.F*z px)
+  const o=V,n=v==="F"?VF:VL,pl=CELLS.L,pf=CELLS.F*FC,po=view==="F"?pf:pl,pn=v==="F"?pf:pl,cxc=(W/2-o.ox)/(po*o.z),cyc=(H/2-o.oy)/(po*o.z);
+  n.z=o.z*po/pn;n.ox=W/2-cxc*pn*n.z;n.oy=H/2-cyc*pn*n.z;if(v==="F")VF.init=true;
+  view=v;V=n;tab=v==="F"?"m":"b";active=null;sel=new Set();drag=null;
   all();
 }
 const RM=matchMedia("(prefers-reduced-motion:reduce)");
