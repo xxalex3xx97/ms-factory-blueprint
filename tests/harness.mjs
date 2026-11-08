@@ -2731,6 +2731,23 @@ async function s28(br) {
       return ed === 2 || ed === 3 ? [lo(ra), hi(rc)] : [hi(ra), lo(rc)] }, [`${P}${n}.${n}_C`, `${P}${nb}.${nb}_C`, r]);
     chk(`28 ${n} rot ${r} next to ${nb.replace('BPO_', '')}: wall outer face ${g[0]} == neighbour wall outer face ${g[1]} (one line)`, Math.abs(g[0] - g[1]) < 0.0101, JSON.stringify(g));   // Command Module entry bars start at 0.006 (decoded collider)
   }
+  // openings: a connected slot looks exactly like an unconnected one (no purple), no hover text on openings
+  const op = await pg.evaluate(() => {
+    const P = '/Game/Blueprints/BuildingBlocks/', B = (n, x, y, i) => ({Class: `${P}${n}.${n}_C`, GridLocation: {X: x, Y: y}, Height: 0, GridRotation: 0, BlockID: i, PaletteID: 0});
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B('BPO_Station_01', 40, 40, 1), B('BPO_Station_01', 44, 40, 2), B('BPO_Station_01', 40, 48, 3)], DefaultMachines: []}));
+    __fb.setView('F'); const A = areas(0), pr = A.doors.find(d => d.paired && d.open), un = A.doors.find(d => !d.paired && d.open); V.z = 1.2;
+    const s = sc(), g = document.getElementById('cv').getContext('2d'), k = devicePixelRatio, cvs = document.getElementById('cv');
+    const px = (r, fx) => { const X = V.ox + (r.x + r.w * fx) * s, Y = V.oy + (r.y + r.h * .5) * s; const q = g.getImageData(Math.round(X * k), Math.round(Y * k), 1, 1).data; return [q[0], q[1], q[2]] };
+    const rec = []; const fr = g.fillRect, fs = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'fillStyle'); const ss = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'strokeStyle'); const cols = new Set();
+    Object.defineProperty(g, 'strokeStyle', {set(v) { cols.add(String(v)); ss.set.call(this, v) }, get() { return ss.get.call(this) }, configurable: true});
+    Object.defineProperty(g, 'fillStyle', {set(v) { cols.add(String(v)); fs.set.call(this, v) }, get() { return fs.get.call(this) }, configurable: true});
+    __fb.paint(); delete g.strokeStyle; delete g.fillStyle;
+    return {paired: !!pr, unpaired: !!un, purple: [...cols].filter(c => /hsla\(310/.test(c)), a: pr && px(pr, .5), b: un && px(un, .5)};
+  });
+  chk('28 openings: both a connected and an unconnected open slot exist in the test scene, no purple (hsla 310) colour used anywhere in the Factory floor paint', op.paired && op.unpaired && op.purple.length === 0, JSON.stringify(op));
+  const hov = await pg.evaluate(() => { const r = areas(0).doors.find(d => d.paired && d.open), s = sc(), q = cv.getBoundingClientRect(), out = [];
+    for (const d of areas(0).doors.filter(d => d.open).slice(0, 6)) { cv.dispatchEvent(new PointerEvent('pointermove', {clientX: q.left + V.ox + (d.x + d.w / 2) * s, clientY: q.top + V.oy + (d.y + d.h / 2) * s, bubbles: true, pointerId: 1})); out.push(cv.title) } return out });
+  chk('28 hovering opening slots (connected or not) shows no "Door" / "verified position" text', hov.length > 0 && hov.every(t => !/door|verified position|position not confirmed/i.test(t)), JSON.stringify(hov));
   // Layout marks: bar = full door slot length (scales with zoom), thickness min(5, .12 s), chevron radius capped at 9; centred on the TRUE tile edge middle
   const lay = (blocks, s, rot) => pg.evaluate(([bl, s]) => {
     __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: bl.map((q, i) => ({Class: q[0], GridLocation: {X: q[1], Y: q[2]}, Height: 0, GridRotation: q[3], BlockID: i + 1, PaletteID: 0})), DefaultMachines: []}));

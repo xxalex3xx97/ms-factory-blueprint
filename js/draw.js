@@ -354,7 +354,7 @@ function paintFloorBase(s){
   A.doors.forEach(r=>R(r,(x,y,w,h)=>{
     cx.save();
     if(!r.open){cx.fillStyle="rgba(150,60,60,.5)";cx.fillRect(x,y,w,h);cx.strokeStyle="rgba(255,120,120,.9)";cx.lineWidth=1.5;cx.strokeRect(x+.5,y+.5,w-1,h-1)}
-    else{cx.fillStyle=r.paired?"hsla(310,55%,62%,.32)":"rgba(160,170,190,.07)";cx.fillRect(x,y,w,h);cx.strokeStyle=r.paired?"hsla(310,60%,75%,.85)":"rgba(190,200,220,.5)";cx.lineWidth=1.5;if(!r.ver||!r.paired)cx.setLineDash([4,3]);cx.strokeRect(x+.5,y+.5,w-1,h-1)}
+    else{cx.fillStyle="rgba(160,170,190,.07)";cx.fillRect(x,y,w,h);cx.strokeStyle="rgba(190,200,220,.5)";cx.lineWidth=1.5;cx.setLineDash([4,3]);cx.strokeRect(x+.5,y+.5,w-1,h-1)}   // an opening: connected or not it looks the same (grey dashed); a door is a Doorway Wall buildable
     cx.restore();
   }));
   return A;
