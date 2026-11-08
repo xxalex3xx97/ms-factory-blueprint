@@ -1736,6 +1736,17 @@ async function s16e(br) {
     const r = await routers();
     chk('16e up: one input router (level 0, N0) with one output (level 1)', r.length === 1 && r[0].h === 0 && r[0].ins === 1 && r[0].outs === 1, JSON.stringify(r));
   }
+  // a2) 'Simulate only current floor' (default checked): only the shown level runs; no throw
+  {
+    const r = await pg.evaluate(() => {
+      __fb.simInit({}); const all = __fb.SIM.M.size + __fb.SIM.C.size, L = __fb.layer;
+      __fb.simInit({cur: true}); const bs = [...__fb.SIM.M.values(), ...__fb.SIM.C.values()].map(x => x.b);
+      let threw = ''; try { __fb.simRun(60); } catch (e) { threw = String(e); }
+      return {def: document.getElementById('smCur').checked, L, all, cur: bs.length, offFloor: bs.filter(b => b.h !== L).length, threw};
+    });
+    chk('16e cur: "Simulate only current floor" checkbox exists, checked by default', r.def === true, JSON.stringify(r));
+    chk('16e cur: only current-floor blocks in sim, <= all-floor size, no throw over simRun(60)', r.cur <= r.all && r.offFloor === 0 && r.threw === '', JSON.stringify(r));
+  }
   // b) down: source L1 -> elevator L1 -> elevator L0 -> sink L0 (output belt = the reversed one, pointing away)
   await scene([0, 1], [{h: 1, kind: 'in', contents: INF}, {h: 0, kind: 'out'}]);
   {
@@ -1932,10 +1943,16 @@ async function s16ui(br) {
   chk('16ui toggling Simulate off clears SIM', await pg.evaluate(() => __fb.SIM === null && !__fb.SM));
   // view change resets + pauses; layer change keeps the run (all levels run together)
   cells = await asmScene(pg, tk, {src: INF});
+  // 'Simulate only current floor' defaults on (layer change re-inits); this check is the all-floor behaviour, so turn it off
+  await pg.evaluate(() => { const c = document.getElementById('smCur'); c.checked = false; c.onchange(); });
   await startSim(pg, 'sm60'); await pg.waitForTimeout(700);
   const tL0 = await T(pg);
   await pg.click('#lUp'); await pg.waitForTimeout(150);
   chk('16ui layer change while on: sim keeps running, not reset (all levels in one run)', await pg.getAttribute('#smPlay', 'aria-pressed') === 'true' && (await T(pg)) > tL0, `t=${tL0} -> ${await T(pg)}`);
+  await pg.click('#lDn'); await pg.waitForTimeout(150);
+  await pg.evaluate(() => { const c = document.getElementById('smCur'); c.checked = true; c.onchange(); });   // current-floor mode: layer change re-inits the run
+  await pg.click('#lUp'); await pg.waitForTimeout(150);
+  chk('16ui layer change with Simulate only current floor on: sim re-inits (t restarts)', (await T(pg)) < tL0, `t=${tL0} -> ${await T(pg)}`);
   await pg.click('#lDn'); await pg.waitForTimeout(150);
   await startSim(pg, 'sm60'); await pg.waitForTimeout(500);
   await pg.evaluate(() => __fb.setView('L')); await pg.waitForTimeout(100);
