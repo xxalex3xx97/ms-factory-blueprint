@@ -7,7 +7,6 @@ const ugOk=g=>{const d=def(ugPend.cls);if(g.n<2)return false;const q={id:-1,cls:
 function ugCancel(){if(!ugPend)return false;const i=ugPend.id;ugPend=null;if(S.blocks.some(b=>b.id===i)){S.blocks=S.blocks.filter(b=>b.id!==i);sel=new Set();undoS.pop();all()}return true}
 const pt=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
 const hit=c=>{const l=S.blocks.filter(b=>b.h===layer&&inView(b));for(let i=l.length-1;i>=0;i--){const b=l[i],d=dim(b);if(c.x>=b.x&&c.x<b.x+d.w&&c.y>=b.y&&c.y<b.y+d.h)return b}return null};
-const doorAt=c=>areas(layer).doors.find(r=>c.x>=r.x&&c.x<r.x+r.w&&c.y>=r.y&&c.y<r.y+r.h);
 cv.addEventListener("contextmenu",e=>e.preventDefault());
 cv.addEventListener("pointerdown",e=>{
   cv.focus();const p=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
@@ -62,7 +61,6 @@ cv.addEventListener("pointermove",e=>{
       else{const b=hit(c);w=!!(b&&outside(b,R))}
     }
     cv.title=w?WARN:"";
-    if(view==="F"&&!active&&!hit(c)){const dr=doorAt(c);if(dr)cv.title=`Door (${dr.ver&&dr.paired?"verified position":"position not confirmed"}${dr.paired?"":", leads outside, nothing buildable beyond"}): ${dr.open?"open":"closed"}. `}
     {const b=view==="F"&&!active?hit(c):null,belt=b&&isBelt(b),pl=b&&LK&&(links(layer).nb.get(b.id)||[]).some(e=>e.k==="port");
       if(belt)btip(b,pl,e,w);else{btip(null);if(pl&&!w)cv.title=PORTLINK}}
     if(view==="F"&&!active){const q=portAt(p);if(q){btip(null);cv.title=`Port ${q.p.key} (faces ${FN[q.p.wf]}): ${q.p.en?"enabled":"disabled"}. Click to toggle.`}}

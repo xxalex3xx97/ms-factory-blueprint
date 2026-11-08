@@ -1,6 +1,6 @@
-"""Dev-time: re-embed catalog.js icons at --px (default 128). Copy of make_icons.py (see its docstring for origin).
+"""Dev-time: re-embed catalog.js icons. Blocks/buildables at 256 px (native texture size), items at 128 px (CobaltPlates source is 128).
 
-Usage:  python -I make_icons.py [--px 64]   (falls back to 48px if icons.json > 600KB)
+Usage:  python -I extract/hd_icons.py --catalog js/catalog.js   (keys: catalog icons + block icons referenced by the catalog + items)
 Copied (not imported) from F:\\MSDemoMods-public\\ue\\MiningUnitUI\\scripts\\extract_textures.py
 (parse/to_png/block_bytes/dds_wrap) and extract_item_icons.py (icon lookup); originals untouched.
 Texture lookup: first T_* name in the uasset name table that exists as <name>.uexp under Materials\\Icons.
@@ -20,6 +20,7 @@ MODS_ROOT = os.environ.get("MS_MODS_ROOT", r"F:\MSDemoMods")
 CONTENT = os.path.join(MODS_ROOT, "legacy", "MainSequence", "Content")
 BP_DIR = os.path.join(CONTENT, "Blueprints", "BuildingBlocks")
 BUILD_DIR = os.path.join(CONTENT, "Data", "Buildables")
+ITEM_DIR = os.path.join(CONTENT, "Data", "Items")
 ICONS_ROOT = os.path.join(CONTENT, "Materials", "Icons")
 RENDER_DIR = os.path.join(CONTENT, "Editor", "IconRender")
 PRIMARY_DIRS = ["BuildingBlocks", "Machines", "Items", "Stations", "UI"]
@@ -27,9 +28,6 @@ PRIMARY_DIRS = ["BuildingBlocks", "Machines", "Items", "Stations", "UI"]
 TAG = bytes.fromhex("c1832a9e")
 PF_RE = re.compile(rb"PF_[A-Za-z0-9_]+\x00")
 TEX_RE = re.compile(r"^T_[A-Za-z0-9_\-]+$")
-# same station filter as extract_catalog.py STEM_RE
-STATION_RE = re.compile(r'^BPO_(Station|Dock|TradeDock|DockingCollar|Hangar|Plaza|Workstation|Vendor|'
-                        r'Elevator|ItemElevator|Ladder|BriefingRoom|Penthouse|NPC_|Abandoned|Window)')
 
 
 class Unsupported(ValueError):
@@ -143,18 +141,24 @@ def texture_index():
 
 
 def ids_to_map():
+    """Blocks + buildables: every BPO_ block with a uexp, plus DAT_ buildables."""
     out = []
     for fn in sorted(os.listdir(BP_DIR)):
-        if fn.startswith("BPO_") and fn.endswith(".uasset") and STATION_RE.match(fn[:-7]):
-            if os.path.isfile(os.path.join(BP_DIR, fn[:-7] + ".uexp")):
-                out.append((fn[:-7], os.path.join(BP_DIR, fn)))
+        if fn.startswith("BPO_") and fn.endswith(".uasset") and os.path.isfile(os.path.join(BP_DIR, fn[:-7] + ".uexp")):
+            out.append((fn[:-7], os.path.join(BP_DIR, fn)))
     for fn in sorted(os.listdir(BUILD_DIR)):
         if fn.startswith("DAT_") and fn.endswith(".uasset"):
             out.append((fn[:-7], os.path.join(BUILD_DIR, fn)))
     return out
 
 
-# explicit near-miss overrides: buildable id -> texture (no fallback; missing file -> null)
+def items_to_map():
+    return [(fn[:-7], os.path.join(ITEM_DIR, fn)) for fn in sorted(os.listdir(ITEM_DIR))
+            if fn.startswith("ITEM_") and fn.endswith(".uasset")]
+
+
+# explicit overrides: buildable/item id -> texture (no fallback; missing file -> null).
+# Blocks: texture = the BPO Icon property (decoded), not the first T_ name in the name table.
 OVERRIDES = {
     "DAT_Container": "T_Container_1",
     "DAT_SmartContainerResearch": "T_Container_1",
@@ -164,13 +168,25 @@ OVERRIDES = {
     "DAT_UndergroundBelt": "T_Underground_1",
     "DAT_UndergroundBelt_2": "T_Underground_2",
     "DAT_UndergroundBelt_3": "T_Underground_3",
+    "BPO_CommandModule": "T_CommandModule",
+    "BPO_ShipyardSide": "T_ShipyardSide_01",
+    "BPO_ShipyardCore": "T_ShipyardCore_01",
+    "BPO_ShipyardCore_02": "T_Shipyard_02",
+    "BPO_MiningDroneBayBlock": "T_DroneBay_01",
+    "BPO_MiningDroneBayBlock_2": "T_DroneBay_02",
+    "BPO_SolarPanelBlock": "T_SolarPanels_2",
+    "BPO_SolarPanelBlock_02": "T_SolarPanels_01",
+    # item name table says T_Backpack / T_Exoskeleton; the texture files are *_1 (all Mk share one image)
+    "ITEM_BackpackMk1": "T_Backpack_1", "ITEM_BackpackMk2": "T_Backpack_1", "ITEM_BackpackMk3": "T_Backpack_1",
+    "ITEM_ExoskeletonMk1": "T_Exoskeleton_1", "ITEM_ExoskeletonMk2": "T_Exoskeleton_1", "ITEM_ExoskeletonMk3": "T_Exoskeleton_1",
 }
+BLOCK_PX, ITEM_PX = 256, 128
 
 
-def build(px, tex):
+def build(px, tex, ids):
     icons, mapping, problems = {}, {}, []
     unsupported = set()
-    for ident, path in ids_to_map():
+    for ident, path in ids:
         try:
             names = read_names(open(path, "rb").read())
         except (struct.error, ValueError, IndexError) as e:
@@ -204,15 +220,14 @@ def build(px, tex):
 
 
 def main():
-    px = 128
     cat_path = None
-    if "--px" in sys.argv:
-        px = int(sys.argv[sys.argv.index("--px") + 1])
     if "--catalog" in sys.argv:
         cat_path = sys.argv[sys.argv.index("--catalog") + 1]
     assert cat_path, "--catalog PATH required"
     tex = texture_index()
-    icons, mapping, problems, unsupported = build(px, tex)
+    bicons, _, bprob, buns = build(BLOCK_PX, tex, ids_to_map())
+    iicons, _, iprob, iuns = build(ITEM_PX, tex, items_to_map())
+    new = dict(bicons, **iicons)
     with open(cat_path, encoding="utf-8", newline="") as f:
         t = f.read()
     ls = t.split("\n")
@@ -221,18 +236,25 @@ def main():
     eol = "\r" if ls[ix[0]].endswith("\r") else ""  # catalog.js is CRLF
     cat = json.loads(ls[ix[0]][len("const CATALOG = "):].rstrip("\r;"))
     old = cat["icons"]
-    fallback = sorted(k for k in old if k not in icons)
-    for k in fallback:
-        icons[k] = old[k]
-    cat["icons"] = {k: icons[k] for k in old}
+    # keys written: existing icon keys, block icons the catalog references, explicit block overrides, every item
+    want = list(old) + [b["icon"] for b in cat["blocks"] if b.get("icon")] + list(OVERRIDES) + list(cat["items"])
+    out, missing = {}, []
+    for k in dict.fromkeys(want):
+        if k in new:
+            out[k] = new[k]
+        elif k in old:
+            out[k] = old[k]          # no texture found: keep the previous embed
+        else:
+            missing.append(k)
+    cat["icons"] = out
     c = json.dumps(cat, separators=(",", ":"), ensure_ascii=True).replace("</", "<\\/")
     ls[ix[0]] = "const CATALOG = " + c + ";" + eol
     with open(cat_path, "w", encoding="utf-8", newline="") as f:
         f.write("\n".join(ls))
-    print("px=%d textures_indexed=%d icons_in_catalog=%d" % (px, len(tex), len(cat["icons"])))
-    print("fallback to previous icon (old size): " + (", ".join(fallback) or "none"))
-    print("unsupported formats seen: %s" % (sorted(unsupported) or "none"))
-    for p in problems:
+    print("blocks px=%d items px=%d textures_indexed=%d icons_in_catalog=%d" % (BLOCK_PX, ITEM_PX, len(tex), len(out)))
+    print("no texture (not embedded): " + (", ".join(missing) or "none"))
+    print("unsupported formats seen: %s" % (sorted(buns | iuns) or "none"))
+    for p in bprob + iprob:
         print("problem: " + p)
 
 

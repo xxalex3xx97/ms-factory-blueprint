@@ -15,7 +15,8 @@
       "entrance": {
         "kind": "doors",
         "evidence": "doors on every hall side except the ship berth (DIR[rot], rot 0 east = shaft end): W, N, S at rot 0, slots by the station door rule (BPO_Dock_2 colliders: W gaps y-11..-5,5..11; N/S gaps x-11..-5); the ship side gets no entrance mark"
-      }
+      },
+      "hatch": "interior"
     },
     "BPO_Station_01": {
       "w": 1,
@@ -143,6 +144,7 @@
       "h": 1,
       "verified": true,
       "source": "decoded BPO_SolarPanelBlock 2026-11-08: hull 16x16 = 1x1 block, one solid collider over the whole footprint; no-build, no floor",
+      "icon": "BPO_SolarPanelBlock",
       "nofloor": true,
       "floorOrigin": [
         -8,
@@ -193,7 +195,13 @@
       "entrance": {
         "kind": "ports",
         "evidence": "inferred: the 2 output ports (decoded machine Outputs) and the BPO_LargeConnector are on the west edge at rot 0, no doors; ports facing W is inferred, no live belt probe"
-      }
+      },
+      "wallIdx": [
+        0,
+        1,
+        2
+      ],
+      "hatch": "interior"
     },
     "BPO_MiningDroneBayBlock_2": {
       "add": true,
@@ -224,7 +232,6 @@
       ],
       "confidence": "high (decoded BPO_MiningDroneBayBlock_2; locked in demo, untested in game)",
       "icon": "BPO_MiningDroneBayBlock_2",
-      "iconFile": "BPO_MiningDroneBayBlock_2.png",
       "note": "rounded: 19x8 floor cells -> 1x1 block; overhang into the +x neighbour (blocking UNK)",
       "cost": [
         [
@@ -239,7 +246,13 @@
       "entrance": {
         "kind": "ports",
         "evidence": "inferred: the 2 output ports (decoded machine Outputs) and the BPO_LargeConnector are on the west edge at rot 0, no doors; ports facing W is inferred, no live belt probe"
-      }
+      },
+      "wallIdx": [
+        0,
+        1,
+        2
+      ],
+      "hatch": "interior"
     },
     "BPO_StationArmour_01": {
       "w": 1,
@@ -281,6 +294,368 @@
       ],
       "floor": null,
       "note": "mirror of BPO_StationArmour_01; no catalog entry (palette shows 01 only)"
+    },
+    "BPO_CommandModule": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "decoded BPO_CommandModule 2026-11-08: BlockBounds 16x16 = 1x1 block; 20 props (round ring x -8..6.3, y +-6.4, centre holotable), no walls, no BPC_Door; one door gap on the west edge (rot 0)",
+      "nofloor": true,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "floor": null,
+      "note": null,
+      "floorNote": null,
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "sides": [
+          "W"
+        ],
+        "verified": true,
+        "source": "decoded BPO_CommandModule: single entry gap y -2.95..2.95 (5.9 wide, rounded to 6) on the west edge at rot 0, entry bars x -8..-4.66, connector (-2,0) rot 2"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded: one door gap on the west edge (rot 0), y -2.954..2.954; Layout mark at the true gap centre",
+        "gaps": [
+          {
+            "side": "W",
+            "from": -2.954,
+            "to": 2.954
+          }
+        ]
+      },
+      "ring": {
+        "c": [
+          0,
+          0
+        ],
+        "rOut": 6.33,
+        "rIn": 5.35,
+        "gap": {
+          "side": "W",
+          "half": 2.954
+        },
+        "idx": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ],
+        "evidence": "fit from the 20 decoded colliders: centre = BlockBounds centre (block 0,0); outer radius = mean of the outer faces of the N, S and E axis pieces (6.358, 6.358, 6.27 = 6.33), inner = mean of their inner faces (5.421, 5.421, 5.213 = 5.35); the 17 stepped ring boxes are replaced by the annulus, the 2 west entry bars (idx 0, 10) and the centre holotable (idx 19) stay boxes; ring opening = the door gap y +-2.954"
+      },
+      "hatch": "ring"
+    },
+    "BPO_ShipyardSide": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "decoded BPO_ShipyardSide 2026-11-08: BlockBounds x -8..1 (9 floor cells) x 16, ROUNDED UP to a 1x1 block; 5 props, no walls, no floor; one door gap on the west edge (rot 0)",
+      "nofloor": true,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "floor": null,
+      "note": "rounded: 9x16 floor cells -> 1x1 block",
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "sides": [
+          "W"
+        ],
+        "verified": true,
+        "source": "decoded BPO_ShipyardSide: gap y -2.986..2.986 (5.97 wide, rounded to 6) between the two west posts/bars"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded: one door gap on the west edge (rot 0), y -2.986..2.986; Layout mark at the true gap centre",
+        "gaps": [
+          {
+            "side": "W",
+            "from": -2.986,
+            "to": 2.986
+          }
+        ]
+      },
+      "wallIdx": [
+        0,
+        2,
+        4
+      ],
+      "drop": [
+        1,
+        3
+      ],
+      "chain": {
+        "group": "shipyard",
+        "edges": {
+          "N": [
+            -8,
+            -8,
+            0.264,
+            -7
+          ],
+          "S": [
+            -8,
+            7,
+            0.264,
+            8
+          ]
+        },
+        "evidence": "shipyard strip: the west wall bars and the east rail end flush at the block N/S edges (no wall there, same on Side and Core), so a Side or Core attaches on those two lateral edges; with no such neighbour the edge is closed by a wall as thick as the west bars (1) between the west bar and the rail"
+      },
+      "hatch": "interior",
+      "clip": true
+    },
+    "BPO_ShipyardCore": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "decoded BPO_ShipyardCore 2026-11-08: BlockBounds 16x16 = 1x1 block; 11 props (console, rails, posts), no walls, no floor; one door gap on the west edge (rot 0)",
+      "nofloor": true,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "floor": null,
+      "note": null,
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "sides": [
+          "W"
+        ],
+        "verified": true,
+        "source": "decoded BPO_ShipyardCore: gap y -2.986..2.986 on the west edge (same as Side)"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded: one door gap on the west edge (rot 0), y -2.986..2.986; Layout mark at the true gap centre",
+        "gaps": [
+          {
+            "side": "W",
+            "from": -2.986,
+            "to": 2.986
+          }
+        ]
+      },
+      "wallIdx": [
+        0,
+        1,
+        3,
+        4,
+        6,
+        7,
+        9,
+        10
+      ],
+      "drop": [
+        2,
+        8
+      ],
+      "chain": {
+        "group": "shipyard",
+        "edges": {
+          "N": [
+            -8,
+            -8,
+            0.264,
+            -7
+          ],
+          "S": [
+            -8,
+            7,
+            0.264,
+            8
+          ]
+        },
+        "evidence": "shipyard strip: the west wall bars and the east rail end flush at the block N/S edges (no wall there, same on Side and Core), so a Side or Core attaches on those two lateral edges; with no such neighbour the edge is closed by a wall as thick as the west bars (1) between the west bar and the rail"
+      },
+      "hatch": "interior",
+      "clip": true
+    },
+    "BPO_ShipyardCore_02": {
+      "w": 1,
+      "h": 2,
+      "verified": true,
+      "source": "decoded BPO_ShipyardCore_02 2026-11-08: BlockBounds 16x32 = 1x2 block; 12 props, no walls, no floor; two door gaps on the west edge (rot 0); props overhang the footprint 8 cells east (bay, x to 15.92)",
+      "nofloor": true,
+      "floorOrigin": [
+        -8,
+        -16
+      ],
+      "floor": null,
+      "note": "overhang: props reach x 15.92, 8 floor cells past the footprint on +x (blocking UNK)",
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 5,
+        "sides": [
+          "W"
+        ],
+        "verified": true,
+        "source": "decoded BPO_ShipyardCore_02: 2 gaps on the west edge, y -10.986..-5.13 and 5.13..10.986 (5.86 wide, rounded to 6, centres +-8.06)"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded: two door gaps on the west edge (rot 0), y -10.986..-5.13 and 5.13..10.986; Layout marks at the true gap centres; no N/S doors (not decoded)",
+        "gaps": [
+          {
+            "side": "W",
+            "from": -10.986,
+            "to": -5.13
+          },
+          {
+            "side": "W",
+            "from": 5.13,
+            "to": 10.986
+          }
+        ]
+      },
+      "wallIdx": [
+        0,
+        1,
+        3,
+        4,
+        6,
+        7,
+        9,
+        10,
+        11
+      ],
+      "drop": [
+        2,
+        8
+      ],
+      "chain": {
+        "group": "shipyard",
+        "edges": {
+          "N": [
+            -8,
+            -16,
+            0.264,
+            -15
+          ],
+          "S": [
+            -8,
+            15,
+            0.264,
+            16
+          ]
+        },
+        "evidence": "shipyard strip: the west wall bars and the east rail end flush at the block N/S edges (no wall there, same on Side and Core), so a Side or Core attaches on those two lateral edges; with no such neighbour the edge is closed by a wall as thick as the west bars (1) between the west bar and the rail"
+      },
+      "hatch": "interior",
+      "clip": true
+    },
+    "BPO_BlueprintUnit": {
+      "add": true,
+      "label": "Blueprint Unit",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_BlueprintUnit.BPO_BlueprintUnit_C",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "mod pak pakchunk100-BlueprintUnit_P, decoded 2026-11-08: DisplayName 'Blueprint Unit', ItemCost HullPlates 5 + LightweightFrame 10, Hull 30, Weight 10; BlockBounds 16x16 = 1x1; colliders identical to Command Module (shape = Command Module per user); one west door",
+      "description": "Imports a factory blueprint from the clipboard and builds it on your station.",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          5
+        ],
+        [
+          "ITEM_LightweightFrame",
+          10
+        ]
+      ],
+      "research": [],
+      "researchNote": "no research decoded for this mod block",
+      "confidence": "decoded from the mod pak (untested in game)",
+      "icon": "BPO_BlueprintUnit",
+      "iconFile": "BPO_BlueprintUnit.png",
+      "shapeOf": "BPO_CommandModule",
+      "nofloor": true,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "floor": null,
+      "note": null,
+      "floorNote": null,
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "sides": [
+          "W"
+        ],
+        "verified": true,
+        "source": "decoded BPO_BlueprintUnit (mod pak): same colliders as Command Module: single entry gap y -2.95..2.95 on the west edge (rot 0)"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded BPO_BlueprintUnit (mod pak): one door gap on the west edge (rot 0), y -2.954..2.954 (shape = Command Module per user); Layout mark at the true gap centre",
+        "gaps": [
+          {
+            "side": "W",
+            "from": -2.954,
+            "to": 2.954
+          }
+        ]
+      },
+      "ring": {
+        "c": [
+          0,
+          0
+        ],
+        "rOut": 6.33,
+        "rIn": 5.35,
+        "gap": {
+          "side": "W",
+          "half": 2.954
+        },
+        "idx": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ],
+        "evidence": "fit from the 20 decoded colliders: centre = BlockBounds centre (block 0,0); outer radius = mean of the outer faces of the N, S and E axis pieces (6.358, 6.358, 6.27 = 6.33), inner = mean of their inner faces (5.421, 5.421, 5.213 = 5.35); the 17 stepped ring boxes are replaced by the annulus, the 2 west entry bars (idx 0, 10) and the centre holotable (idx 19) stay boxes; ring opening = the door gap y +-2.954"
+      },
+      "hatch": "ring"
     }
   }
 }

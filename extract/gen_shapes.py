@@ -9,13 +9,16 @@ Inputs: extract/floors.json (colliders_raw, hull), extract/shapes_src.json (allo
 Shape coords: block units (1 unit = 1 site cell = 100 cm; machine grid units are 50 cm), relative to the floor top-left (floorOrigin).
 Walls: collider z-size >= 1.9, else props. Port arms: cm * cm2unit + originBlock, mirrorY, then shifted by floorOrigin.
 Per block (shapes_src.json): floorOrigin [x,y] overrides the global one; polys [[[x,y],...],...] (floor cells, block frame like
-colliders_raw) are copied into the shape entry as 'polys' (floor frame). Shape-only keys (floorOrigin, polys) never reach the catalog patch.
+colliders_raw) are copied into the shape entry as 'polys' (floor frame). Shape-only keys (floorOrigin, polys, shapeOf) never reach the catalog patch. shapeOf: colliders taken from another block in floors.json (add:true mod block).
 ground: true = ground-level plan (colliders with z0 >= 1 are overhead: skipped; walls need z0 < 1). solid: true = every collider is a prop.
 fill: [x0,y0,x1,y1] block frame = one solid prop, used when the BPO has no colliders (Station Armour); hull size then comes from fill.
 add: true = block is not in CATALOG.blocks yet: its full definition (the block's own keys) is appended to CATALOG.blocks before core.js.
 iconFile: PNG under extract/icons/, embedded as CATALOG.icons[<icon key>] (data URL). mirrorOf: shape copy of another block, no catalog entry.
 ports: optional 'bay' (numbered belt ports, dock); without 'bay' the port is drawn unnumbered.
-entrance: {kind: doors|ports, evidence}: what the Layout arrows mark for this block (doors = catalog door slots, ports = side of the shape's output ports); evidence string says 'inferred' when it is.
+entrance: {kind: doors|ports, evidence}: what the Layout arrows mark for this block (doors = catalog door slots, ports = side of the shape's output ports); evidence string says 'inferred' when it is. entrance.gaps: [{side: E|S|W|N, from, to}] block-frame door gaps for no-floor blocks (one mark each, shape frame in 'gaps').
+shapeOf: take the colliders of another floors.json block (mod block with the same shape).
+drop: [collider indices] not drawn. clip: clip walls/props to the tile on N/S. chain: {group, edges {N, S}, evidence} closing walls for open lateral edges. hatch: interior|ring.
+wallIdx: [collider indices] low colliders drawn as walls (joined outline + chamfered corners). ring: {c [x,y] block frame, rOut, rIn, gap {side, half}, idx [collider indices drawn as the ring instead of boxes], evidence}.
 A block without these keys produces the same entry as before.
 """
 import base64, json, os, sys
@@ -23,7 +26,7 @@ import base64, json, os, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 EX = os.path.join(ROOT, 'extract')
 OUT = os.path.join(ROOT, 'js', 'shapes.js')
-SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance')
+SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'drop', 'chain', 'hatch', 'clip', 'shapeOf')
 
 
 def rd(name):
@@ -47,6 +50,18 @@ def merge_rows(rows):
     return out
 
 
+def gap_rect(g, w, h, ox, oy):
+    # door gap on a block edge: block frame (centred on the block) -> shape frame (origin ox,oy); edges at +-8 cells per block cell
+    side, a, b = g['side'], g['from'], g['to']
+    if side not in ('E', 'S', 'W', 'N') or not a < b:
+        sys.exit('bad gap ' + json.dumps(g))
+    if side in ('E', 'W'):
+        ex = (8 * w if side == 'E' else -8 * w) - ox
+        return [side, r3(ex), r3(a - oy), r3(ex), r3(b - oy)]
+    ey = (8 * h if side == 'S' else -8 * h) - oy
+    return [side, r3(a - ox), r3(ey), r3(b - ox), r3(ey)]
+
+
 def build():
     src = rd('shapes_src.json')
     fl = rd('floors.json')['blocks']
@@ -62,18 +77,25 @@ def build():
         if p.get('iconFile'):
             with open(os.path.join(EX, 'icons', p['iconFile']), 'rb') as f:
                 icons[p['icon']] = 'data:image/png;base64,' + base64.b64encode(f.read()).decode('ascii')
-        if name not in fl:
-            sys.exit('no floors.json entry for ' + name)
+        src_name = p.get('shapeOf', name)   # shapeOf: same colliders as another decoded block (mod block with a cloned shape)
+        if src_name not in fl:
+            sys.exit('no floors.json entry for ' + src_name)
         ox, oy = p.get('floorOrigin', [gox, goy])   # per-block floor origin overrides the global one
-        f = fl[name]
+        f = fl[src_name]
         cols = f.get('colliders_raw', [])
         size = f['hull']['size'] if 'hull' in f else None
         walls, props, arms = [], [], []
-        for (x0, y0, z0), (x1, y1, z1) in cols:
+        ring_idx = set((p.get('ring') or {}).get('idx', []))
+        for ci, ((x0, y0, z0), (x1, y1, z1)) in enumerate(cols):
             if p.get('ground') and z0 >= 1:
                 continue   # ground plan: overhead boxes (lintels over doors, balcony) are not drawn
+            if ci in ring_idx or ci in p.get('drop', []):
+                continue   # ring: drawn as a circle; drop: collider not drawn (loose posts on the shipyard N/S edges)   # drawn as a true circle (ring), not as boxes
             rect = [r3(x0 - ox), r3(y0 - oy), r3(x1 - ox), r3(y1 - oy)]
-            (walls if z1 - z0 >= 1.9 and not p.get('solid') else props).append(rect)   # solid: one solid collider = no-build prop
+            if p.get('clip'):   # clip: genuine colliders overshoot the tile by 0.24 on N/S (and nothing may start west of it); drawn clipped to the tile so neighbours meet on one line
+                rect = [max(0, rect[0]), max(0, rect[1]), rect[2], min(p['h'] * 16, rect[3])]
+            wall = (z1 - z0 >= 1.9 and not p.get('solid')) or ci in p.get('wallIdx', [])   # wallIdx: low colliders that are really wall bars (drone bay) -> one joined outline
+            (walls if wall else props).append(rect)   # solid: one solid collider = no-build prop
         if p.get('fill'):
             fx0, fy0, fx1, fy1 = p['fill']
             props.append([r3(fx0 - ox), r3(fy0 - oy), r3(fx1 - ox), r3(fy1 - oy)])
@@ -96,6 +118,16 @@ def build():
             if p['entrance'].get('kind') not in ('doors', 'ports') or not p['entrance'].get('evidence'):
                 sys.exit('bad entrance for ' + name)
             entry['entrance'] = p['entrance']
+            if p['entrance'].get('gaps'):   # no-floor doors: [side, x0, y0, x1, y1] gap rects on the block edge, shape frame (Layout marks)
+                entry['gaps'] = [gap_rect(g, p['w'], p['h'], ox, oy) for g in p['entrance']['gaps']]
+        if p.get('chain'):   # chain: {group, edges {N,S: closing wall rect, block frame}, evidence}: closing walls drawn on the edges with no attached block of the group
+            ch = p['chain']
+            entry['chain'] = {'group': ch['group'], 'closing': {k: [r3(v[0] - ox), r3(v[1] - oy), r3(v[2] - ox), r3(v[3] - oy)] for k, v in ch['edges'].items()}}
+        if p.get('hatch'):
+            entry['hatch'] = p['hatch']   # 'interior' = grey no-build hatch inside the closed wall outline; 'ring' = inside the circle
+        if p.get('ring'):   # circular ring (Command Module / Blueprint Unit): centre + radii fitted in shapes_src (see ring.evidence), gap = door opening on one side
+            rg = p['ring']
+            entry['ring'] = {'c': [r3(rg['c'][0] - ox), r3(rg['c'][1] - oy)], 'ro': rg['rOut'], 'ri': rg['rIn'], 'gap': rg['gap'], 'n': len(ring_idx)}
         shapes[name] = entry
     return shapes, patch, adds, icons
 
