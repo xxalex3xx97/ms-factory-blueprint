@@ -2540,6 +2540,26 @@ async function s28(br) {
   }
   const leg = await pg.evaluate(() => document.getElementById('helpDlg') ? 1 : document.body.innerHTML.includes('Layout arrows: entrances'));
   chk('28 help legend explains the Layout arrows', !!leg, String(leg));
+  // no-floor shapes line up with the site's floor model: Station 1x1 next to the drone bay's ports side -> both port cells inside the station door slot, symmetric about its centre, on the tile edge
+  for (const n of ['BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) for (const r of [0, 1, 2, 3]) {
+    const g = await pg.evaluate(([dc, sc2, r]) => {
+      const ed = (2 + r) & 3, DD = DIR[ed], B = (cls, x, y, rot) => ({Class: cls, GridLocation: {X: x, Y: y}, Height: 0, GridRotation: rot, BlockID: 1, PaletteID: 0});
+      __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(dc, 40, 40, r), B(sc2, 40 + 2 * DD[0], 40 + 2 * DD[1], 0)].map((q, i) => Object.assign(q, {BlockID: i + 1})), DefaultMachines: []}));
+      const b = __fb.S.blocks.find(q => q.cls.includes('Drone')), st = __fb.S.blocks.find(q => q.cls.includes('Station_01')), t = shapeTf(b), tile = nfRect(b);
+      const P = t.sh.ports.map(p => t.f(p[1], p[2])), opp = (ed + 2) & 3, door = __fb.areas(0).doors.find(d => d.bx === st.x && d.by === st.y && d.ed === opp);
+      const v = ed % 2 === 0, al = P.map(p => v ? p[1] : p[0]).sort((x, y) => x - y), nrm = P.map(p => v ? p[0] : p[1]);
+      const edge = ed === 0 ? tile.x + tile.w : ed === 2 ? tile.x : ed === 1 ? tile.y + tile.h : tile.y;
+      return {ed, door: door && (v ? [door.y, door.y + door.h] : [door.x, door.x + door.w]), al, nrm, edge};
+    }, [`${P}${n}.${n}_C`, `${P}BPO_Station_01.BPO_Station_01_C`, r]);
+    if (n === 'BPO_MiningDroneBayBlock') {   // shot: Factory floor, drone bay + Station 1x1 on its ports side
+      await pg.evaluate(() => { __fb.setView('F'); const b = __fb.S.blocks.find(q => q.cls.includes('Drone')), st = __fb.S.blocks.find(q => q.cls.includes('Station_01')); V.z = Math.min(W, H) / (3.2 * FC * CELLS.F);
+        V.ox = W / 2 - ((b.x + st.x) / 2 + .5) * FC * sc(); V.oy = H / 2 - ((b.y + st.y) / 2 + .5) * FC * sc(); __fb.paint(); });
+      await pg.waitForTimeout(100);
+      await pg.screenshot({path: path.join(SHOTS, `align-drone-rot${r}-floor.png`)});
+    }
+    const [lo, hi] = g.door || [0, 0], mid = (lo + hi) / 2;
+    chk(`28 ${n} rot ${r}: both port cells inside the neighbouring station door slot [${lo},${hi}], symmetric about ${mid}, ports on the tile edge ${g.edge}`, !!g.door && g.al.every(a => a > lo && a < hi) && Math.abs((g.al[0] + g.al[1]) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - g.edge) < 1e-6), JSON.stringify(g));
+  }
   // view sync: switching Layout <-> Factory floor keeps the centre world point and the on-screen size of a block cell (1 block cell = FC floor cells)
   const sync = await pg.evaluate(() => {
     __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [], DefaultMachines: []}));
