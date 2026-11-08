@@ -65,8 +65,11 @@
       "w": 1,
       "h": 1,
       "size": "label",
-      "floor": null,
-      "conf": "high (icon + research StationModules3)"
+      "floor": {
+        "w": 14,
+        "h": 14
+      },
+      "conf": "high (icon + research StationModules3); floor = decoded colliders 2026-11-08 (polygon, 151 of 196 cells)"
     },
     {
       "label": "Corridor 1x1",
@@ -75,8 +78,11 @@
       "w": 1,
       "h": 1,
       "size": "label",
-      "floor": null,
-      "conf": "high (icon + research StationModules3; Corridor_02 needs Corridor2)"
+      "floor": {
+        "w": 16,
+        "h": 6
+      },
+      "conf": "high (icon + research StationModules3; Corridor_02 needs Corridor2); floor = decoded colliders 2026-11-08 (strip 16x6)"
     },
     {
       "label": "Elevator 1x1",

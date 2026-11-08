@@ -44,7 +44,7 @@ function drawLinks(s){
       if(merge){cx.beginPath();cx.arc(b[0],b[1],Math.max(3,s*.18),0,7);cx.stroke()}
       const e=BNK.load.get(u.id);if(e&&e.mixed)mixMark((a[0]+b[0])/2,(a[1]+b[1])/2,s)});
     cx.setLineDash([4,3]);cx.lineWidth=lw;
-    K.ug.forEach(({u,t})=>{const{a,b,g}=seg(u,t);cx.strokeStyle=g;cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke();
+    if(s>=ARROW_MIN_S)K.ug.forEach(({u,t})=>{const{a,b,g}=seg(u,t);cx.strokeStyle=g;cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke();
       const e=BNK.load.get(u.id);if(e&&e.mixed){cx.setLineDash([]);mixMark((a[0]+b[0])/2,(a[1]+b[1])/2,s);cx.setLineDash([4,3])}});
     cx.setLineDash([]);
   }
@@ -56,7 +56,7 @@ function drawLinks(s){
     if(merge){cx.beginPath();cx.arc(b[0],b[1],Math.max(3,s*.18),0,7);cx.stroke()}
   });
   cx.setLineDash([4,3]);cx.strokeStyle="hsl(210,80%,72%)";cx.lineWidth=lw;
-  K.ug.forEach(({u,t})=>{const a=c(u.x,u.y),b=c(t.x,t.y);cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke()});
+  if(s>=ARROW_MIN_S)K.ug.forEach(({u,t})=>{const a=c(u.x,u.y),b=c(t.x,t.y);cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke()});
   cx.setLineDash([]);
   }
   K.off.forEach(e=>{const p=e.port,a=c(p.x,p.y);cx.strokeStyle="rgba(255,90,90,.5)";cx.lineWidth=lw;cx.beginPath();cx.moveTo(a[0]+p.nx*.5*s,a[1]+p.ny*.5*s);cx.lineTo(a[0]+p.nx*.85*s,a[1]+p.ny*.85*s);cx.stroke()});
@@ -149,6 +149,7 @@ function drawIcon(d,x,y,w,h,alpha){
   const z=Math.min(w,h)*.72;if(z<10)return;
   cx.save();cx.globalAlpha=alpha;cx.imageSmoothingQuality="high";cx.drawImage(i,x+(w-z)/2,y+(h-z)/2,z,z);cx.restore();
 }
+const ARROW_MIN_S=10;   // zoom (px per unit, sc()) below which belt direction arrows and underground links are hidden
 function arrow(x,y,w,h,rot,alpha){
   const r=Math.min(w,h)*.3;if(r<3)return;
   cx.save();cx.translate(x+w/2,y+h/2);cx.rotate(rot*Math.PI/2);
@@ -174,7 +175,7 @@ function drawBlock(b,alpha,isSel){
   cx.fillStyle=cat?fill(cat,alpha*.8):`rgba(120,125,135,${alpha*.8})`;
   cx.fillRect(x,y,w,h);
   drawIcon(df,x,y,w,h,Math.min(1,alpha));
-  if(df&&df.directional&&s>=10)arrow(x,y,w,h,b.rot,Math.min(1,alpha));
+  if(df&&df.directional&&s>=ARROW_MIN_S)arrow(x,y,w,h,b.rot,Math.min(1,alpha));
   cx.lineWidth=1;cx.strokeStyle=cat?`hsla(${hue(cat)},70%,70%,${alpha})`:`rgba(190,195,205,${alpha})`;
   cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
@@ -278,7 +279,7 @@ function drawShapeFloor(A,s){
     const rc=(q,f,g=0)=>{cx.fillStyle=f;const x0=X(q.x),y0=Y(q.y);cx.fillRect(x0-g,y0-g,X(q.x+q.w)-x0+2*g,Y(q.y+q.h)-y0+2*g)};
     if(dock&&sh.hatch)hatchShape(b,t,s);   // Industrial Dock: grey hatch inside the walls, minus the buildable floor box, behind everything
     const d=def(b.cls),R0=floorRect(b),hall=dock?tr(0,0,Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0])),d.fh):R0&&{x:R0.x,y:R0.y,w:R0.w,h:R0.h};   // dock: hall up to the partition (shaft beyond); other blocks: whole floor; no-floor blocks: no tint
-    if(hall)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
+    if(hall&&!sh.polys)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
     // pods (dock only): one per decoded port cell (1 cell, contiguous), x extent from the arm mesh rows of that cell
     const pods=!dock?[]:sh.ports.map(([bay,x,y])=>{const rs=sh.arms.filter(a=>(a[1]+a[3])/2>=y-.5&&(a[1]+a[3])/2<y+.5);if(!rs.length)return null;
       return{bay,x,y,q:tr(Math.min(...rs.map(a=>a[0])),y-.46,Math.max(...rs.map(a=>a[2])),y+.46)}}).filter(Boolean);
@@ -313,7 +314,7 @@ function paintFloorBase(s){
   const own2=new Map();SH.forEach(e=>{const d=fcell(e.r.b);for(let i=0;i<d.cw;i++)for(let j=0;j<d.ch;j++)own2.set((d.cx+i)+","+(d.cy+j),e)});
   cx.fillStyle="rgba(70,80,100,.5)";
   SH.forEach(e=>{const d=fcell(e.r.b),seen=new Set();
-    const put=(nb,ax)=>{if(!nb||nb===e||seen.has(nb))return;seen.add(nb);
+    const put=(nb,ax)=>{if(!nb||nb===e||seen.has(nb))return;seen.add(nb);if(!passage(e.r.b,nb.r.b,ax==="x"?0:1))return;   // no door passage (corridor long side, no matching door): no tint between the blocks
       if(ax==="x"){if(nb.x<=e.x+e.w)return;const y0=Math.max(e.y,nb.y),y1=Math.min(e.y+e.h,nb.y+nb.h);if(y1<=y0)return;R({x:e.x+e.w,y:y0,w:nb.x-(e.x+e.w),h:y1-y0},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}
       else{if(nb.y<=e.y+e.h)return;const x0=Math.max(e.x,nb.x),x1=Math.min(e.x+e.w,nb.x+nb.w);if(x1<=x0)return;R({x:x0,y:e.y+e.h,w:x1-x0,h:nb.y-(e.y+e.h)},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}};
     for(let j=0;j<d.ch;j++)put(own2.get((d.cx+d.cw)+","+(d.cy+j)),"x");
@@ -321,11 +322,11 @@ function paintFloorBase(s){
   });
   A.floors.forEach(r=>{
     const T=.5,Q=((def(r.b.cls)||{}).floorInset)||0,sx=r.x-Q,sy=r.y-Q,sw=r.w+2*Q,sn=r.h+2*Q,noShape=!shapeTf(r.b);   // shell = floor + inset ring (elevator 1): same 0.5 wall band as a station
-    const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s,c=catOf(r.b);
+    const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s,c=catOf(r.b),pr=polyRects(r.b);   // pr: real polygon floor (Corner): cut cells stay dark
     if(Q){cx.fillStyle="rgba(150,190,230,.08)";R({x:sx,y:sy,w:sw,h:sn},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}   // inset ring inside the shell: floor colour
-    cx.fillStyle="rgba(150,190,230,.08)";cx.fillRect(x,y,w,h);
+    cx.fillStyle="rgba(150,190,230,.08)";if(pr)pr.ok.forEach(q=>R(q,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2)));else cx.fillRect(x,y,w,h);
     if(!r.known)hatch(x,y,w,h);
-    cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(c)},70%,70%,.5)`;cx.strokeRect(x+.5,y+.5,w-1,h-1);
+    cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(c)},70%,70%,.5)`;if(!pr)cx.strokeRect(x+.5,y+.5,w-1,h-1);
     // walls: dark band outside the floor edge, gaps at the doors
     cx.fillStyle="#262e3c";cx.strokeStyle="rgba(150,165,190,.6)";cx.lineWidth=1;
     for(let ed=0;ed<4&&noShape;ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;
@@ -369,6 +370,7 @@ function ugLine(a,b,s,over,pv){
   cx.restore();
 }
 function drawUG(s){
+  if(s<ARROW_MIN_S)return;   // zoomed out: same threshold as the belt arrows
   const c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s];
   ugPairs(S.blocks.filter(b=>isM(b)&&b.h===layer&&inView(b))).forEach(({u,t,n,max})=>ugLine(c(u),c(t),s,n>max));
 }

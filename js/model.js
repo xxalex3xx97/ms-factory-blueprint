@@ -2,6 +2,15 @@
 const DOORW=6,DOFF=4,EN=["E","S","W","N"];
 const dv=b=>{const d=def(b.cls);return !!(d&&d.door&&d.door.verified)};
 const sideOpen=(b,ed)=>{const s=((def(b.cls)||{}).door||{}).sides;return !s||s.some(c=>(EN.indexOf(c)+(b.rot&3))%4===ed)};   // door.sides (block frame, E/S/W/N) -> world side after rot; no sides key = all sides
+// door slots of floor block b on world side ed: [t0,t1] along that edge (same formula as areas()); none on the shipEnd side or on a closed side
+function slotIvs(b,ed){const r=floorRect(b);if(!r||SHIPEND(b)&&ed===b.rot||!sideOpen(b,ed))return[];const d=def(b.cls),QI=d.floorInset||0,fo=fcell(b),v=ed%2===0,n=v?fo.ch:fo.cw,fl=d.door&&d.door.flush;
+  return Array.from({length:n},(_,k)=>{const t0=(v?r.y:r.x)+FC*k+(fl?0:DOFF)-QI;return[t0,t0+DOORW]})}
+// door passage between b and the floor block nb on b's world side ed: opens only where BOTH blocks have a door over the same slot (else the wall stays)
+function passage(b,nb,ed){const o=slotIvs(nb,(ed+2)%4);return slotIvs(b,ed).some(([a,c])=>o.some(([p,q])=>a<q&&p<c))}
+// door-match rule (catalog doorMatch, Corner/Corridor only): a pair where either block has it needs a door over the same slot on both sides; every other pair is a plain door passage
+const matchRule=(b,nb)=>!!((def(b.cls)||{}).doorMatch||(def(nb.cls)||{}).doorMatch);
+// floor block covering cell (x,y) on level L (cell units), or undefined
+function floorAt(L,x,y){return S.blocks.find(o=>{if(o.h!==L||isM(o)||!floorRect(o))return false;const c=fcell(o);return x>=c.cx&&x<c.cx+c.cw&&y>=c.cy&&y<c.cy+c.ch})}
 // floor cell box of a block (cell units): shipEnd = the end opposite the ship direction (rot); else the whole footprint
 function fcell(b){const o=dim(b);if(!SHIPEND(b))return{cx:b.x,cy:b.y,cw:o.w,ch:o.h};const D=DIR[b.rot&3];return{cx:b.x+(D[0]<0?o.w-1:0),cy:b.y+(D[1]<0?o.h-1:0),cw:D[0]?1:o.w,ch:D[1]?1:o.h}}
 function floorRect(b){
@@ -11,7 +20,9 @@ function floorRect(b){
   const lo=known?Math.min(d.fw,d.fh):0,hi=known?Math.max(d.fw,d.fh):0;
   const f=SHIPEND(b)?dimOf({w:d.fw,h:d.fh},b.rot):!known?{w:FC*o.w-2,h:FC*o.h-2}:o.w===o.h?dimOf({w:d.fw,h:d.fh},b.rot):o.w>o.h?{w:hi,h:lo}:{w:lo,h:hi};
   const q=d.floorInset||0;   // elevator: 12x12 buildable inside the 14x14 shell (1-cell input ring)
-  return{x:fo.cx*FC+q,y:fo.cy*FC+q,w:f.w,h:f.h,known,guess:known&&!!d.floor&&d.floor.verified===false,b};
+  // floorCenter (corridor only): strip centred in the tile with the station hull convention (station floor = tile origin, hull 1 unit outside it): top-left = tile + ((16-w)>>1) - 1
+  const c=d.floorCenter?[((FC*fo.cw-f.w)>>1)-1,((FC*fo.ch-f.h)>>1)-1]:[0,0];
+  return{x:fo.cx*FC+q+c[0],y:fo.cy*FC+q+c[1],w:f.w,h:f.h,known,guess:known&&!!d.floor&&d.floor.verified===false,b};
 }
 // real hull silhouette (shapes.js, floor frame: origin = floor top-left, rot 0 = ship side east) -> floor-unit coords of the block's floor rect, rotated by b.rot about the floor corner
 // nofloor block (solar, turret, drone bay): its own tile is the shape frame (origin = tile top-left); no floor, no buildable area
@@ -41,9 +52,11 @@ function entrances(b,real){
   const d=def(b.cls),sh=d&&SHAPES[d.name],o=[];if(!d)return o;
   if(!floorRect(b)&&sh&&sh.gaps){const t=shapeTf(b);if(!t)return o;   // no-floor doors (Command Module, shipyards): one mark per gap, at the gap centre on the block edge; rot maps the block-frame side to a world side
     sh.gaps.forEach(g=>{const[p,q]=t.f0((g[1]+g[3])/2,(g[2]+g[4])/2);o.push({ed:(EN.indexOf(g[0])+(b.rot&3))%4,x:p/FC,y:q/FC,port:false})});return o}
-  if(floorRect(b)&&dv(b)){const fo=fcell(b),al=(DOFF+DOORW/2+(real?NFQ:0))/FC;
-    for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot||!sideOpen(b,ed))continue;const n=ed%2===0?fo.ch:fo.cw;
-      for(let k=0;k<n;k++)o.push({ed,x:ed===0?fo.cx+fo.cw:ed===2?fo.cx:fo.cx+k+al,y:ed===1?fo.cy+fo.ch:ed===3?fo.cy:fo.cy+k+al,port:false})}
+  if(floorRect(b)&&dv(b)){const fo=fcell(b),r=floorRect(b),QI=d.floorInset||0,fl=d.door&&d.door.flush,nq=real?NFQ:0;
+    for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot||!sideOpen(b,ed))continue;const v=ed%2===0,n=v?fo.ch:fo.cw;
+      for(let k=0;k<n;k++){const c=((v?r.y:r.x)+FC*k+(fl?0:DOFF)-QI+DOORW/2+nq)/FC;   // door slot centre along the edge (cell units), same slot as areas(); real: +NFQ
+        const nb=floorAt(b.h,ed===0?fo.cx+fo.cw:ed===2?fo.cx-1:fo.cx+k,ed===1?fo.cy+fo.ch:ed===3?fo.cy-1:fo.cy+k);if(nb&&nb!==b&&matchRule(b,nb)&&!passage(b,nb,ed))continue;   // no matching door on the neighbour: a wall, no mark
+        o.push({ed,x:ed===0?fo.cx+fo.cw:ed===2?fo.cx:c,y:ed===1?fo.cy+fo.ch:ed===3?fo.cy:c,port:false})}}
     return o}
   const t=sh&&sh.entrance&&sh.entrance.kind==="ports"&&sh.ports.length&&shapeTf(b),r=t&&(floorRect(b)||nfRect(b));if(!t)return o;
   const P=sh.ports.map(p=>(real?t.f0:t.f)(p[1],p[2])),px=P.reduce((a,p)=>a+p[0],0)/P.length,py=P.reduce((a,p)=>a+p[1],0)/P.length,
@@ -52,6 +65,8 @@ function entrances(b,real){
 const entText=b=>{const e=entrances(b);return e.length?{kind:e[0].port?"Outputs":"Entrances",sides:[...new Set(e.map(q=>EN[q.ed]))].sort((a,c)=>EN.indexOf(a)-EN.indexOf(c))}:null};
 const ENT_HINT="Arrows mark the entrances: station doors, or the output ports for blocks without doors";
 const shapeRects=(b,k)=>{const t=shapeTf(b);return t?t.sh[k].map(([a,c,e,g])=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}}):[]};
+function polyCells(sh){if(sh._pc)return sh._pc;const P=sh.polys,W=Math.ceil(Math.max(...P.flat().map(v=>v[0]))),H=Math.ceil(Math.max(...P.flat().map(v=>v[1])));const inP=(x,y)=>P.some(p=>{let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++)if((p[i][1]>y)!==(p[j][1]>y)&&x<(p[j][0]-p[i][0])*(y-p[i][1])/(p[j][1]-p[i][1])+p[i][0])c=!c;return c});const ok=[],cut=[];for(let j=0;j<H;j++)for(const[arr,want]of[[ok,true],[cut,false]]){let s=-1;for(let i=0;i<=W;i++){const m=i<W&&inP(i+.5,j+.5)===want;if(m&&s<0)s=i;if(!m&&s>=0){arr.push([s,j,i,j+1]);s=-1}}}return sh._pc={ok,cut}}
+function polyRects(b){const t=shapeTf(b);if(!t||!t.sh.polys||!floorRect(b))return null;const c=polyCells(t.sh),m=l=>l.map(([a,d,e,g])=>{const[p,q]=t.f(a,d),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}});return{ok:m(c.ok),cut:m(c.cut)}}
 const elvRect=b=>{const d=def(b.cls),r=d&&d.elevator&&floorRect(b);return r?{x:r.x+((r.w-d.elevator.w)>>1),y:r.y+((r.h-d.elevator.h)>>1),w:d.elevator.w,h:d.elevator.h,b}:null};
 function areas(L){
   const fb=[],floors=[],doors=[],gaps=[],blocked=[],own=new Map();
@@ -65,12 +80,14 @@ function areas(L){
     for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot||!sideOpen(b,ed))continue;   // Industrial Dock: doors on every side except the ship side (rot = ship direction); user screenshot 2026-11-07: station side 2 doors, both short ends 1 each; positions = station rule, unverified
       const v=ed%2===0,n=v?fo.ch:fo.cw;
       for(let k=0;k<n;k++){
-        const t0=(v?r.y:r.x)+FC*k+DOFF-QI,ex=ed===0?r.x+r.w+QI:ed===2?r.x-QI-DW:t0,ey=ed===1?r.y+r.h+QI:ed===3?r.y-QI-DW:t0;
-        r.cuts[ed].push([t0,t0+DOORW]);
+        const t0=(v?r.y:r.x)+FC*k+(((def(b.cls)||{}).door||{}).flush?0:DOFF)-QI,ex=ed===0?r.x+r.w+QI:ed===2?r.x-QI-DW:t0,ey=ed===1?r.y+r.h+QI:ed===3?r.y-QI-DW:t0;
         const nf=own.get((ed===0?fo.cx+fo.cw:ed===2?fo.cx-1:fo.cx+k)+","+(ed===1?fo.cy+fo.ch:ed===3?fo.cy-1:fo.cy+k));
-        if(nf&&nf!==f)r.wcuts[ed].push([t0,t0+DOORW]);   // passage between two real blocks: both walls open here
-        if(nf&&nf!==f&&ed>1)continue;   // the E/S side owns the shared door (gap strip + door)
-        const p=nf&&nf!==f,sp=DW;   // door = the 2-cell passage between the two walls only
+        const p=!!nf&&nf!==f&&(!matchRule(b,nf.b)||passage(b,nf.b,ed));   // real neighbour: door passage (Corner/Corridor pairs: only if it has a door over this slot too)
+        if(nf&&nf!==f&&!p)continue;   // neighbour with no matching door (corridor long side, corner/dock open side): the wall stays, no ring, no door
+        r.cuts[ed].push([t0,t0+DOORW]);
+        if(p)r.wcuts[ed].push([t0,t0+DOORW]);   // passage between two real blocks: both walls open here
+        if(p&&ed>1)continue;   // the E/S side owns the shared door (gap strip + door)
+        const sp=DW;   // door = the 2-cell passage between the two walls only
         if(p)gaps.push(v?{x:ex,y:r.y+FC*k,w:sp,h:FC}:{x:r.x+FC*k,y:ey,w:FC,h:sp});
         const key=`${L}|${fo.cx}|${fo.cy}|${EN[ed]}|${k}`;   // anchor = floor cell box (fcell): dock rot 2/3 floor is offset from the footprint anchor
         doors.push({key,open:!S.closed.includes(key),paired:!!p,ver:dv(b)&&(!p||dv(nf.b)),ed,bx:fo.cx,by:fo.cy,k,x:ex,y:ey,w:v?sp:DOORW,h:v?DOORW:sp,
@@ -81,14 +98,14 @@ function areas(L){
   // elevator ring: inset strip (floorInset Q) inside each open door slot, same geometry as draw.js paintFloorBase
   const ring=[];floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;
     for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>ring.push(ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q}))});
-  return{floors,doors,gaps,blocked,rects:floors.concat(doors.filter(d=>d.open),ring)};
+  return{floors,doors,gaps,blocked,rects:floors.flatMap(r=>{const pr=polyRects(r.b);return pr?pr.ok:[r]}).concat(doors.filter(d=>d.open),ring),nob:floors.flatMap(r=>{const pr=polyRects(r.b);return pr?pr.cut:[]})};
 }
 // elevator shaft (blocked 4x4 centre): machines may not overlap it
 let STRICT=true;   // Settings: keep buildables on the floor (no outside / across walls); overlaps are always refused
 const hitR=(i,e)=>i.x<e.x+e.w&&i.x+i.w>e.x&&i.y<e.y+e.h&&i.y+i.h>e.y;
 function noBuild(it){const c={},ids=new Set(it.map(i=>i.id).filter(x=>x!=null));
   return it.some(i=>{const a=c[i.l]=c[i.l]||areas(i.l);
-    if(a.blocked.some(e=>hitR(i,e)))return true;
+    if(a.blocked.some(e=>hitR(i,e))||a.nob.some(e=>hitR(i,e)))return true;
     if(i.id==null)return false;   // preview-only probes without id: shaft check only
     if(STRICT&&!onArea(i.x,i.y,i.w,i.h,a.rects))return true;
     return S.blocks.some(o=>o.h===i.l&&isM(o)&&!ids.has(o.id)&&!(i.belt&&isBelt(o))&&hitR(i,mItem(o)))})}

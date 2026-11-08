@@ -14,10 +14,12 @@ ground: true = ground-level plan (colliders with z0 >= 1 are overhead: skipped; 
 fill: [x0,y0,x1,y1] block frame = one solid prop, used when the BPO has no colliders (Station Armour); hull size then comes from fill.
 add: true = block is not in CATALOG.blocks yet: its full definition (the block's own keys) is appended to CATALOG.blocks before core.js.
 iconFile: PNG under extract/icons/, embedded as CATALOG.icons[<icon key>] (data URL). mirrorOf: shape copy of another block, no catalog entry.
-ports: optional 'bay' (numbered belt ports, dock); without 'bay' the port is drawn unnumbered.
+flipY: true = mirror the collider and polys y (shape-only). doorMatch: true = catalog flag for model.js door-match rule (Corner/Corridor pairs only: a neighbour without a door over the same slot keeps the wall). ports: optional 'bay' (numbered belt ports, dock); without 'bay' the port is drawn unnumbered.
 entrance: {kind: doors|ports, evidence}: what the Layout arrows mark for this block (doors = catalog door slots, ports = side of the shape's output ports); evidence string says 'inferred' when it is. entrance.gaps: [{side: E|S|W|N, from, to}] block-frame door gaps for no-floor blocks (one mark each, shape frame in 'gaps').
 shapeOf: take the colliders of another floors.json block (mod block with the same shape).
-drop: [collider indices] not drawn. clip: clip walls/props to the tile on N/S. chain: {group, edges {N, S}, evidence} closing walls for open lateral edges. hatch: interior|ring.
+top-level 'buildables': {DAT_id: patch} merged into CATALOG.buildables (matched by b.id), e.g. hidden: true = kept for import/export but not offered in the palette (DAT_TradeConsole).
+wallsOverride: [[x0,y0,x1,y1]] block-frame wall rects appended to walls (use with drop on the replaced colliders; corridor: 1-unit walls on the strip edges, user "walls THIN").
+floorCenter (catalog key, read by model.js floorRect): floor centred in the tile with the station hull convention (corridor: strip 16x6 at tile (-1,4)). drop: [collider indices] not drawn. clip: clip walls/props to the tile on N/S. chain: {group, edges {N, S}, evidence} closing walls for open lateral edges. hatch: interior|ring.
 wallIdx: [collider indices] low colliders drawn as walls (joined outline + chamfered corners). ring: {c [x,y] block frame, rOut, rIn, gap {side, half}, idx [collider indices drawn as the ring instead of boxes], evidence}.
 A block without these keys produces the same entry as before.
 """
@@ -26,7 +28,7 @@ import base64, json, os, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 EX = os.path.join(ROOT, 'extract')
 OUT = os.path.join(ROOT, 'js', 'shapes.js')
-SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'drop', 'chain', 'hatch', 'clip', 'shapeOf')
+SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'drop', 'chain', 'hatch', 'clip', 'shapeOf', 'flipY', 'wallsOverride')
 
 
 def rd(name):
@@ -83,6 +85,8 @@ def build():
         ox, oy = p.get('floorOrigin', [gox, goy])   # per-block floor origin overrides the global one
         f = fl[src_name]
         cols = f.get('colliders_raw', [])
+        if p.get('flipY'):   # flipY: mirror the collider y (floor frame) when the decoded BPO is upside down vs the Layout
+            cols = [[[a, -y1, c], [d, -y0, e]] for (a, y0, c), (d, y1, e) in cols]
         size = f['hull']['size'] if 'hull' in f else None
         walls, props, arms = [], [], []
         ring_idx = set((p.get('ring') or {}).get('idx', []))
@@ -96,6 +100,8 @@ def build():
                 rect = [max(0, rect[0]), max(0, rect[1]), rect[2], min(p['h'] * 16, rect[3])]
             wall = (z1 - z0 >= 1.9 and not p.get('solid')) or ci in p.get('wallIdx', [])   # wallIdx: low colliders that are really wall bars (drone bay) -> one joined outline
             (walls if wall else props).append(rect)   # solid: one solid collider = no-build prop
+        for x0, y0, x1, y1 in p.get('wallsOverride', []):   # wallsOverride: block-frame wall rects appended (with drop on the replaced colliders)
+            walls.append([r3(x0 - ox), r3(y0 - oy), r3(x1 - ox), r3(y1 - oy)])
         if p.get('fill'):
             fx0, fy0, fx1, fy1 = p['fill']
             props.append([r3(fx0 - ox), r3(fy0 - oy), r3(fx1 - ox), r3(fy1 - oy)])
@@ -113,7 +119,7 @@ def build():
         ports = [[q.get('bay'), r3(q['x'] - ox), r3(q['y'] - oy)] for q in (eb.get(name) or {}).get('ports', [])]   # bay (None = unnumbered), x, y of the port cell centre (floor frame)
         entry = {'fw': round(size[0]), 'fh': round(size[1]), 'walls': walls, 'props': props, 'arms': arms, 'ports': ports}
         if p.get('polys'):
-            entry['polys'] = [[[r3(x - ox), r3(y - oy)] for x, y in poly] for poly in p['polys']]
+            entry['polys'] = [[[r3(x - ox), r3((-y if p.get('flipY') else y) - oy)] for x, y in poly] for poly in p['polys']]
         if p.get('entrance'):   # entrance: {kind: 'doors'|'ports', evidence}; Layout marks door slots (catalog door data) or the side of the output ports
             if p['entrance'].get('kind') not in ('doors', 'ports') or not p['entrance'].get('evidence'):
                 sys.exit('bad entrance for ' + name)
@@ -129,11 +135,11 @@ def build():
             rg = p['ring']
             entry['ring'] = {'c': [r3(rg['c'][0] - ox), r3(rg['c'][1] - oy)], 'ro': rg['rOut'], 'ri': rg['rIn'], 'gap': rg['gap'], 'n': len(ring_idx)}
         shapes[name] = entry
-    return shapes, patch, adds, icons
+    return shapes, patch, adds, icons, src.get('buildables', {})
 
 
 def render():
-    shapes, patch, adds, icons = build()
+    shapes, patch, adds, icons, bsrc = build()
     lines = [
         '// generated by extract/gen_shapes.py (python -I). Do not edit by hand.',
         '// shape units: sim units, origin = floor top-left (block -15,-15). walls / props / arms = [x0,y0,x1,y1].',
@@ -142,9 +148,11 @@ def render():
         '(function(){const P=' + json.dumps(patch, sort_keys=True, separators=(',', ':')) + ';',
         'const A=' + json.dumps(adds, sort_keys=True, separators=(',', ':')) + ';',
         'const I=' + json.dumps(icons, sort_keys=True, separators=(',', ':')) + ';',
+        'const B=' + json.dumps(bsrc, sort_keys=True, separators=(',', ':')) + ';',
         'Object.keys(A).forEach(n=>{if(!CATALOG.blocks.some(b=>b.name===n))CATALOG.blocks.push(Object.assign({name:n},A[n]))});',
         'Object.assign(CATALOG.icons,I);',
-        'CATALOG.blocks.forEach(b=>{const p=P[b.name];if(!p)return;const door=Object.assign({},b.door,p.door);Object.assign(b,p,{door})});})();',
+        'CATALOG.blocks.forEach(b=>{const p=P[b.name];if(!p)return;const door=Object.assign({},b.door,p.door);Object.assign(b,p,{door})});',
+        'CATALOG.buildables.forEach(b=>{const p=B[b.id];if(p)Object.assign(b,p)});})();',
         '',
     ]
     return '\n'.join(lines)
