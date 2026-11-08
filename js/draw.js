@@ -69,10 +69,10 @@ function drawLinks(s){
 }
 function drawPorts(s){
   if(s<6)return;
-  const Ln=.6*s,T=Math.max(3,.2*s);cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
+  const Ln=Math.min(.6*s,18),T=Math.min(5,Math.max(3,.2*s));cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
   S.blocks.forEach(b=>{if(b.h!==layer)return;const bars=barPorts(b);
     // splitter input (back) face: no bar; small neutral chevron pointing into the machine (not clickable, no hover state)
-    portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.max(3,s*.2),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
+    portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.min(8,Math.max(3,s*.2)),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
       cx.strokeStyle="rgba(230,240,255,.45)";cx.lineWidth=Math.max(1.5,s*.08);cx.beginPath();
       cx.moveTo(ex-ix*r+qx*r,ey-iy*r+qy*r);cx.lineTo(ex+ix*r,ey+iy*r);cx.lineTo(ex-ix*r-qx*r,ey-iy*r-qy*r);cx.stroke()});
     cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
@@ -85,7 +85,7 @@ function drawPorts(s){
       cx.stroke();cx.restore();return}
     const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,w=p.nx?T:Ln,h=p.nx?Ln:T;
     cx.fillStyle=p.en?"hsl(140,70%,48%)":"hsl(0,75%,55%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1);
-    if(p.dir&&s>=10){const r=Math.max(3,s*.2),sg=p.dir==="in"?-1:1,dx=p.nx*sg,dy=p.ny*sg,qx=ex+p.nx*.35*s*(p.dir==="in"?-.2:.2),qy=ey+p.ny*.35*s*(p.dir==="in"?-.2:.2);
+    if(p.dir&&s>=10){const r=Math.min(8,Math.max(3,s*.2)),sg=p.dir==="in"?-1:1,dx=p.nx*sg,dy=p.ny*sg,qx=ex+p.nx*.35*s*(p.dir==="in"?-.2:.2),qy=ey+p.ny*.35*s*(p.dir==="in"?-.2:.2);
       cx.fillStyle="#fff";cx.beginPath();cx.moveTo(qx+dx*r,qy+dy*r);cx.lineTo(qx-dx*r*.6-dy*r*.8,qy-dy*r*.6+dx*r*.8);cx.lineTo(qx-dx*r*.6+dy*r*.8,qy-dy*r*.6-dx*r*.8);cx.closePath();cx.fill();cx.stroke()}
   })});
   cx.restore();
@@ -156,10 +156,11 @@ function arrow(x,y,w,h,rot,alpha){
   cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.7,-r*.75);cx.lineTo(-r*.3,0);cx.lineTo(-r*.7,r*.75);cx.closePath();cx.fill();cx.stroke();cx.restore();
 }
 // entrance marks (Layout, model.js entrances()): door slot = light bar on the edge + white chevron pointing INTO the block; ports side (no doors) = mint bar + chevron pointing out to the ports. Rotates with the block
+const ENT_DOOR_S=44;
 function entMark(b,x,y,alpha,s,w,h){
-  if(alpha<.5||s<5)return;const E=entrances(b);if(!E.length)return;
-  const t=Math.max(2,Math.min(5,s*.12)),r=Math.max(3,Math.min(9,Math.min(w,h)*.12)),L=Math.max(5,DOORW/FC*s),lh=s>=18?Math.min(12,Math.max(9,s/3))+6:0;
-  E.forEach(e=>{const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,bw=hz?L:t,bh=hz?t:L,
+  if(alpha<.5||s<5)return;const E=entrances(b);if(!E.length)return;   // marks grow with zoom only up to a cap (size constant for s >= ~75), door marks (many on stations) only when a cell is >= ENT_DOOR_S px
+  const t=Math.min(3,Math.max(2,s*.08)),r=Math.min(9,Math.max(3,s*.12)),L=Math.min(12,Math.max(5,DOORW/FC*s)),lh=s>=18?Math.min(12,Math.max(9,s/3))+6:0;
+  E.forEach(e=>{if(!e.port&&s<ENT_DOOR_S)return;const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,bw=hz?L:t,bh=hz?t:L,
     bx=D[0]>0?ex-t:D[0]<0?ex:ex-L/2,by=D[1]>0?ey-t:D[1]<0?ey:ey-L/2,sg=e.port?1:-1,   // door: chevron looks inward, port: outward
     dd=r+t+(D[1]<0?lh:0),cx0=ex-D[0]*dd,cy0=ey-D[1]*dd;
     cx.save();cx.fillStyle=e.port?`hsla(140,85%,75%,${alpha})`:`hsla(${hue(catOf(b)||"")},90%,86%,${alpha*.9})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.6})`;cx.lineWidth=1;
@@ -254,7 +255,7 @@ function drawShapeFloor(A,s){
     wr.forEach(q=>rc(q,ST,1));poly.forEach(pg=>{path(pg);cx.fillStyle=ST;cx.strokeStyle=ST;cx.lineWidth=2;cx.stroke();cx.fill()});
     wr.forEach(q=>rc(q,WF));poly.forEach(pg=>{path(pg);cx.fillStyle=WF;cx.fill()});
     // ports (display only): green bar on each port's edge (dock: pod floor-facing edge), bay number only on numbered ports
-    if(s>=6){const Ln=.6*s,Tk=Math.max(3,.2*s),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
+    if(s>=6){const Ln=Math.min(.6*s,18),Tk=Math.min(5,Math.max(3,.2*s)),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
       marks.forEach(p=>{const[ex,ey]=t.f(p.x,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),w=odd?Ln:Tk,h=odd?Tk:Ln;
         cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
       if(s>=10){cx.font="600 "+Math.min(13,Math.max(9,s*.6))+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillStyle="rgba(255,255,255,.9)";

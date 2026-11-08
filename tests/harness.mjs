@@ -2560,6 +2560,19 @@ async function s28(br) {
     const [lo, hi] = g.door || [0, 0], mid = (lo + hi) / 2;
     chk(`28 ${n} rot ${r}: both port cells inside the neighbouring station door slot [${lo},${hi}], symmetric about ${mid}, ports on the tile edge ${g.edge}`, !!g.door && g.al.every(a => a > lo && a < hi) && Math.abs((g.al[0] + g.al[1]) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - g.edge) < 1e-6), JSON.stringify(g));
   }
+  // mark size caps: entrance bars (door on Station 1x1, ports side on drone bay) keep the same on-screen size for s above the cap; door marks hidden below s 44
+  const bars = (n, s) => pg.evaluate(([cls, s]) => {
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+    __fb.setView('L'); const b = __fb.S.blocks[0]; V.z = s / CELLS.L; V.ox = W / 2 - (b.x + .5) * s; V.oy = H / 2 - (b.y + .5) * s;
+    const g = document.getElementById('cv').getContext('2d'), o = g.fillRect, got = []; g.fillRect = function (x, y, w, h) { const a = Math.min(w, h), c = Math.max(w, h); if (a <= 3.01 && c >= 5 && c <= 20) got.push(a.toFixed(2) + 'x' + c.toFixed(2)); return o.call(this, x, y, w, h) };
+    __fb.paint(); g.fillRect = o; return [...new Set(got)].sort();
+  }, [`${P}${n}.${n}_C`, s]);
+  for (const n of ['BPO_Station_01', 'BPO_MiningDroneBayBlock']) {
+    const a = await bars(n, 100), c = await bars(n, 200);
+    chk(`28 ${n}: entrance bar size identical at s=100 and s=200 (capped) and non-empty`, a.length > 0 && JSON.stringify(a) === JSON.stringify(c), JSON.stringify([a, c]));
+  }
+  const lowDoor = await bars('BPO_Station_01', 30), lowPort = await bars('BPO_MiningDroneBayBlock', 30);
+  chk('28 door marks hidden below s 44 (Station 1x1 at s=30), port marks still shown (drone bay)', lowDoor.length === 0 && lowPort.length > 0, JSON.stringify([lowDoor, lowPort]));
   // view sync: switching Layout <-> Factory floor keeps the centre world point and the on-screen size of a block cell (1 block cell = FC floor cells)
   const sync = await pg.evaluate(() => {
     __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [], DefaultMachines: []}));
