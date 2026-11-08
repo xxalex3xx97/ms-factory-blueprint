@@ -57,9 +57,9 @@ $("expDl").onclick=()=>{const a=document.createElement("a");a.href=URL.createObj
 // mod-built exit records: same Length, sitting on entrance + (Length-1) cells (raw units, 2 per cell). Mirror of ug_exit_dupes (import_station.py).
 function ugDupes(machs,UG){
   const at=new Map(),dup=new Set();
-  for(const m of machs)if(UG[m.MID]!==undefined){const k=m.X+","+m.Y;(at.get(k)||at.set(k,[]).get(k)).push(m.MID)}
+  for(const m of machs)if(UG[m.MID]!==undefined){const k=m.X+","+m.Y+","+m.H;(at.get(k)||at.set(k,[]).get(k)).push(m.MID)}
   for(const m of machs){const Lr=UG[m.MID];if(Lr===undefined||dup.has(m.MID))continue;
-    const r=((m.R%4)+4)%4,k=(m.X+2*(Lr-1)*DIR[r][0])+","+(m.Y+2*(Lr-1)*DIR[r][1]);
+    const r=((m.R%4)+4)%4,k=(m.X+2*(Lr-1)*DIR[r][0])+","+(m.Y+2*(Lr-1)*DIR[r][1])+","+m.H;
     for(const i of at.get(k)||[])if(UG[i]===Lr&&i!==m.MID)dup.add(i)}
   return dup;
 }
