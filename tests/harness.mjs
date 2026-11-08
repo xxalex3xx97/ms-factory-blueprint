@@ -174,6 +174,17 @@ async function s2(pg, C) {
   const n2 = r1.find(p => p.f === 'N' && p.pos === 2);
   chk('rotation 1: Assembler N2 port now faces E (wf=1), normal (1,0), cell (4,1)',
     !!n2 && n2.wf === 1 && n2.nx === 1 && n2.ny === 0 && n2.x === 4 && n2.y === 1, JSON.stringify(n2));
+  // splitter: 3 port bars (outputs only) at rotations 0-3; input face kept as model port but not drawn as a bar
+  for (const rot of [0, 1, 2, 3]) {
+    await imp(pg, bp([], [mac('DAT_Splitter', 0, 0, {rot, mid: 1})]));
+    const sb = await pg.evaluate(() => {
+      const b = __fb.S.blocks[0];
+      return {bars: __fb.barPorts(b).map(p => p.dir), all: __fb.portsOf(b).map(p => p.dir)};
+    });
+    chk(`splitter rot ${rot}: 3 port bars (all outputs), input face has no bar`,
+      sb.bars.length === 3 && sb.bars.every(d => d === 'out') && sb.all.filter(d => d === 'in').length === 1,
+      JSON.stringify(sb));
+  }
 }
 
 // ================= 3. recipes / items / icons
@@ -306,6 +317,17 @@ async function s5(pg, C) {
   chk('closed door kept after roundtrip', a.FactoryLayout.ClosedDoorways.some(d => d.Edge === 'E' && d.X === 0) && b.FactoryLayout.ClosedDoorways.some(d => d.Edge === 'E' && d.X === 0));
   chk('bad JSON returns false', (await pg.evaluate(() => __fb.importJson('{bad'))) === false);
   chk('JSON without Blocks array returns false', (await pg.evaluate(() => __fb.importJson('{"Version":1}'))) === false);
+  // v2 station block with a guessed footprint: file coords kept verbatim (raw); a moved block recomputes from the cell model
+  await reset(pg);
+  const SHIP = BLK.BPO_ShipyardCore_02 || '/Game/Blueprints/BuildingBlocks/BPO_ShipyardCore_02.BPO_ShipyardCore_02_C';
+  const v2s = {Version: 2, DisplayName: 't', Blocks: [{Class: SHIP, GridLocation: {X: -8, Y: -2}, Height: -4, GridRotation: 2, BlockID: 207533, PaletteID: 0}], DefaultMachines: []};
+  chk('v2 import of ShipyardCore_02 (file Y=-2) accepted', await imp(pg, v2s) === true);
+  chk('v2 import toast warns that a guessed footprint kept file positions', /guessed footprint/.test(await pg.locator('#toast').textContent()));
+  const v2a = await pg.evaluate(() => __fb.build().Blocks[0]);
+  chk('v2 export: ShipyardCore_02 GridLocation X -8, Y -2 verbatim, Height -4, rot 2, BlockID 207533', v2a.GridLocation.X === -8 && v2a.GridLocation.Y === -2 && v2a.Height === -4 && v2a.GridRotation === 2 && v2a.BlockID === 207533, JSON.stringify(v2a));
+  await pg.evaluate(() => { __fb.S.blocks[0].x += 1; });
+  const v2m = await pg.evaluate(() => __fb.build().Blocks[0].GridLocation);
+  chk('moved ShipyardCore_02: build() recomputes X from the cell model (-8 -> -4), raw not used', v2m.X === -4, JSON.stringify(v2m));
 }
 
 // ================= 6. underground warnings

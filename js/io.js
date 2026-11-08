@@ -28,13 +28,15 @@ function cfgModel(b,d,e,ugn){
     e.ConfigHex=cfgEnc(k,{filters:b.fl||Array(n).fill(""),prioA:b.pr?b.pr[0]:-1,prioB:b.pr?b.pr[1]:-1,ports:isSplitterCls(b.cls)?SPL_FACES.map(f=>{const q=ps.find(q=>q.f===f);return!q||q.en}):en.slice(-n)});
   }
 }
+const blkSig=b=>[b.cls,b.x,b.y,b.h,b.rot].join("|");   // model identity of a block: raw file values are kept only while this is unchanged
 function build(){
   const bl=S.blocks.filter(b=>!isM(b)),ms=S.blocks.filter(isM),UGN=new Map(ugPairs(ms).map(q=>[q.u.id,q.n]));
   let base=Math.max(0,...S.dm.map(m=>Number(m&&m.MachineID)||0),...ms.map(b=>b.mid||0));
   // Version 2 out: inverse of importJson v2 (block 4 units/cell, footprint centre; machine 2 units/floor cell, +W-14, Height*8)
   const RB=b=>{const f=dim(b),sh=SHIPEND(b),ax=sh&&f.w===1&&DIR[b.rot][0]<0?1:0,ay=sh&&f.h===1&&DIR[b.rot][1]<0?1:0;return{X:4*(b.x-ax)+2*(sh?1:f.w-1),Y:4*(b.y-ay)+2*(sh?1:f.h-1)}},RM=b=>{const f=dim(b);return{X:2*b.x+f.w-14,Y:2*b.y+f.h-14}};
   return{Version:2,DisplayName:S.name,
-    Blocks:bl.map((b,i)=>expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h,GridRotation:b.rot,BlockID:i+1,PaletteID:b.pid||0})),
+    Blocks:bl.map((b,i)=>{const k=b.raw&&b.raw.sig===blkSig(b);   // imported station block not moved/rotated: file values verbatim
+      return expPorts(b,{Class:b.cls,GridLocation:k?{X:b.raw.X,Y:b.raw.Y}:RB(b),Height:k?b.raw.H:b.h,GridRotation:k?b.raw.R:b.rot,BlockID:k&&b.raw.bid!=null?b.raw.bid:i+1,PaletteID:b.pid||0})}),
     DefaultMachines:ms.map(b=>{const d=def(b.cls),e={Class:d.machineClass||d.id,Transform:{GridLocation:RM(b),Height:b.h*8,GridRotation:b.rot},MachineID:b.mid||++base,PaletteID:b.pid||0,DefaultName:d.id};
       if(b.ct&&b.ct.length)e.Contents=b.ct.map(x=>({Item:x.item,Count:x.n,Infinite:!!x.inf}));
       if(b.rec)e.Recipe=b.rec;expCfg(b,d,e,UGN);return expPorts(b,e)}).concat(S.dm).map((e,i)=>({e,i,k:Number(e&&e.MachineID)})).sort((a,b)=>(isFinite(a.k)&&isFinite(b.k)?a.k-b.k:isFinite(a.k)?-1:isFinite(b.k)?1:0)||a.i-b.i).map(x=>x.e),   // keep original MachineID order
@@ -149,7 +151,7 @@ function importJson(txt,quiet){
   S.name=typeof o.DisplayName==="string"?o.DisplayName:"Imported";
   if(o.Catalog&&typeof o.Catalog==="object")for(const c in o.Catalog){OV[c]=Object.assign(OV[c]||{},o.Catalog[c])}
   saveOV();
-  let odd=0;spFix=0;
+  let odd=0,guessN=0;spFix=0;
   // Version 2 = game units (extract/import_station.py): block 4 units per cell, GridLocation = footprint centre;
   // machine 2 units per floor cell, GridLocation = footprint centre, Height 8 per layer. Version 1/absent = legacy site units.
   const v2=o.Version===2,MZ=8;
@@ -159,7 +161,10 @@ function importJson(txt,quiet){
   S.blocks=o.Blocks.map(b=>{const r=rot(b.GridRotation),gx=b.GridLocation&&b.GridLocation.X,gy=b.GridLocation&&b.GridLocation.Y,cls=String(b.Class||"");
     if(!v2)return{id:uid++,cls,x:hf(gx),y:hf(gy),h:n(b.Height),rot:r,pid:n(b.PaletteID)};
     const f=dim({cls,rot:r}),sh=SHIPEND({cls}),ax=sh&&f.w===1&&DIR[r][0]<0?1:0,ay=sh&&f.h===1&&DIR[r][1]<0?1:0;   // shipEnd: 2x2 box, drawn row = station side
-    return{id:uid++,cls,x:cell(gx,4,sh?2:2*(f.w-1))+ax,y:cell(gy,4,sh?2:2*(f.h-1))+ay,h:n(b.Height),rot:r,pid:n(b.PaletteID)}});
+    const nb={id:uid++,cls,x:cell(gx,4,sh?2:2*(f.w-1))+ax,y:cell(gy,4,sh?2:2*(f.h-1))+ay,h:n(b.Height),rot:r,pid:n(b.PaletteID)};
+    nb.raw={X:gx??0,Y:gy??0,H:b.Height,R:b.GridRotation,bid:b.BlockID,sig:blkSig(nb)};   // file values kept: the cell model rounds (footprint guesses), export writes these back
+    const dd=def(cls);if(dd&&/guess/.test(dd.source||""))guessN++;
+    return nb});
   S.blocks.forEach((b,i)=>impPorts(b,o.Blocks[i].Ports));
   const cd=o.FactoryLayout&&o.FactoryLayout.ClosedDoorways,lg=[];S.closed=[];
   if(Array.isArray(cd))cd.forEach(d=>{if(d&&d.Seg!=null&&"ESWN".includes(d.Edge))S.closed.push(`${n(d.Height)}|${n(d.X)}|${n(d.Y)}|${d.Edge}|${n(d.Seg)}`);else if(d)lg.push(d)});
@@ -182,7 +187,7 @@ function importJson(txt,quiet){
   });
   sel=new Set();$("name").value=S.name;all();if(quiet)return true;fit();
   const unk=S.blocks.filter(b=>!BASE[b.cls]).length;
-  toast(`Imported ${S.blocks.length-nm} blocks, ${nm} buildables`+(S.dm.length?`, ${S.dm.length} other machines kept`:"")+(unk?`, ${unk} unknown class`:"")+(odd?`; ${odd} odd coordinates rounded`:"")+(spFix?`; ${spFix} splitter input port set on (input face is always open)`:""));return true;
+  toast(`Imported ${S.blocks.length-nm} blocks, ${nm} buildables`+(S.dm.length?`, ${S.dm.length} other machines kept`:"")+(unk?`, ${unk} unknown class`:"")+(odd?`; ${odd} odd coordinates rounded`:"")+(guessN?`; ${guessN} blocks with a guessed footprint kept at their file positions`:"")+(spFix?`; ${spFix} splitter input port set on (input face is always open)`:""));return true;
 }
 // ---- save to file (File System Access API; Chromium only, others download)
 let FH=null;const JT={types:[{description:"JSON",accept:{"application/json":[".json"]}}]};

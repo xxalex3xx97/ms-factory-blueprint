@@ -70,7 +70,13 @@ function drawLinks(s){
 function drawPorts(s){
   if(s<6)return;
   const Ln=.6*s,T=Math.max(3,.2*s);cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
-  S.blocks.forEach(b=>{if(b.h!==layer)return;portsOf(b).forEach(p=>{
+  S.blocks.forEach(b=>{if(b.h!==layer)return;const bars=barPorts(b);
+    // splitter input (back) face: no bar; small neutral chevron pointing into the machine (not clickable, no hover state)
+    portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.max(3,s*.2),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
+      cx.strokeStyle="rgba(230,240,255,.45)";cx.lineWidth=Math.max(1.5,s*.08);cx.beginPath();
+      cx.moveTo(ex-ix*r+qx*r,ey-iy*r+qy*r);cx.lineTo(ex+ix*r,ey+iy*r);cx.lineTo(ex-ix*r-qx*r,ey-iy*r-qy*r);cx.stroke()});
+    cx.lineWidth=1;
+    bars.forEach(p=>{
     if(p.line){   // elevator: short tick on the outer edge of the ring cell behind the port (pos 4 = low side, pos 9 = high side)
       const low=p.pos==='start',rx=p.x+p.nx,ry=p.y+p.ny,k=(low?0:1);
       cx.save();cx.strokeStyle=p.en?"hsl(140,70%,48%)":"hsl(0,75%,55%)";cx.lineWidth=Math.max(2,s*.12);cx.beginPath();   // save/restore: the tick's stroke style must not leak into the next port

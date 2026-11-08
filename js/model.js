@@ -86,11 +86,13 @@ function portsOf(b){
   });
   return o;
 }
+// ports drawn as bars: splitter input (back) face is not a port, so no bar (draw.js draws a neutral chevron there)
+const barPorts=b=>portsOf(b).filter(p=>!(p.dir==="in"&&isSplitterCls(b.cls)));
 const togglePort=(b,k)=>{if(!portsOf(b).some(p=>p.key===k&&p.tg))return;const o=b.off||[];b.off=o.includes(k)?o.filter(q=>q!==k):o.concat(k)};
 function portAt(p){
   const s=sc();if(s<14)return null;
   const fx=(p.x-V.ox)/s,fy=(p.y-V.oy)/s;let best=null,bd=9;
-  S.blocks.forEach(b=>{if(b.h!==layer)return;portsOf(b).filter(q=>q.tg).forEach(q=>{
+  S.blocks.forEach(b=>{if(b.h!==layer)return;barPorts(b).filter(q=>q.tg).forEach(q=>{
     const ex=q.x+.5+q.nx*.5,ey=q.y+.5+q.ny*.5,dn=(fx-ex)*q.nx+(fy-ey)*q.ny,dt=q.nx?fy-ey:fx-ex;
     if(dn>=-.35&&dn<=.25&&Math.abs(dt)<=.35){const dd=Math.hypot(fx-ex,fy-ey);if(dd<bd){bd=dd;best={b,p:q}}}
   })});

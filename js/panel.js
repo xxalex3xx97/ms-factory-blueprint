@@ -131,7 +131,7 @@ $("insp").addEventListener("click",e=>{
   if((rr||id==="bRecClr")&&bs1.length===1&&isM(bs1[0])){push();const m=bs1[0];if(id==="bRecClr"||m.rec===rr.dataset.rk)delete m.rec;else m.rec=rr.dataset.rk;all();return}
   if(id==="bRot")rotate();
   else if(id==="bDel")del();
-  else if(id==="bDup"){const nb=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,id:uid++,mid:0,x:b.x+1,y:b.y+1}));if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}push();S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));all()}
+  else if(id==="bDup"){const nb=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null,id:uid++,mid:0,x:b.x+1,y:b.y+1}));if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}push();S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));all()}
   else if(id==="bStop"){active=null;all()}
   else if(id==="bClear"){if(S.blocks.length&&confirm("Remove all blocks and buildables?")){push();S.blocks=[];S.closed=[];sel=new Set();all()}}
   else if(id==="bResetCat"){if(confirm("Discard all catalog edits (size, floor, category, verified)?")){push();OV={};saveOV();all()}}
