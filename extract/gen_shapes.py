@@ -47,6 +47,18 @@ def merge_rows(rows):
     return out
 
 
+def gap_rect(g, w, h, ox, oy):
+    # door gap on a block edge: block frame (centred on the block) -> shape frame (origin ox,oy); edges at +-8 cells per block cell
+    side, a, b = g['side'], g['from'], g['to']
+    if side not in ('E', 'S', 'W', 'N') or not a < b:
+        sys.exit('bad gap ' + json.dumps(g))
+    if side in ('E', 'W'):
+        ex = (8 * w if side == 'E' else -8 * w) - ox
+        return [side, r3(ex), r3(a - oy), r3(ex), r3(b - oy)]
+    ey = (8 * h if side == 'S' else -8 * h) - oy
+    return [side, r3(a - ox), r3(ey), r3(b - ox), r3(ey)]
+
+
 def build():
     src = rd('shapes_src.json')
     fl = rd('floors.json')['blocks']
@@ -96,6 +108,8 @@ def build():
             if p['entrance'].get('kind') not in ('doors', 'ports') or not p['entrance'].get('evidence'):
                 sys.exit('bad entrance for ' + name)
             entry['entrance'] = p['entrance']
+            if p['entrance'].get('gaps'):   # no-floor doors: [side, x0, y0, x1, y1] gap rects on the block edge, shape frame (Layout marks)
+                entry['gaps'] = [gap_rect(g, p['w'], p['h'], ox, oy) for g in p['entrance']['gaps']]
         shapes[name] = entry
     return shapes, patch, adds, icons
 

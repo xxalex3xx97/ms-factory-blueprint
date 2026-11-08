@@ -31,6 +31,8 @@ function shapeTf(b){const fl=floorRect(b),r=fl||nfRect(b),d=def(b.cls),sh=r&&d&&
 // real=true (Layout): TRUE block-frame positions (door slot +NFQ along the edge = middle of a station tile edge; ports unshifted); default = site floor model positions
 function entrances(b,real){
   const d=def(b.cls),sh=d&&SHAPES[d.name],o=[];if(!d)return o;
+  if(!floorRect(b)&&sh&&sh.gaps){const t=shapeTf(b);if(!t)return o;   // no-floor doors (Command Module, shipyards): one mark per gap, at the gap centre on the block edge; rot maps the block-frame side to a world side
+    sh.gaps.forEach(g=>{const[p,q]=t.f0((g[1]+g[3])/2,(g[2]+g[4])/2);o.push({ed:(EN.indexOf(g[0])+(b.rot&3))%4,x:p/FC,y:q/FC,port:false})});return o}
   if(floorRect(b)&&dv(b)){const fo=fcell(b),al=(DOFF+DOORW/2+(real?NFQ:0))/FC;
     for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot||!sideOpen(b,ed))continue;const n=ed%2===0?fo.ch:fo.cw;
       for(let k=0;k<n;k++)o.push({ed,x:ed===0?fo.cx+fo.cw:ed===2?fo.cx:fo.cx+k+al,y:ed===1?fo.cy+fo.ch:ed===3?fo.cy:fo.cy+k+al,port:false})}

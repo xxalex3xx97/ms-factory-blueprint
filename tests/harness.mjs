@@ -2350,7 +2350,7 @@ async function s26(br) {
   chk('26 round trip: every block identical after import+export (ShipyardCore_02 at -8,-2,-4 r2)', diff.length === 0, diff.join(' ; '));
   const lv = await pg.evaluate(() => [...new Set(__fb.S.blocks.map(b => b.h))].sort((x, y) => x - y));
   chk('26 levels: game Heights -4,0,-4.. become consecutive levels', JSON.stringify(lv) === JSON.stringify([-2, 0]), JSON.stringify(lv));
-  await pg.evaluate(() => { const b = __fb.S.blocks.find(q => q.raw); b.x += 1; });
+  await pg.evaluate(() => { const b = __fb.S.blocks[0]; b.x += 1; });   // first block = Core Mk.2 at -8,-2 (on the 1x2 grid since h=2)
   const moved = await pg.evaluate(() => __fb.build().Blocks.filter(b => b.Class.includes('ShipyardCore_02')).map(b => b.GridLocation.X + ',' + b.GridLocation.Y));
   chk('26 round trip: a block moved in the editor is exported at its new cell', !moved.includes('-8,-2') || moved.length === 2 && moved.filter(m => m === '-8,-2').length === 0, moved.join(' ; '));
   // Industrial Dock (shipEnd, 3x2 / 2x3): X=18,Y=2 imports and exports unchanged at all four rotations
@@ -2378,9 +2378,9 @@ async function s27(br) {
   const sh = await pg.evaluate(() => { const s = SHAPES.BPO_Dock_2; return s && {walls: s.walls.length, props: s.props.length, arms: s.arms.length} });
   chk('27 SHAPES.BPO_Dock_2 has walls, props (console) and port arms', !!sh && sh.walls > 0 && sh.props > 0 && sh.arms > 0, JSON.stringify(sh));
   // (1) catalog patch (js/shapes.js merges into CATALOG before core.js): dock verified; negative: an unverified block stays unverified
-  const cat = await pg.evaluate(() => { const d = CATALOG.blocks.find(b => b.name === 'BPO_Dock_2'), u = CATALOG.blocks.find(b => b.name === 'BPO_ShipyardCore_02'); return {dock: d && {verified: d.verified, door: d.door && d.door.verified}, unverified: u && u.verified} });
+  const cat = await pg.evaluate(() => { const d = CATALOG.blocks.find(b => b.name === 'BPO_Dock_2'), u = CATALOG.blocks.find(b => b.name === 'BPO_Dock'); return {dock: d && {verified: d.verified, door: d.door && d.door.verified}, unverified: u && u.verified} });
   chk('27 catalog patch: BPO_Dock_2 verified===true and door.verified===true', !!cat.dock && cat.dock.verified === true && cat.dock.door === true, JSON.stringify(cat));
-  chk('27 catalog negative: BPO_ShipyardCore_02 still verified===false', cat.unverified === false, JSON.stringify(cat));
+  chk('27 catalog negative: BPO_Dock (not decoded yet) still verified===false', cat.unverified === false, JSON.stringify(cat));
   // (2) '!?' badge: select the dock -> inspector and palette entry clean; select an unverified block -> both still show '!?'
   const palHtml = label => pg.evaluate(l => { const b = [...document.querySelectorAll('#palList button.item')].find(x => x.querySelector('.n') && x.querySelector('.n').textContent === l); return b ? b.outerHTML : null }, label);
   const selectAt = async (cls, X, Y) => {
@@ -2394,11 +2394,11 @@ async function s27(br) {
   chk('27 dock inspector HTML has no "!?"', !dockInsp.includes('!?'), dockInsp.slice(0, 300));
   const dockPal = await palHtml('Industrial Dock');
   chk('27 palette entry "Industrial Dock" present and has no "!?"', dockPal !== null && !dockPal.includes('!?'), String(dockPal).slice(0, 400));
-  const coreSel = await selectAt('BPO_ShipyardCore_02', 30, 2);
-  chk('27 unverified block selected in Layout', !!coreSel && coreSel.includes('ShipyardCore_02'), String(coreSel));
+  const coreSel = await selectAt('BPO_Dock', 30, 2);
+  chk('27 unverified block selected in Layout', !!coreSel && coreSel.includes('BPO_Dock'), String(coreSel));
   const coreInsp = await pg.locator('#insp').innerHTML();
   chk('27 unverified block inspector still shows "!?"', coreInsp.includes('!?'), coreInsp.slice(0, 300));
-  const corePal = await palHtml('Shipyard Core Mk.2');
+  const corePal = await palHtml('Dock');
   chk('27 unverified block palette entry still shows "!?"', corePal !== null && corePal.includes('!?'), String(corePal).slice(0, 400));
   // (3) gen_shapes.py --check: js/shapes.js up to date with extract/shapes_src.json + floors.json
   const gs = spawnSync(process.env.PYTHON || 'python', ['-I', path.join(ROOT, 'extract', 'gen_shapes.py'), '--check'], {cwd: ROOT, encoding: 'utf8'});
@@ -2505,7 +2505,7 @@ async function s28(br) {
   chk('28 machines BPO_MiningDroneBay_2 and BPO_MiningDroneBay both kept in "other machines" (no buildable maps them, like Mk.1)', rt.dm === 2, `dm ${rt.dm}`);
   // entrance key: shapes_src.json entrance {kind, evidence} on dock (doors) + drone bays (ports), carried to SHAPES; Layout arrows from entrances()
   const ents = names.filter(n => srcBlocks[n].entrance);
-  chk('28 entrance: dock (doors) + Mk.1 + Mk.2 (ports) carry the key, no other block', JSON.stringify(ents.sort()) === '["BPO_Dock_2","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2"]', JSON.stringify(ents));
+  chk('28 entrance: dock + Command Module + 3 shipyards (doors), Mk.1 + Mk.2 drone bays (ports); no other block', JSON.stringify(ents.sort()) === '["BPO_CommandModule","BPO_Dock_2","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ShipyardSide"]', JSON.stringify(ents));
   for (const n of names) {
     const f = srcBlocks[n].entrance, g = await pg.evaluate(k => SHAPES[k].entrance, n);
     if (f) chk(`28 entrance ${n}: SHAPES.entrance kind "${f.kind}" + evidence carried`, ['doors', 'ports'].includes(f.kind) && g && g.kind === f.kind && g.evidence === f.evidence && f.evidence.length > 20, JSON.stringify(g));
@@ -2522,7 +2522,7 @@ async function s28(br) {
     return {eds: E.map(e => e.ed).sort(), ports: E.map(e => e.port), txt: entText(b), diff: E.map(e => { const D = DIR[e.ed], ex = V.ox + e.x * s, ey = V.oy + e.y * s,
       m = at(ex - D[0] * 1.5, ey - D[1] * 1.5), ref = D[0] ? at(ex - D[0] * 1.5, y0 + 3) : at(x0 + 3, ey - D[1] * 1.5); return Math.abs(m - ref) }), s};
   }, [`${P}${n}.${n}_C`, r]);
-  const want = {BPO_Dock_2: r => [0, 1, 2, 3].filter(e => e !== r), BPO_Station_2x1: r => [0, 2].map(e => (e + r) & 3), BPO_Station_01: () => [0, 1, 2, 3], BPO_MiningDroneBayBlock: r => [(2 + r) & 3], BPO_MiningDroneBayBlock_2: r => [(2 + r) & 3]};
+  const want = {BPO_Dock_2: r => [0, 1, 2, 3].filter(e => e !== r), BPO_Station_2x1: r => [0, 2].map(e => (e + r) & 3), BPO_Station_01: () => [0, 1, 2, 3], BPO_MiningDroneBayBlock: r => [(2 + r) & 3], BPO_MiningDroneBayBlock_2: r => [(2 + r) & 3], BPO_CommandModule: r => [(2 + r) & 3], BPO_ShipyardSide: r => [(2 + r) & 3], BPO_ShipyardCore: r => [(2 + r) & 3], BPO_ShipyardCore_02: r => [(2 + r) & 3]};
   for (const n of Object.keys(want)) for (const r of [0, 1, 2, 3]) {
     const o = await probe(n, r), w = want[n](r).sort(), ports = n.includes('Drone');
     chk(`28 entrance marks ${n} rot ${r}: world edges ${w.map(e => 'ESWN'[e]).join('')}${n === 'BPO_Dock_2' ? ' (none on the ship side)' : ''}, ${ports ? 'ports side' : 'doors'}`, JSON.stringify(o.eds.filter((e, i, a) => a.indexOf(e) === i)) === JSON.stringify(w) && o.ports.every(p => p === ports), JSON.stringify(o));

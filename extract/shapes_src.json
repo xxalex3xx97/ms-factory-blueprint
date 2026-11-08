@@ -281,6 +281,148 @@
       ],
       "floor": null,
       "note": "mirror of BPO_StationArmour_01; no catalog entry (palette shows 01 only)"
+    },
+    "BPO_CommandModule": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "decoded BPO_CommandModule 2026-11-08: BlockBounds 16x16 = 1x1 block; 20 props (round ring x -8..6.3, y +-6.4, centre holotable), no walls, no BPC_Door; one door gap on the west edge (rot 0)",
+      "nofloor": true,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "floor": null,
+      "note": null,
+      "floorNote": null,
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "sides": [
+          "W"
+        ],
+        "verified": true,
+        "source": "decoded BPO_CommandModule: single entry gap y -2.95..2.95 (5.9 wide, rounded to 6) on the west edge at rot 0, entry bars x -8..-4.66, connector (-2,0) rot 2"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded: one door gap on the west edge (rot 0), y -2.954..2.954; Layout mark at the true gap centre",
+        "gaps": [
+          {
+            "side": "W",
+            "from": -2.954,
+            "to": 2.954
+          }
+        ]
+      }
+    },
+    "BPO_ShipyardSide": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "decoded BPO_ShipyardSide 2026-11-08: BlockBounds x -8..1 (9 floor cells) x 16, ROUNDED UP to a 1x1 block; 5 props, no walls, no floor; one door gap on the west edge (rot 0)",
+      "nofloor": true,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "floor": null,
+      "note": "rounded: 9x16 floor cells -> 1x1 block",
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "sides": [
+          "W"
+        ],
+        "verified": true,
+        "source": "decoded BPO_ShipyardSide: gap y -2.986..2.986 (5.97 wide, rounded to 6) between the two west posts/bars"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded: one door gap on the west edge (rot 0), y -2.986..2.986; Layout mark at the true gap centre",
+        "gaps": [
+          {
+            "side": "W",
+            "from": -2.986,
+            "to": 2.986
+          }
+        ]
+      }
+    },
+    "BPO_ShipyardCore": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "decoded BPO_ShipyardCore 2026-11-08: BlockBounds 16x16 = 1x1 block; 11 props (console, rails, posts), no walls, no floor; one door gap on the west edge (rot 0)",
+      "nofloor": true,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "floor": null,
+      "note": null,
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "sides": [
+          "W"
+        ],
+        "verified": true,
+        "source": "decoded BPO_ShipyardCore: gap y -2.986..2.986 on the west edge (same as Side)"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded: one door gap on the west edge (rot 0), y -2.986..2.986; Layout mark at the true gap centre",
+        "gaps": [
+          {
+            "side": "W",
+            "from": -2.986,
+            "to": 2.986
+          }
+        ]
+      }
+    },
+    "BPO_ShipyardCore_02": {
+      "w": 1,
+      "h": 2,
+      "verified": true,
+      "source": "decoded BPO_ShipyardCore_02 2026-11-08: BlockBounds 16x32 = 1x2 block; 12 props, no walls, no floor; two door gaps on the west edge (rot 0); props overhang the footprint 8 cells east (bay, x to 15.92)",
+      "nofloor": true,
+      "floorOrigin": [
+        -8,
+        -16
+      ],
+      "floor": null,
+      "note": "overhang: props reach x 15.92, 8 floor cells past the footprint on +x (blocking UNK)",
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 5,
+        "sides": [
+          "W"
+        ],
+        "verified": true,
+        "source": "decoded BPO_ShipyardCore_02: 2 gaps on the west edge, y -10.986..-5.13 and 5.13..10.986 (5.86 wide, rounded to 6, centres +-8.06)"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded: two door gaps on the west edge (rot 0), y -10.986..-5.13 and 5.13..10.986; Layout marks at the true gap centres; no N/S doors (not decoded)",
+        "gaps": [
+          {
+            "side": "W",
+            "from": -10.986,
+            "to": -5.13
+          },
+          {
+            "side": "W",
+            "from": 5.13,
+            "to": 10.986
+          }
+        ]
+      }
     }
   }
 }
