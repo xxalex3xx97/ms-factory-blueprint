@@ -143,6 +143,7 @@
       "h": 1,
       "verified": true,
       "source": "decoded BPO_SolarPanelBlock 2026-11-08: hull 16x16 = 1x1 block, one solid collider over the whole footprint; no-build, no floor",
+      "icon": "BPO_SolarPanelBlock",
       "nofloor": true,
       "floorOrigin": [
         -8,
@@ -224,7 +225,6 @@
       ],
       "confidence": "high (decoded BPO_MiningDroneBayBlock_2; locked in demo, untested in game)",
       "icon": "BPO_MiningDroneBayBlock_2",
-      "iconFile": "BPO_MiningDroneBayBlock_2.png",
       "note": "rounded: 19x8 floor cells -> 1x1 block; overhang into the +x neighbour (blocking UNK)",
       "cost": [
         [
