@@ -1,11 +1,113 @@
 {
-  "floorOrigin": [-15, -15],
+  "floorOrigin": [
+    -15,
+    -15
+  ],
   "blocks": {
     "BPO_Dock_2": {
       "w": 3,
       "h": 2,
       "verified": true,
-      "door": {"verified": true, "source": "BPO_Dock_2 colliders: W gaps y-11..-5,5..11; N/S gaps x-11..-5 (6 wide, offset 4)"}
+      "door": {
+        "verified": true,
+        "source": "BPO_Dock_2 colliders: W gaps y-11..-5,5..11; N/S gaps x-11..-5 (6 wide, offset 4)"
+      }
+    },
+    "BPO_Station_01": {
+      "w": 1,
+      "h": 1,
+      "verified": true,
+      "source": "decoded BPO_Station_01 2026-11-08: hull 16x16 = 1x1 block, 1-unit walls, floor 14x14, doors 6 wide at offset 4",
+      "ground": true,
+      "floorOrigin": [
+        -7,
+        -7
+      ],
+      "floor": {
+        "w": 14,
+        "h": 14,
+        "verified": true,
+        "source": "decoded BPO_Station_01: inner 14x14 inside 1-unit walls"
+      },
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "verified": true,
+        "source": "decoded BPO_Station_01: gaps y -3..3 (W,E) and x -3..3 (N,S)"
+      },
+      "note": null
+    },
+    "BPO_Station_2x1": {
+      "w": 2,
+      "h": 1,
+      "verified": true,
+      "source": "decoded BPO_Station_2x1 2026-11-08: hull 32x16 = 2x1 block, floor 30x14; doors on the two short ends only (long-side doors removed by user)",
+      "ground": true,
+      "floorOrigin": [
+        -15,
+        -7
+      ],
+      "floor": {
+        "w": 14,
+        "h": 30,
+        "verified": true,
+        "source": "decoded BPO_Station_2x1: inner 30x14 inside 1-unit walls, long axis = block long axis"
+      },
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "verified": true,
+        "sides": [
+          "E",
+          "W"
+        ],
+        "source": "decoded BPO_Station_2x1: short-end gaps y -3..3 only; long sides solid"
+      },
+      "note": null
+    },
+    "BPO_Station_02A": {
+      "w": 2,
+      "h": 2,
+      "verified": true,
+      "source": "decoded BPO_Station_02A 2026-11-08: hull 32x32 = 2x2 block, floor 30x30, 2 doors per side",
+      "ground": true,
+      "floor": {
+        "w": 30,
+        "h": 30,
+        "verified": true,
+        "source": "decoded BPO_Station_02A: inner 30x30 inside 1-unit walls"
+      },
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "verified": true,
+        "source": "decoded BPO_Station_02A: gaps x/y -11..-5 and 5..11 on all sides"
+      },
+      "note": null
+    },
+    "BPO_Station_02": {
+      "w": 2,
+      "h": 2,
+      "verified": true,
+      "source": "decoded BPO_Station_02 2026-11-08: hull 32x32 = 2x2 block, ground floor 30x30, 2 doors per side; z 8..10 central slab = second floor balcony, not drawn, not buildable",
+      "ground": true,
+      "floor": {
+        "w": 30,
+        "h": 30,
+        "verified": true,
+        "source": "decoded BPO_Station_02: inner 30x30 inside 1-unit walls"
+      },
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "verified": true,
+        "source": "decoded BPO_Station_02: gaps -11..-5 and 5..11 on all sides"
+      },
+      "note": null
     }
   }
 }

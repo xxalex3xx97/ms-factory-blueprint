@@ -1,6 +1,7 @@
 // ---- floor model: block floors + doors (per layer). Door = 6 wide, 2 deep, 4 cells from the wall, one per 14-cell segment per side
 const DOORW=6,DOFF=4,EN=["E","S","W","N"];
 const dv=b=>{const d=def(b.cls);return !!(d&&d.door&&d.door.verified)};
+const sideOpen=(b,ed)=>{const s=((def(b.cls)||{}).door||{}).sides;return !s||s.some(c=>(EN.indexOf(c)+(b.rot&3))%4===ed)};   // door.sides (block frame, E/S/W/N) -> world side after rot; no sides key = all sides
 // floor cell box of a block (cell units): shipEnd = the end opposite the ship direction (rot); else the whole footprint
 function fcell(b){const o=dim(b);if(!SHIPEND(b))return{cx:b.x,cy:b.y,cw:o.w,ch:o.h};const D=DIR[b.rot&3];return{cx:b.x+(D[0]<0?o.w-1:0),cy:b.y+(D[1]<0?o.h-1:0),cw:D[0]?1:o.w,ch:D[1]?1:o.h}}
 function floorRect(b){
@@ -13,8 +14,10 @@ function floorRect(b){
   return{x:fo.cx*FC+q,y:fo.cy*FC+q,w:f.w,h:f.h,known,guess:known&&!!d.floor&&d.floor.verified===false,b};
 }
 // real hull silhouette (shapes.js, floor frame: origin = floor top-left, rot 0 = ship side east) -> floor-unit coords of the block's floor rect, rotated by b.rot about the floor corner
-function shapeTf(b){const r=floorRect(b),d=def(b.cls),sh=r&&d&&SHAPES[d.name];if(!sh)return null;
-  return{sh,f:(u,v)=>{let x=u,y=v,W=d.fw,H=d.fh;for(let i=0;i<(b.rot&3);i++){[x,y]=[H-y,x];[W,H]=[H,W]}return[r.x+x,r.y+y]}}}
+// nofloor block (solar, turret, drone bay): its own tile is the shape frame (origin = tile top-left); no floor, no buildable area
+function nfRect(b){const d=def(b.cls);if(!d||!d.nofloor||!SHAPES[d.name])return null;const o=dim(b);return{x:b.x*FC,y:b.y*FC,w:FC*o.w,h:FC*o.h,b}}
+function shapeTf(b){const r=floorRect(b)||nfRect(b),d=def(b.cls),sh=r&&d&&SHAPES[d.name];if(!sh)return null;
+  return{sh,f:(u,v)=>{let x=u,y=v,W=b.rot&1?r.h:r.w,H=b.rot&1?r.w:r.h;for(let i=0;i<(b.rot&3);i++){[x,y]=[H-y,x];[W,H]=[H,W]}return[r.x+x,r.y+y]}}}   // unrotated shape-frame size: rot 1/3 swap the rotated floor's w/h
 const shapeRects=(b,k)=>{const t=shapeTf(b);return t?t.sh[k].map(([a,c,e,g])=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}}):[]};
 const elvRect=b=>{const d=def(b.cls),r=d&&d.elevator&&floorRect(b);return r?{x:r.x+((r.w-d.elevator.w)>>1),y:r.y+((r.h-d.elevator.h)>>1),w:d.elevator.w,h:d.elevator.h,b}:null};
 function areas(L){
@@ -26,7 +29,7 @@ function areas(L){
     const e=elvRect(b);if(e)blocked.push(e);
   });
   fb.forEach(f=>{const{b,r}=f,QI=(def(b.cls)||{}).floorInset||0,fo=fcell(b);   // QI: floor inset inside the shell (elevator 1); fo: floor cell box (shipEnd: station side only)
-    for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot)continue;   // Industrial Dock: doors on every side except the ship side (rot = ship direction); user screenshot 2026-11-07: station side 2 doors, both short ends 1 each; positions = station rule, unverified
+    for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot||!sideOpen(b,ed))continue;   // Industrial Dock: doors on every side except the ship side (rot = ship direction); user screenshot 2026-11-07: station side 2 doors, both short ends 1 each; positions = station rule, unverified
       const v=ed%2===0,n=v?fo.ch:fo.cw;
       for(let k=0;k<n;k++){
         const t0=(v?r.y:r.x)+FC*k+DOFF-QI,ex=ed===0?r.x+r.w+QI:ed===2?r.x-QI-DW:t0,ey=ed===1?r.y+r.h+QI:ed===3?r.y-QI-DW:t0;

@@ -263,12 +263,15 @@ async function s4(pg, C) {
   chk('switch off: outside allowed', !(await nb(-5, -5, 2, 2)));
   await pg.evaluate(() => { STRICT = true; });
 
-  // 2x1 block: 14x30 floor (long side follows block axis), 6 doors
+  // 2x1 block: 14x30 floor (long side follows block axis), doors on the two short ends only (user 2026-11-08)
   await imp(pg, bp([blk('BPO_Station_2x1', 0, 0)]));
   A = await areas();
   chk('2x1 station: 30x14 floor (14x30 along block long axis)', A.floors.length === 1 && A.floors[0].w === 30 && A.floors[0].h === 14, JSON.stringify(A.floors));
-  chk('2x1 station: 6 doors (2 per long side, 1 per short side) each centred per 14-cell segment',
-    A.doors.length === 6 && A.doors.every(d => (d.ed % 2 === 0 ? d.y : d.x) % 16 === 4), `doors ${A.doors.length}`);
+  chk('2x1 station: 2 doors, both on the short ends (E,W), centred in the 14-cell end, none on the long sides',
+    A.doors.length === 2 && A.doors.every(d => d.ed % 2 === 0 && d.y % 16 === 4), `doors ${JSON.stringify(A.doors.map(d => [d.ed, d.x, d.y]))}`);
+  await imp(pg, bp([blk('BPO_Station_2x1', 0, 0, {rot: 1})]));
+  A = await areas();
+  chk('2x1 station rot 1: 2 doors on the N,S short ends (door.sides follow rot)', A.doors.length === 2 && A.doors.every(d => d.ed % 2 === 1 && d.x % 16 === 4), `doors ${JSON.stringify(A.doors.map(d => [d.ed, d.x, d.y]))}`);
 
   // 2x2 A: 30x30 floor, 2 doors per side
   await imp(pg, bp([blk('BPO_Station_02A', 0, 0)]));
@@ -2433,6 +2436,43 @@ async function s27(br) {
   await ctx.close();
 }
 
+// ================= 28 data-driven shapes: every block in extract/shapes_src.json (SHAPES entry, catalog verified, no '!?', collider counts)
+async function s28(br) {
+  const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's28');
+  const P = '/Game/Blueprints/BuildingBlocks/';
+  const srcBlocks = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'shapes_src.json'), 'utf8')).blocks;
+  const floors = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'floors.json'), 'utf8')).blocks;
+  const names = Object.keys(srcBlocks);
+  const cat = await pg.evaluate(ns => ns.map(n => { const b = CATALOG.blocks.find(x => x.name === n); return b && {label: b.label, verified: b.verified, source: b.source, w: b.w, h: b.h, hasFloor: !!b.floor, floorV: b.floor ? b.floor.verified : null, doorV: b.door ? b.door.verified : null, nofloor: !!b.nofloor, sides: b.door ? b.door.sides || null : null} }), names);
+  const shapes = await pg.evaluate(ns => ns.map(n => SHAPES[n] ? {walls: SHAPES[n].walls.length, props: SHAPES[n].props.length} : null), names);
+  const palHtml = label => pg.evaluate(l => { const b = [...document.querySelectorAll('#palList button.item')].find(x => x.querySelector('.n') && x.querySelector('.n').textContent === l); return b ? b.outerHTML : null }, label);
+  const selectAt = async (cls, X, Y) => {
+    await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: `${P}${cls}.${cls}_C`, GridLocation: {X, Y}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+    await pg.evaluate(() => { __fb.setView('L'); const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
+    return pg.evaluate(() => { const b = __fb.S.blocks.find(q => __fb.sel.has(q.id)); return b ? b.cls : null });
+  };
+  for (let i = 0; i < names.length; i++) {
+    const n = names[i], c = cat[i], sh = shapes[i], src = srcBlocks[n];
+    chk(`28 ${n}: SHAPES entry exists`, !!sh, String(sh));
+    chk(`28 ${n}: catalog verified===true, ${c && c.w}x${c && c.h} block, source string set`, !!c && c.verified === true && typeof c.source === 'string' && c.source.length > 0, JSON.stringify(c));
+    if (c && c.hasFloor) chk(`28 ${n}: floor.verified and door.verified`, c.floorV === true && c.doorV === true, JSON.stringify(c));
+    if (c && c.nofloor) chk(`28 ${n}: nofloor (no floor, no buildable area)`, !c.hasFloor, JSON.stringify(c));
+    const cols = floors[n].colliders_raw, overhead = src.ground ? cols.filter(q => q[0][2] >= 1).length : 0;
+    const want = cols.length - overhead, got = sh ? sh.walls + sh.props : -1;
+    chk(`28 ${n}: walls+props (${got}) == colliders_raw (${cols.length}) minus overhead (${overhead}) = ${want}`, got === want, `walls ${sh && sh.walls} props ${sh && sh.props}`);
+    const pal = await palHtml(c && c.label);
+    chk(`28 ${n}: palette entry "${c && c.label}" present, no "!?"`, pal !== null && !pal.includes('!?'), String(pal).slice(0, 300));
+    const cls = await selectAt(n, 20, 20);
+    const insp = await pg.locator('#insp').innerHTML();
+    chk(`28 ${n}: selected in Layout (${cls ? 'ok' : 'none'}), inspector has no "!?"`, !!cls && !insp.includes('!?'), insp.slice(0, 200));
+  }
+  const st2 = cat[names.indexOf('BPO_Station_2x1')];
+  chk('28 BPO_Station_2x1: door.sides === [E,W] (short ends only)', JSON.stringify(st2 && st2.sides) === '["E","W"]', JSON.stringify(st2 && st2.sides));
+  const gs = spawnSync(process.env.PYTHON || 'python', ['-I', path.join(ROOT, 'extract', 'gen_shapes.py'), '--check'], {cwd: ROOT, encoding: 'utf8'});
+  chk('28 python -I extract/gen_shapes.py --check exits 0 (all shapes_src blocks)', gs.status === 0, `status ${gs.status} ${(gs.stdout || '').trim()} ${(gs.stderr || '').trim()}`);
+  await ctx.close();
+}
+
 // ================= 24 r12: user save (Test (8).json): sim outcome, storage pulls, perf, shots
 async function s24(br) {
   const txt = fs.readFileSync('C:/Users/SFidelis/Downloads/Test (8).json', 'utf8');
@@ -2535,6 +2575,7 @@ try {
   try { console.log('--- 24 r12 user save: sim, perf, shots'); await s24(br); } catch (e) { chk('24 r12: section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 28 data-driven shapes'); await s28(br); } catch (e) { chk('28 shapes: section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
     try { console.log(`--- viewport ${vp.width}x${vp.height}`); await viewport(br, vp); }
     catch (e) { chk(`viewport ${vp.width}x${vp.height} ran`, false, e.stack || String(e)); }

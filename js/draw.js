@@ -224,8 +224,8 @@ function drawShapeFloor(A,s){
   A.floors.forEach(r=>{const b=r.b,t=shapeTf(b);if(!t)return;
     const sh=t.sh,dock=SHIPEND(b),tr=(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
     const rc=(q,f,g=0)=>{cx.fillStyle=f;const x0=X(q.x),y0=Y(q.y);cx.fillRect(x0-g,y0-g,X(q.x+q.w)-x0+2*g,Y(q.y+q.h)-y0+2*g)};
-    const d=def(b.cls),hall=dock?tr(0,0,Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0])),d.fh):tr(0,0,d.fw,d.fh);   // dock: hall up to the partition (shaft beyond); other blocks: whole floor
-    rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
+    const d=def(b.cls),R0=floorRect(b),hall=dock?tr(0,0,Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0])),d.fh):R0&&{x:R0.x,y:R0.y,w:R0.w,h:R0.h};   // dock: hall up to the partition (shaft beyond); other blocks: whole floor; no-floor blocks: no tint
+    if(hall)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
     // pods (dock only): one per decoded port cell (1 cell, contiguous), x extent from the arm mesh rows of that cell
     const pods=!dock?[]:sh.ports.map(([bay,x,y])=>{const rs=sh.arms.filter(a=>(a[1]+a[3])/2>=y-.5&&(a[1]+a[3])/2<y+.5);if(!rs.length)return null;
       return{bay,x,y,q:tr(Math.min(...rs.map(a=>a[0])),y-.46,Math.max(...rs.map(a=>a[2])),y+.46)}}).filter(Boolean);
@@ -278,6 +278,7 @@ function paintFloorBase(s){
     if(w>70){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
   });
   drawShapeFloor(A,s);
+  drawShapeFloor({floors:S.blocks.filter(b=>b.h===layer&&!isM(b)&&nfRect(b)).map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
   A.floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;   // elevator: ring cells inside the door slot are open buildable floor
     cx.fillStyle="rgba(150,190,230,.08)";
     for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>{const v=ed%2===0,ring=ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q};R(ring,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))});

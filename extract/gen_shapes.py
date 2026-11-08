@@ -10,6 +10,7 @@ Shape coords: block units (1 unit = 1 site cell = 100 cm; machine grid units are
 Walls: collider z-size >= 1.9, else props. Port arms: cm * cm2unit + originBlock, mirrorY, then shifted by floorOrigin.
 Per block (shapes_src.json): floorOrigin [x,y] overrides the global one; polys [[[x,y],...],...] (floor cells, block frame like
 colliders_raw) are copied into the shape entry as 'polys' (floor frame). Shape-only keys (floorOrigin, polys) never reach the catalog patch.
+ground: true = ground-level plan (colliders with z0 >= 1 are overhead: skipped; walls need z0 < 1). solid: true = every collider is a prop.
 A block without these keys produces the same entry as before.
 """
 import json, os, sys
@@ -17,7 +18,7 @@ import json, os, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 EX = os.path.join(ROOT, 'extract')
 OUT = os.path.join(ROOT, 'js', 'shapes.js')
-SHAPE_ONLY = ('floorOrigin', 'polys')
+SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid')
 
 
 def rd(name):
@@ -56,8 +57,10 @@ def build():
         size = f['hull']['size']
         walls, props, arms = [], [], []
         for (x0, y0, z0), (x1, y1, z1) in f['colliders_raw']:
+            if p.get('ground') and z0 >= 1:
+                continue   # ground plan: overhead boxes (lintels over doors, balcony) are not drawn
             rect = [r3(x0 - ox), r3(y0 - oy), r3(x1 - ox), r3(y1 - oy)]
-            (walls if z1 - z0 >= 1.9 else props).append(rect)
+            (walls if z1 - z0 >= 1.9 and not p.get('solid') else props).append(rect)   # solid: one solid collider = no-build prop
         pm = (eb.get(name) or {}).get('portsMesh')
         if pm:
             mesh = rd(pm['file'])
