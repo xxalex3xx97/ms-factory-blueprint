@@ -822,6 +822,7 @@
   },
   "buildables": {
     "DAT_LargeConveyorBelt": {
+      "hidden": true,
       "w": 3,
       "h": 3,
       "verified": true,
