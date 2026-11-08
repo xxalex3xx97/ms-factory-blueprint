@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
 import {isDeepStrictEqual} from 'util';
+import {spawnSync} from 'child_process';
 
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
@@ -107,7 +108,7 @@ async function s1(C) {
   for (const [id, v] of [['DAT_UndergroundBelt', 8], ['DAT_UndergroundBelt_2', 10], ['DAT_UndergroundBelt_3', 12]]) {
     chk(`maxApart ${id} = ${v}`, bm[id]?.maxApart === v, `catalog ${bm[id]?.maxApart}`);
   }
-  chk('18 station blocks in catalog', C.blocks.length === 18, `have ${C.blocks.length}`);
+  chk('19 station blocks in catalog (18 + Mining Drone Bay Mk.2 add:true)', C.blocks.length === 19, `have ${C.blocks.length}`);
   for (const g of G.blocks) {
     const c = C.blocks.find(b => b.name === g.name);
     const gf = g.floor, cf = c?.floor;
@@ -262,12 +263,15 @@ async function s4(pg, C) {
   chk('switch off: outside allowed', !(await nb(-5, -5, 2, 2)));
   await pg.evaluate(() => { STRICT = true; });
 
-  // 2x1 block: 14x30 floor (long side follows block axis), 6 doors
+  // 2x1 block: 14x30 floor (long side follows block axis), doors on the two short ends only (user 2026-11-08)
   await imp(pg, bp([blk('BPO_Station_2x1', 0, 0)]));
   A = await areas();
   chk('2x1 station: 30x14 floor (14x30 along block long axis)', A.floors.length === 1 && A.floors[0].w === 30 && A.floors[0].h === 14, JSON.stringify(A.floors));
-  chk('2x1 station: 6 doors (2 per long side, 1 per short side) each centred per 14-cell segment',
-    A.doors.length === 6 && A.doors.every(d => (d.ed % 2 === 0 ? d.y : d.x) % 16 === 4), `doors ${A.doors.length}`);
+  chk('2x1 station: 2 doors, both on the short ends (E,W), centred in the 14-cell end, none on the long sides',
+    A.doors.length === 2 && A.doors.every(d => d.ed % 2 === 0 && d.y % 16 === 4), `doors ${JSON.stringify(A.doors.map(d => [d.ed, d.x, d.y]))}`);
+  await imp(pg, bp([blk('BPO_Station_2x1', 0, 0, {rot: 1})]));
+  A = await areas();
+  chk('2x1 station rot 1: 2 doors on the N,S short ends (door.sides follow rot)', A.doors.length === 2 && A.doors.every(d => d.ed % 2 === 1 && d.x % 16 === 4), `doors ${JSON.stringify(A.doors.map(d => [d.ed, d.x, d.y]))}`);
 
   // 2x2 A: 30x30 floor, 2 doors per side
   await imp(pg, bp([blk('BPO_Station_02A', 0, 0)]));
@@ -2349,6 +2353,290 @@ async function s26(br) {
   await pg.evaluate(() => { const b = __fb.S.blocks.find(q => q.raw); b.x += 1; });
   const moved = await pg.evaluate(() => __fb.build().Blocks.filter(b => b.Class.includes('ShipyardCore_02')).map(b => b.GridLocation.X + ',' + b.GridLocation.Y));
   chk('26 round trip: a block moved in the editor is exported at its new cell', !moved.includes('-8,-2') || moved.length === 2 && moved.filter(m => m === '-8,-2').length === 0, moved.join(' ; '));
+  // Industrial Dock (shipEnd, 3x2 / 2x3): X=18,Y=2 imports and exports unchanged at all four rotations
+  for (const r of [0, 1, 2, 3]) {
+    await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B('BPO_Dock_2', 18, 2, 0, r)], DefaultMachines: []}));
+    const o = await pg.evaluate(() => __fb.build().Blocks.filter(b => b.Class.includes('BPO_Dock_2')).map(b => `${b.GridLocation.X},${b.GridLocation.Y},${b.GridRotation}`));
+    chk(`26 dock rot ${r}: X=18,Y=2 round trip unchanged`, JSON.stringify(o) === JSON.stringify([`18,2,${r}`]), JSON.stringify(o));
+    const fp = await pg.evaluate(() => { const b = __fb.S.blocks[0], d = dim(b); return {w: d.w, h: d.h, raw: !!b.raw} });
+    const wantW = r & 1 ? 2 : 3, wantH = r & 1 ? 3 : 2;
+    // hull-cell check: BlockBounds x -16..32, y +-16 sim units (/4 = game units), rotated r*90deg about the exported origin = the dim() cells at the imported anchor (cell k spans [4k-2,4k+2])
+    const hc = await pg.evaluate(() => { const b = __fb.S.blocks[0], d = dim(b), o = dockOrg(b.rot), X = 4 * b.x + o.X, Y = 4 * b.y + o.Y;
+      let p = [[-4, -4], [8, 4]].map(([x, y]) => { for (let i = 0; i < b.rot; i++) [x, y] = [-y, x]; return [X + x, Y + y] });
+      return {hull: [Math.min(p[0][0], p[1][0]), Math.min(p[0][1], p[1][1]), Math.max(p[0][0], p[1][0]), Math.max(p[0][1], p[1][1])], cells: [4 * b.x - 2, 4 * b.y - 2, 4 * (b.x + d.w) - 2, 4 * (b.y + d.h) - 2]} });
+    chk(`26 dock rot ${r}: BlockBounds hull rect == footprint cells at the imported anchor`, JSON.stringify(hc.hull) === JSON.stringify(hc.cells), JSON.stringify(hc));
+    chk(`26 dock rot ${r}: footprint ${wantW}x${wantH} cells, block not moved to raw`, fp.w === wantW && fp.h === wantH && !fp.raw, JSON.stringify(fp));
+  }
+  await ctx.close();
+}
+
+// ================= 27 Industrial Dock real shape: shapeTf per rot, Layout + Factory floor paint (screenshots)
+async function s27(br) {
+  const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's27');
+  const P = '/Game/Blueprints/BuildingBlocks/';
+  const B = (n, X, Y, h, r) => ({Class: `${P}${n}.${n}_C`, GridLocation: {X, Y}, Height: h, GridRotation: r, BlockID: 1, PaletteID: 0});
+  const sh = await pg.evaluate(() => { const s = SHAPES.BPO_Dock_2; return s && {walls: s.walls.length, props: s.props.length, arms: s.arms.length} });
+  chk('27 SHAPES.BPO_Dock_2 has walls, props (console) and port arms', !!sh && sh.walls > 0 && sh.props > 0 && sh.arms > 0, JSON.stringify(sh));
+  // (1) catalog patch (js/shapes.js merges into CATALOG before core.js): dock verified; negative: an unverified block stays unverified
+  const cat = await pg.evaluate(() => { const d = CATALOG.blocks.find(b => b.name === 'BPO_Dock_2'), u = CATALOG.blocks.find(b => b.name === 'BPO_ShipyardCore_02'); return {dock: d && {verified: d.verified, door: d.door && d.door.verified}, unverified: u && u.verified} });
+  chk('27 catalog patch: BPO_Dock_2 verified===true and door.verified===true', !!cat.dock && cat.dock.verified === true && cat.dock.door === true, JSON.stringify(cat));
+  chk('27 catalog negative: BPO_ShipyardCore_02 still verified===false', cat.unverified === false, JSON.stringify(cat));
+  // (2) '!?' badge: select the dock -> inspector and palette entry clean; select an unverified block -> both still show '!?'
+  const palHtml = label => pg.evaluate(l => { const b = [...document.querySelectorAll('#palList button.item')].find(x => x.querySelector('.n') && x.querySelector('.n').textContent === l); return b ? b.outerHTML : null }, label);
+  const selectAt = async (cls, X, Y) => {
+    await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(cls, X, Y, 0, 0)], DefaultMachines: []}));
+    await pg.evaluate(() => { __fb.setView('L'); const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
+    return pg.evaluate(() => { const b = __fb.S.blocks.find(q => __fb.sel.has(q.id)); return b ? b.cls : null });
+  };
+  const dockSel = await selectAt('BPO_Dock_2', 18, 2);
+  chk('27 dock selected in Layout', !!dockSel && dockSel.includes('BPO_Dock_2'), String(dockSel));
+  const dockInsp = await pg.locator('#insp').innerHTML();
+  chk('27 dock inspector HTML has no "!?"', !dockInsp.includes('!?'), dockInsp.slice(0, 300));
+  const dockPal = await palHtml('Industrial Dock');
+  chk('27 palette entry "Industrial Dock" present and has no "!?"', dockPal !== null && !dockPal.includes('!?'), String(dockPal).slice(0, 400));
+  const coreSel = await selectAt('BPO_ShipyardCore_02', 30, 2);
+  chk('27 unverified block selected in Layout', !!coreSel && coreSel.includes('ShipyardCore_02'), String(coreSel));
+  const coreInsp = await pg.locator('#insp').innerHTML();
+  chk('27 unverified block inspector still shows "!?"', coreInsp.includes('!?'), coreInsp.slice(0, 300));
+  const corePal = await palHtml('Shipyard Core Mk.2');
+  chk('27 unverified block palette entry still shows "!?"', corePal !== null && corePal.includes('!?'), String(corePal).slice(0, 400));
+  // (3) gen_shapes.py --check: js/shapes.js up to date with extract/shapes_src.json + floors.json
+  const gs = spawnSync(process.env.PYTHON || 'python', ['-I', path.join(ROOT, 'extract', 'gen_shapes.py'), '--check'], {cwd: ROOT, encoding: 'utf8'});
+  chk('27 python -I extract/gen_shapes.py --check exits 0', gs.status === 0, `status ${gs.status} ${(gs.stdout || '').trim()} ${(gs.stderr || '').trim()} ${gs.error || ''}`);
+  // (4) SHAPES walls+props == colliders_raw count in extract/floors.json for BPO_Dock_2 (18)
+  const nCol = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'floors.json'), 'utf8')).blocks.BPO_Dock_2.colliders_raw.length;
+  const nSh = await pg.evaluate(() => SHAPES.BPO_Dock_2.walls.length + SHAPES.BPO_Dock_2.props.length);
+  chk(`27 SHAPES BPO_Dock_2 walls+props (${nSh}) == floors.json colliders_raw (${nCol})`, nSh === nCol, `walls+props ${nSh}, colliders_raw ${nCol}`);
+  const pr = await pg.evaluate(() => { const s = SHAPES.BPO_Dock_2; return s.ports.map(([bay, x, y]) => { const rs = s.arms.filter(a => (a[1] + a[3]) / 2 >= y - .5 && (a[1] + a[3]) / 2 < y + .5); return {bay, x, y, n: rs.length, ax: rs.length ? Math.min(...rs.map(a => a[0])) : null, ymin: rs.length ? Math.min(...rs.map(a => a[1])) : null, ymax: rs.length ? Math.max(...rs.map(a => a[3])) : null} }) });
+  chk('27 dock ports: 8, bays 1..8, centres y -5.5..-2.5 and 2.5..5.5 (block) = floor frame 9.5..12.5 / 17.5..20.5, x on the floor edge (14)', pr.length === 8 && pr.every((p, i) => p.bay === i + 1 && p.x === 14) && JSON.stringify(pr.map(p => p.y)) === JSON.stringify([9.5, 10.5, 11.5, 12.5, 17.5, 18.5, 19.5, 20.5]), JSON.stringify(pr));
+  chk('27 dock pods: every port cell has arm mesh rows, 1 cell tall, starting at the port x (aligned to the belt rows)', pr.every(p => p.n > 0 && Math.abs(p.ax - p.x) < .1 && p.ymin >= p.y - .55 && p.ymax <= p.y + .55), JSON.stringify(pr));
+  const sides = ['east', 'south', 'west', 'north'];
+  for (const r of [0, 1, 2, 3]) {
+    await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B('BPO_Dock_2', 18, 2, 0, r)], DefaultMachines: []}));
+    // ship side = DIR[rot]: the extreme wall edge lies on that side of the footprint, the floor box on the opposite end
+    const g = await pg.evaluate(() => { const b = __fb.S.blocks[0], w = shapeRects(b, 'walls'), d = dim(b), fl = floorRect(b);
+      const ex = [Math.min(...w.map(q => q.x)), Math.max(...w.map(q => q.x + q.w)), Math.min(...w.map(q => q.y)), Math.max(...w.map(q => q.y + q.h))];
+      return {ex, fx: [b.x * FC, (b.x + d.w) * FC, b.y * FC, (b.y + d.h) * FC], fl: [fl.x, fl.x + fl.w, fl.y, fl.y + fl.h], rot: b.rot} });
+    const [x0, x1, y0, y1] = g.ex, [fx0, fx1, fy0, fy1] = g.fx;
+    
+    const idx = [1, 3, 0, 2][r], tgt = [fx1, fy1, fx0, fy0][r], ext = g.ex[idx];
+    chk(`27 dock rot ${r}: shaft wall reaches the ship side (${sides[r]}) of the 3x2 footprint`, Math.abs(ext - tgt) <= 2, JSON.stringify(g));
+    chk(`27 dock rot ${r}: hull walls stay inside the footprint (+-1 wall unit)`, x0 >= fx0 - 1.01 && x1 <= fx1 + 1.01 && y0 >= fy0 - 1.01 && y1 <= fy1 + 1.01, JSON.stringify(g));
+    for (const v of ['L', 'F']) {
+      await pg.evaluate(v => { __fb.setView(v); __fb.fit(); const b = __fb.S.blocks[0], d = dim(b), k = v === 'F' ? FC : 1;   // F: whole footprint centred (fit() frames only the floor)
+        if (v === 'F') { V.z = Math.min(W / (d.w * k + 4), H / (d.h * k + 4)) / CELLS.F * .85; V.ox = W / 2 - (b.x + d.w / 2) * k * sc(); V.oy = H / 2 - (b.y + d.h / 2) * k * sc(); __fb.paint(); } }, v);
+      await pg.waitForTimeout(150);
+      await pg.screenshot({path: path.join(SHOTS, `dock-rot${r}-${v === 'L' ? 'layout' : 'floor'}.png`)});
+      if (v === 'F') {   // zoom check: ~2.5x on the hall/ports end
+        await pg.evaluate(() => { const b = __fb.S.blocks[0], f = floorRect(b); V.z *= 2.5; V.ox = W / 2 - (f.x + f.w / 2) * sc(); V.oy = H / 2 - (f.y + f.h / 2) * sc(); __fb.paint(); });
+        await pg.screenshot({path: path.join(SHOTS, `dock-rot${r}-floor-zoom.png`)});
+      }
+    }
+  }
+  await ctx.close();
+}
+
+// ================= 28 data-driven shapes: every block in extract/shapes_src.json (SHAPES entry, catalog verified, no '!?', collider counts)
+async function s28(br) {
+  const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's28');
+  const P = '/Game/Blueprints/BuildingBlocks/';
+  const srcBlocks = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'shapes_src.json'), 'utf8')).blocks;
+  const floors = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'floors.json'), 'utf8')).blocks;
+  const extra = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'extra_blocks.json'), 'utf8'));
+  const names = Object.keys(srcBlocks);
+  const cat = await pg.evaluate(ns => ns.map(n => { const b = CATALOG.blocks.find(x => x.name === n); return b && {label: b.label, verified: b.verified, source: b.source, w: b.w, h: b.h, hasFloor: !!b.floor, floorV: b.floor ? b.floor.verified : null, doorV: b.door ? b.door.verified : null, nofloor: !!b.nofloor, sides: b.door ? b.door.sides || null : null, cls: b.class, cost: b.cost, research: b.research, icon: b.icon} }), names);
+  const shapes = await pg.evaluate(ns => ns.map(n => SHAPES[n] ? {walls: SHAPES[n].walls.length, props: SHAPES[n].props.length, ports: SHAPES[n].ports} : null), names);
+  const palHtml = label => pg.evaluate(l => { const b = [...document.querySelectorAll('#palList button.item')].find(x => x.querySelector('.n') && x.querySelector('.n').textContent === l); return b ? b.outerHTML : null }, label);
+  const selectAt = async (cls, X, Y) => {
+    await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: `${P}${cls}.${cls}_C`, GridLocation: {X, Y}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+    await pg.evaluate(() => { __fb.setView('L'); const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
+    return pg.evaluate(() => { const b = __fb.S.blocks.find(q => __fb.sel.has(q.id)); return b ? b.cls : null });
+  };
+  // catalog count: 18 base blocks + one per add:true entry (Mk.2)
+  const addN = names.filter(n => srcBlocks[n].add).length, catN = await pg.evaluate(() => CATALOG.blocks.length);
+  chk(`28 catalog block count ${catN} = 18 base + ${addN} add:true`, catN === 18 + addN, `count ${catN}`);
+  for (let i = 0; i < names.length; i++) {
+    const n = names[i], c = cat[i], sh = shapes[i], src = srcBlocks[n];
+    chk(`28 ${n}: SHAPES entry exists`, !!sh, String(sh));
+    if (src.mirrorOf) {   // mirror pair: same shape as its base block, no catalog entry (palette shows the base only)
+      const same = await pg.evaluate(([a, b]) => JSON.stringify(SHAPES[a]) === JSON.stringify(SHAPES[b]), [n, src.mirrorOf]);
+      chk(`28 ${n}: mirror of ${src.mirrorOf}: SHAPES identical, no catalog entry`, same && !c, JSON.stringify(c));
+      continue;
+    }
+    chk(`28 ${n}: catalog verified===true, ${c && c.w}x${c && c.h} block, source string set`, !!c && c.verified === true && typeof c.source === 'string' && c.source.length > 0, JSON.stringify(c));
+    if (c && c.hasFloor) chk(`28 ${n}: floor.verified and door.verified`, c.floorV === true && c.doorV === true, JSON.stringify(c));
+    if (c && c.nofloor) chk(`28 ${n}: nofloor (no floor, no buildable area)`, !c.hasFloor, JSON.stringify(c));
+    const cols = floors[n].colliders_raw || [], overhead = src.ground ? cols.filter(q => q[0][2] >= 1).length : 0, fill = src.fill ? 1 : 0;
+    const want = cols.length - overhead + fill, got = sh ? sh.walls + sh.props : -1;
+    chk(`28 ${n}: walls+props (${got}) == colliders_raw (${cols.length}) minus overhead (${overhead}) plus fill (${fill}) = ${want}`, got === want, `walls ${sh && sh.walls} props ${sh && sh.props}`);
+    const pal = await palHtml(c && c.label);
+    chk(`28 ${n}: palette entry "${c && c.label}" present, no "!?"`, pal !== null && !pal.includes('!?'), String(pal).slice(0, 300));
+    const cls = await selectAt(n, 20, 20);
+    const insp = await pg.locator('#insp').innerHTML();
+    chk(`28 ${n}: selected in Layout (${cls ? 'ok' : 'none'}), inspector has no "!?"`, !!cls && !insp.includes('!?'), insp.slice(0, 200));
+  }
+  const st2 = cat[names.indexOf('BPO_Station_2x1')];
+  chk('28 BPO_Station_2x1: door.sides === [E,W] (short ends only)', JSON.stringify(st2 && st2.sides) === '["E","W"]', JSON.stringify(st2 && st2.sides));
+  // Mining Drone Bay Mk.1 / Mk.2: 2 output ports, unnumbered, on the west edge (block (-8,+0.5),(-8,-0.5) = floor (0,8.5),(0,7.5))
+  for (const n of ['BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) {
+    const p = await pg.evaluate(k => SHAPES[k].ports, n);
+    chk(`28 ${n}: ${p.length} unnumbered west-edge ports at floor (0,8.5),(0,7.5) (extra_blocks ports ${extra[n].ports.length})`, p.length === 2 && extra[n].ports.length === 2 && p.every(q => q[0] === null && q[1] === 0) && JSON.stringify(p.map(q => q[2]).sort((a, b) => a - b)) === '[7.5,8.5]', JSON.stringify(p));
+  }
+  const mk2 = cat[names.indexOf('BPO_MiningDroneBayBlock_2')];
+  chk('28 Mk.2 catalog: label, class path, Functional Blocks, 1x1, nofloor, RSC_MiningDroneBay_2, icon, cost Servomotor 10 + BasicCircuit 10, untested source', !!mk2 && mk2.label === 'Mining Drone Bay Mk.2' && mk2.cls === `${P}BPO_MiningDroneBayBlock_2.BPO_MiningDroneBayBlock_2_C` && mk2.w === 1 && mk2.h === 1 && mk2.nofloor && JSON.stringify(mk2.research) === '["RSC_MiningDroneBay_2"]' && mk2.icon === 'BPO_MiningDroneBayBlock_2' && JSON.stringify(mk2.cost) === '[["ITEM_Servomotor",10],["ITEM_BasicCircuit",10]]' && /untested in game/.test(mk2.source), JSON.stringify(mk2));
+  const iconOk = await pg.evaluate(() => !!(CATALOG.icons.BPO_MiningDroneBayBlock_2 && CATALOG.icons.BPO_MiningDroneBayBlock_2.startsWith('data:image/png')));
+  chk('28 Mk.2 icon embedded in CATALOG.icons (data:image/png)', iconOk, String(iconOk));
+  // Station Armour: one solid 16x16 prop, no walls, no ports
+  const arm = shapes[names.indexOf('BPO_StationArmour_01')];
+  chk('28 BPO_StationArmour_01: one 16x16 solid prop, no walls, no ports', !!arm && arm.walls === 0 && arm.props === 1 && JSON.stringify(arm.ports) === '[]', JSON.stringify(arm));
+  // Mk.2 overhang: colliders reach floor x 19 (3 cells past the 16-cell tile)
+  const ov = await pg.evaluate(() => Math.max(...SHAPES.BPO_MiningDroneBayBlock_2.props.map(q => q[2])));
+  chk('28 Mk.2 props overhang the tile: max floor x 19 (+-0.01 rounding)', Math.abs(ov - 19) < .01, String(ov));
+  // Mk.2 save round trip: class path imports as the block, exports back with the same Class/GridLocation/GridRotation; machine BPO_MiningDroneBay_2 kept like Mk.1
+  const MK2 = `${P}BPO_MiningDroneBayBlock_2.BPO_MiningDroneBayBlock_2_C`;
+  const rt = await pg.evaluate(cls => {
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 1, BlockID: 1, PaletteID: 0}],
+      DefaultMachines: [{Class: 'BPO_MiningDroneBay_2', DefaultName: 'BPO_MiningDroneBay_2', Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}, MachineID: 1, PaletteID: 0}, {Class: 'BPO_MiningDroneBay', DefaultName: 'BPO_MiningDroneBay', Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}, MachineID: 2, PaletteID: 0}]}));
+    const o = __fb.build();
+    return {blocks: __fb.S.blocks.map(b => b.cls), dm: __fb.S.dm.length, out: o.Blocks.map(b => ({Class: b.Class, GridLocation: b.GridLocation, Height: b.Height, GridRotation: b.GridRotation}))};
+  }, MK2);
+  chk('28 Mk.2 save: Class imports as BPO_MiningDroneBayBlock_2 (1 block)', rt.blocks.length === 1 && rt.blocks[0] === MK2, JSON.stringify(rt));
+  chk('28 Mk.2 save: exports back unchanged (Class, GridLocation {40,40}, GridRotation 1)', JSON.stringify(rt.out) === JSON.stringify([{Class: MK2, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 1}]), JSON.stringify(rt.out));
+  chk('28 machines BPO_MiningDroneBay_2 and BPO_MiningDroneBay both kept in "other machines" (no buildable maps them, like Mk.1)', rt.dm === 2, `dm ${rt.dm}`);
+  // entrance key: shapes_src.json entrance {kind, evidence} on dock (doors) + drone bays (ports), carried to SHAPES; Layout arrows from entrances()
+  const ents = names.filter(n => srcBlocks[n].entrance);
+  chk('28 entrance: dock (doors) + Mk.1 + Mk.2 (ports) carry the key, no other block', JSON.stringify(ents.sort()) === '["BPO_Dock_2","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2"]', JSON.stringify(ents));
+  for (const n of names) {
+    const f = srcBlocks[n].entrance, g = await pg.evaluate(k => SHAPES[k].entrance, n);
+    if (f) chk(`28 entrance ${n}: SHAPES.entrance kind "${f.kind}" + evidence carried`, ['doors', 'ports'].includes(f.kind) && g && g.kind === f.kind && g.evidence === f.evidence && f.evidence.length > 20, JSON.stringify(g));
+    else chk(`28 entrance ${n}: none in the source = none in SHAPES`, g === undefined, JSON.stringify(g));
+  }
+  chk('28 entrance: drone bays marked inferred, dock not', /^inferred/.test(srcBlocks.BPO_MiningDroneBayBlock.entrance.evidence) && !/inferred/.test(srcBlocks.BPO_Dock_2.entrance.evidence), '');
+  // marks: expected world edges per block + rotation (block-frame side S -> world (EN.indexOf(S)+rot)&3), drawn bar differs from a clear spot of the same edge
+  const probe = (n, r) => pg.evaluate(([cls, r]) => {
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+    __fb.setView('L'); __fb.fit(); __fb.paint();
+    const b = __fb.S.blocks[0], s = sc(), k = devicePixelRatio, g = document.getElementById('cv').getContext('2d'), d = dim(b), x0 = V.ox + b.x * s, y0 = V.oy + b.y * s;
+    const at = (px, py) => { const q = g.getImageData(Math.round(px * k), Math.round(py * k), 1, 1).data; return q[0] + q[1] + q[2] };
+    const E = entrances(b, true);
+    return {eds: E.map(e => e.ed).sort(), ports: E.map(e => e.port), txt: entText(b), diff: E.map(e => { const D = DIR[e.ed], ex = V.ox + e.x * s, ey = V.oy + e.y * s,
+      m = at(ex - D[0] * 1.5, ey - D[1] * 1.5), ref = D[0] ? at(ex - D[0] * 1.5, y0 + 3) : at(x0 + 3, ey - D[1] * 1.5); return Math.abs(m - ref) }), s};
+  }, [`${P}${n}.${n}_C`, r]);
+  const want = {BPO_Dock_2: r => [0, 1, 2, 3].filter(e => e !== r), BPO_Station_2x1: r => [0, 2].map(e => (e + r) & 3), BPO_Station_01: () => [0, 1, 2, 3], BPO_MiningDroneBayBlock: r => [(2 + r) & 3], BPO_MiningDroneBayBlock_2: r => [(2 + r) & 3]};
+  for (const n of Object.keys(want)) for (const r of [0, 1, 2, 3]) {
+    const o = await probe(n, r), w = want[n](r).sort(), ports = n.includes('Drone');
+    chk(`28 entrance marks ${n} rot ${r}: world edges ${w.map(e => 'ESWN'[e]).join('')}${n === 'BPO_Dock_2' ? ' (none on the ship side)' : ''}, ${ports ? 'ports side' : 'doors'}`, JSON.stringify(o.eds.filter((e, i, a) => a.indexOf(e) === i)) === JSON.stringify(w) && o.ports.every(p => p === ports), JSON.stringify(o));
+    chk(`28 entrance drawn ${n} rot ${r}: every mark's bar differs from the plain edge (min ${Math.min(...o.diff)})`, o.diff.length > 0 && o.diff.every(v => v > 40), JSON.stringify(o.diff));
+  }
+  const dk = await probe('BPO_Dock_2', 0), dd2 = await probe('BPO_Station_2x1', 0), dm = await probe('BPO_MiningDroneBayBlock', 0);
+  chk('28 dock rot 0: entrances W,N,S, door marks (4 = 2 W + N + S) and text lists S, W, N', dk.eds.length === 4 && JSON.stringify(dk.txt) === '{"kind":"Entrances","sides":["S","W","N"]}', JSON.stringify(dk));
+  chk('28 Station 2x1 rot 0: short ends only (E, W)', JSON.stringify(dd2.txt) === '{"kind":"Entrances","sides":["E","W"]}', JSON.stringify(dd2.txt));
+  chk('28 Drone bay rot 0: "Outputs: W"', JSON.stringify(dm.txt) === '{"kind":"Outputs","sides":["W"]}', JSON.stringify(dm.txt));
+  // explanation text: inspector of the selected block (Layout) + help legend
+  for (const [n, r, st] of [['BPO_Dock_2', 0, 'Entrances:'], ['BPO_MiningDroneBayBlock', 1, 'Outputs:']]) {
+    await selectAt(n, 20, 20);
+    const ih = await pg.evaluate(() => { const e = document.getElementById('entInfo'); return e ? e.textContent : null });
+    chk(`28 inspector of ${n} states "${st}" and the arrows hint`, !!ih && ih.includes(st) && ih.includes('Arrows mark the entrances: station doors, or the output ports for blocks without doors'), String(ih));
+  }
+  const leg = await pg.evaluate(() => document.getElementById('helpDlg') ? 1 : document.body.innerHTML.includes('Layout arrows: entrances'));
+  chk('28 help legend explains the Layout arrows', !!leg, String(leg));
+  // no-floor shapes line up with the site's floor model: Station 1x1 next to the drone bay's ports side -> both port cells inside the station door slot, symmetric about its centre, on the tile edge
+  for (const n of ['BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) for (const r of [0, 1, 2, 3]) {
+    const g = await pg.evaluate(([dc, sc2, r]) => {
+      const ed = (2 + r) & 3, DD = DIR[ed], B = (cls, x, y, rot) => ({Class: cls, GridLocation: {X: x, Y: y}, Height: 0, GridRotation: rot, BlockID: 1, PaletteID: 0});
+      __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(dc, 40, 40, r), B(sc2, 40 + 2 * DD[0], 40 + 2 * DD[1], 0)].map((q, i) => Object.assign(q, {BlockID: i + 1})), DefaultMachines: []}));
+      const b = __fb.S.blocks.find(q => q.cls.includes('Drone')), st = __fb.S.blocks.find(q => q.cls.includes('Station_01')), t = shapeTf(b), tile = nfRect(b);
+      const P = t.sh.ports.map(p => t.f(p[1], p[2])), opp = (ed + 2) & 3, door = __fb.areas(0).doors.find(d => d.bx === st.x && d.by === st.y && d.ed === opp);
+      const v = ed % 2 === 0, al = P.map(p => v ? p[1] : p[0]).sort((x, y) => x - y), nrm = P.map(p => v ? p[0] : p[1]);
+      const edge = ed === 0 ? tile.x + tile.w : ed === 2 ? tile.x : ed === 1 ? tile.y + tile.h : tile.y;
+      return {ed, door: door && (v ? [door.y, door.y + door.h] : [door.x, door.x + door.w]), al, nrm, edge};
+    }, [`${P}${n}.${n}_C`, `${P}BPO_Station_01.BPO_Station_01_C`, r]);
+    if (n === 'BPO_MiningDroneBayBlock') {   // shot: Factory floor, drone bay + Station 1x1 on its ports side
+      await pg.evaluate(() => { __fb.setView('F'); const b = __fb.S.blocks.find(q => q.cls.includes('Drone')), st = __fb.S.blocks.find(q => q.cls.includes('Station_01')); V.z = Math.min(W, H) / (3.2 * FC * CELLS.F);
+        V.ox = W / 2 - ((b.x + st.x) / 2 + .5) * FC * sc(); V.oy = H / 2 - ((b.y + st.y) / 2 + .5) * FC * sc(); __fb.paint(); });
+      await pg.waitForTimeout(100);
+      await pg.screenshot({path: path.join(SHOTS, `align-drone-rot${r}-floor.png`)});
+    }
+    const [lo, hi] = g.door || [0, 0], mid = (lo + hi) / 2;
+    chk(`28 ${n} rot ${r}: both port cells inside the neighbouring station door slot [${lo},${hi}], symmetric about ${mid}, ports on the tile edge ${g.edge}`, !!g.door && g.al.every(a => a > lo && a < hi) && Math.abs((g.al[0] + g.al[1]) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - g.edge) < 1e-6), JSON.stringify(g));
+  }
+  // no ports (solar, turret, armour): shape frame = the tile exactly, no shift, all rot
+  for (const n of ['BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01', 'BPO_StationArmour_01']) for (const r of [0, 1, 2, 3]) {
+    const g = await pg.evaluate(([cls, r]) => { __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+      const b = __fb.S.blocks[0], t = shapeTf(b), q = nfRect(b), c = [t.f(0, 0), t.f(16, 16)]; return {c, tile: [q.x, q.y, q.x + q.w, q.y + q.h]} }, [`${P}${n}.${n}_C`, r]);
+    const xs = g.c.map(p => p[0]).sort((a, b) => a - b), ys = g.c.map(p => p[1]).sort((a, b) => a - b);
+    chk(`28 ${n} rot ${r}: shape frame corners == tile corners (no shift)`, xs[0] === g.tile[0] && xs[1] === g.tile[2] && ys[0] === g.tile[1] && ys[1] === g.tile[3], JSON.stringify(g));
+  }
+  // Layout marks: bar = full door slot length (scales with zoom), thickness min(5, .12 s), chevron radius capped at 9; centred on the TRUE tile edge middle
+  const lay = (blocks, s, rot) => pg.evaluate(([bl, s]) => {
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: bl.map((q, i) => ({Class: q[0], GridLocation: {X: q[1], Y: q[2]}, Height: 0, GridRotation: q[3], BlockID: i + 1, PaletteID: 0})), DefaultMachines: []}));
+    __fb.setView('L'); const bs = __fb.S.blocks; V.z = s / CELLS.L;
+    const x0 = Math.min(...bs.map(b => b.x)), y0 = Math.min(...bs.map(b => b.y)); V.ox = 300 - x0 * s; V.oy = 200 - y0 * s;
+    const g = document.getElementById('cv').getContext('2d'), fr = g.fillRect, mv = g.moveTo, bars = [], rad = [];
+    const t = Math.max(2, Math.min(5, s * .12)), L = Math.max(5, 6 / 16 * s);
+    g.fillRect = function (x, y, w, h) { if (Math.abs(Math.min(w, h) - t) < .01 && Math.abs(Math.max(w, h) - L) < .01) bars.push([x + w / 2, y + h / 2, w > h]); return fr.call(this, x, y, w, h) };
+    g.moveTo = function (x, y) { if (y === 0 && x >= 3 && x <= 40) rad.push(x); return mv.call(this, x, y) };
+    __fb.paint(); g.fillRect = fr; g.moveTo = mv;
+    return {bars, rad: [...new Set(rad)], t, L, blocks: bs.map(b => { const d = dim(b); return {cls: b.cls, x: V.ox + b.x * s, y: V.oy + b.y * s, w: d.w * s, h: d.h * s} })};
+  }, [blocks.map(([n, x, y, r]) => [`${P}${n}.${n}_C`, x, y, r]), s]);
+  const mid = (b, ed) => [[b.x + b.w, b.y + b.h / 2], [b.x + b.w / 2, b.y + b.h], [b.x, b.y + b.h / 2], [b.x + b.w / 2, b.y]][ed];
+  const hasPt = (bars, p) => bars.some(q => (q[2] ? Math.abs(q[0] - p[0]) < .5 && Math.abs(q[1] - p[1]) <= 3 : Math.abs(q[1] - p[1]) < .5 && Math.abs(q[0] - p[0]) <= 3));   // along the edge: +-0.5 px; normal: the bar sits inside the edge (thickness/2)
+  const cases = [['BPO_Station_01', 'all', [0, 1, 2, 3]], ['BPO_Station_2x1', 'ends', null], ['BPO_MiningDroneBayBlock', 'ports', null], ['BPO_MiningDroneBayBlock_2', 'ports', null]];
+  for (const [n, kind] of cases) for (const r of [0, 1, 2, 3]) {
+    const o = await lay([[n, 40, 40, r]], 100), b = o.blocks[0];
+    const eds = kind === 'all' ? [0, 1, 2, 3] : kind === 'ends' ? [0, 2].map(e => (e + r) & 3) : [(2 + r) & 3];
+    chk(`28 Layout ${n} rot ${r}: ${eds.length} mark(s) centred on the footprint edge middle (+-0.5 px)`, o.bars.length === eds.length && eds.every(e => hasPt(o.bars, mid(b, e))), JSON.stringify({bars: o.bars, want: eds.map(e => mid(b, e))}));
+  }
+  for (const r of [0, 1, 2, 3]) {   // dock: 4 door marks (W x2, N, S at rot 0), none on the ship side, symmetric about the ship axis through the footprint centre
+    const o = await lay([['BPO_Dock_2', 40, 40, r]], 100), b = o.blocks[0], sx = [1, 0, -1, 0][r] !== 0, c = sx ? b.y + b.h / 2 : b.x + b.w / 2;
+    const per = o.bars.map(q => sx ? q[1] : q[0]), ship = mid(b, r);
+    chk(`28 Layout dock rot ${r}: 4 marks, symmetric about the ship axis, none on the ship side`, o.bars.length === 4 && per.every(p => per.some(q => Math.abs(p + q - 2 * c) < .5)) && !o.bars.some(q => Math.hypot(q[0] - ship[0], q[1] - ship[1]) < 3), JSON.stringify({bars: o.bars, c}));
+  }
+  for (const s of [100, 200]) {
+    const o = await lay([['BPO_Station_01', 40, 40, 0]], s);
+    chk(`28 Layout door bar at s=${s}: length == door slot (${6 / 16 * s} px), thickness ${o.t}, chevron radius capped (<= 9)`, o.bars.length === 4 && o.rad.length > 0 && Math.max(...o.rad) <= 9.001 && o.L === 6 / 16 * s, JSON.stringify(o));
+  }
+  const c1 = await lay([['BPO_Station_01', 40, 40, 0]], 100), c2 = await lay([['BPO_Station_01', 40, 40, 0]], 200);
+  chk('28 chevron radius identical at s=100 and s=200 (capped), bar length doubles', JSON.stringify(c1.rad) === JSON.stringify(c2.rad) && Math.abs(c2.L - 2 * c1.L) < 1e-9, JSON.stringify([c1.rad, c2.rad, c1.L, c2.L]));
+  const lowDoor = await lay([['BPO_Station_01', 40, 40, 0]], 30), lowPort = await lay([['BPO_MiningDroneBayBlock', 40, 40, 0]], 30);
+  chk('28 door marks hidden below s 44 (Station 1x1 at s=30), port marks still shown (drone bay)', lowDoor.bars.length === 0 && lowPort.bars.length === 1, JSON.stringify([lowDoor.bars, lowPort.bars]));
+  // view sync: switching Layout <-> Factory floor keeps the centre world point and the on-screen size of a block cell (1 block cell = FC floor cells)
+  const sync = await pg.evaluate(() => {
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [], DefaultMachines: []}));
+    __fb.setView('L'); const VL = __fb.V; VL.ox = 123.4; VL.oy = -77.7; VL.z = .83; const w = innerWidth, o = {};
+    const ctr = () => { const s = sc(), k = view === 'F' ? FC : 1; return [(W / 2 - V.ox) / s / k, (H / 2 - V.oy) / s / k, s * k] };   // centre in block cells, px per block cell
+    const a = ctr(); __fb.setView('F'); const f = ctr(); __fb.setView('L'); const b = ctr();
+    const vl = JSON.stringify([__fb.V.ox, __fb.V.oy, __fb.V.z]);
+    __fb.setView('F'); const F = __fb.V; F.z = 2.5; F.ox = -310; F.oy = 95; const c = ctr(); __fb.setView('L'); const d = ctr(); __fb.setView('F');
+    return {a, f, b, c, d, back: [F.ox, F.oy, F.z], vl, z: [__fb.VF.z]};
+  });
+  const near = (p, q, e = 1e-6) => p.every((v, i) => Math.abs(v - q[i]) < e);
+  chk('28 view sync L->F: same centre world point and same px per block cell', near(sync.a, sync.f, 1e-6), JSON.stringify([sync.a, sync.f]));
+  chk('28 view sync L->F->L round trip returns the same Layout viewport', near(sync.a, sync.b, 1e-6) && near(JSON.parse(sync.vl), [123.4, -77.7, .83], 1e-6), sync.vl);
+  chk('28 view sync F->L: centre and px per block cell preserved (floor zoom 2.5)', near(sync.c, sync.d, 1e-6), JSON.stringify([sync.c, sync.d]));
+  // Factory floor label of a no-floor shaped block: name + tile size, like floor blocks (Station 1x1  14x14)
+  for (const n of ['BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2', 'BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01', 'BPO_StationArmour_01']) {
+    const got = await pg.evaluate(cls => {
+      __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+      __fb.setView('F'); __fb.fit(); const b = __fb.S.blocks[0]; V.z = Math.min(W, H) / (2 * FC * CELLS.F) * .9; V.ox = W / 2 - (b.x + .5) * FC * sc(); V.oy = H / 2 - (b.y + .5) * FC * sc();
+      const g = document.getElementById('cv').getContext('2d'), tx = [], o = g.fillText; g.fillText = function (t, ...a) { tx.push(t); return o.call(this, t, ...a) };
+      __fb.paint(); g.fillText = o; return {tx, want: `${lab(def(b.cls))}  ${FC}×${FC}`};
+    }, `${P}${n}.${n}_C`);
+    chk(`28 Factory floor label "${got.want}" drawn for ${n}`, got.tx.includes(got.want), JSON.stringify(got.tx));
+  }
+  // screenshots: Layout + Factory floor, rot 0..3, for Mk.1, Mk.2 and Station Armour + Station 1x1
+  for (const n of ['BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2', 'BPO_StationArmour_01', 'BPO_Station_01', 'BPO_Station_2x1']) {
+    const tag = n.replace('BPO_', '').replace(/[^A-Za-z0-9]+/g, '-').toLowerCase();
+    for (const r of [0, 1, 2, 3]) {
+      await pg.evaluate(([cls, r]) => __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []})), [`${P}${n}.${n}_C`, r]);
+      for (const v of ['L', 'F']) {
+        await pg.evaluate(v => { __fb.setView(v); __fb.fit(); const b = __fb.S.blocks[0], k = v === 'F' ? FC : 1;   // F: 2x2 blocks around the block, the block centred
+          if (v === 'F') { V.z = Math.min(W, H) / (2 * FC * CELLS.F) * .9; V.ox = W / 2 - (b.x + .5) * k * sc(); V.oy = H / 2 - (b.y + .5) * k * sc(); } __fb.paint(); }, v);
+        await pg.waitForTimeout(150);
+        await pg.screenshot({path: path.join(SHOTS, `${tag}-rot${r}-${v === 'L' ? 'layout' : 'floor'}.png`)});
+      }
+    }
+  }
   await ctx.close();
 }
 
@@ -2453,6 +2741,8 @@ try {
   try { console.log('--- 23 U3 production'); await s23(br); } catch (e) { chk('23 U3: section ran', false, e.stack || String(e)); }
   try { console.log('--- 24 r12 user save: sim, perf, shots'); await s24(br); } catch (e) { chk('24 r12: section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 28 data-driven shapes'); await s28(br); } catch (e) { chk('28 shapes: section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
     try { console.log(`--- viewport ${vp.width}x${vp.height}`); await viewport(br, vp); }
     catch (e) { chk(`viewport ${vp.width}x${vp.height} ran`, false, e.stack || String(e)); }

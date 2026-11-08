@@ -69,10 +69,10 @@ function drawLinks(s){
 }
 function drawPorts(s){
   if(s<6)return;
-  const Ln=.6*s,T=Math.max(3,.2*s);cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
+  const Ln=Math.min(.6*s,18),T=Math.min(5,Math.max(3,.2*s));cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
   S.blocks.forEach(b=>{if(b.h!==layer)return;const bars=barPorts(b);
     // splitter input (back) face: no bar; small neutral chevron pointing into the machine (not clickable, no hover state)
-    portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.max(3,s*.2),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
+    portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.min(8,Math.max(3,s*.2)),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
       cx.strokeStyle="rgba(230,240,255,.45)";cx.lineWidth=Math.max(1.5,s*.08);cx.beginPath();
       cx.moveTo(ex-ix*r+qx*r,ey-iy*r+qy*r);cx.lineTo(ex+ix*r,ey+iy*r);cx.lineTo(ex-ix*r-qx*r,ey-iy*r-qy*r);cx.stroke()});
     cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
@@ -85,7 +85,7 @@ function drawPorts(s){
       cx.stroke();cx.restore();return}
     const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,w=p.nx?T:Ln,h=p.nx?Ln:T;
     cx.fillStyle=p.en?"hsl(140,70%,48%)":"hsl(0,75%,55%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1);
-    if(p.dir&&s>=10){const r=Math.max(3,s*.2),sg=p.dir==="in"?-1:1,dx=p.nx*sg,dy=p.ny*sg,qx=ex+p.nx*.35*s*(p.dir==="in"?-.2:.2),qy=ey+p.ny*.35*s*(p.dir==="in"?-.2:.2);
+    if(p.dir&&s>=10){const r=Math.min(8,Math.max(3,s*.2)),sg=p.dir==="in"?-1:1,dx=p.nx*sg,dy=p.ny*sg,qx=ex+p.nx*.35*s*(p.dir==="in"?-.2:.2),qy=ey+p.ny*.35*s*(p.dir==="in"?-.2:.2);
       cx.fillStyle="#fff";cx.beginPath();cx.moveTo(qx+dx*r,qy+dy*r);cx.lineTo(qx-dx*r*.6-dy*r*.8,qy-dy*r*.6+dx*r*.8);cx.lineTo(qx-dx*r*.6+dy*r*.8,qy-dy*r*.6-dx*r*.8);cx.closePath();cx.fill();cx.stroke()}
   })});
   cx.restore();
@@ -155,6 +155,20 @@ function arrow(x,y,w,h,rot,alpha){
   cx.fillStyle=`rgba(255,255,255,${alpha})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.7})`;cx.lineWidth=1;
   cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.7,-r*.75);cx.lineTo(-r*.3,0);cx.lineTo(-r*.7,r*.75);cx.closePath();cx.fill();cx.stroke();cx.restore();
 }
+// entrance marks (Layout, model.js entrances()): door slot = light bar on the edge + white chevron pointing INTO the block; ports side (no doors) = mint bar + chevron pointing out to the ports. Rotates with the block
+const ENT_DOOR_S=44;
+function entMark(b,x,y,alpha,s,w,h){
+  if(alpha<.5||s<5)return;const E=entrances(b,true);if(!E.length)return;   // bar = full door slot length (scales with zoom); only the chevron is capped (r <= 9); door marks (many on stations) only when a cell is >= ENT_DOOR_S px
+  const t=Math.max(2,Math.min(5,s*.12)),r=Math.min(9,Math.max(3,s*.12)),L=Math.max(5,DOORW/FC*s),lh=s>=18?Math.min(12,Math.max(9,s/3))+6:0;
+  E.forEach(e=>{if(!e.port&&s<ENT_DOOR_S)return;const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,bw=hz?L:t,bh=hz?t:L,
+    bx=D[0]>0?ex-t:D[0]<0?ex:ex-L/2,by=D[1]>0?ey-t:D[1]<0?ey:ey-L/2,sg=e.port?1:-1,   // door: chevron looks inward, port: outward
+    dd=r+t+(D[1]<0?lh:0),cx0=ex-D[0]*dd,cy0=ey-D[1]*dd;
+    cx.save();cx.fillStyle=e.port?`hsla(140,85%,75%,${alpha})`:`hsla(${hue(catOf(b)||"")},90%,86%,${alpha*.9})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.6})`;cx.lineWidth=1;
+    cx.fillRect(bx,by,bw,bh);cx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
+    cx.translate(cx0,cy0);cx.rotate(Math.atan2(D[1]*sg,D[0]*sg));
+    cx.fillStyle=e.port?`hsla(140,85%,75%,${alpha})`:`rgba(255,255,255,${alpha})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.7})`;
+    cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.5,-r*.9);cx.lineTo(-r*.5,r*.9);cx.closePath();cx.fill();cx.stroke();cx.restore()});
+}
 function drawBlock(b,alpha,isSel){
   const s=sc(),d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s,cat=catOf(b),df=def(b.cls),m=isM(b);
   cx.fillStyle=cat?fill(cat,alpha*.8):`rgba(120,125,135,${alpha*.8})`;
@@ -164,6 +178,7 @@ function drawBlock(b,alpha,isSel){
   cx.lineWidth=1;cx.strokeStyle=cat?`hsla(${hue(cat)},70%,70%,${alpha})`:`rgba(190,195,205,${alpha})`;
   cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
+  entMark(b,x,y,alpha,s,w,h);
   if(isSel){cx.lineWidth=2.5;cx.strokeStyle="#fff";cx.strokeRect(x+1,y+1,w-2,h-2)}
   if(s>=(m?10:18)&&alpha>.5&&(!m||Math.max(w,h)>=2*s)&&!(df&&df.directional)){
     const t=df?lab(df):shortCls(b.cls),fs=Math.min(12,Math.max(9,s/3));
@@ -198,21 +213,71 @@ function grid(major){
   }
 }
 function pieces(a,b,cuts){const o=[];let p=a;cuts.slice().sort((u,v)=>u[0]-v[0]).forEach(c=>{if(c[0]>p)o.push([p,c[0]]);p=Math.max(p,c[1])});if(p<b)o.push([p,b]);return o}
+// blocks with a real hull (Industrial Dock): ONE roofless plan from the collider/mesh data: hall tint, port pods (green ports + bay numbers, display only), console, one connected wall outline with joined corners
+function wallPlan(sh,dock){   // walls in floor frame: bridge gaps < .5 between rects (flush end caps), add the missing corner squares (outer vertex chamfered)
+  if(sh._wp)return sh._wp;
+  let w=sh.walls.map(a=>a.slice());const ov=(a0,a1,b0,b1)=>Math.min(a1,b1)-Math.max(a0,b0),E=.5;
+  if(dock){   // dock-only clean-up of the long shaft bars (dock magic numbers: bar >= 15 wide, partition at x 20..24): small end caps merge into one flush, identical end; inner end runs to the partition's inner face (closes the doorway gap)
+    const bars=w.filter(a=>a[2]-a[0]>=15),small=a=>a[2]-a[0]<3&&a[3]-a[1]<3,part=Math.min(...w.filter(a=>a[0]>=20&&a[0]<24&&a[3]-a[1]>=8).map(a=>a[0]));
+    bars.forEach(b=>w.filter(small).forEach(c=>{if(c[0]>=b[2]-E&&c[0]-b[2]<E&&ov(b[1],b[3],c[1],c[3])>.3)b[2]=Math.max(b[2],c[2])}));
+    const endX=Math.max(...bars.map(b=>b[2]));bars.forEach(b=>{b[2]=endX;if(b[0]>part&&b[0]-part<2)b[0]=part});
+    w=w.filter(a=>!small(a)||a[0]<endX-3);   // caps are now part of the bars
+  }
+  for(let i=0;i<w.length;i++)for(let j=0;j<w.length;j++){if(i===j)continue;const A=w[i],B=w[j];
+    if(B[0]>A[2]&&B[0]-A[2]<E&&ov(A[1],A[3],B[1],B[3])>.3){A[2]=B[0];if(Math.abs(A[1]-B[1])<.7&&Math.abs(A[3]-B[3])<.7){B[1]=A[1];B[3]=A[3]}}
+    else if(B[1]>A[3]&&B[1]-A[3]<E&&ov(A[0],A[2],B[0],B[2])>.3)A[3]=B[1]}
+  const corners=[],T=1e-3;
+  w.forEach(H=>w.forEach(V=>{if(H===V||H[3]-H[1]>=H[2]-H[0]||V[3]-V[1]<=V[2]-V[0])return;
+    const left=Math.abs(H[2]-V[0])<T,right=Math.abs(H[0]-V[2])<T,above=Math.abs(H[3]-V[1])<T,below=Math.abs(H[1]-V[3])<T;
+    if(!(left||right)||!(above||below))return;
+    const tx=left?V[0]:V[2],ty=above?H[3]:H[1],bx=[V[0],H[1],V[2],H[3]];
+    corners.push({box:bx,out:[bx[0]+bx[2]-tx,bx[1]+bx[3]-ty]})}));
+  return sh._wp={w,corners};
+}
+function drawShapeFloor(A,s){
+  const X=x=>Math.round(V.ox+x*s),Y=y=>Math.round(V.oy+y*s),ST="rgba(150,165,190,.6)",WF="#262e3c";
+  A.floors.forEach(r=>{const b=r.b,t=shapeTf(b);if(!t)return;
+    const sh=t.sh,dock=SHIPEND(b),tr=(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
+    const rc=(q,f,g=0)=>{cx.fillStyle=f;const x0=X(q.x),y0=Y(q.y);cx.fillRect(x0-g,y0-g,X(q.x+q.w)-x0+2*g,Y(q.y+q.h)-y0+2*g)};
+    const d=def(b.cls),R0=floorRect(b),hall=dock?tr(0,0,Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0])),d.fh):R0&&{x:R0.x,y:R0.y,w:R0.w,h:R0.h};   // dock: hall up to the partition (shaft beyond); other blocks: whole floor; no-floor blocks: no tint
+    if(hall)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
+    // pods (dock only): one per decoded port cell (1 cell, contiguous), x extent from the arm mesh rows of that cell
+    const pods=!dock?[]:sh.ports.map(([bay,x,y])=>{const rs=sh.arms.filter(a=>(a[1]+a[3])/2>=y-.5&&(a[1]+a[3])/2<y+.5);if(!rs.length)return null;
+      return{bay,x,y,q:tr(Math.min(...rs.map(a=>a[0])),y-.46,Math.max(...rs.map(a=>a[2])),y+.46)}}).filter(Boolean);
+    const marks=dock?pods:sh.ports.map(([bay,x,y])=>({bay,x,y}));   // port markers: dock = one per pod (numbered); other shapes = one per SHAPES port (unnumbered)
+    const props=sh.props.map(a=>tr(...a));
+    props.forEach(q=>rc(q,ST,1));props.forEach(q=>rc(q,"#3b4659"));
+    pods.forEach(p=>rc(p.q,ST,1));pods.forEach(p=>rc(p.q,"#2c3648"));
+    // walls: strokes (grown 1px) under all fills = outline of the union only
+    const wp=wallPlan(sh,dock),wr=wp.w.map(a=>tr(...a)),poly=wp.corners.map(c=>{const[x0,y0,x1,y1]=c.box,o=c.out,k=Math.min(x1-x0,y1-y0)*.6;
+      return[[x0,y0],[x1,y0],[x1,y1],[x0,y1]].flatMap(v=>{if(v[0]!==o[0]||v[1]!==o[1])return[v];const dx=v[0]===x0?1:-1,dy=v[1]===y0?1:-1;const pr=[[v[0]+dx*k,v[1]],[v[0],v[1]+dy*k]];return dx===dy?pr.reverse():pr}).map(v=>t.f(...v).map((n,i)=>Math.round(i?V.oy+n*s:V.ox+n*s)))});
+    const path=pg=>{cx.beginPath();pg.forEach((v,i)=>i?cx.lineTo(v[0],v[1]):cx.moveTo(v[0],v[1]));cx.closePath()};
+    wr.forEach(q=>rc(q,ST,1));poly.forEach(pg=>{path(pg);cx.fillStyle=ST;cx.strokeStyle=ST;cx.lineWidth=2;cx.stroke();cx.fill()});
+    wr.forEach(q=>rc(q,WF));poly.forEach(pg=>{path(pg);cx.fillStyle=WF;cx.fill()});
+    // ports (display only): green bar on each port's edge (dock: pod floor-facing edge), bay number only on numbered ports
+    if(s>=6){const Ln=Math.min(.6*s,18),Tk=Math.min(5,Math.max(3,.2*s)),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
+      marks.forEach(p=>{const[ex,ey]=t.f(p.x,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),w=odd?Ln:Tk,h=odd?Tk:Ln;
+        cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
+      if(s>=10){cx.font="600 "+Math.min(13,Math.max(9,s*.6))+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillStyle="rgba(255,255,255,.9)";
+        marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(p.bay),tx,ty)})}
+      cx.restore()}
+  });
+}
 function paintFloorBase(s){
   const A=areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;
   // gap strips: only between two facing floor blocks; strip = the distance between their SHELLS, long axis = overlap of their shells
   const SH=A.floors.map(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;return{r,x:r.x-Q,y:r.y-Q,w:r.w+2*Q,h:r.h+2*Q}});
-  const own2=new Map();SH.forEach(e=>{const d=dim(e.r.b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)own2.set((e.r.b.x+i)+","+(e.r.b.y+j),e)});
+  const own2=new Map();SH.forEach(e=>{const d=fcell(e.r.b);for(let i=0;i<d.cw;i++)for(let j=0;j<d.ch;j++)own2.set((d.cx+i)+","+(d.cy+j),e)});
   cx.fillStyle="rgba(70,80,100,.5)";
-  SH.forEach(e=>{const d=dim(e.r.b),seen=new Set();
+  SH.forEach(e=>{const d=fcell(e.r.b),seen=new Set();
     const put=(nb,ax)=>{if(!nb||nb===e||seen.has(nb))return;seen.add(nb);
       if(ax==="x"){if(nb.x<=e.x+e.w)return;const y0=Math.max(e.y,nb.y),y1=Math.min(e.y+e.h,nb.y+nb.h);if(y1<=y0)return;R({x:e.x+e.w,y:y0,w:nb.x-(e.x+e.w),h:y1-y0},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}
       else{if(nb.y<=e.y+e.h)return;const x0=Math.max(e.x,nb.x),x1=Math.min(e.x+e.w,nb.x+nb.w);if(x1<=x0)return;R({x:x0,y:e.y+e.h,w:x1-x0,h:nb.y-(e.y+e.h)},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}};
-    for(let j=0;j<d.h;j++)put(own2.get((e.r.b.x+d.w)+","+(e.r.b.y+j)),"x");
-    for(let i=0;i<d.w;i++)put(own2.get((e.r.b.x+i)+","+(e.r.b.y+d.h)),"y");
+    for(let j=0;j<d.ch;j++)put(own2.get((d.cx+d.cw)+","+(d.cy+j)),"x");
+    for(let i=0;i<d.cw;i++)put(own2.get((d.cx+i)+","+(d.cy+d.ch)),"y");
   });
   A.floors.forEach(r=>{
-    const T=.5,Q=((def(r.b.cls)||{}).floorInset)||0,sx=r.x-Q,sy=r.y-Q,sw=r.w+2*Q,sn=r.h+2*Q;   // shell = floor + inset ring (elevator 1): same 0.5 wall band as a station
+    const T=.5,Q=((def(r.b.cls)||{}).floorInset)||0,sx=r.x-Q,sy=r.y-Q,sw=r.w+2*Q,sn=r.h+2*Q,noShape=!shapeTf(r.b);   // shell = floor + inset ring (elevator 1): same 0.5 wall band as a station
     const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s,c=catOf(r.b);
     if(Q){cx.fillStyle="rgba(150,190,230,.08)";R({x:sx,y:sy,w:sw,h:sn},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}   // inset ring inside the shell: floor colour
     cx.fillStyle="rgba(150,190,230,.08)";cx.fillRect(x,y,w,h);
@@ -220,7 +285,7 @@ function paintFloorBase(s){
     cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(c)},70%,70%,.5)`;cx.strokeRect(x+.5,y+.5,w-1,h-1);
     // walls: dark band outside the floor edge, gaps at the doors
     cx.fillStyle="#262e3c";cx.strokeStyle="rgba(150,165,190,.6)";cx.lineWidth=1;
-    for(let ed=0;ed<4;ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;
+    for(let ed=0;ed<4&&noShape;ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;
       pieces(a0,a1,r.wcuts[ed]).forEach(([p,q])=>{
         const b=ed===0?{x:sx+sw,y:p,w:T,h:q-p}:ed===2?{x:sx-T,y:p,w:T,h:q-p}:ed===1?{x:p,y:sy+sn,w:q-p,h:T}:{x:p,y:sy-T,w:q-p,h:T};
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
@@ -228,6 +293,11 @@ function paintFloorBase(s){
     }
     if(w>70){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
   });
+  drawShapeFloor(A,s);
+  const NF=S.blocks.filter(b=>b.h===layer&&!isM(b)&&nfRect(b));
+  NF.forEach(b=>{const r=nfRect(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
+  drawShapeFloor({floors:NF.map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
+  NF.forEach(b=>{const r=nfRect(b),w=r.w*s;if(w>70)note(`${lab(def(b.cls))}  ${r.w}×${r.h}`,V.ox+r.x*s,V.oy+r.y*s,w)});   // label like floor blocks: name + tile size, top-left
   A.floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;   // elevator: ring cells inside the door slot are open buildable floor
     cx.fillStyle="rgba(150,190,230,.08)";
     for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>{const v=ed%2===0,ring=ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q};R(ring,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))});

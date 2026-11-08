@@ -35,14 +35,15 @@ function panel(){
     }else h+='<h2>Selection ('+bs.length+')</h2>';
     h+='<div class="pad"><div class="btns"><button id="bRot">Rotate</button><button id="bDup">Duplicate</button><button id="bDel" class="danger">Delete</button></div>';
     if(one){
+      const et=entText(one);if(et)h+='<div class="sub" title="'+esc(ENT_HINT)+'" id="entInfo"><b>'+et.kind+':</b> '+et.sides.join(", ")+'<br>'+esc(ENT_HINT)+'.</div>';
       if(F){
         if(one.h===layer&&outside(one,A.rects))h+='<div class="warnline">'+esc(WARN)+'</div>';
         const u=ugWarn().get(one.id);if(u)h+='<div class="warnline">Underground: length '+u.n+' &gt; max '+u.max+'</div>';
       }else{
-        const fr=floorRect(one),o=dim(one);
+        const fr=floorRect(one),fo=fcell(one);
         if(fr)h+='<div class="sub">Floor '+fr.w+'&times;'+fr.h+(fr.known?(fr.guess?" "+BQ:""):" "+BQ)+(dv(one)?"":" &middot; doors "+BQ)+'</div>';
         if(dd&&dd.elevator)h+='<div class="sub">Elevator centre '+dd.elevator.w+'&times;'+dd.elevator.h+' blocked</div>';
-        const n=S.blocks.filter(m=>isM(m)&&m.h===one.h&&m.x>=one.x*FC&&m.x<(one.x+o.w)*FC&&m.y>=one.y*FC&&m.y<(one.y+o.h)*FC).length;
+        const n=S.blocks.filter(m=>isM(m)&&m.h===one.h&&m.x>=fo.cx*FC&&m.x<(fo.cx+fo.cw)*FC&&m.y>=fo.cy*FC&&m.y<(fo.cy+fo.ch)*FC).length;
         h+='<div class="sub">'+n+' buildable'+(n===1?"":"s")+' on this block (level '+(one.h+1)+')</div>';
       }
     }

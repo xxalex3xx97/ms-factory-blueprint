@@ -22,6 +22,24 @@ try {
     const tall = r.h > r.w, n = ed => ed % 2 === 0 ? (tall ? 2 : 1) : (tall ? 1 : 2);
     const want = [0, 1, 2, 3].filter(ed => ed !== rot).flatMap(ed => Array(n(ed)).fill(ed)).join('');
     chk(`rot ${rot}: floor ${r.w}x${r.h}, doors ${want} (all sides but the ship side ${rot})`, r.eds === want, r.eds);
+    // footprint 3x2 (rot 0/2) or 2x3 (rot 1/3); floor box = the end opposite DIR[rot] (station side)
+    const fp = await pg.evaluate(() => {
+      const b = __fb.S.blocks[0], d = dim(b), c = fcell(b);
+      return {w: d.w, h: d.h, cx: c.cx - b.x, cy: c.cy - b.y, cw: c.cw, ch: c.ch};
+    });
+    const wantFp = {0: {w: 3, h: 2, cx: 0, cy: 0, cw: 1, ch: 2}, 1: {w: 2, h: 3, cx: 0, cy: 0, cw: 2, ch: 1},
+      2: {w: 3, h: 2, cx: 2, cy: 0, cw: 1, ch: 2}, 3: {w: 2, h: 3, cx: 0, cy: 2, cw: 2, ch: 1}}[rot];
+    chk(`rot ${rot}: footprint ${wantFp.w}x${wantFp.h}, floor box at ${wantFp.cx},${wantFp.cy} size ${wantFp.cw}x${wantFp.ch}`, JSON.stringify(fp) === JSON.stringify(wantFp), JSON.stringify(fp));
+    // closed-door key anchors on the floor cell box (fcell), so the saved key survives rot 2/3; the footprint-anchor (b.x,b.y) key matches only where the two coincide (rot 0/1)
+    const ck = await pg.evaluate(rot => {
+      const b = S.blocks[0], c = fcell(b), ed = (rot + 1) % 4, key = (x, y) => `0|${x}|${y}|${EN[ed]}|0`;
+      S.closed = [key(c.cx, c.cy)];
+      const a = areas(0), hit = a.doors.find(d => d.key === key(c.cx, c.cy)), old = a.doors.some(d => d.key === key(b.x, b.y));
+      S.closed = [];
+      return {hitOpen: hit ? hit.open : null, old, anchor: [c.cx, c.cy]};
+    }, rot);
+    chk(`rot ${rot}: closed key on floor anchor ${ck.anchor} closes its door`, ck.hitOpen === false, JSON.stringify(ck));
+    chk(`rot ${rot}: footprint-anchor key ${rot < 2 ? 'matches' : 'does not match'} a door`, ck.old === (rot < 2), JSON.stringify(ck));
   }
 } finally { await br.close(); }
 process.exit(bad ? 1 : 0);

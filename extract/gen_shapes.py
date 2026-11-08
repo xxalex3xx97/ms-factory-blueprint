@@ -1,0 +1,137 @@
+"""Generate js/shapes.js: real hull shapes (walls / props / port arms / optional outline polys) + catalog patch for allowlisted blocks.
+
+usage:
+  python -I extract/gen_shapes.py           write js/shapes.js
+  python -I extract/gen_shapes.py --check   exit 1 if js/shapes.js is not what this script generates
+
+Inputs: extract/floors.json (colliders_raw, hull), extract/shapes_src.json (allowlist, patch, floorOrigin),
+        extract/extra_blocks.json (portsMesh), extract/sm2_industrial_dock_ports_outline.json (mesh rows, cm).
+Shape coords: block units (1 unit = 1 site cell = 100 cm; machine grid units are 50 cm), relative to the floor top-left (floorOrigin).
+Walls: collider z-size >= 1.9, else props. Port arms: cm * cm2unit + originBlock, mirrorY, then shifted by floorOrigin.
+Per block (shapes_src.json): floorOrigin [x,y] overrides the global one; polys [[[x,y],...],...] (floor cells, block frame like
+colliders_raw) are copied into the shape entry as 'polys' (floor frame). Shape-only keys (floorOrigin, polys) never reach the catalog patch.
+ground: true = ground-level plan (colliders with z0 >= 1 are overhead: skipped; walls need z0 < 1). solid: true = every collider is a prop.
+fill: [x0,y0,x1,y1] block frame = one solid prop, used when the BPO has no colliders (Station Armour); hull size then comes from fill.
+add: true = block is not in CATALOG.blocks yet: its full definition (the block's own keys) is appended to CATALOG.blocks before core.js.
+iconFile: PNG under extract/icons/, embedded as CATALOG.icons[<icon key>] (data URL). mirrorOf: shape copy of another block, no catalog entry.
+ports: optional 'bay' (numbered belt ports, dock); without 'bay' the port is drawn unnumbered.
+entrance: {kind: doors|ports, evidence}: what the Layout arrows mark for this block (doors = catalog door slots, ports = side of the shape's output ports); evidence string says 'inferred' when it is.
+A block without these keys produces the same entry as before.
+"""
+import base64, json, os, sys
+
+ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+EX = os.path.join(ROOT, 'extract')
+OUT = os.path.join(ROOT, 'js', 'shapes.js')
+SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance')
+
+
+def rd(name):
+    with open(os.path.join(EX, name), encoding='utf-8') as f:
+        return json.load(f)
+
+
+def r3(v):
+    return round(v, 3)
+
+
+def merge_rows(rows):
+    # consecutive mesh rows with identical runs become one rect per run
+    out, prev = [], None
+    for row in rows:
+        if prev and prev['runs'] == row['runs'] and abs(prev['y1'] - row['y0']) < 1e-6:
+            prev['y1'] = row['y1']
+        else:
+            prev = {'y0': row['y0'], 'y1': row['y1'], 'runs': row['runs']}
+            out.append(prev)
+    return out
+
+
+def build():
+    src = rd('shapes_src.json')
+    fl = rd('floors.json')['blocks']
+    eb = rd('extra_blocks.json')
+    gox, goy = src['floorOrigin']
+    shapes, patch, adds, icons = {}, {}, {}, {}
+    for name, p in src['blocks'].items():
+        body = {k: v for k, v in p.items() if k not in SHAPE_ONLY}
+        if p.get('add'):
+            adds[name] = body
+        elif not p.get('mirrorOf'):
+            patch[name] = body
+        if p.get('iconFile'):
+            with open(os.path.join(EX, 'icons', p['iconFile']), 'rb') as f:
+                icons[p['icon']] = 'data:image/png;base64,' + base64.b64encode(f.read()).decode('ascii')
+        if name not in fl:
+            sys.exit('no floors.json entry for ' + name)
+        ox, oy = p.get('floorOrigin', [gox, goy])   # per-block floor origin overrides the global one
+        f = fl[name]
+        cols = f.get('colliders_raw', [])
+        size = f['hull']['size'] if 'hull' in f else None
+        walls, props, arms = [], [], []
+        for (x0, y0, z0), (x1, y1, z1) in cols:
+            if p.get('ground') and z0 >= 1:
+                continue   # ground plan: overhead boxes (lintels over doors, balcony) are not drawn
+            rect = [r3(x0 - ox), r3(y0 - oy), r3(x1 - ox), r3(y1 - oy)]
+            (walls if z1 - z0 >= 1.9 and not p.get('solid') else props).append(rect)   # solid: one solid collider = no-build prop
+        if p.get('fill'):
+            fx0, fy0, fx1, fy1 = p['fill']
+            props.append([r3(fx0 - ox), r3(fy0 - oy), r3(fx1 - ox), r3(fy1 - oy)])
+            size = size or [fx1 - fx0, fy1 - fy0]
+        pm = (eb.get(name) or {}).get('portsMesh')
+        if pm:
+            mesh = rd(pm['file'])
+            k, (bx, by) = pm['cm2unit'], pm['originBlock']
+            for r in merge_rows(mesh['rows']):
+                for x0, x1 in r['runs']:
+                    ys = [r['y0'] * k + by, r['y1'] * k + by]
+                    if pm.get('mirrorY'):
+                        ys = [-ys[1], -ys[0]]
+                    arms.append([r3(x0 * k + bx - ox), r3(ys[0] - oy), r3(x1 * k + bx - ox), r3(ys[1] - oy)])
+        ports = [[q.get('bay'), r3(q['x'] - ox), r3(q['y'] - oy)] for q in (eb.get(name) or {}).get('ports', [])]   # bay (None = unnumbered), x, y of the port cell centre (floor frame)
+        entry = {'fw': round(size[0]), 'fh': round(size[1]), 'walls': walls, 'props': props, 'arms': arms, 'ports': ports}
+        if p.get('polys'):
+            entry['polys'] = [[[r3(x - ox), r3(y - oy)] for x, y in poly] for poly in p['polys']]
+        if p.get('entrance'):   # entrance: {kind: 'doors'|'ports', evidence}; Layout marks door slots (catalog door data) or the side of the output ports
+            if p['entrance'].get('kind') not in ('doors', 'ports') or not p['entrance'].get('evidence'):
+                sys.exit('bad entrance for ' + name)
+            entry['entrance'] = p['entrance']
+        shapes[name] = entry
+    return shapes, patch, adds, icons
+
+
+def render():
+    shapes, patch, adds, icons = build()
+    lines = [
+        '// generated by extract/gen_shapes.py (python -I). Do not edit by hand.',
+        '// shape units: sim units, origin = floor top-left (block -15,-15). walls / props / arms = [x0,y0,x1,y1].',
+        'const SHAPES=' + json.dumps(shapes, sort_keys=True, separators=(',', ':')) + ';',
+        '// catalog patch (generated from extract/shapes_src.json): merges into CATALOG.blocks before core.js builds BASE',
+        '(function(){const P=' + json.dumps(patch, sort_keys=True, separators=(',', ':')) + ';',
+        'const A=' + json.dumps(adds, sort_keys=True, separators=(',', ':')) + ';',
+        'const I=' + json.dumps(icons, sort_keys=True, separators=(',', ':')) + ';',
+        'Object.keys(A).forEach(n=>{if(!CATALOG.blocks.some(b=>b.name===n))CATALOG.blocks.push(Object.assign({name:n},A[n]))});',
+        'Object.assign(CATALOG.icons,I);',
+        'CATALOG.blocks.forEach(b=>{const p=P[b.name];if(!p)return;const door=Object.assign({},b.door,p.door);Object.assign(b,p,{door})});})();',
+        '',
+    ]
+    return '\n'.join(lines)
+
+
+def main():
+    text = render()
+    if '--check' in sys.argv:
+        cur = open(OUT, encoding='utf-8', newline='').read() if os.path.exists(OUT) else ''
+        if cur != text:
+            print('FAIL js/shapes.js is stale: run python -I extract/gen_shapes.py')
+            return 1
+        print('OK js/shapes.js up to date')
+        return 0
+    with open(OUT, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(text)
+    print('wrote', OUT)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
