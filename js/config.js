@@ -13,6 +13,8 @@ function cfgKind(cls){
   if(["assembler","refinery","enrichment","growth","supercomputer","relicsynth"].some(k=>c.includes(k)))return"recipe";
   return null;
 }
+// game splitter (DAT_Splitter, _2, _3): 1 input (back) face, never a game port; 3 controllable outputs = config bytes [front, right, left] at rot 0 (local faces, see io.js SPL_FACES). Balancers keep the generic 4-port model.
+const isSplitterCls=c=>/^DAT_Splitter(_\d+)?$/.test(String(c||""));
 function cfgEnc(k,d){
   const o=[1,0],i32=v=>{for(let i=0;i<4;i++)o.push((v>>(8*i))&255)},fs=s=>{if(!s)return i32(0);i32(s.length+1);for(let i=0;i<s.length;i++)o.push(s.charCodeAt(i)&255);o.push(0)},bl=a=>{i32(a.length);a.forEach(p=>o.push(p?1:0))};
   if(k==="recipe"){fs(d.recipe||"");bl(d.ports)}

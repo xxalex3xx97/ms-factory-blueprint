@@ -1,7 +1,10 @@
 // ---- export / import (blocks: GridLocation = cell x CU; machines: GridLocation = floor cells)
 const CU=CATALOG.cell_units||2;
 const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.length)e.Ports=ps.map(p=>({Face:p.f,Index:p.i,Enabled:p.en})).concat(xp);return e};   // extra non-game field, only when non-default
-const impPorts=(b,L)=>{if(!Array.isArray(L))return;const ps=portsOf(b),off=[],xp=[];L.forEach(e=>{const p=e&&ps.find(q=>q.f===e.Face&&q.i===e.Index);if(p){if(e.Enabled===false)off.push(p.key)}else xp.push(e)});if(off.length)b.off=off;if(xp.length)b.xp=xp};
+// game splitter config bytes = [front, right, left] at rot 0, as local faces (port identity is fixed in the machine, so rotation needs no mapping). The back/input face (W at rot 0) is never a game byte.
+const SPL_FACES=["E","S","N"];
+let spFix=0;   // splitter input-face "off" entries in an import, forced on (counted for the import message)
+const impPorts=(b,L)=>{if(!Array.isArray(L))return;const ps=portsOf(b),off=[],xp=[];L.forEach(e=>{const p=e&&ps.find(q=>q.f===e.Face&&q.i===e.Index);if(p){if(e.Enabled===false){if(p.tg)off.push(p.key);else if(p.dir==="in"&&isSplitterCls(b.cls))spFix++}}else xp.push(e)});if(off.length)b.off=off;if(xp.length)b.xp=xp};
 // game-ready SerializedMachineConfig per machine (ConfigHex = exact bytes the game applies; Recipe/Ports/Filters stay for humans). Only when the machine has something to configure.
 // Underground: ONE config on the pair's entrance (Length = cells entrance..exit inclusive); the mod's paste tool merges entrance+exit into one game machine. Recipe ports: game port order (config.js gamePortMap; verified Refinery/Assembler, others rule-derived -> PortOrderUnverified).
 // Contents (containers only): totals per item, duplicates summed, Count >= 1, empty = field omitted. Infinite sources are site/simulation only: written under SiteOnly.Infinite (the mod's parser ignores SiteOnly), never in Contents.
@@ -28,7 +31,7 @@ function cfgModel(b,d,e,ugn){
     if(!b.fl&&!b.pr&&!off)return;
     if(b.fl)e.Filters=b.fl;
     const n=b.fl?b.fl.length:3;   // game config: one filter + one port flag per output (3 for a splitter); the last n site ports (UNVERIFIED mapping)
-    e.ConfigHex=cfgEnc(k,{filters:b.fl||Array(n).fill(""),prioA:b.pr?b.pr[0]:-1,prioB:b.pr?b.pr[1]:-1,ports:en.slice(-n)});
+    e.ConfigHex=cfgEnc(k,{filters:b.fl||Array(n).fill(""),prioA:b.pr?b.pr[0]:-1,prioB:b.pr?b.pr[1]:-1,ports:isSplitterCls(b.cls)?SPL_FACES.map(f=>{const q=ps.find(q=>q.f===f);return!q||q.en}):en.slice(-n)});
   }
 }
 function build(){
@@ -145,7 +148,8 @@ function impCfg(b,d,m){
   if(k==="underground"){const l=n0(m.Length)||(dc?dc.length:0);if(l>1)b.ugl=l;return}   // Length field (world record) first, ConfigHex as fallback
   if(!dc)return;
   const off=[],ps=portsOf(b),gm=gamePortMap(b);
-  if(gm&&dc.ports&&dc.ports.length===gm.length)dc.ports.forEach((e,g)=>{const q=ps[gm[g]];if(e===false&&q.tg)off.push(q.key)});
+  if(isSplitterCls(d.id))(dc.ports||[]).forEach((e,g)=>{const q=ps.find(q=>q.f===SPL_FACES[g]);if(e===false&&q&&q.tg)off.push(q.key)});
+  else if(gm&&dc.ports&&dc.ports.length===gm.length)dc.ports.forEach((e,g)=>{const q=ps[gm[g]];if(e===false&&q.tg)off.push(q.key)});
   else{const sk=k==="splitter"?Math.max(0,ps.length-(dc.ports||[]).length):0;(dc.ports||[]).forEach((e,i)=>{const q=ps[sk+i];if(e===false&&q&&q.tg)off.push(q.key)})}
   if(off.length)b.off=off;
   if(dc.recipe){const kk=recKeyOf(dc.recipe);if(kk)b.rec=kk;else b.recn=dc.recipe}
@@ -168,7 +172,7 @@ function importJson0(txt,quiet){
   S.name=typeof o.DisplayName==="string"?o.DisplayName:"Imported";
   if(o.Catalog&&typeof o.Catalog==="object")for(const c in o.Catalog){OV[c]=Object.assign(OV[c]||{},o.Catalog[c])}
   saveOV();
-  let odd=0;
+  let odd=0;spFix=0;
   // Version 2 = game units (extract/import_station.py): block 4 units per cell, GridLocation = footprint centre;
   // machine 2 units per floor cell, GridLocation = footprint centre, Height per level: blocks 2, machines 16. Version 1/absent = legacy site units.
   const v2=o.Version===2,MZ=16,BZ=2;   // game Height per level: blocks 2, machines 16 (sample station: blocks 0,2,4.. machines 0,16,32..)
@@ -204,7 +208,7 @@ function importJson0(txt,quiet){
   });
   sel=new Set();$("name").value=S.name;all();if(quiet)return true;fit();
   const unk=S.blocks.filter(b=>!BASE[b.cls]).length;
-  toast(`Imported ${S.blocks.length-nm} blocks, ${nm} buildables`+(S.dm.length?`, ${S.dm.length} other machines kept`:"")+(unk?`, ${unk} unknown class`:"")+(odd?`; ${odd} odd coordinates rounded`:""));return true;
+  toast(`Imported ${S.blocks.length-nm} blocks, ${nm} buildables`+(S.dm.length?`, ${S.dm.length} other machines kept`:"")+(unk?`, ${unk} unknown class`:"")+(odd?`; ${odd} odd coordinates rounded`:"")+(spFix?`; ${spFix} splitter input port set on (input face is always open)`:""));return true;
 }
 // ---- save to file (File System Access API; Chromium only, others download)
 let FH=null;const JT={types:[{description:"JSON",accept:{"application/json":[".json"]}}]};

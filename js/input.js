@@ -145,7 +145,7 @@ function carryOf(bs){
     S.closed=cl.map(k=>{const a=k.split("|"),m=o.find(p=>p.h===+a[0]&&p.x===+a[1]&&p.y===+a[2]);if(m){a[0]=m.h+dh;a[1]=m.x+dx;a[2]=m.y+dy}return a.join("|")});
   };
 }
-function copy(){if(!sel.size)return;clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b}));if(clip.length){toast(clip.length+" copied");paste()}}
+function copy(){if(!sel.size)return;clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null}));if(clip.length){toast(clip.length+" copied");paste()}}
 // horizontal mirror of a machine: pick the rotation whose port layout is the mirror image (same face/pos/direction), remap disabled ports; null = cannot mirror
 function mirM(b){
   const d=def(b.cls);if(!d||!d.portsLayout||d.elevator)return null;
@@ -158,7 +158,7 @@ function mirM(b){
   return null;
 }
 function clipT(n,fl){   // clip mirrored (fl) then rotated n x 90deg clockwise, origin at 0,0
-  let l=clip.map(b=>({...b}));
+  let l=clip.map(b=>({...b,raw:null}));   // clones never carry the imported raw coords
   if(fl){const mx=Math.min(...l.map(b=>b.x)),W=Math.max(...l.map(b=>b.x-mx+dim(b).w));
     l=l.map(b=>{const m=mirM(b);return{...b,x:mx+W-(b.x-mx)-dim(b).w,...(m||((def(b.cls)||{}).portsLayout?{}:{rot:b.rot===0?2:b.rot===2?0:b.rot}))}})}
   for(let k=0;k<n;k++){

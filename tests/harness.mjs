@@ -162,7 +162,7 @@ async function s2(pg, C) {
     if (id === 'DAT_Container') continue;   // truth file holds old 4-port guess; REA says 8, checked above
     const got = P(id).map(p => `${p.f}${p.pos}${p.dir ? ':' + p.dir : ''}`).sort();
     const exp = g.ports.map(q => `${q[0]}${q[1]}${q[2] ? ':' + q[2] : ''}`).sort();
-    const tgOk = P(id).length === 0 || P(id).every(p => p.tg === !!g.t);
+    const tgOk = P(id).length === 0 || P(id).every(p => p.tg === (!!g.t && !(/^DAT_Splitter(_\d+)?$/.test(id) && p.dir === 'in')));   // splitter back (input) face is never toggleable
     chk(`ports ${id} match ground_truth.json (${exp.length}, toggleable=${g.t})`,
       JSON.stringify(got) === JSON.stringify(exp) && tgOk,
       `page [${got.join(' ')}] truth [${exp.join(' ')}] toggleable page=${P(id)[0]?.tg} truth=${g.t}`);
@@ -174,6 +174,17 @@ async function s2(pg, C) {
   const n2 = r1.find(p => p.f === 'N' && p.pos === 2);
   chk('rotation 1: Assembler N2 port now faces E (wf=1), normal (1,0), cell (4,1)',
     !!n2 && n2.wf === 1 && n2.nx === 1 && n2.ny === 0 && n2.x === 4 && n2.y === 1, JSON.stringify(n2));
+  // splitter: 3 port bars (outputs only) at rotations 0-3; input face kept as model port but not drawn as a bar
+  for (const rot of [0, 1, 2, 3]) {
+    await imp(pg, bp([], [mac('DAT_Splitter', 0, 0, {rot, mid: 1})]));
+    const sb = await pg.evaluate(() => {
+      const b = __fb.S.blocks[0];
+      return {bars: __fb.barPorts(b).map(p => p.dir), all: __fb.portsOf(b).map(p => p.dir)};
+    });
+    chk(`splitter rot ${rot}: 3 port bars (all outputs), input face has no bar`,
+      sb.bars.length === 3 && sb.bars.every(d => d === 'out') && sb.all.filter(d => d === 'in').length === 1,
+      JSON.stringify(sb));
+  }
 }
 
 // ================= 3. recipes / items / icons

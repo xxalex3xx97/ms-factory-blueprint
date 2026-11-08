@@ -91,15 +91,18 @@ function portsOf(b){
     const len=fi&1?H:W,ET=DOFF-((d&&d.floorInset)||0),c=q.pos==='start'?ET:q.pos==='end'?ET+DOORW-1:Math.max(0,Math.min(len-1,(parseInt(q.pos,10)||1)-1));   // door slot ends (elevator)
     let x=fi===1?W-1:fi===3?0:c,y=fi===2?H-1:fi===0?0:c,w=W,h=H,nx=NRM[fi][0],ny=NRM[fi][1];
     for(let r=0;r<(b.rot&3);r++){[x,y]=[h-1-y,x];[w,h]=[h,w];[nx,ny]=[-ny,nx]}
-    const key=f+i,tg=!!L.toggleable;o.push({key,f,i,pos:q.pos,dir:q.dir||null,tg,en:!tg||!off.includes(key),wf:(fi+(b.rot&3))%4,x:ox+x,y:oy+y,nx,ny,line:!!L.line});
+    // splitter input (back) face is not a game port: never toggleable, always enabled
+    const key=f+i,tg=!!L.toggleable&&!(q.dir==="in"&&isSplitterCls(b.cls));o.push({key,f,i,pos:q.pos,dir:q.dir||null,tg,en:!tg||!off.includes(key),wf:(fi+(b.rot&3))%4,x:ox+x,y:oy+y,nx,ny,line:!!L.line});
   });
   return o;
 }
+// ports drawn as bars: splitter input (back) face is not a port, so no bar (draw.js draws a neutral chevron there)
+const barPorts=b=>portsOf(b).filter(p=>!(p.dir==="in"&&isSplitterCls(b.cls)));
 const togglePort=(b,k)=>{if(!portsOf(b).some(p=>p.key===k&&p.tg))return;const o=b.off||[];b.off=o.includes(k)?o.filter(q=>q!==k):o.concat(k)};
 function portAt(p){
   const s=sc();if(s<14)return null;
   const fx=(p.x-V.ox)/s,fy=(p.y-V.oy)/s;let best=null,bd=9;
-  S.blocks.forEach(b=>{if(b.h!==layer)return;portsOf(b).filter(q=>q.tg).forEach(q=>{
+  S.blocks.forEach(b=>{if(b.h!==layer)return;barPorts(b).filter(q=>q.tg).forEach(q=>{
     const ex=q.x+.5+q.nx*.5,ey=q.y+.5+q.ny*.5,dn=(fx-ex)*q.nx+(fy-ey)*q.ny,dt=q.nx?fy-ey:fx-ex;
     if(dn>=-.35&&dn<=.25&&Math.abs(dt)<=.35){const dd=Math.hypot(fx-ex,fy-ey);if(dd<bd){bd=dd;best={b,p:q}}}
   })});
