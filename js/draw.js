@@ -201,7 +201,12 @@ function pieces(a,b,cuts){const o=[];let p=a;cuts.slice().sort((u,v)=>u[0]-v[0])
 // blocks with a real hull (Industrial Dock): ONE roofless plan from the collider/mesh data: hall tint, port pods (green ports + bay numbers, display only), console, one connected wall outline with joined corners
 function wallPlan(sh){   // walls in floor frame: bridge gaps < .5 between rects (flush end caps), add the missing corner squares (outer vertex chamfered)
   if(sh._wp)return sh._wp;
-  const w=sh.walls.map(a=>a.slice()),ov=(a0,a1,b0,b1)=>Math.min(a1,b1)-Math.max(a0,b0),E=.5;
+  let w=sh.walls.map(a=>a.slice());const ov=(a0,a1,b0,b1)=>Math.min(a1,b1)-Math.max(a0,b0),E=.5;
+  // drawing clean-up of the long shaft bars (wide walls): small end caps merge into one flush, identical end; inner end runs to the partition's inner face (closes the doorway gap)
+  const bars=w.filter(a=>a[2]-a[0]>=15),small=a=>a[2]-a[0]<3&&a[3]-a[1]<3,part=Math.min(...w.filter(a=>a[0]>=20&&a[0]<24&&a[3]-a[1]>=8).map(a=>a[0]));
+  bars.forEach(b=>w.filter(small).forEach(c=>{if(c[0]>=b[2]-E&&c[0]-b[2]<E&&ov(b[1],b[3],c[1],c[3])>.3)b[2]=Math.max(b[2],c[2])}));
+  const endX=Math.max(...bars.map(b=>b[2]));bars.forEach(b=>{b[2]=endX;if(b[0]>part&&b[0]-part<2)b[0]=part});
+  w=w.filter(a=>!small(a)||a[0]<endX-3);   // caps are now part of the bars
   for(let i=0;i<w.length;i++)for(let j=0;j<w.length;j++){if(i===j)continue;const A=w[i],B=w[j];
     if(B[0]>A[2]&&B[0]-A[2]<E&&ov(A[1],A[3],B[1],B[3])>.3){A[2]=B[0];if(Math.abs(A[1]-B[1])<.7&&Math.abs(A[3]-B[3])<.7){B[1]=A[1];B[3]=A[3]}}
     else if(B[1]>A[3]&&B[1]-A[3]<E&&ov(A[0],A[2],B[0],B[2])>.3)A[3]=B[1]}
