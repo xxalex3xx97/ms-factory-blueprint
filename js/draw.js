@@ -155,15 +155,18 @@ function arrow(x,y,w,h,rot,alpha){
   cx.fillStyle=`rgba(255,255,255,${alpha})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.7})`;cx.lineWidth=1;
   cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.7,-r*.75);cx.lineTo(-r*.3,0);cx.lineTo(-r*.7,r*.75);cx.closePath();cx.fill();cx.stroke();cx.restore();
 }
-// front marker (Layout): shapes_src 'front' (edge at rot 0, block frame) -> world edge after rot; a light band on that edge + a chevron pointing out, rotates with the block
-function frontMark(b,x,y,w,h,alpha,s,cat){
-  const sh=SHAPES[(def(b.cls)||{}).name],f=sh&&sh.front;if(!f||alpha<.5||s<5)return;
-  const D=DIR[(EN.indexOf(f)+b.rot)&3],t=Math.max(2,Math.min(5,s*.12)),r=Math.max(3,Math.min(9,Math.min(w,h)*.12)),cxm=x+w/2+D[0]*(w/2-t),cym=y+h/2+D[1]*(h/2-t)+(D[1]<0&&s>=18?Math.min(12,Math.max(9,s/3))+6:0);
-  cx.save();cx.fillStyle=`hsla(${cat?hue(cat):210},90%,86%,${alpha*.85})`;
-  cx.fillRect(D[0]>0?x+w-t:x,D[1]>0?y+h-t:y,D[0]?t:w,D[1]?t:h);
-  cx.translate(cxm-D[0]*r*.6,cym-D[1]*r*.6);cx.rotate(Math.atan2(D[1],D[0]));
-  cx.fillStyle=`rgba(255,255,255,${alpha})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.7})`;cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.5,-r*.9);cx.lineTo(-r*.5,r*.9);cx.closePath();cx.fill();cx.stroke();cx.restore();
+// entrance marks (Layout, model.js entrances()): door slot = light bar on the edge + white chevron pointing INTO the block; ports side (no doors) = mint bar + chevron pointing out to the ports. Rotates with the block
+function entMark(b,x,y,alpha,s,w,h){
+  if(alpha<.5||s<5)return;const E=entrances(b);if(!E.length)return;
+  const t=Math.max(2,Math.min(5,s*.12)),r=Math.max(3,Math.min(9,Math.min(w,h)*.12)),L=Math.max(5,DOORW/FC*s),lh=s>=18?Math.min(12,Math.max(9,s/3))+6:0;
+  E.forEach(e=>{const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,bw=hz?L:t,bh=hz?t:L,
+    bx=D[0]>0?ex-t:D[0]<0?ex:ex-L/2,by=D[1]>0?ey-t:D[1]<0?ey:ey-L/2,sg=e.port?1:-1,   // door: chevron looks inward, port: outward
+    dd=r+t+(D[1]<0?lh:0),cx0=ex-D[0]*dd,cy0=ey-D[1]*dd;
+    cx.save();cx.fillStyle=e.port?`hsla(140,85%,75%,${alpha})`:`hsla(${hue(catOf(b)||"")},90%,86%,${alpha*.9})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.6})`;cx.lineWidth=1;
+    cx.fillRect(bx,by,bw,bh);cx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
+    cx.translate(cx0,cy0);cx.rotate(Math.atan2(D[1]*sg,D[0]*sg));
+    cx.fillStyle=e.port?`hsla(140,85%,75%,${alpha})`:`rgba(255,255,255,${alpha})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.7})`;
+    cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.5,-r*.9);cx.lineTo(-r*.5,r*.9);cx.closePath();cx.fill();cx.stroke();cx.restore()});
 }
 function drawBlock(b,alpha,isSel){
   const s=sc(),d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s,cat=catOf(b),df=def(b.cls),m=isM(b);
@@ -174,7 +177,7 @@ function drawBlock(b,alpha,isSel){
   cx.lineWidth=1;cx.strokeStyle=cat?`hsla(${hue(cat)},70%,70%,${alpha})`:`rgba(190,195,205,${alpha})`;
   cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
-  frontMark(b,x,y,w,h,alpha,s,cat);
+  entMark(b,x,y,alpha,s,w,h);
   if(isSel){cx.lineWidth=2.5;cx.strokeStyle="#fff";cx.strokeRect(x+1,y+1,w-2,h-2)}
   if(s>=(m?10:18)&&alpha>.5&&(!m||Math.max(w,h)>=2*s)&&!(df&&df.directional)){
     const t=df?lab(df):shortCls(b.cls),fs=Math.min(12,Math.max(9,s/3));
