@@ -2,7 +2,7 @@
 const CU=CATALOG.cell_units||2;
 const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.length)e.Ports=ps.map(p=>({Face:p.f,Index:p.i,Enabled:p.en})).concat(xp);return e};   // extra non-game field, only when non-default
 // game splitter config bytes = [front, right, left] at rot 0, as local faces (port identity is fixed in the machine, so rotation needs no mapping). The back/input face (W at rot 0) is never a game byte.
-const SPL_FACES=["E","S","N"];
+const SPL_FACES=["S","E","N"];
 let spFix=0;   // splitter input-face "off" entries in an import, forced on (counted for the import message)
 const impPorts=(b,L)=>{if(!Array.isArray(L))return;const ps=portsOf(b),off=[],xp=[];L.forEach(e=>{const p=e&&ps.find(q=>q.f===e.Face&&q.i===e.Index);if(p){if(e.Enabled===false){if(p.tg)off.push(p.key);else if(p.dir==="in"&&isSplitterCls(b.cls))spFix++}}else xp.push(e)});if(off.length)b.off=off;if(xp.length)b.xp=xp};
 // game-ready SerializedMachineConfig per machine (ConfigHex = exact bytes the game applies; Recipe/Ports/Filters stay for humans). Only when the machine has something to configure.
