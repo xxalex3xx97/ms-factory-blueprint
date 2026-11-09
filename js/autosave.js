@@ -20,7 +20,7 @@ function asRestore(){
     if(!importJson(JSON.stringify(o.d),true))return;
     undoS=[];redoS=[];
     if(Number.isInteger(u.si)&&u.si>=0)SIK=u.si;
-    if(u.w&&typeof u.w==="object"){WINSET=true;[["stB","stW","st"],["lvB","lvW","lv"],["flwB","fwW","fw"],["shB","shW","sh"]].forEach(([b,w,k])=>{if(typeof u.w[k]==="boolean"&&!$(w).hidden!==u.w[k])$(b).click()})}
+    if(u.w&&typeof u.w==="object"){WINSET=true;[["stB","st"],["lvB","lv"],["flwB","fw"],["shB","sh"]].forEach(([b,k])=>{if(typeof u.w[k]==="boolean")winSet(b,u.w[k])})}
     if(u.view==="F"||u.view==="L"){view=u.view;V=view==="F"?VF:VL;tab=view==="F"?"m":"b"}
     if(u.tab==="b"||u.tab==="m")tab=u.tab;
     if(fin(u.layer))layer=Math.trunc(u.layer);

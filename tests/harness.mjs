@@ -69,6 +69,7 @@ async function open(br, vp, tag) {
   await pg.goto(PAGE);
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
   await lkOn(pg);
+  await pg.evaluate(() => { $('lvWX').click(); $('fwWX').click(); });   // default windows (Flow, and Level with 2+ levels) start open; old tests assume closed
   return {ctx, pg};
 }
 
@@ -86,7 +87,7 @@ const blk = (name, x, y, o = {}) => ({
   Class: BLK[name], GridLocation: {X: x * 2, Y: y * 2}, Height: o.h || 0, GridRotation: o.rot || 0, BlockID: 0, PaletteID: 0,
 });
 const bp = (Blocks = [], DefaultMachines = [], extra = {}) => ({Version: 1, DisplayName: 't', Blocks, DefaultMachines, ...extra});
-const imp = (pg, obj) => pg.evaluate(t => __fb.importJson(t), JSON.stringify(obj));
+const imp = async (pg, obj) => { const ok = await pg.evaluate(t => __fb.importJson(t), JSON.stringify(obj)); await pg.evaluate(() => { if (!$('lvW').hidden) $('lvWX').click(); }); return ok; };   // import opens Level for 2+ levels; old tests assume closed
 const reset = async pg => { await imp(pg, bp()); await pg.evaluate(() => __fb.setView('L')); };
 function firstDiff(a, b) {
   const x = JSON.stringify(a, null, 1), y = JSON.stringify(b, null, 1);
@@ -2580,6 +2581,43 @@ async function s26(br) {
   await ctx.close();
 }
 
+// ================= 36 default windows: boot opens Flow (LK off); Level opens after a 2+ level import and at boot with 2+ levels
+async function s36(br) {
+  const ctx = await br.newContext({viewport: {width: 1400, height: 900}});   // fresh context: no saved state
+  const pg = await ctx.newPage();
+  wire(pg, 's36');
+  await pg.goto(PAGE);
+  await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  const ws = () => pg.evaluate(() => ({fw: $('fwW').hidden, lv: $('lvW').hidden, fwP: $('flwB').getAttribute('aria-pressed'), lvP: $('lvB').getAttribute('aria-pressed'), lk: $('lk').getAttribute('aria-pressed')}));
+  const d0 = await ws();
+  chk('36 boot, no saved state: Flow window open, #flwB pressed', !d0.fw && d0.fwP === 'true', JSON.stringify(d0));
+  chk('36 boot, no saved state: Level closed (empty design)', d0.lv && d0.lvP === 'false', JSON.stringify(d0));
+  chk('36 boot: flow links (LK) off by default', d0.lk === 'false', JSON.stringify(d0));
+  const P = '/Game/Blueprints/BuildingBlocks/';
+  const B = (n, X, Y, h, r) => ({Class: `${P}${n}.${n}_C`, GridLocation: {X, Y}, Height: h, GridRotation: r, BlockID: 1, PaletteID: 0});
+  const impB = blocks => pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: blocks, DefaultMachines: []}));
+  const two = [B('BPO_Station_01', 2, 2, 0, 0), B('BPO_Station_01', 14, 10, -4, 0)];
+  await impB(two);
+  const a = await ws();
+  chk('36 import of a 2-level design opens Level', !a.lv && a.lvP === 'true', JSON.stringify(a));
+  await pg.evaluate(() => $('lvWX').click());
+  await impB([B('BPO_Station_01', 2, 2, 0, 0)]);
+  const b1 = await ws();
+  chk('36 import of a 1-level design leaves Level closed', b1.lv, JSON.stringify(b1));
+  // boot with a saved design (2 levels) but no window state: boot defaults apply (Flow + Level open)
+  await impB(two);
+  await pg.evaluate(() => { const d = __fb.build(); ASO = false; localStorage.setItem('msfb.state', JSON.stringify({v: 2, d, u: {}})); });   // ASO=false: pagehide must not overwrite the seeded state
+  await pg.reload(); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await pg.waitForTimeout(300);
+  const c = await ws();
+  chk('36 boot with 2-level design and no window state: Level and Flow open', !c.lv && !c.fw, JSON.stringify(c));
+  // saved window state wins over boot defaults
+  await pg.evaluate(() => { const o = JSON.parse(localStorage.getItem('msfb.state')); o.u.w = {st: false, lv: false, fw: false, sh: false}; ASO = false; localStorage.setItem('msfb.state', JSON.stringify(o)); });
+  await pg.reload(); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await pg.waitForTimeout(300);
+  const e = await ws();
+  chk('36 boot with saved window state: saved states used (Level and Flow closed)', e.lv && e.fw, JSON.stringify(e));
+  await ctx.close();
+}
+
 // ================= 27 Industrial Dock real shape: shapeTf per rot, Layout + Factory floor paint (screenshots)
 async function s27(br) {
   const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's27');
@@ -3504,6 +3542,7 @@ try {
   try { console.log('--- 23 U3 production'); await s23(br); } catch (e) { chk('23 U3: section ran', false, e.stack || String(e)); }
   try { console.log('--- 24 r12 user save: sim, perf, shots'); await s24(br); } catch (e) { chk('24 r12: section ran', false, e.stack || String(e)); }
   try { console.log('--- 25b refresh restore'); await s25b(br); } catch (e) { chk('25b refresh restore: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 36 default windows'); await s36(br); } catch (e) { chk('36 default windows: section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }

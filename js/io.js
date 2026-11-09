@@ -164,7 +164,7 @@ function matchM(m){
   const l=bbs.filter(d=>d.machineClass===c||d.id===c||"BPO_"+d.id.slice(4)===c||d.id===m.DefaultName||(d.category==="Undergrounds"&&"DAT_"+ug===d.id));
   return l.find(d=>d.id===m.DefaultName)||l[0]||null;
 }
-function importJson(txt,quiet){const ok=importJson0(txt,quiet);if(ok)stHide();return ok}
+function importJson(txt,quiet){const ok=importJson0(txt,quiet);if(ok){stHide();if(!quiet)lvAuto()}return ok}
 function importJson0(txt,quiet){
   let o;try{o=JSON.parse(txt)}catch(e){toast("Invalid JSON: "+e.message);return false}
   if(!o||!Array.isArray(o.Blocks)){toast('Missing "Blocks" array');return false}
