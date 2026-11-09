@@ -3304,6 +3304,10 @@ async function s33(br) {
   chk('33 ghost on, show-all on: every other level ghosted', JSON.stringify(every) === '[0,2,3]', JSON.stringify(every));
   const arcs = await pg.evaluate(() => { const p = CanvasRenderingContext2D.prototype, o = p.arc; let k = 0; p.arc = function (...a) { k++; return o.apply(this, a) }; try { drawSimFull(5) } finally { p.arc = o } return k });
   chk('33 sim full ring: nothing drawn when zoomed out (s<6)', arcs === 0, `arc calls ${arcs}`);
+  const linkCalls = async (s) => pg.evaluate(s => { const o = window.drawLinks; let k = 0; window.drawLinks = function (...a) { k++; return o.apply(this, a) }; try { V.z = s / CELLS[view]; paint() } finally { window.drawLinks = o } return k }, s);
+  const lk4 = await linkCalls(4), lk12 = await linkCalls(12);
+  chk('33 flow links hidden when zoomed out (s=4 < ARROW_MIN_S): drawLinks not called', lk4 === 0, `calls ${lk4}`);
+  chk('33 flow links drawn when zoomed in (s=12): drawLinks called', lk12 > 0, `calls ${lk12}`);
   await ctx.close();
 }
 

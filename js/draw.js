@@ -393,8 +393,8 @@ function paint0(){
   cur.forEach(a=>{const d=dim(a);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const k=(a.x+i+32768)*65536+(a.y+j+32768);
     if(occ.has(k)){const X=V.ox+(a.x+i)*s,Y=V.oy+(a.y+j)*s;if(X<W&&Y<H&&X+s>0&&Y+s>0)cx.fillRect(X,Y,s,s)}else occ.add(k)}});
   if(F&&smOn())drawSimMach(s);
-  if(F&&BN&&!LK)drawBnCells(s);
-  if(F&&LK)drawLinks(s);
+  if(F&&BN&&(!LK||s<ARROW_MIN_S))drawBnCells(s);
+  if(F&&LK&&s>=ARROW_MIN_S)drawLinks(s);
   if(F&&smOn())drawSimFull(s);
   if(F)drawUG(s);
   if(F&&ugPend&&ugPend.cls&&ugTool(def(ugPend.cls))){   // pending underground: blue dotted line + n / max, red when the second click would be refused

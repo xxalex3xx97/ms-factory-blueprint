@@ -111,7 +111,8 @@ async function verify() {
     const pg2 = await open(dir);
     await pg2.evaluate(() => { __fb.setView('F'); document.getElementById('ghost').checked = false; });
     // pre-fix build has no ring gate: emulate the s<6 gate there so the rest of the pixels can be compared exactly
-    if (dir === BEFORE) await pg2.evaluate(() => { const of = window.drawSimFull; window.drawSimFull = function (s) { if (s < 6) return; return of.call(this, s) } });
+    // same for flow links: pre-fix draws them at every zoom, so emulate the ARROW_MIN_S gate (links absent at fit now expected)
+    if (dir === BEFORE) await pg2.evaluate(() => { const of = window.drawSimFull; window.drawSimFull = function (s) { if (s < 6) return; return of.call(this, s) }; const ol = window.drawLinks; window.drawLinks = function (s) { if (s < ARROW_MIN_S) return; return ol.call(this, s) } });
     const fbLayer = fb ? fb.h : 0;
     await pg2.evaluate(h => __fb.setLayer(h), fbLayer);
     await pg2.click('#simB'); await pg2.evaluate(() => __fb.simRun(30));
