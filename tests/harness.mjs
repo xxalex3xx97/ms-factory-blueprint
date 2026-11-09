@@ -3857,6 +3857,15 @@ async function s40(br) {
   chk('40 undo restores the previous name', await pg.evaluate(() => S.blocks[0].nm) === NM);
   await setNm('');
   chk('40 clearing the field removes Name (no key on export)', await pg.evaluate(() => !('nm' in S.blocks[0]) && !('Name' in __fb.build().Blocks[0])));
+  const u0 = await pg.evaluate(() => undoS.length);
+  await setNm('   ');
+  chk('40 whitespace-only Name leaves no Name (no key on export, no undo entry)', await pg.evaluate(u => !('nm' in S.blocks[0]) && !('Name' in __fb.build().Blocks[0]) && undoS.length === u, u0), `undo ${await pg.evaluate(() => undoS.length)} vs ${u0}`);
+  await setNm(NM);
+  const u1 = await pg.evaluate(() => undoS.length);
+  await setNm(' ' + NM + ' ');
+  chk('40 Name unchanged after trim pushes no undo entry', await pg.evaluate(([u, nm]) => S.blocks[0].nm === nm && undoS.length === u, [u1, NM]), `undo ${await pg.evaluate(() => undoS.length)} vs ${u1}`);
+  await setNm('  Trimmed  ');
+  chk('40 Name is stored trimmed', await pg.evaluate(() => S.blocks[0].nm === 'Trimmed'));
   await setNm(NM);
   await pg.evaluate(() => { sel = new Set([S.blocks[0].id]); all(); });
   const cp = await pg.evaluate(() => { copy(); return clip.map(b => b.nm ?? null); });
@@ -3902,6 +3911,13 @@ async function s40(br) {
   chk('40 cfgEnc/cfgDec non-ASCII name round trip (UTF-16)', cc.back === NM, JSON.stringify(cc));
   const py = spawnSync(process.env.PYTHON || 'py', ['-I', '-c', `import sys;sys.path.insert(0,r'${path.join(ROOT, 'extract')}');import config_codec as c;print(c.encode('dock',{'name':'Dock \\u00dcn\\u00ef \\u6d4b\\u8bd5 \\u2713','filters':[]}).hex())`], {encoding: 'utf8'});
   chk('40 python config_codec encodes the same bytes as cfgEnc (non-ASCII)', py.status === 0 && py.stdout.trim() === cc.u, `js ${cc.u} py ${(py.stdout || '').trim()} ${py.stderr || ''}`);
+  // chars > 0x7F (Latin-1 too) go UTF-16 like UE IsPureAnsi: round trip, negative length, python identical bytes
+  const CN = ['Café', 'Ünï', NM];
+  const cl = await pg.evaluate(names => names.map(nm => { const h = cfgEnc('dock', {name: nm, filters: []}); return {h, len: new DataView(new Uint8Array(h.match(/../g).map(x => parseInt(x, 16))).buffer).getInt32(2, true), back: cfgDec('BP_StationBlockDock_C', h).name}; }), CN);
+  chk('40 cfgEnc Latin-1 names (Café, Ünï) and >0xFF name go UTF-16 (negative length), round trip', cl.every((x, i) => x.back === CN[i] && x.len === -(CN[i].length + 1)), JSON.stringify(cl));
+  const cnPy = CN.map(s => "'" + [...s].map(ch => '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0')).join('') + "'").join(',');
+  const pyCn = spawnSync(process.env.PYTHON || 'py', ['-I', '-c', `import sys;sys.path.insert(0,r'${path.join(ROOT, 'extract')}');import config_codec as c;print(' '.join(c.encode('dock',{'name':n,'filters':[]}).hex() for n in [${cnPy}]))`], {encoding: 'utf8'});
+  chk('40 python config_codec = cfgEnc bytes for Café, Ünï, >0xFF names', pyCn.status === 0 && pyCn.stdout.trim() === cl.map(x => x.h).join(' '), `js ${cl.map(x => x.h).join(' ')} py ${(pyCn.stdout || '').trim()} ${pyCn.stderr || ''}`);
   // label on the canvas: Layout, zoomed onto the imported Rich Titan dock; one long name shows the ellipsis
   await pg.evaluate(() => { __fb.setView('L'); const yard = S.blocks.find(b => b.nm === 'S Titan') || S.blocks[0]; yard.nm = 'A very long industrial dock name that cannot fit the block'; sel = new Set(); all(); });
   await pg.evaluate(() => { const b = S.blocks.find(q => q.nm && q.nm.startsWith('Station Dock')); V.z = 4; const d = __fb.dim(b); V.ox = W / 2 - (b.x + d.w / 2) * sc(); V.oy = H / 2 - (b.y + d.h / 2) * sc(); __fb.paint(); });

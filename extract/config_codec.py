@@ -19,7 +19,7 @@ def kind(cls):
 
 def fs(s):
     if not s: return struct.pack('<i', 0)
-    if any(ord(c) > 255 for c in s):      # UTF-16: negative length = code units incl NUL (mirror of js/config.js cfgEnc)
+    if any(ord(c) > 127 for c in s):      # UTF-16 (UE IsPureAnsi: any char > 0x7F): negative length = code units incl NUL (mirror of js/config.js cfgEnc)
         u = s.encode('utf-16-le')
         return struct.pack('<i', -(len(u) // 2 + 1)) + u + b'\0\0'
     return struct.pack('<i', len(s) + 1) + s.encode('latin-1') + b'\0'

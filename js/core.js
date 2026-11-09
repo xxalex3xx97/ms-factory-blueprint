@@ -70,7 +70,8 @@ const snap=()=>JSON.stringify({b:S.blocks,n:S.name,ov:OV,d:S.dm,c:S.closed});
 let ASH=false,ASO=false,AST=0;const ASK="msfb.state";   // autosave: hold (after New), enabled (after restore), debounce timer
 let SIK=null,WINSET=false;   // SIK: station index of the imported .sav (null = none); WINSET: window states came from autosave
 let SV=0;   // bumped by push(), restore(), all(), setOV(), impCfg/impPorts: any "block set may differ" event
-const blkKey=()=>{let h=SV;const a=S.blocks;for(let i=0;i<a.length;i++){const b=a[i];h=(Math.imul(h,31)+b.id+b.x*7+b.y*13+b.h*17+b.rot*19+(b.pid|0)*23+(b.mid|0)*29+(b.off?b.off.length*37:0)+(b.nm?[...b.nm].reduce((u,c)=>(Math.imul(u,31)+c.charCodeAt(0))|0,0):0))|0}return a.length+":"+h};
+const nmHash=s=>{let u=0;for(let i=0;i<s.length;i++)u=(Math.imul(u,31)+s.charCodeAt(i))|0;return u};
+const blkKey=()=>{let h=SV;const a=S.blocks;for(let i=0;i<a.length;i++){const b=a[i];h=(Math.imul(h,31)+b.id+b.x*7+b.y*13+b.h*17+b.rot*19+(b.pid|0)*23+(b.mid|0)*29+(b.off?b.off.length*37:0)+(b.nm?nmHash(b.nm):0))|0}return a.length+":"+h};
 function push(){SV++;ASH=false;undoS.push(snap());if(undoS.length>200)undoS.shift();redoS=[]}
 function restore(s){SV++;ASH=false;const o=JSON.parse(s);S.blocks=o.b;S.name=o.n;OV=o.ov;if(o.d)S.dm=o.d;S.closed=o.c||[];saveOV();sel=new Set([...sel].filter(i=>S.blocks.some(b=>b.id===i)));$("name").value=S.name;all()}
 function undo(){if(!undoS.length)return;redoS.push(snap());restore(undoS.pop())}
