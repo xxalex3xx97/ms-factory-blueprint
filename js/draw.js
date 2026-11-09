@@ -207,7 +207,8 @@ function drawBlock(b,alpha,isSel){
     cx.shadowColor="rgba(0,0,0,.8)";cx.shadowBlur=3;
     const ell=(q,max)=>{if(cx.measureText(q).width<=max)return q;let r=q;while(r&&cx.measureText(r+"…").width>max)r=r.slice(0,-1);return r+"…"};   // label cut to the block width with an ellipsis
     cx.fillText(ell(t0,w-8),x+4,y+4);
-    if(b.rot){cx.fillStyle="rgba(255,255,255,.7)";cx.fillText("r"+b.rot,x+4,y+6+fs)}
+    if(b.nm&&nmOk(b.cls)){cx.fillStyle="rgba(190,195,205,.8)";cx.fillText(ell(df?lab(df):shortCls(b.cls),w-8),x+4,y+6+fs)}   // named block: the building name in grey replaces the rotation line
+    else if(b.rot){cx.fillStyle="rgba(255,255,255,.7)";cx.fillText("r"+b.rot,x+4,y+6+fs)}
     cx.restore();
   }
 }
