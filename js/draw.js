@@ -15,23 +15,20 @@ function drawBnCells(s){
   cx.restore();
 }
 const AMB="hsl(40,95%,55%)";
-function mixMark(x,y,s){const r=Math.max(5,s*.2),rq=Math.round(r*2)/2,D=Math.ceil(rq*2+4),h=D/2;   // cached sprite; radius quantised to half px so key matches geometry
-  blit(spr("mx|"+rq*2,D,D,g=>{g.fillStyle=AMB;g.strokeStyle="rgba(0,0,0,.7)";g.lineWidth=1;g.beginPath();g.arc(h,h,rq,0,7);g.fill();g.stroke();
-    g.fillStyle="#000";g.font=`bold ${Math.round(rq*1.5)}px system-ui,sans-serif`;g.textAlign="center";g.textBaseline="middle";g.fillText("!",h,h+.5)}),x-h,y-h)}
+function mixMark(x,y,s){const r=Math.max(5,s*.2);cx.save();cx.fillStyle=AMB;cx.strokeStyle="rgba(0,0,0,.7)";cx.lineWidth=1;cx.beginPath();cx.arc(x,y,r,0,7);cx.fill();cx.stroke();
+  cx.fillStyle="#000";cx.font=`bold ${Math.round(r*1.5)}px system-ui,sans-serif`;cx.textAlign="center";cx.textBaseline="middle";cx.fillText("!",x,y+.5);cx.restore()}
 function drawBeltItems(s){
   if(s<10)return;
-  const K=smK(),sz=Math.min(s*.5,22),szi=Math.round(sz*4)/4,pad=Math.ceil(szi*.55+2),D=pad*2,ph=RM.matches?0:smPh,ox=V.ox,oy=V.oy,seen=new Set();
-  // items on one belt stack: start (ax,ay) and end (bx,by) when moving (b=true); stationary at (ax,ay) otherwise
-  const icons=(e,ax,ay,bx,by,b)=>{
-    const n=Math.max(1,e.items.size),itK=e.items.keys();
-    for(let k=0;k<n;k++){const f=b?(ph+k/n)%1:0,x=b?ax+(bx-ax)*f:ax,y=b?ay+(by-ay)*f:ay,key=e.items.size?itK.next().value:null,ic=key==null?null:img(key);
-      if(ic&&ic.complete&&ic.naturalWidth)blit(spr("bi|"+key+"|"+szi,D,D,g=>{g.fillStyle="rgba(235,240,245,.88)";g.beginPath();g.arc(pad,pad,szi*.55,0,7);g.fill();g.drawImage(ic,pad-szi/2,pad-szi/2,szi,szi)}),x-pad,y-pad);
-      else{cx.fillStyle="rgba(235,240,245,.88)";cx.beginPath();cx.arc(x,y,sz*.55,0,7);cx.fill();cx.fillStyle="rgba(255,255,255,.7)";cx.beginPath();cx.arc(x,y,sz/4,0,7);cx.fill()}}
-    if(e.mixed){if(b)mixMark((ax+bx)/2,(ay+by)/2,s);else mixMark(ax,ay-sz*.5,s)}};
-  const F=K.flow,U=K.ug,nF=F.length;
-  for(let i=0,nn=nF+U.length;i<nn;i++){const sg=i<nF?F[i]:U[i-nF],u=sg.u,tg=sg.t,e=K.load.get(u.id);if(!e)continue;seen.add(u.id);
-    const ax=ox+(u.x+.5)*s,ay=oy+(u.y+.5)*s;if(!vis(ax-s,ay-s,3*s,3*s))continue;icons(e,ax,ay,ox+(tg.x+.5)*s,oy+(tg.y+.5)*s,true)}
-  K.load.forEach((e,id)=>{if(seen.has(id))return;const b=lblk(id);if(b&&vis(ox+(b.x-1)*s,oy+(b.y-1)*s,3*s,3*s))icons(e,ox+(b.x+.5)*s,oy+(b.y+.5)*s,0,0,false)});
+  const K=smK(),c=(x,y)=>[V.ox+(x+.5)*s,V.oy+(y+.5)*s],sz=Math.min(s*.5,22),seen=new Set();
+  const segs=K.flow.concat(K.ug),icons=(e,u,a,b)=>{
+    const n=Math.max(1,e.items.size),ks=[...e.items.keys()],ph=RM.matches?0:smPh;
+    for(let k=0;k<n;k++){const f=b?(ph+k/n)%1:0,x=b?a[0]+(b[0]-a[0])*f:a[0],y=b?a[1]+(b[1]-a[1])*f:a[1],ic=img(ks[k%ks.length]);
+      cx.fillStyle="rgba(235,240,245,.88)";cx.beginPath();cx.arc(x,y,sz*.55,0,7);cx.fill();
+      if(ic&&ic.complete)cx.drawImage(ic,x-sz/2,y-sz/2,sz,sz);
+      else{cx.fillStyle="rgba(255,255,255,.7)";cx.beginPath();cx.arc(x,y,sz/4,0,7);cx.fill()}}
+    if(e.mixed){const m=b?[(a[0]+b[0])/2,(a[1]+b[1])/2]:a;mixMark(m[0],m[1]-(b?0:sz*.5),s)}};
+  segs.forEach(({u,t:tg})=>{const e=K.load.get(u.id);if(!e)return;seen.add(u.id);const a=c(u.x,u.y);if(!vis(a[0]-s,a[1]-s,3*s,3*s))return;icons(e,u,a,c(tg.x,tg.y))});
+  K.load.forEach((e,id)=>{if(seen.has(id))return;const b=lblk(id);if(b&&vis(V.ox+(b.x-1)*s,V.oy+(b.y-1)*s,3*s,3*s))icons(e,b,c(b.x,b.y),null)});
 }
 function drawLinks(s){
   const K=smOn()?smK():linksC(layer),c=(x,y)=>[V.ox+(x+.5)*s,V.oy+(y+.5)*s],lw=s>=12?2:1.5,BNK=bnK();
