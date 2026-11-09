@@ -17,7 +17,7 @@ Browser tool to plan a station factory for **Main Sequence**: a top-down grid of
 - JSON export / import. Static page (index.html + css/ + js/ plain scripts), no build step, opens from file://.
 
 ## Companion mod: Blueprint Unit
-[**MSBlueprintUnit**](https://github.com/xxalex3xx97/MSBlueprintUnit) turns a plan from this site into a real factory in Main Sequence. Use the **Companion mod** button in the site header to open its page.
+[**MSBlueprintUnit**](https://github.com/xxalex3xx97/MSBlueprintUnit) turns a plan from this site into a real factory in Main Sequence. Its page is linked from the Help dialog (**?** in the site header).
 
 **What it does**
 - Adds a **Blueprint Unit** station block (researched under Computation Science).

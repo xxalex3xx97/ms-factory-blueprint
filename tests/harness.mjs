@@ -3430,7 +3430,7 @@ async function s35(br) {
   chk('35 starved refinery (no input) -> 0', z === 0, String(z));
   // UI: two windows. #thB -> #dTheo (sim off); #prodB -> #dProd (sim on). Independent.
   await scene(pg, INF);
-  chk('35 Theoretical button visible with sim off', await pg.isVisible('#thB'));
+  await pg.click('#winM'); chk('35 Theoretical button visible (Windows menu open) with sim off', await pg.isVisible('#thB')); await pg.keyboard.press('Escape');
   await pg.click('#thB');
   chk('35 #thB opens #dTheo with title Theoretical production', await pg.isVisible('#dTheo') && (await pg.innerText('#dTheoT')) === 'Theoretical production');
   chk('35 #thB leaves #dProd hidden (separate window), aria-pressed true', !(await pg.isVisible('#dProd')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'true');

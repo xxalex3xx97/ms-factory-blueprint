@@ -24,7 +24,6 @@
       <button id="nw" role="menuitem" aria-label="New design and clear saved" title="Clear the autosaved design and start empty">New / Clear</button>
       <button id="fOpen" role="menuitem" aria-label="Open file" title="Open a .json file and keep it linked for Save">Open</button>
       <button id="fSaveAs" role="menuitem" aria-label="Save as" title="Save to a new file (Ctrl+Shift+S)">Save as</button>
-      <button id="comp" role="menuitem" title="Companion mod: Blueprint Unit builds this factory in the game (opens GitHub)" onclick="window.open('https://github.com/xxalex3xx97/MSBlueprintUnit','_blank','noopener')">Companion mod</button>
     </div></div>
   </div>
   <div class="grp">
@@ -37,13 +36,16 @@
   </div>
   </div>
   <div class="tg" role="group" aria-label="Tools">
-    <button id="stB" class="hbt" aria-pressed="false" aria-controls="stW" aria-label="Settings" title="Settings"><span class="ic" aria-hidden="true">&#9881;</span><span class="tx">Settings</span></button>
-    <button id="shB" class="hbt" aria-pressed="false" aria-controls="shW" aria-label="Screenshot" title="Screenshot: export the plan as PNG or SVG"><span class="ic" aria-hidden="true">&#128247;</span><span class="tx">Screenshot</span></button>
+    <div class="mn" id="winMn"><button id="winM" aria-haspopup="menu" aria-expanded="false" aria-controls="winL">Windows <span aria-hidden="true">&#9662;</span></button>
+    <div class="mnl" id="winL" role="menu" hidden>
+      <button role="menuitem" id="stB" class="hbt" aria-pressed="false" aria-controls="stW" aria-label="Settings" title="Settings"><span class="ic" aria-hidden="true">&#9881;</span><span class="tx">Settings</span></button>
+      <button role="menuitem" id="shB" class="hbt" aria-pressed="false" aria-controls="shW" aria-label="Screenshot" title="Screenshot: export the plan as PNG or SVG"><span class="ic" aria-hidden="true">&#128247;</span><span class="tx">Screenshot</span></button>
+      <button role="menuitem" id="simB" class="hbt" aria-pressed="false" aria-controls="smW" title="Simulation window"><span class="ic" aria-hidden="true">&#9654;</span><span class="tx">Simulation</span></button>
+      <button role="menuitem" id="thB" class="hbt" aria-pressed="false" aria-controls="dProd" title="Theoretical production: full speed, limited by belts"><span class="ic" aria-hidden="true">&#931;</span><span class="tx">Theoretical</span></button>
+      <button role="menuitem" id="plnB" class="hbt" aria-label="Planner" title="Planner: target item, rate, machines and belts (schematic only)" aria-pressed="false"><span class="ic" aria-hidden="true">&#9638;</span><span class="tx">Planner</span></button>
+    </div></div>
     <button id="lvB" class="hbt" aria-pressed="false" aria-controls="lvW" title="Level window (up/down, ghost levels)"><span class="tx">Level</span> <span id="lvN">1</span></button>
-    <button id="simB" class="hbt" aria-pressed="false" aria-controls="smW" title="Simulation window"><span class="ic" aria-hidden="true">&#9654;</span><span class="tx">Simulation</span></button>
     <button id="flwB" class="hbt" aria-pressed="false" aria-controls="fwW" title="Flow window: links and bottlenecks"><span class="ic" aria-hidden="true">&#8644;</span><span class="tx">Flow</span></button>
-    <button id="thB" class="hbt" aria-pressed="false" aria-controls="dProd" title="Theoretical production: full speed, limited by belts"><span class="ic" aria-hidden="true">&#931;</span><span class="tx">Theoretical</span></button>
-    <button id="plnB" class="hbt" aria-label="Planner" title="Planner: target item, rate, machines and belts (schematic only)" aria-pressed="false"><span class="ic" aria-hidden="true">&#9638;</span><span class="tx">Planner</span></button>
   </div>
   <div class="tg" role="group" aria-label="View"><span class="gl">View</span>
   <div class="grp seg" id="vw" role="group" aria-label="View level"><button id="vwL" class="on" aria-pressed="true" title="Block layout">Layout</button><button id="vwF" aria-pressed="false" title="Factory floor (F)"><span class="lg">Factory </span><span class="fl">floor</span> <kbd>F</kbd></button></div>
