@@ -1,13 +1,26 @@
 // ---- simulation UI (play/pause/reset/speed/clock, overlay, inspector). Engine above is pure; SIM is null while Simulate is off.
 let SM=false,SMP=false,SPD=1,smPh=0,smRaf=0,smLast=0,smLv=0;
+let TH=null;   // Theoretical snapshot {byItem,byType,count} while the production window shows it; null = live sim view
 const smOn=()=>SM&&view==="F"&&!!SIM&&!!SIM.stat;
 const smK=()=>simView();
 const SMC={idle:"hsl(220,10%,58%)",working:"hsl(140,60%,48%)",starved:"hsl(48,95%,55%)",blocked:"hsl(0,75%,58%)"},SML={idle:"I",working:"W",starved:"S",blocked:"B"};
 const smOne=()=>{const l=S.blocks.filter(b=>sel.has(b.id));return l.length===1?l[0]:null};
 function smClkUp(){const t=SIM?SIM.t:0,p=n=>String(n).padStart(2,"0");$("smClk").textContent=p(Math.floor(t/3600))+":"+p(Math.floor(t/60)%60)+":"+p(t%60)}
 const PRC=i=>`hsl(${Math.round((i*137.5+200)%360)},70%,62%)`,prT=t=>Math.floor(t/60)+":"+String(Math.floor(t%60)).padStart(2,"0");
+function thDraw(){
+  const ks=Object.keys(TH.byItem),has=ks.length>0;
+  $("prSub").textContent="Full speed, limited by belt throughput. Snapshot at click.";
+  $("prAllL").hidden=false;$("prElv").hidden=false;$("prCv").style.display="none";$("prLeg").style.display="none";$("prTW").hidden=true;
+  $("prEmpty").textContent="No production";$("prEmpty").style.display=has?"none":"";$("prBody").style.display=has?"":"none";if(!has)return;
+  const now=ks.map(k=>[k,TH.byItem[k]]).sort((a,b)=>b[1]-a[1]),nx=Math.max(1,...now.map(x=>x[1]));
+  $("prNow").innerHTML=now.map(([k,v],i)=>`<div class="prr"><span class="n">${itemHtml(k)}</span><span class="bar"><i style="width:${Math.round(v/nx*100)}%;background:${PRC(i)}"></i></span><b>${v}</b></div>`).join("");
+  const mt=Object.keys(TH.count).sort((a,b)=>(TH.byType[b]||0)-(TH.byType[a]||0));
+  $("prMt").innerHTML=`<div class="prr t2 hd"><span>Machine</span><span>/min</span><span>Count</span></div>`+mt.map(k=>{const f=def(k);return`<div class="prr t2"><span class="n">${esc(f?lab(f):k)}</span><b>${TH.byType[k]||0}</b><b>${TH.count[k]}</b></div>`}).join("");
+}
 function prodDraw(){
   const d=$("dProd");if(d.hidden||d.classList.contains("col"))return;
+  if(TH)return thDraw();
+  $("prSub").textContent="30 s average, sampled every 5 s";$("prAllL").hidden=true;$("prElv").hidden=true;$("prCv").style.display="";$("prLeg").style.display="";$("prTW").hidden=false;$("prEmpty").textContent="No production yet";
   const P=simProd(),ser=P?P.series:[],tot=P?[...P.totals].filter(([,n])=>n>0):[],keys=[];
   ser.forEach(s=>Object.keys(s.it).forEach(k=>{if(!keys.includes(k))keys.push(k)}));tot.forEach(([k])=>{if(!keys.includes(k))keys.push(k)});
   const has=keys.length>0;$("prEmpty").style.display=has?"none":"";$("prBody").style.display=has?"":"none";if(!has)return;
