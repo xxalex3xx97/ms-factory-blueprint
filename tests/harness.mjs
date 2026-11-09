@@ -68,11 +68,13 @@ async function open(br, vp, tag) {
   wire(pg, tag);
   await pg.goto(PAGE);
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  await lkOn(pg);
   return {ctx, pg};
 }
 
 // ---- blueprint builders (importJson input = build() output format)
 let C, BMAP, BLK;
+const lkOn = p => p.evaluate(() => { LK = true; $('lk').classList.add('on'); $('lk').setAttribute('aria-pressed', 'true'); });   // flow links default off; the suite predates that
 const mclass = id => BMAP[id].machineClass || id;
 const mac = (id, x, y, o = {}) => ({
   Class: mclass(id), DefaultName: id,
@@ -866,6 +868,7 @@ async function s12(br) {
   const offReq = []; po.on('request', r => offReq.push(r.url()));
   await po.goto(PAGE);
   await po.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  await lkOn(po);
   await po.evaluate(t => __fb.importJson(t), JSON.stringify(bp([st], [mac('DAT_Refinery', 10, 22, {mid: 1, rec: KC})])));
   await po.evaluate(() => __fb.setView('F'));
   await po.click('#bn'); await po.click('#lk');

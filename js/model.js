@@ -219,7 +219,7 @@ function storeInfo(m,K){
 const supplySt=(need,have)=>!(have>0)?"none":have+1e-9>=need?"ok":"short";
 function supplyRows(m,K){const r=recOf(m),s=K.sup.get(m.id)||new Map();return r?r.i.map(x=>{const need=pm(x[1],r.t)||0,have=r2(s.get(x[0])||0);return{item:x[0],need,have,st:supplySt(need,have)}}):[]}
 // ---- informational link model (floor view, one layer; no rules, nothing blocked)
-let LK=true;
+let LK=false;
 const isBelt=b=>{const d=def(b.cls);return !!(d&&d.directional&&(d.category==="Conveyors"||d.category==="Undergrounds"))};
 const isStore=b=>!!(isM(b)&&def(b.cls)&&def(b.cls).category==="Storage");
 const ctFirst=b=>(b.ct||[]).find(x=>x.inf||x.n>0)||null;
