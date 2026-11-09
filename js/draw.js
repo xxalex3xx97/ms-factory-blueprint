@@ -11,7 +11,7 @@ const bnK=()=>simLive()?simView():linksC(layer);
 const bnU=(K,id)=>{const e=K.load.get(id),u=e?e.util:0;return BM==="B"&&simLive()&&smS().full.has(id)?Math.max(u||0,1.25):u};
 function drawBnCells(s){
   const K=bnK();cx.save();cx.globalAlpha=.6;
-  S.blocks.forEach(b=>{if(b.h!==layer||!isBelt(b)||!inView(b))return;const d=dim(b);cx.fillStyle=bnCol(bnU(K,b.id),BM);cx.fillRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)});
+  lyBlocks().all.forEach(b=>{if(!isBelt(b)||!inView(b))return;const d=dim(b);cx.fillStyle=bnCol(bnU(K,b.id),BM);cx.fillRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)});
   cx.restore();
 }
 const AMB="hsl(40,95%,55%)";
@@ -77,7 +77,7 @@ let CUR=[];   // this paint's layer blocks in view (set in paint0, cleared in pa
 function drawPorts(s){
   if(s<6)return;
   const Ln=Math.min(.6*s,18),T=Math.min(5,Math.max(3,.2*s));cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
-  S.blocks.forEach(b=>{if(b.h!==layer||!vis(V.ox+b.x*s-CULLM,V.oy+b.y*s-CULLM,dim(b).w*s+2*CULLM,dim(b).h*s+2*CULLM))return;const bars=barPorts(b);
+  lyBlocks().all.forEach(b=>{if(!vis(V.ox+b.x*s-CULLM,V.oy+b.y*s-CULLM,dim(b).w*s+2*CULLM,dim(b).h*s+2*CULLM))return;const bars=barPorts(b);
     // splitter input (back) face: no bar; small neutral chevron pointing into the machine (not clickable, no hover state)
     portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.min(8,Math.max(3,s*.2)),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
       cx.strokeStyle="rgba(230,240,255,.45)";cx.lineWidth=Math.max(1.5,s*.08);cx.beginPath();
@@ -346,7 +346,7 @@ function paintFloorBase(s){
     if(w>70){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
   });
   drawShapeFloor(A,s);
-  const NF=S.blocks.filter(b=>b.h===layer&&!isM(b)&&nfRect(b));
+  const NF=lyBlocks().all.filter(b=>!isM(b)&&nfRect(b));
   NF.forEach(b=>{const r=nfRect(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
   NF.forEach(b=>{const t=shapeTf(b);if(t&&t.sh.hatch)return hatchShape(b,t,s);const r=nfRect(b);nbHatch(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s,true)});   // grey no-build hatch on the whole tile, behind the shape
   drawShapeFloor({floors:NF.map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
@@ -382,7 +382,9 @@ function drawUG(s){
   const c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s];
   ugPairs(CUR.filter(isM)).forEach(({u,t,n,max})=>ugLine(c(u),c(t),s,n>max));
 }
-let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(S.blocks.filter(b=>b.h===layer).map(b=>[b.id,b]));return LBM.get(id)};
+let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(b=>b.h===layer);LYB={k,all,v:all.filter(inView)}}return LYB}
+let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k!==k)GHB={k,v:S.blocks.filter(b=>b.h!==layer&&inView(b))};return GHB.v}
+let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(lyBlocks().all.map(b=>[b.id,b]));return LBM.get(id)};
 const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
 function paint(pk){LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}}
 function paint0(){
@@ -392,8 +394,8 @@ function paint0(){
   if(F&&SM&&SIM&&SIM.sig!==PK){simReset();SIM.sig=PK;smClkUp()}
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8);
-  if($("ghost").checked)S.blocks.filter(inView).forEach(b=>{if(b.h!==layer&&($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s))drawBlock(b,Math.max(.08,.3-.07*Math.abs(b.h-layer)),false)});
-  const cur=S.blocks.filter(b=>b.h===layer&&inView(b));CUR=cur;
+  if($("ghost").checked)ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s))drawBlock(b,Math.max(.08,.3-.07*Math.abs(b.h-layer)),false)});
+  const cur=lyBlocks().v;CUR=cur;
   cur.forEach(b=>{const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s;if(x>W||y>H||x+d.w*s<0||y+d.h*s<0)return;drawBlock(b,.92,sel.has(b.id))});   // viewport cull
   cx.fillStyle="rgba(255,60,60,.5)";
   const occ=new Set();   // overlap marks: cell hash instead of all-pairs (was O(n^2) dim() calls)
