@@ -3660,7 +3660,8 @@ async function s37(br) {
     chk(`37 ${vp.tag}px: #winM opens the Windows panel (aria-pressed), lists the 7 window toggles, #lvN in the Level entry`, pw.vis && pw.pr === 'true' && ['stB', 'shB', 'lvB', 'flwB', 'simB', 'thB', 'plnB'].every(i => pw.ids.includes(i)) && pw.inLv && /^\d+$/.test(pw.lvN) && !pw.hdr, JSON.stringify(pw));
     chk(`37 ${vp.tag}px: Windows panel open, no horizontal page overflow, panel inside the viewport`, pw.sw <= pw.iw && pw.r <= pw.iw, JSON.stringify(pw));
     await p2.screenshot({path: path.join(SHOTS, `s37-windows-open-${vp.tag}.png`)});
-    await p2.evaluate(() => asvNow()); await p2.reload(); await p2.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await p2.waitForTimeout(1000);
+    await p2.evaluate(() => asvNow()); await p2.waitForTimeout(2500);   // a 5MB IndexedDB write needs time to land before the reload (users refresh after the 400ms debounce)
+    await p2.reload(); await p2.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await p2.waitForFunction(() => ASO === true, null, {timeout: 60000}); await p2.waitForTimeout(300);   // big design: restore is async (IndexedDB read + import)
     chk(`37 ${vp.tag}px: Windows panel open state restored on refresh (autosaved)`, await p2.evaluate(() => !$('wnW').hidden && $('winM').getAttribute('aria-pressed') === 'true'));
     await p2.click('#winM');
     chk(`37 ${vp.tag}px: #winM toggles the panel closed`, await p2.evaluate(() => $('wnW').hidden && $('winM').getAttribute('aria-pressed') === 'false'));
