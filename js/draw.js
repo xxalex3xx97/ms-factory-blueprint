@@ -389,7 +389,24 @@ let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==
 let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k!==k)GHB={k,v:S.blocks.filter(b=>b.h!==layer&&inView(b))};return GHB.v}
 let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(lyBlocks().all.map(b=>[b.id,b]));return LBM.get(id)};
 const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
-function paint(pk){LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}}
+// static layer cache: only smFrame paints (USEB) read it; any other paint (edits, resize, export) repaints fresh and marks DIRTY
+const OFFC={};let BASEFILL=false;
+function cached(name,fn){
+  if(!USEB)return fn();
+  const k=[view,layer,V.ox,V.oy,V.z,W,H,dpr,PK].join();let o=OFFC[name];
+  if(!o||o.k!==k||DIRTY||o.c.width!==cv.width||o.c.height!==cv.height){
+    // fill: draw on the main canvas exactly like a fresh paint, then copy the result out (copy is exact; drawing on a 2nd canvas is not)
+    if(!o)o=OFFC[name]={c:document.createElement("canvas")};
+    o.c.width=cv.width;o.c.height=cv.height;o.g=o.c.getContext("2d");o.k=k;
+    o.st=fn();
+    o.g.setTransform(1,0,0,1,0,0);o.g.drawImage(cv,0,0);
+    BASEFILL=true;
+    return;
+  }
+  RCT=o.st.RCT;CUR=o.st.CUR;
+  cx.setTransform(1,0,0,1,0,0);cx.drawImage(o.c,0,0);cx.setTransform(dpr,0,0,dpr,0,0);
+}
+function paint(pk){if(!USEB)DIRTY=true;LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}}
 let FLAT_S=5;   // let: tests set FLAT_S=0 for exact block pixels. below this zoom (px per cell) blocks are batched as flat rects (no icon/arrow/label/door marks are drawn there anyway)
 function drawBlocks(list,alpha,useSel){
   const s=sc(),flat=s<FLAT_S,fl=new Map(),st=new Map(),full=[];
@@ -410,8 +427,9 @@ function drawBlocks(list,alpha,useSel){
 function paint0(){
   cx.setTransform(dpr,0,0,dpr,0,0);cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality="high";cx.clearRect(0,0,W,H);
   const s=sc(),F=view==="F";
-  RCT=null;
   if(F&&SM&&SIM&&SIM.sig!==PK){simReset();SIM.sig=PK;smClkUp()}
+  cached("base",()=>{
+  RCT=null;
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8);
   if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*Math.abs(b.h-layer));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
@@ -421,9 +439,11 @@ function paint0(){
   const occ=new Set();   // overlap marks: cell hash instead of all-pairs (was O(n^2) dim() calls)
   cur.forEach(a=>{const d=dim(a);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const k=(a.x+i+32768)*65536+(a.y+j+32768);
     if(occ.has(k)){const X=V.ox+(a.x+i)*s,Y=V.oy+(a.y+j)*s;if(X<W&&Y<H&&X+s>0&&Y+s>0)cx.fillRect(X,Y,s,s)}else occ.add(k)}});
+  return{RCT,CUR};
+  });
   if(F&&smOn())drawSimMach(s);
   if(F&&BN&&(!LK||s<ARROW_MIN_S))drawBnCells(s);
-  if(F&&LK&&s>=ARROW_MIN_S)drawLinks(s);
+  if(F&&LK&&s>=ARROW_MIN_S)drawLinks(s);   // live: flow links read sim state (smK) when sim is on
   if(F&&smOn())drawSimFull(s);
   if(F)drawUG(s);
   if(F&&ugPend&&ugPend.cls&&ugTool(def(ugPend.cls))){   // pending underground: blue dotted line + n / max, red when the second click would be refused
@@ -464,6 +484,7 @@ function paint0(){
     cx.strokeStyle=d.kind==="m"&&noBuild([{id:-1,x:hover.x,y:hover.y,w:bw,h:bh,l:layer,belt:isBelt({cls:active})}])?"hsl(0,85%,60%)":d.kind==="m"&&RCT&&!onArea(hover.x,hover.y,bw,bh,RCT)?"hsl(45,95%,62%)":"#fff";
     cx.setLineDash([5,4]);cx.lineWidth=1.5;cx.strokeRect(px+.5,py+.5,bw*s-1,bh*s-1);cx.setLineDash([]);
   }
+  if(USEB&&BASEFILL){DIRTY=false;BASEFILL=false}
 }
 const boxRect=()=>({x:Math.min(drag.sx,drag.px),y:Math.min(drag.sy,drag.py),w:Math.abs(drag.px-drag.sx),h:Math.abs(drag.py-drag.sy)});
 
