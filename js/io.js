@@ -250,8 +250,8 @@ $("savX").onclick=()=>$("dSav").close();
 $("savGo").onclick=()=>{const l=SAVL,i=+$("savSt").value;if(l&&importJson(JSON.stringify(l[i].json))){svPut(SAVB,SAVN,l,i);$("dSav").close()}};
 // Header station switcher: shown after picking one station of a multi-station save, any other import hides it
 let STL=null;
-function stHide(){STL=null;$("stG").hidden=true}
-function stShow(l,i){STL=l;$("stSel").replaceChildren(...l.map((s,j)=>new Option(s.name,String(j))));$("stSel").value=String(i);$("stSel").dataset.cur=String(i);$("stG").hidden=false}
+function stHide(){STL=null;SIK=null;$("stG").hidden=true}
+function stShow(l,i){STL=l;$("stSel").replaceChildren(...l.map((s,j)=>new Option(s.name,String(j))));$("stSel").value=String(i);$("stSel").dataset.cur=String(i);$("stG").hidden=false;SIK=i;asv()}
 $("stSel").onchange=()=>{const l=STL,i=+$("stSel").value,cur=+$("stSel").dataset.cur;
   if(!l||!confirm(`Switch to station "${l[i].name}"? Unsaved changes to the current station will be lost.`)){$("stSel").value=String(cur);return}
   if(importJson(JSON.stringify(l[i].json)))stShow(l,i);else $("stSel").value=String(cur)};

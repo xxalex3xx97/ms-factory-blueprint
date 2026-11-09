@@ -3447,6 +3447,33 @@ async function s35(br) {
   await bm.ctx.close();
 }
 
+// ---- slice B: refresh restores window states, the imported .sav (IndexedDB) and its station picker
+async function s25b(br) {
+  const SAVF = 'C:/Users/SFidelis/AppData/Local/MainSequence/Saved/SaveGames/blueprint module-Autosave_S.sav';
+  const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's25b');
+  const again = async () => { await pg.reload(); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await pg.waitForTimeout(1000); };
+  await pg.evaluate(() => { if (!$('fwW').hidden) $('flwB').click(); if ($('stW').hidden) $('stB').click(); asvNow(); });
+  await again();
+  const w = await pg.evaluate(() => ({fw: $('fwW').hidden, st: $('stW').hidden}));
+  chk('25b refresh: window states restored (Flow closed, Settings open)', w.fw === true && w.st === false, JSON.stringify(w));
+  if (fs.existsSync(SAVF)) {
+    const n = await pg.evaluate(b => { const u = Uint8Array.from(atob(b), c => c.charCodeAt(0)); return __fb.parseSav(u.buffer).length; }, fs.readFileSync(SAVF).toString('base64'));
+    await pg.setInputFiles('#savFile', SAVF);
+    if (n > 1) { await pg.waitForSelector('#dSav[open]'); await pg.selectOption('#savSt', '1'); await pg.click('#savGo'); }
+    else await pg.waitForTimeout(500);
+    await pg.waitForTimeout(300);
+    const before = await pg.evaluate(() => ({n: S.name, b: S.blocks.length}));
+    await pg.evaluate(() => asvNow());
+    await pg.waitForTimeout(300);
+    await again();
+    const after = await pg.evaluate(async () => ({n: S.name, b: S.blocks.length, stG: !$('stG').hidden, sel: $('stSel').value, idb: !!(await idbGet('sav'))}));
+    chk('25b refresh: same design after reload (name + block count)', after.n === before.n && after.b === before.b && after.b > 0, JSON.stringify({before, after}));
+    if (n > 1) chk('25b refresh: station picker shows station 1 after reload', after.stG && after.sel === '1', JSON.stringify(after));
+    chk('25b refresh: imported save kept in IndexedDB (msfb/kv sav)', after.idb);
+  }
+  await ctx.close();
+}
+
 // ================= main
 const br =await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 try {
@@ -3476,6 +3503,7 @@ try {
   try { console.log('--- 22 U2 inspector'); await s22(br); } catch (e) { chk('22 U2: section ran', false, e.stack || String(e)); }
   try { console.log('--- 23 U3 production'); await s23(br); } catch (e) { chk('23 U3: section ran', false, e.stack || String(e)); }
   try { console.log('--- 24 r12 user save: sim, perf, shots'); await s24(br); } catch (e) { chk('24 r12: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 25b refresh restore'); await s25b(br); } catch (e) { chk('25b refresh restore: section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }

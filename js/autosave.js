@@ -1,9 +1,15 @@
 // ---- autosave (localStorage msfb.state): design (= export JSON) + UI settings. Sim running state/clock are never saved.
 // autosave schema v2 (Version 2 export); older autosaves (v1) are ignored on restore
+let asWarned=false;
 const asNow=()=>{if(!ASO||ASH)return;try{localStorage.setItem(ASK,JSON.stringify({v:2,d:build(),u:{view,layer,tab,spd:SPD,gh:$("ghost").checked,gha:$("ghostAll").checked,st:STRICT,lk:LK,bn:BN,bm:BM,po:[...po],io:[...io],
-  sel:S.blocks.filter(b=>sel.has(b.id)).map(b=>[b.cls,b.x,b.y,b.h]),vl:{ox:VL.ox,oy:VL.oy,z:VL.z},vf:{ox:VF.ox,oy:VF.oy,z:VF.z,init:VF.init}}}))}catch(e){}};
+  sel:S.blocks.filter(b=>sel.has(b.id)).map(b=>[b.cls,b.x,b.y,b.h]),vl:{ox:VL.ox,oy:VL.oy,z:VL.z},vf:{ox:VF.ox,oy:VF.oy,z:VF.z,init:VF.init},si:SIK,w:{st:!$("stW").hidden,lv:!$("lvW").hidden,fw:!$("fwW").hidden,sh:!$("shW").hidden}}}))}catch(e){if(!asWarned){asWarned=true;toast("Autosave failed (browser storage full?). Refresh may not restore this design.")}}};
 const asv=()=>{if(!ASO||ASH)return;clearTimeout(AST);AST=setTimeout(asNow,400)};
 const asvNow=()=>{clearTimeout(AST);asNow()};
+const idb=()=>new Promise((ok,no)=>{const r=indexedDB.open("msfb",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+const idbGet=async k=>{const d=await idb();return new Promise((ok,no)=>{const q=d.transaction("kv").objectStore("kv").get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)})};
+const idbSet=async(k,v)=>{const d=await idb();return new Promise((ok,no)=>{const t=d.transaction("kv","readwrite");t.objectStore("kv").put(v,k);t.oncomplete=()=>ok();t.onerror=()=>no(t.error)})};
+function svPut(ab,name,l,i){SIK=i;if(l.length>1)stShow(l,i);asv();idbSet("sav",{b:ab,n:name}).catch(()=>toast("Could not keep the save for refresh (storage blocked)"))}
+async function svRestore(){const si=SIK;if(si==null)return;try{const r=await idbGet("sav");if(!r||!r.b||STL||SIK!==si)return;const l=parseSav(r.b);if(l.length>1&&l[si])stShow(l,si)}catch(e){}}
 window.addEventListener("pagehide",asvNow);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)asvNow()});
 function asRestore(){
@@ -13,6 +19,8 @@ function asRestore(){
   try{
     if(!importJson(JSON.stringify(o.d),true))return;
     undoS=[];redoS=[];
+    if(Number.isInteger(u.si)&&u.si>=0)SIK=u.si;
+    if(u.w&&typeof u.w==="object"){WINSET=true;[["stB","stW","st"],["lvB","lvW","lv"],["flwB","fwW","fw"],["shB","shW","sh"]].forEach(([b,w,k])=>{if(typeof u.w[k]==="boolean"&&!$(w).hidden!==u.w[k])$(b).click()})}
     if(u.view==="F"||u.view==="L"){view=u.view;V=view==="F"?VF:VL;tab=view==="F"?"m":"b"}
     if(u.tab==="b"||u.tab==="m")tab=u.tab;
     if(fin(u.layer))layer=Math.trunc(u.layer);
@@ -32,7 +40,7 @@ function asRestore(){
 }
 $("nw").onclick=()=>{
   if(!confirm("Clear the autosaved design and start with an empty one?"))return;
-  FH=null;clearTimeout(AST);try{localStorage.removeItem(ASK)}catch(e){}
+  FH=null;clearTimeout(AST);try{localStorage.removeItem(ASK)}catch(e){}SIK=null;stHide();
   push();S.blocks=[];S.dm=[];S.closed=[];S.name="Untitled station";sel=new Set();$("name").value=S.name;ASH=true;all();
 };
 
