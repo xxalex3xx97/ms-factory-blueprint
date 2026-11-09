@@ -1,5 +1,7 @@
 // ---- export / import (blocks: GridLocation = cell x CU; machines: GridLocation = floor cells)
 const CU=CATALOG.cell_units||2;
+// block Name (dock, industrial dock, shipyard core only; not Shipyard Side): optional string, written only when set
+const NMC=["BPO_Dock","BPO_Dock_2","BPO_ShipyardCore","BPO_ShipyardCore_02"],nmOk=c=>{const d=def(c);return!!d&&NMC.includes(d.name)},expNm=(b,e)=>{if(b.nm&&nmOk(b.cls))e.Name=b.nm;return e};
 const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.length)e.Ports=ps.map(p=>({Face:p.f,Index:p.i,Enabled:p.en})).concat(xp);return e};   // extra non-game field, only when non-default
 // game splitter config bytes = [front, right, left] at rot 0, as local faces (port identity is fixed in the machine, so rotation needs no mapping). The back/input face (W at rot 0) is never a game byte.
 const SPL_FACES=["S","E","N"];
@@ -41,7 +43,7 @@ function build(){
   const RB=b=>{if(b.raw&&b.raw.x===b.x&&b.raw.y===b.y&&b.raw.r===b.rot)return{X:b.raw.X,Y:b.raw.Y};   // game coords that the site footprint cannot express: written back untouched until moved/rotated
     const f=dim(b),o=SHIPEND(b)?dockOrg(b.rot):null;return o?{X:4*b.x+o.X,Y:4*b.y+o.Y}:{X:4*b.x+2*(f.w-1),Y:4*b.y+2*(f.h-1)}},RM=b=>{const f=dim(b);return{X:2*b.x+f.w-14,Y:2*b.y+f.h-14}};
   return{Version:2,DisplayName:S.name,
-    Blocks:bl.map((b,i)=>expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h*2,GridRotation:b.rot,BlockID:i+1,PaletteID:b.pid||0})),
+    Blocks:bl.map((b,i)=>expNm(b,expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h*2,GridRotation:b.rot,BlockID:i+1,PaletteID:b.pid||0}))),
     DefaultMachines:ms.map(b=>{const d=def(b.cls),e={Class:d.machineClass||d.id,Transform:{GridLocation:RM(b),Height:b.h*16,GridRotation:b.rot},MachineID:b.mid||++base,PaletteID:b.pid||0,DefaultName:d.id};
       if(b.rec)e.Recipe=b.rec;expCfg(b,d,e,UGN);expPorts(b,e);expCt(b,e);return e}).concat(S.dm).map((e,i)=>({e,i,k:Number(e&&e.MachineID)})).sort((a,b)=>(isFinite(a.k)&&isFinite(b.k)?a.k-b.k:isFinite(a.k)?-1:isFinite(b.k)?1:0)||a.i-b.i).map(x=>x.e),   // keep original MachineID order
     FactoryLayout:{FloorCellsPerBlock:FC,DoorwayCells:DW,ClosedDoorways:S.closed.map(k=>{const a=k.split("|");return{Height:+a[0],X:+a[1],Y:+a[2],Edge:a[3],Seg:+a[4]}})},
@@ -90,7 +92,9 @@ function parseSav(buf){
   const siteJson=A=>{
     const C=A.cls,pth=i=>i>=0&&i<C.length?C[i]:null;
     const blocks=[],machs=A.machs.slice();
-    for(const{b,ms}of A.blocks){machs.push(...ms);const p=pth(b.cls);if(p)blocks.push({Class:p,GridLocation:{X:b.X,Y:b.Y},Height:b.H,GridRotation:b.R,BlockID:b.ID,PaletteID:b.PAL})}
+    for(const{b,ms}of A.blocks){machs.push(...ms);const p=pth(b.cls);if(p){const e={Class:p,GridLocation:{X:b.X,Y:b.Y},Height:b.H,GridRotation:b.R,BlockID:b.ID,PaletteID:b.PAL};   // dock name: string in the built-in dock child machine's ConfigHex (kept as an opaque machine too)
+      if(NMC.includes(p.split("/").pop().split(".")[0]))for(const m of ms){const q=pth(m.cls),c=q&&q.split("/").pop().split(".")[0];if(c&&/(StationBlockDock|IndustrialDock|ShipyardBlockDock)/.test(c)&&m.hx){const d=cfgDec(c,m.hx);if(d&&d.name)e.Name=d.name}}
+      blocks.push(e)}}
     const dm=[],dup=ugDupes(machs,UG);
     for(const m of machs){const p=pth(m.cls);if(p){const c=p.split("/").pop().split(".")[0],e={Class:c,Transform:{GridLocation:{X:m.X,Y:m.Y},Height:m.H,GridRotation:m.R},MachineID:m.MID,PaletteID:m.PAL,...(m.hx?cfgView(c,m.hx):{})};
       if(dup.has(m.MID)){delete e.ConfigHex;delete e.Length}   // mod-built exit record: a tile, not a second tunnel
@@ -185,7 +189,7 @@ function importJson0(txt,quiet){
     const x=cell(gx,4,ox),y=cell(gy,4,oy),nb={id:uid++,cls,x,y,h:Math.round(n(b.Height)/BZ),rot:r,pid:n(b.PaletteID)};
     if(4*x+ox!==Number(gx)||4*y+oy!==Number(gy))nb.raw={x,y,r,X:Number(gx),Y:Number(gy)};   // block never moves on round trip; non-fitting game coords kept via raw
     return nb});
-  S.blocks.forEach((b,i)=>impPorts(b,o.Blocks[i].Ports));
+  S.blocks.forEach((b,i)=>{impPorts(b,o.Blocks[i].Ports);const nm=o.Blocks[i].Name;if(typeof nm==="string"&&nm&&nmOk(b.cls))b.nm=nm});
   const cd=o.FactoryLayout&&o.FactoryLayout.ClosedDoorways,lg=[];S.closed=[];
   if(Array.isArray(cd))cd.forEach(d=>{if(d&&d.Seg!=null&&"ESWN".includes(d.Edge))S.closed.push(`${n(d.Height)}|${n(d.X)}|${n(d.Y)}|${d.Edge}|${n(d.Seg)}`);else if(d)lg.push(d)});
   // old format (V/H strip, or an edge without Seg): closes every door on that edge

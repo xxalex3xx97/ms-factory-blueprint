@@ -18,7 +18,11 @@ def kind(cls):
 
 
 def fs(s):
-    return struct.pack('<i', 0) if not s else struct.pack('<i', len(s) + 1) + s.encode('ascii') + b'\0'
+    if not s: return struct.pack('<i', 0)
+    if any(ord(c) > 127 for c in s):      # UTF-16 (UE IsPureAnsi: any char > 0x7F): negative length = code units incl NUL (mirror of js/config.js cfgEnc)
+        u = s.encode('utf-16-le')
+        return struct.pack('<i', -(len(u) // 2 + 1)) + u + b'\0\0'
+    return struct.pack('<i', len(s) + 1) + s.encode('latin-1') + b'\0'
 
 
 def encode(k, d):
@@ -48,7 +52,7 @@ def decode(cls, b):
     def fstr():
         n = i32()
         if n == 0: return ''
-        if n > 0: return take(n)[:-1].decode('ascii')
+        if n > 0: return take(n)[:-1].decode('latin-1')   # bytes -> chars 1:1, as js/config.js fstr
         return take(-n * 2)[:-2].decode('utf-16-le')
 
     def bools(): return [bool(x) for x in take(i32())]

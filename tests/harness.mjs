@@ -4,6 +4,7 @@
 // Never weakens a check: a mismatch with ground_truth.json or the brief is reported as FAIL.
 import {createRequire} from 'module';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
 import {isDeepStrictEqual} from 'util';
@@ -3812,6 +3813,122 @@ async function s38(br) {
   await ctx.close();
 }
 
+// ================= 40 rename docks: Name on Dock / Industrial Dock / Shipyard Core (+_02), not Shipyard Side (2026-11-09 brief rename-docks-shipyards, slice A)
+async function s40(br) {
+  const ctx = await br.newContext({viewport: {width: 1400, height: 900}});
+  const pg = await ctx.newPage();
+  wire(pg, 's40');
+  await pg.goto(PAGE);
+  await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  await pg.waitForTimeout(300);
+  await reset(pg);
+  const NM = 'Dock \u00dcn\u00ef \u6d4b\u8bd5 \u2713';   // non-ASCII, no length limit
+  const named = [
+    {...blk('BPO_Dock', 0, 0), Name: NM},
+    {...blk('BPO_Dock_2', 20, 0), Name: 'Industrial \u2713'},
+    {...blk('BPO_ShipyardCore', 0, 20), Name: 'Yard A'},
+    {...blk('BPO_ShipyardCore_02', 20, 20), Name: 'Yard B'},
+    {...blk('BPO_ShipyardSide', 40, 0), Name: 'Side'},
+    {...blk('BPO_Station_01', 40, 40), Name: 'Station'},
+  ];
+  await imp(pg, bp(named));
+  const st = await pg.evaluate(() => S.blocks.map(b => b.nm ?? null));
+  chk('40 JSON Name imports on Dock, Industrial Dock, Shipyard Core (+_02) only', JSON.stringify(st) === JSON.stringify([NM, 'Industrial \u2713', 'Yard A', 'Yard B', null, null]), JSON.stringify(st));
+  const ex = await pg.evaluate(() => __fb.build().Blocks.map(e => ['Name' in e ? e.Name : null]));
+  chk('40 export writes Name on the 4 classes only (Shipyard Side and other blocks have no Name key)', JSON.stringify(ex.flat()) === JSON.stringify([NM, 'Industrial \u2713', 'Yard A', 'Yard B', null, null]), JSON.stringify(ex));
+  const rt = await pg.evaluate(() => { const a = __fb.build().Blocks.map(e => e.Name ?? null); __fb.importJson(JSON.stringify(__fb.build())); return {a, b: __fb.build().Blocks.map(e => e.Name ?? null)}; });
+  chk('40 export -> import -> export keeps every Name (non-ASCII too)', JSON.stringify(rt.a) === JSON.stringify(rt.b) && rt.b[0] === NM, JSON.stringify(rt));
+  await imp(pg, bp([blk('BPO_Dock', 0, 0)]));
+  const old = await pg.evaluate(() => ({has: 'Name' in __fb.build().Blocks[0], nm: S.blocks[0].nm ?? null}));
+  chk('40 old JSON without Name imports and exports with no Name key', !old.has && old.nm === null, JSON.stringify(old));
+  await imp(pg, bp(named));
+  await pg.evaluate(() => { sel = new Set([S.blocks[0].id]); all(); });
+  chk('40 inspector: Name field shows the selected dock name', (await pg.evaluate(() => document.getElementById('fnm') && document.getElementById('fnm').value)) === NM);
+  await pg.evaluate(() => { sel = new Set([S.blocks[5].id]); all(); });
+  chk('40 inspector: no Name field for Station 1x1', await pg.evaluate(() => !document.getElementById('fnm')));
+  await pg.evaluate(() => { sel = new Set([S.blocks[4].id]); all(); });
+  chk('40 inspector: no Name field for Shipyard Side', await pg.evaluate(() => !document.getElementById('fnm')));
+  await pg.evaluate(() => { sel = new Set([S.blocks[0].id]); all(); });
+  const setNm = v => pg.evaluate(x => { const e = document.getElementById('fnm'); e.value = x; e.dispatchEvent(new Event('change', {bubbles: true})); }, v);
+  await setNm('Renamed Dock');
+  const ed = await pg.evaluate(() => [S.blocks[0].nm, __fb.build().Blocks[0].Name]);
+  chk('40 inspector edit sets b.nm and exports it', JSON.stringify(ed) === '["Renamed Dock","Renamed Dock"]', JSON.stringify(ed));
+  await pg.click('#undo');
+  chk('40 undo restores the previous name', await pg.evaluate(() => S.blocks[0].nm) === NM);
+  await setNm('');
+  chk('40 clearing the field removes Name (no key on export)', await pg.evaluate(() => !('nm' in S.blocks[0]) && !('Name' in __fb.build().Blocks[0])));
+  const u0 = await pg.evaluate(() => undoS.length);
+  await setNm('   ');
+  chk('40 whitespace-only Name leaves no Name (no key on export, no undo entry)', await pg.evaluate(u => !('nm' in S.blocks[0]) && !('Name' in __fb.build().Blocks[0]) && undoS.length === u, u0), `undo ${await pg.evaluate(() => undoS.length)} vs ${u0}`);
+  await setNm(NM);
+  const u1 = await pg.evaluate(() => undoS.length);
+  await setNm(' ' + NM + ' ');
+  chk('40 Name unchanged after trim pushes no undo entry', await pg.evaluate(([u, nm]) => S.blocks[0].nm === nm && undoS.length === u, [u1, NM]), `undo ${await pg.evaluate(() => undoS.length)} vs ${u1}`);
+  await setNm('  Trimmed  ');
+  chk('40 Name is stored trimmed', await pg.evaluate(() => S.blocks[0].nm === 'Trimmed'));
+  await setNm(NM);
+  await pg.evaluate(() => { sel = new Set([S.blocks[0].id]); all(); });
+  const cp = await pg.evaluate(() => { copy(); return clip.map(b => b.nm ?? null); });
+  chk('40 copy keeps the name (clipboard)', JSON.stringify(cp) === JSON.stringify([NM]), JSON.stringify(cp));
+  await pg.evaluate(() => { pasting = null; mode = null; all(); });
+  await pg.evaluate(() => { sel = new Set([S.blocks[0].id]); all(); });
+  await pg.click('#bDup');
+  chk('40 duplicate keeps the name', await pg.evaluate(() => S.blocks.filter(b => b.nm === S.blocks[0].nm).length) === 2);
+  const sn = await pg.evaluate(() => { snAdd('rename test'); snUse(SN.length - 1); const o = clip.map(b => b.nm ?? null); pasting = null; mode = null; all(); return o; });
+  chk('40 snippet keeps the name', JSON.stringify(sn) === JSON.stringify([NM]), JSON.stringify(sn));
+  await pg.evaluate(() => asvNow());
+  await pg.reload();
+  await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  await pg.waitForTimeout(500);
+  const ar = await pg.evaluate(() => S.blocks.filter(b => b.nm).map(b => b.nm));
+  chk('40 autosave/refresh restores the names (5 = 4 imported + 1 duplicate)', ar.length === 5 && ar[0] === NM && ar.includes('Yard B'), JSON.stringify(ar));
+  // .sav import: names from the game (Discovery Next save), JS parseSav vs python oracle for every station
+  const SAVF = 'C:/Users/SFidelis/Downloads/Discovery Next 20261108-2121_S.sav';
+  if (!fs.existsSync(SAVF)) { chk('40 fixture present (Downloads: Discovery Next _S.sav)', false, SAVF); await ctx.close(); return; }
+  const b64 = fs.readFileSync(SAVF).toString('base64');
+  const stl = await pg.evaluate(b => __fb.parseSav(Uint8Array.from(atob(b), c => c.charCodeAt(0)).buffer).map(s => ({name: s.name, json: s.json})), b64);
+  const nmOf = j => j.Blocks.filter(b => 'Name' in b).map(b => [b.Class.split('/').pop(), b.Name]);
+  const tmp = path.join(os.tmpdir(), 'rename40-oracle.json');
+  let parity = true, detail = '';
+  for (const s of stl) {
+    const r = spawnSync(process.env.PYTHON || 'py', ['-I', path.join(ROOT, 'extract', 'import_station.py'), SAVF, '--station', s.name, '-o', tmp], {encoding: 'utf8'});
+    const py = r.status === 0 ? nmOf(JSON.parse(fs.readFileSync(tmp, 'utf8'))) : null;
+    if (!isDeepStrictEqual(py, nmOf(s.json))) { parity = false; detail += ` [${s.name}: js ${JSON.stringify(nmOf(s.json))} py ${JSON.stringify(py)} ${r.stderr || ''}]`; }
+  }
+  fs.existsSync(tmp) && fs.unlinkSync(tmp);
+  chk(`40 .sav names: JS parseSav = python oracle (${stl.length} stations)`, parity, detail);
+  const titan = stl.find(s => s.name === 'Rich Titan (+Graphite)');
+  chk('40 .sav Rich Titan: dock = "Station Dock 1 1 1", industrial dock = "S Titan" (game bytes)', !!titan && JSON.stringify(nmOf(titan.json)) === JSON.stringify([['BPO_Dock.BPO_Dock_C', 'Station Dock 1 1 1'], ['BPO_Dock_2.BPO_Dock_2_C', 'S Titan']]), JSON.stringify(titan && nmOf(titan.json)));
+  const beta = stl.find(s => s.name === 'Beta Honor 3 Central');
+  chk('40 .sav Beta Honor 3: shipyard core named "Shipyard Dock 1"', !!beta && nmOf(beta.json).some(x => x[0] === 'BPO_ShipyardCore.BPO_ShipyardCore_C' && x[1] === 'Shipyard Dock 1'), beta ? JSON.stringify(nmOf(beta.json)) : 'no station');
+  chk('40 .sav: Shipyard Side never gets a Name', stl.every(s => nmOf(s.json).every(x => !/ShipyardSide/.test(x[0]))));
+  await pg.evaluate(j => importJson(JSON.stringify(j)), titan.json);
+  const imported = await pg.evaluate(() => S.blocks.filter(b => b.nm).map(b => [b.cls.split('/').pop(), b.nm]));
+  chk('40 .sav import: names applied to the blocks in the page', JSON.stringify(imported) === JSON.stringify([['BPO_Dock.BPO_Dock_C', 'Station Dock 1 1 1'], ['BPO_Dock_2.BPO_Dock_2_C', 'S Titan']]), JSON.stringify(imported));
+  // config codec: ASCII bytes unchanged, non-ASCII UTF-16 (negative length), decodes back, python mirror identical
+  const cc = await pg.evaluate(nm => ({a: cfgEnc('dock', {name: 'Station Dock 1', filters: []}), u: cfgEnc('dock', {name: nm, filters: []}), back: cfgDec('BP_StationBlockDock_C', cfgEnc('dock', {name: nm, filters: []})).name}), NM);
+  chk('40 cfgEnc ASCII name bytes unchanged (i32 len 15 incl NUL, NUL)', cc.a === '0100' + '0f000000' + Buffer.from('Station Dock 1').toString('hex') + '00' + '00000000', cc.a);
+  chk('40 cfgEnc/cfgDec non-ASCII name round trip (UTF-16)', cc.back === NM, JSON.stringify(cc));
+  const py = spawnSync(process.env.PYTHON || 'py', ['-I', '-c', `import sys;sys.path.insert(0,r'${path.join(ROOT, 'extract')}');import config_codec as c;print(c.encode('dock',{'name':'Dock \\u00dcn\\u00ef \\u6d4b\\u8bd5 \\u2713','filters':[]}).hex())`], {encoding: 'utf8'});
+  chk('40 python config_codec encodes the same bytes as cfgEnc (non-ASCII)', py.status === 0 && py.stdout.trim() === cc.u, `js ${cc.u} py ${(py.stdout || '').trim()} ${py.stderr || ''}`);
+  // chars > 0x7F (Latin-1 too) go UTF-16 like UE IsPureAnsi: round trip, negative length, python identical bytes
+  const CN = ['Café', 'Ünï', NM];
+  const cl = await pg.evaluate(names => names.map(nm => { const h = cfgEnc('dock', {name: nm, filters: []}); return {h, len: new DataView(new Uint8Array(h.match(/../g).map(x => parseInt(x, 16))).buffer).getInt32(2, true), back: cfgDec('BP_StationBlockDock_C', h).name}; }), CN);
+  chk('40 cfgEnc Latin-1 names (Café, Ünï) and >0xFF name go UTF-16 (negative length), round trip', cl.every((x, i) => x.back === CN[i] && x.len === -(CN[i].length + 1)), JSON.stringify(cl));
+  const cnPy = CN.map(s => "'" + [...s].map(ch => '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0')).join('') + "'").join(',');
+  const pyCn = spawnSync(process.env.PYTHON || 'py', ['-I', '-c', `import sys;sys.path.insert(0,r'${path.join(ROOT, 'extract')}');import config_codec as c;print(' '.join(c.encode('dock',{'name':n,'filters':[]}).hex() for n in [${cnPy}]))`], {encoding: 'utf8'});
+  chk('40 python config_codec = cfgEnc bytes for Café, Ünï, >0xFF names', pyCn.status === 0 && pyCn.stdout.trim() === cl.map(x => x.h).join(' '), `js ${cl.map(x => x.h).join(' ')} py ${(pyCn.stdout || '').trim()} ${pyCn.stderr || ''}`);
+  // label on the canvas: Layout, zoomed onto the imported Rich Titan dock; one long name shows the ellipsis
+  await pg.evaluate(() => { __fb.setView('L'); const yard = S.blocks.find(b => b.nm === 'S Titan') || S.blocks[0]; yard.nm = 'A very long industrial dock name that cannot fit the block'; sel = new Set(); all(); });
+  await pg.evaluate(() => { const b = S.blocks.find(q => q.nm && q.nm.startsWith('Station Dock')); V.z = 4; const d = __fb.dim(b); V.ox = W / 2 - (b.x + d.w / 2) * sc(); V.oy = H / 2 - (b.y + d.h / 2) * sc(); __fb.paint(); });
+  await pg.waitForTimeout(150);
+  await pg.screenshot({path: path.join(SHOTS, 'rename-label-layout.png')});
+  await pg.evaluate(() => { const b = S.blocks.find(q => q.nm && q.nm.startsWith('Station Dock')); V.z = 1; const d = __fb.dim(b); V.ox = W / 2 - (b.x + d.w / 2) * sc(); V.oy = H / 2 - (b.y + d.h / 2) * sc(); __fb.paint(); });
+  await pg.waitForTimeout(150);
+  await pg.screenshot({path: path.join(SHOTS, 'rename-label-layout-zoom1.png')});
+  await ctx.close();
+}
+
 // ================= main
 const br =await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 try {
@@ -3846,6 +3963,7 @@ try {
   try { console.log('--- 37 header, import, restore'); await s37(br); } catch (e) { chk('37 header/import/restore: section ran', false, e.stack || String(e)); }
   try { console.log('--- 38 delete mode, config copy/paste, context menu'); await s38(br); } catch (e) { chk('38 section ran', false, e.stack || String(e)); }
   try { console.log('--- 39 dock shape'); await s39(br); } catch (e) { chk('39 dock shape: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 40 rename docks'); await s40(br); } catch (e) { chk('40 rename docks: section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }
