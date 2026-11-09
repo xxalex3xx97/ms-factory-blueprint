@@ -37,7 +37,7 @@ async function asRestore(){   // resolves after the saved state is read; boot ap
     if(typeof u.gh==="boolean")$("ghost").checked=u.gh;
     if(typeof u.gha==="boolean")$("ghostAll").checked=u.gha;
     if(typeof u.st==="boolean")STRICT=u.st;
-    if(typeof u.lk==="boolean"){LK=u.lk;bt("lk",LK)}
+    // flow links always start off (LK is not restored)
     if(typeof u.bn==="boolean"){BN=u.bn;bt("bn",BN);bnSub()}
     if(u.bm==="F"||u.bm==="B"){BM=u.bm;$("bnF").classList.toggle("on",BM==="F");$("bnB").classList.toggle("on",BM==="B");bnSub()}
     if([1,10,60].includes(u.spd))SPD=u.spd;
