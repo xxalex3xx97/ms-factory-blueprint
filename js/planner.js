@@ -46,8 +46,10 @@ function plnDraw(){
   if(!it||!(rate>0)){$("plnOut").innerHTML='<div class="sub">Pick a craftable item and a rate above 0.</div>';return}
   const pr=plnProto(),BY=plnBy(pr),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
   const P=plan(it,rate,mk,{sp:sp===""?null:+sp,bal:bal===""?null:+bal},PLN_PICK,{proto:pr,enr:$("plnEnr").checked});
+  const inn={};P.edges.forEach(e=>{if(e.to!=null)(inn[e.to]=inn[e.to]||[]).push(e.from)});
+  const stk=new Set(),seen=new Set(),back=new Set(),dfs=n=>{seen.add(n);stk.add(n);(inn[n]||[]).forEach(f=>{if(stk.has(f))back.add(f+"|"+n);else if(!seen.has(f))dfs(f)});stk.delete(n)};dfs(it);   // back-edges (recipe loops) ignored for depth
   const col={[it]:0};   // depth from target (target = rightmost column)
-  for(let k=0;k<=Object.keys(P.nodes).length;k++)P.edges.forEach(e=>{if(e.to!=null)col[e.from]=Math.max(col[e.from]||0,(col[e.to]||0)+1)});
+  for(let k=0;k<=Object.keys(P.nodes).length;k++)P.edges.forEach(e=>{if(e.to!=null&&!back.has(e.from+"|"+e.to))col[e.from]=Math.max(col[e.from]||0,(col[e.to]||0)+1)});
   const ns=Object.values(P.nodes),rw=ns.filter(n=>!n.rec).length,D0=Math.max(0,...ns.filter(n=>n.rec).map(n=>col[n.item]||0));
   if(rw)ns.forEach(n=>{if(!n.rec)col[n.item]=D0+1});   // all raw inputs (ores...) in the leftmost column
   const D=rw?D0+1:D0,cols=[];
@@ -63,7 +65,7 @@ function plnDraw(){
   };
   const boxes=n=>n.rec&&PLN_EX?Array.from({length:n.machines},(_,i)=>box(n,i)):[box(n)];
   const wasOpen=!!$("plnOut").querySelector(".plnFl[open]");
-  $("plnOut").innerHTML=`<div class="plnVp"><div class="plnGrid">${cols.map(c=>`<div class="plnCol">${c.map(n=>boxes(n).join("")).join("")}</div>`).join("")}</div></div>`
+  $("plnOut").innerHTML=`<div class="plnVp"><div class="plnGrid">${cols.filter(c=>c.length).map(c=>`<div class="plnCol">${c.map(n=>boxes(n).join("")).join("")}</div>`).join("")}</div></div>`
     +`<details class="plnFl"${wasOpen?" open":""}><summary>Flows</summary><div class="plnEdges">${P.edges.map(e=>`<div class="plnEdge">${itemHtml(e.from)} &rarr; ${e.to==null?"output":itemHtml(e.to)}: ${esc(e.label)}${e.split?" &middot; "+esc(e.split):""}${e.note?` <span class="sub plnNote${e.fits==null?" bad":""}">${esc(e.note)}</span>`:""}${e.warn?` <b class="plnWarn">${esc(e.warn)}</b>`:""}</div>`).join("")}</div></details>`
     +(P.cycle?'<div class="sub">Recipe loop detected: flows approximate.</div>':"");
   PLN_E=P.edges;
