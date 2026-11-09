@@ -3583,6 +3583,12 @@ async function s37(br) {
   // .sav import: Import save -> file chooser -> station dialog -> Import
   const l = await pg.evaluate(b => __fb.parseSav(Uint8Array.from(atob(b), c => c.charCodeAt(0)).buffer).map(s => ({name: s.name, n: s.json.Blocks.length, lv: new Set(s.json.Blocks.map(x => x.Height)).size})), savB64);
   const pick = l.reduce((bi, s, i) => (s.lv > l[bi].lv ? i : bi), 0);
+  // with the File System Access picker: Import save asks for it with a remembered-folder id and .sav only (the picker reopens in the last folder)
+  await pg.evaluate(() => { window.__pk = null; window.showOpenFilePicker = async o => { window.__pk = o; throw new DOMException('x', 'AbortError'); }; });
+  await pg.click('#impSav');
+  const pk = await pg.evaluate(() => window.__pk);
+  chk('37 Import save uses showOpenFilePicker with id msfb-sav and .sav filter', !!pk && pk.id === 'msfb-sav' && JSON.stringify(pk.types).includes('.sav'), JSON.stringify(pk));
+  await pg.evaluate(() => { delete window.showOpenFilePicker; });   // fallback path: plain file input chooser
   const [fc] = await Promise.all([pg.waitForEvent('filechooser'), pg.click('#impSav')]);
   chk('37 Import save button opens a file chooser', !!fc);
   await fc.setFiles(SAVF);
