@@ -6,8 +6,13 @@ $("palT").onclick=()=>palFold(!$("pal").classList.contains("col"),true);
 {let v=null;try{v=localStorage.getItem(PALK)}catch(e){}if(v==="1")palFold(true)}
 function dockFold(shut){fold($("dock"),$("dockT"),shut,"side panel","Info","»","«");document.querySelector("main").classList.toggle("dc",shut)}
 $("dockT").onclick=()=>dockFold(!$("dock").classList.contains("col"));
-$("prodB").onclick=()=>{const d=$("dProd");d.hidden=!d.hidden;$("prodB").setAttribute("aria-pressed",!d.hidden);$("prScroll").scrollTop=0;prodDraw()};
-$("prodX").onclick=()=>{$("dProd").hidden=true;$("prodB").setAttribute("aria-pressed",false)};
+$("prodB").onclick=()=>{const d=$("dProd");if(TH){TH=null;$("dProdT").textContent="Production";$("thB").setAttribute("aria-pressed",false);d.hidden=false;$("prodB").setAttribute("aria-pressed",true);$("prScroll").scrollTop=0;prodDraw();return}
+  $("dProdT").textContent="Production";d.hidden=!d.hidden;$("prodB").setAttribute("aria-pressed",!d.hidden);$("prScroll").scrollTop=0;prodDraw()};
+const thRun=()=>{TH=theoProd($("prAll").checked)};   // snapshot on click (and on All floors change)
+$("thB").onclick=()=>{const d=$("dProd");if(TH&&!d.hidden){TH=null;d.hidden=true;$("thB").setAttribute("aria-pressed",false);$("prodB").setAttribute("aria-pressed",false);return}
+  thRun();d.hidden=false;d.classList.remove("col");$("thB").setAttribute("aria-pressed",true);$("prodB").setAttribute("aria-pressed",false);$("dProdT").textContent="Theoretical production";prodDraw()};
+$("prAll").onchange=()=>{thRun();prodDraw()};
+$("prodX").onclick=()=>{TH=null;$("dProd").hidden=true;$("prodB").setAttribute("aria-pressed",false);$("thB").setAttribute("aria-pressed",false)};
 let PLNO=null;   // null = auto by planner width on first open
 function plnOptFold(shut){PLNO=shut;fold($("plnOpt"),$("plnOptT"),shut,"options","Options","»","«")}
 $("plnOptT").onclick=()=>plnOptFold(!$("plnOpt").classList.contains("col"));
@@ -16,7 +21,7 @@ window.addEventListener("resize",prodDraw);
 function simLiveUp(){const e=$("simLive"),o=smOne(),u=$("sumLive");if(e&&smOn())e.innerHTML=simLiveHtml(o);if(u&&o&&smOn())u.innerHTML=sumBody(o,def(o.cls));prodDraw()}
 function smSync(){
   const on=SM&&view==="F";
-  if(!on)$("dProd").hidden=true,$("prodB").setAttribute("aria-pressed",false);
+  if(!on&&!TH)$("dProd").hidden=true,$("prodB").setAttribute("aria-pressed",false);
   $("smHint").hidden=on||!SM;
   ["smPlay","smRst","prodB"].forEach(i=>$(i).disabled=!on);
   $("smPlay").textContent=SMP?"Pause":"Play";$("smPlay").setAttribute("aria-pressed",SMP);
