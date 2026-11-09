@@ -1,11 +1,21 @@
 // ---- simulation UI (play/pause/reset/speed/clock, overlay, inspector). Engine above is pure; SIM is null while Simulate is off.
 let SM=false,SMP=false,SPD=1,smPh=0,smRaf=0,smLast=0,smLv=0;
+let TH=null;   // Theoretical snapshot {byItem,byType,count} while the theoretical window is open; null = closed
 const smOn=()=>SM&&view==="F"&&!!SIM&&!!SIM.stat;
 const smK=()=>simView();
 const SMC={idle:"hsl(220,10%,58%)",working:"hsl(140,60%,48%)",starved:"hsl(48,95%,55%)",blocked:"hsl(0,75%,58%)"},SML={idle:"I",working:"W",starved:"S",blocked:"B"};
 const smOne=()=>{const l=S.blocks.filter(b=>sel.has(b.id));return l.length===1?l[0]:null};
 function smClkUp(){const t=SIM?SIM.t:0,p=n=>String(n).padStart(2,"0");$("smClk").textContent=p(Math.floor(t/3600))+":"+p(Math.floor(t/60)%60)+":"+p(t%60)}
 const PRC=i=>`hsl(${Math.round((i*137.5+200)%360)},70%,62%)`,prT=t=>Math.floor(t/60)+":"+String(Math.floor(t%60)).padStart(2,"0");
+function thDraw(){
+  if(!TH)return;
+  const ks=Object.keys(TH.byItem),has=ks.length>0;
+  $("thEmpty").style.display=has?"none":"";$("thBody").style.display=has?"":"none";if(!has)return;
+  const now=ks.map(k=>[k,TH.byItem[k]]).sort((a,b)=>b[1]-a[1]),nx=Math.max(1,...now.map(x=>x[1]));
+  $("thNow").innerHTML=now.map(([k,v],i)=>`<div class="prr"><span class="n">${itemHtml(k)}</span><span class="bar"><i style="width:${Math.round(v/nx*100)}%;background:${PRC(i)}"></i></span><b>${v}</b></div>`).join("");
+  const mt=Object.keys(TH.count).sort((a,b)=>(TH.byType[b]||0)-(TH.byType[a]||0));
+  $("thMt").innerHTML=`<div class="prr t2 hd"><span>Machine</span><span>/min</span><span>Count</span></div>`+mt.map(k=>{const f=def(k);return`<div class="prr t2"><span class="n">${esc(f?lab(f):k)}</span><b>${TH.byType[k]||0}</b><b>${TH.count[k]}</b></div>`}).join("");
+}
 function prodDraw(){
   const d=$("dProd");if(d.hidden||d.classList.contains("col"))return;
   const P=simProd(),ser=P?P.series:[],tot=P?[...P.totals].filter(([,n])=>n>0):[],keys=[];

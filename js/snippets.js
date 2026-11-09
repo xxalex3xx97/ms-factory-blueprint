@@ -40,7 +40,7 @@ addEventListener("keydown",e=>{
   if(e.key==="Escape"){if(!dlg&&ugCancel())return;if(!dlg){active=null;pasting=null;if(!typing)sel=new Set();all()}return}
   if(typing||dlg)return;
   const k=e.key.toLowerCase(),ctl=e.ctrlKey||e.metaKey;
-  if(e.code==="Space"){space=true;cv.style.cursor="grab";e.preventDefault();return}
+  if(e.code==="Space"){if(e.target.closest&&e.target.closest("input,select,textarea,button,[contenteditable]"))return;space=true;cv.style.cursor="grab";e.preventDefault();return}
   if(ctl&&k==="z"){e.preventDefault();e.shiftKey?redo():undo()}
   else if(ctl&&k==="y"){e.preventDefault();redo()}
   else if(ctl&&k==="s"){e.preventDefault();fSave(e.shiftKey)}

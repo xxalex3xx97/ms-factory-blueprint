@@ -7,6 +7,13 @@ $("palT").onclick=()=>palFold(!$("pal").classList.contains("col"),true);
 function dockFold(shut){fold($("dock"),$("dockT"),shut,"side panel","Info","»","«");document.querySelector("main").classList.toggle("dc",shut)}
 $("dockT").onclick=()=>dockFold(!$("dock").classList.contains("col"));
 $("prodB").onclick=()=>{const d=$("dProd");d.hidden=!d.hidden;$("prodB").setAttribute("aria-pressed",!d.hidden);$("prScroll").scrollTop=0;prodDraw()};
+const thRun=()=>{TH=theoProd($("thAll").checked)};   // snapshot on click (and on All floors change)
+const thClose=()=>{TH=null;$("dTheo").hidden=true;$("thB").setAttribute("aria-pressed",false)};
+$("thB").onclick=()=>{const d=$("dTheo");if(!d.hidden){thClose();return}
+  thRun();d.hidden=false;d.classList.remove("col");$("thC").setAttribute("aria-expanded",true);$("thC").title="Collapse to title bar";$("thB").setAttribute("aria-pressed",true);$("thScroll").scrollTop=0;thDraw()};
+$("thAll").onchange=()=>{thRun();thDraw()};
+$("thX").onclick=thClose;
+$("thC").onclick=()=>{const c=$("dTheo").classList.toggle("col");$("thC").setAttribute("aria-expanded",!c);$("thC").title=c?"Expand":"Collapse to title bar"};
 $("prodX").onclick=()=>{$("dProd").hidden=true;$("prodB").setAttribute("aria-pressed",false)};
 let PLNO=null;   // null = auto by planner width on first open
 function plnOptFold(shut){PLNO=shut;fold($("plnOpt"),$("plnOptT"),shut,"options","Options","»","«")}
@@ -89,3 +96,21 @@ function simLiveHtml(one){
   }
   return h;
 }
+// window placement: first-opened window takes first slot
+const WS=[$("dProd"),$("dTheo")];let wn=0;
+function winPlace(){
+  const st=$("stage").getBoundingClientRect(),f=$("fms").getBoundingClientRect(),fv=f.width>0&&f.height>0,
+    fl=fv?f.left-st.left:st.width,top=fv?f.bottom-st.top+10:10,
+    v=WS.filter(d=>!d.hidden).sort((a,b)=>a._o-b._o),
+    need=v.reduce(a=>a+Math.min(340,st.width-20)+10,10);
+  if(!v.length)return;
+  if(need<=fl){let x=10;v.forEach(d=>{d.style.left=x+"px";d.style.top="10px";d.style.bottom="auto";d.style.maxHeight="";x+=d.offsetWidth+10})}
+  else{
+    const b0=innerWidth<=1280?64:10,h=Math.max(44,Math.floor((st.height-b0-top-(v.length-1)*10)/v.length));let b=b0;
+    v.forEach(d=>{d.style.left="10px";d.style.top="auto";d.style.bottom=b+"px";d.style.maxHeight=h+"px";b+=d.offsetHeight+10})
+  }
+}
+WS.forEach(d=>d._o=d.hidden?0:++wn);
+const winMo=new MutationObserver(r=>{r.forEach(m=>{m.target._o=m.target.hidden?0:++wn});winPlace()});
+WS.forEach(d=>winMo.observe(d,{attributes:true,attributeFilter:["hidden"]}));
+const winRo=new ResizeObserver(winPlace);[$("stage"),$("fms"),...WS].forEach(e=>winRo.observe(e));

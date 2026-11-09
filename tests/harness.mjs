@@ -3357,6 +3357,93 @@ async function s34(br) {
   await ctx.close();
 }
 
+// ================= 35. theoretical production (no sim): engine numbers, window UI, benchmark
+async function s35(br) {
+  const KEY = 'ITEM_CobaltOre>ITEM_CobaltPlates', INF = [{Item: 'ITEM_CobaltOre', Count: 0, Infinite: true}];
+  const scene = async (pg, ore) => {
+    const tk = toolkit(pg), A = {x: 40, y: 40};
+    const pr = await tk.relPair('DAT_Refinery', [-1, 0], [1, 0]);
+    const org = {x: A.x - pr.a.x, y: A.y - pr.a.y}, O = {x: org.x + pr.b.x, y: org.y + pr.b.y};
+    tk.resetMid();
+    await imp(pg, bp([], [mac('DAT_Refinery', org.x, org.y, {rot: pr.rot, mid: tk.nm(), rec: KEY}), ...await tk.leg(A, [[[-1, 0], 3]], 'in', ore), ...await tk.leg(O, [[[1, 0], 3]], 'out', [])]));
+    await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); });
+  };
+  const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's35');
+  await scene(pg, INF);
+  const E = await pg.evaluate(() => {
+    const b = S.blocks.find(q => q.cls === 'DAT_Refinery'), r = recOf(b), o = r.o[0], want = pm(r.o[1], r.t);
+    const one = theoProd(false), all = theoProd(true);
+    const bd = def('DAT_ConveyorBelt'), old = bd.speed.itemsPerMin;
+    bd.speed.itemsPerMin = 10; const slow = theoProd(false).byItem[o] || 0; bd.speed.itemsPerMin = old;
+    const sum = x => Object.values(x).reduce((a, v) => a + v, 0);
+    return {want, it: one.byItem[o], si: sum(one.byItem), st: sum(one.byType), same: JSON.stringify(one) === JSON.stringify(all), slow, belt: old, cnt: one.count};
+  });
+  chk('35 theoProd(false) item rate within 1% of pm(out, t)', Math.abs(E.it - E.want) <= .01 * E.want, JSON.stringify([E.it, E.want]));
+  chk('35 byType sum equals byItem sum', Math.abs(E.si - E.st) < 1e-6, JSON.stringify([E.si, E.st]));
+  chk('35 theoProd(true) equals theoProd(false) on one floor', E.same);
+  chk('35 slow belt (10/min) limits the refinery output to 10/min', Math.abs(E.slow - 10) < 1e-6, String(E.slow));
+  chk('35 belt factor restored after slow-belt check', E.belt === 60, String(E.belt));
+  chk('35 machine type count reported', E.cnt && E.cnt.DAT_Refinery === 1, JSON.stringify(E.cnt));
+  await scene(pg, []);
+  const z = await pg.evaluate(() => { const b = S.blocks.find(q => q.cls === 'DAT_Refinery'), o = recOf(b).o[0]; return theoProd(false).byItem[o] || 0 });
+  chk('35 starved refinery (no input) -> 0', z === 0, String(z));
+  // UI: two windows. #thB -> #dTheo (sim off); #prodB -> #dProd (sim on). Independent.
+  await scene(pg, INF);
+  chk('35 Theoretical button visible with sim off', await pg.isVisible('#thB'));
+  await pg.click('#thB');
+  chk('35 #thB opens #dTheo with title Theoretical production', await pg.isVisible('#dTheo') && (await pg.innerText('#dTheoT')) === 'Theoretical production');
+  chk('35 #thB leaves #dProd hidden (separate window), aria-pressed true', !(await pg.isVisible('#dProd')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'true');
+  chk('35 All floors checked by default', await pg.isChecked('#thAll'));
+  chk('35 chart hidden while only Theoretical is open', !(await pg.isVisible('#prCv')));
+  chk('35 Now + By machine type rows drawn', (await pg.locator('#thNow .prr').count()) >= 1 && (await pg.locator('#thMt .prr:not(.hd)').count()) >= 1);
+  chk('35 sub line + elevator note shown', (await pg.innerText('#thScroll')).startsWith('Full speed, limited by belt throughput') && await pg.isVisible('#thElv'));
+  await pg.click('#thAll');
+  chk('35 unchecking All floors keeps window drawn', !(await pg.isChecked('#thAll')) && await pg.isVisible('#dTheo') && (await pg.locator('#thNow .prr').count()) >= 1);
+  await pg.click('#thAll');
+  await pg.screenshot({path: path.join(SHOTS, 'theo-1400.png')});
+  await pg.click('#thX');
+  chk('35 #thX closes the theoretical window (aria-pressed false)', !(await pg.isVisible('#dTheo')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'false');
+  // both open side by side: sim on, Theoretical + Production
+  await pg.click('#simB');
+  await pg.evaluate(() => __fb.simRun(60));
+  await pg.click('#thB');
+  await pg.click('#prodB');
+  await pg.waitForTimeout(150);   // ResizeObserver placement settles
+  const rect = id => pg.evaluate(i => { const r = document.getElementById(i).getBoundingClientRect(); return {x: r.left, y: r.top, r: r.right, b: r.bottom} }, id);
+  const s35Ov = (a, b) => !(a.r <= b.x || b.r <= a.x || a.b <= b.y || b.b <= a.y);
+  const tr = await rect('dTheo'), pr = await rect('dProd');
+  chk('35 both open: both visible, #prCv visible, both aria-pressed true', await pg.isVisible('#dProd') && await pg.isVisible('#dTheo') && await pg.isVisible('#prCv') && (await pg.getAttribute('#prodB', 'aria-pressed')) === 'true' && (await pg.getAttribute('#thB', 'aria-pressed')) === 'true');
+  chk('35 both open: bounding rects do not overlap', tr.r <= pr.x || pr.r <= tr.x || tr.b <= pr.y || pr.b <= tr.y, JSON.stringify({tr, pr}));
+  await pg.click('#prodX');
+  chk('35 #prodX keeps #dTheo open', await pg.isVisible('#dTheo') && !(await pg.isVisible('#dProd')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'true');
+  await pg.click('#prodB');
+  const tr3 = await rect('dTheo'), pr3 = await rect('dProd'), fr3 = await rect('fms');
+  chk('35 both open (theo first): #dTheo does not cover the Simulation panel (#fms)', !s35Ov(tr3, fr3), JSON.stringify({tr3, fr3}));
+  chk('35 both open (theo first): #dProd does not cover #fms', !s35Ov(pr3, fr3), JSON.stringify({pr3, fr3}));
+  chk('35 both open (theo first): no overlap among dTheo, dProd, #fms', !s35Ov(tr3, pr3) && !s35Ov(tr3, fr3) && !s35Ov(pr3, fr3), JSON.stringify({tr3, pr3, fr3}));
+  await pg.evaluate(() => document.getElementById('thC').click());   // JS click: #fms may cover the header button
+  chk('35 #thC collapses theo only (thC false, prodC true, #prCv visible)', (await pg.getAttribute('#thC', 'aria-expanded')) === 'false' && (await pg.getAttribute('#prodC', 'aria-expanded')) === 'true' && await pg.isVisible('#prCv'));
+  await pg.evaluate(() => document.getElementById('thC').click());
+  chk('35 #thC expands theo again', (await pg.getAttribute('#thC', 'aria-expanded')) === 'true' && await pg.isVisible('#thNow'));
+  // prod first: close both (JS clicks, #fms may cover headers), reopen #prodB then #thB
+  await pg.evaluate(() => { document.getElementById('thX').click(); document.getElementById('prodX').click(); });
+  await pg.click('#prodB');
+  await pg.click('#thB');
+  await pg.waitForTimeout(150);
+  const pr2 = await rect('dProd'), tr2 = await rect('dTheo'), fr2 = await rect('fms');
+  chk('35 both open (prod first): no overlap among dProd, dTheo, #fms', !s35Ov(pr2, tr2) && !s35Ov(pr2, fr2) && !s35Ov(tr2, fr2), JSON.stringify({pr2, tr2, fr2}));
+  chk('35 both open (prod first): #dProd does not cover #fms', !s35Ov(pr2, fr2), JSON.stringify({pr2, fr2}));
+  await ctx.close();
+  // benchmark: 28k-block station, theoProd(true) on click
+  const txt = fs.readFileSync(process.env.BENCH || 'C:/Users/SFidelis/Downloads/Beta_Honor_3_Central.json', 'utf8');
+  const bm = await open(br, {width: 1400, height: 900}, 's35b');
+  await bm.pg.evaluate(t => __fb.importJson(t, true), txt);
+  const B = await bm.pg.evaluate(() => { const runs = []; for (let i = 0; i < 3; i++) { const t0 = performance.now(); theoProd(true); runs.push(Math.round(performance.now() - t0)) } return {n: S.blocks.length, runs, layers: new Set(S.blocks.map(b => b.h)).size} });
+  chk('35 benchmark theoProd(true) < 1000 ms', B.runs[0] < 1000, JSON.stringify(B));
+  console.log(`35 benchmark: ${B.n} blocks, ${B.layers} levels, theoProd(true) ms: ${B.runs.join(', ')}`);
+  await bm.ctx.close();
+}
+
 // ================= main
 const br =await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 try {
@@ -3393,6 +3480,7 @@ try {
   try { console.log('--- 32 door passage rule, underground link zoom'); await s32(br); } catch (e) { chk('32 section ran', false, e.stack || String(e)); }
   try { console.log('--- 33 ghost levels, sim ring zoom cull'); await s33(br); } catch (e) { chk('33 section ran', false, e.stack || String(e)); }
   try { console.log('--- 34 elevator ports cull'); await s34(br); } catch (e) { chk('34 elevator ports: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 35 theoretical production'); await s35(br); } catch (e) { chk('35 theoretical production: section ran', false, e.stack || String(e)); }
   try { console.log('--- 28 data-driven shapes'); await s28(br); } catch (e) { chk('28 shapes: section ran', false, e.stack || String(e)); }
   try { console.log('--- 29 icons, Command Module, Blueprint Unit, shipyards'); await s29(br); } catch (e) { chk('29 section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
