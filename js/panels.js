@@ -96,3 +96,21 @@ function simLiveHtml(one){
   }
   return h;
 }
+// window placement: first-opened window takes first slot
+const WS=[$("dProd"),$("dTheo")];let wn=0;
+function winPlace(){
+  const st=$("stage").getBoundingClientRect(),f=$("fms").getBoundingClientRect(),fv=f.width>0&&f.height>0,
+    fl=fv?f.left-st.left:st.width,top=fv?f.bottom-st.top+10:10,
+    v=WS.filter(d=>!d.hidden).sort((a,b)=>a._o-b._o),
+    need=v.reduce(a=>a+Math.min(340,st.width-20)+10,10);
+  if(!v.length)return;
+  if(need<=fl){let x=10;v.forEach(d=>{d.style.left=x+"px";d.style.top="10px";d.style.bottom="auto";d.style.maxHeight="";x+=d.offsetWidth+10})}
+  else{
+    const b0=innerWidth<=1280?64:10,h=Math.max(44,Math.floor((st.height-b0-top-(v.length-1)*10)/v.length));let b=b0;
+    v.forEach(d=>{d.style.left="10px";d.style.top="auto";d.style.bottom=b+"px";d.style.maxHeight=h+"px";b+=d.offsetHeight+10})
+  }
+}
+WS.forEach(d=>d._o=d.hidden?0:++wn);
+const winMo=new MutationObserver(r=>{r.forEach(m=>{m.target._o=m.target.hidden?0:++wn});winPlace()});
+WS.forEach(d=>winMo.observe(d,{attributes:true,attributeFilter:["hidden"]}));
+const winRo=new ResizeObserver(winPlace);[$("stage"),$("fms"),...WS].forEach(e=>winRo.observe(e));
