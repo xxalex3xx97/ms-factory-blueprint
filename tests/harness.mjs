@@ -3512,6 +3512,147 @@ async function s25b(br) {
   await ctx.close();
 }
 
+// ================= 37 header, import buttons, default windows, refresh restore, New/Clear (header/import/restore brief)
+async function s37(br) {
+  const SAVF = 'C:/Users/SFidelis/Downloads/Discovery Next 20261108-2121_S.sav';
+  const JSONF = 'C:/Users/SFidelis/Downloads/Beta_Honor_3_Central.json';
+  if (!fs.existsSync(SAVF) || !fs.existsSync(JSONF)) { chk('37 fixtures present (Downloads: Discovery Next _S.sav, Beta_Honor_3_Central.json)', false, SAVF); return; }
+  const jsonObj = JSON.parse(fs.readFileSync(JSONF, 'utf8'));
+  const levelsOf = blocks => new Set(blocks.map(b => b.Height)).size;
+  const ready = async pg => { await pg.goto(PAGE); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await pg.waitForTimeout(300); };
+  const again = async pg => { await pg.reload(); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await pg.waitForTimeout(1000); };
+  const wins = pg => pg.evaluate(() => ({fw: $('fwW').hidden, lv: $('lvW').hidden, st: $('stW').hidden, fwP: $('flwB').getAttribute('aria-pressed'), lvP: $('lvB').getAttribute('aria-pressed'), lk: $('lk').getAttribute('aria-pressed')}));
+  const savB64 = fs.readFileSync(SAVF).toString('base64');
+
+  // ---- context A, 1400px: header buttons, File menu, default windows (fresh storage)
+  const ctx = await br.newContext({viewport: {width: 1400, height: 900}, acceptDownloads: true});
+  const pg = await ctx.newPage();
+  wire(pg, 's37');
+  await ready(pg);
+  const d0 = await wins(pg);
+  chk('37 boot, no saved state: Flow window open (#flwB pressed), Level closed, link overlay off (#lk)', !d0.fw && d0.fwP === 'true' && d0.lv && d0.lvP === 'false' && d0.lk === 'false', JSON.stringify(d0));
+  const hd = await pg.evaluate(() => {
+    const bb = id => { const b = $(id).getBoundingClientRect(); return {w: Math.round(b.width), h: Math.round(b.height), x: Math.round(b.left), r: Math.round(b.right)}; };
+    const cs = getComputedStyle($('impSav'));
+    return {sav: bb('impSav'), imp: bb('imp'), savTx: $('impSav').querySelector('.tx').textContent.trim(), impTx: $('imp').querySelector('.tx').textContent.trim(), bg: cs.backgroundColor, fg: cs.color,
+      fileIds: [...$('fileL').querySelectorAll('button')].map(b => b.id), fileImp: !!$('fileL').querySelector('#imp,#impSav')};
+  });
+  chk('37 header has "Import save" button, visible at 1400px', hd.sav.w > 0 && hd.savTx === 'Import save', JSON.stringify(hd.sav));
+  chk('37 header has "Import JSON" button, visible and separate from Import save', hd.imp.w > 0 && hd.impTx === 'Import JSON' && hd.imp.x !== hd.sav.x, JSON.stringify([hd.sav, hd.imp]));
+  const ok = hd.bg.match(/oklch\(([\d.]+)\s+([\d.]+)\s+([\d.]+)/), amber = !!ok && +ok[1] > 0.7 && +ok[2] > 0.08 && +ok[3] >= 55 && +ok[3] <= 100;   // amber = light, saturated, hue ~80
+  chk('37 Import save is a colored (amber) button', amber, `bg ${hd.bg} fg ${hd.fg}`);
+  chk('37 File menu has no import item at 1400px (New, Open, Save as)', !hd.fileImp && hd.fileIds.join(',') === 'nw,fOpen,fSaveAs', hd.fileIds.join(','));
+  const helpLink = await pg.evaluate(() => !!$('dHelp').querySelector('a[href*="MSBlueprintUnit"]'));
+  chk('37 Companion mod link: moved to ? (help dialog) after leaving the File menu', helpLink);
+
+  // header fits at 1400 / 900 / 390: no horizontal overflow, nothing outside the viewport
+  for (const vp of [{width: 1400, height: 900}, {width: 900, height: 700}, {width: 390, height: 844}]) {
+    await pg.setViewportSize(vp); await pg.waitForTimeout(300);
+    const o = await pg.evaluate(() => {
+      const h = document.querySelector('header'), vw = innerWidth, out = [];
+      h.querySelectorAll('button,select,input').forEach(e => { const b = e.getBoundingClientRect(); if (b.width > 0 && b.height > 0 && !e.closest('.mnl') && (b.right > vw + 1 || b.left < -1)) out.push(e.id || e.className); });
+      return {hsw: h.scrollWidth, hcw: h.clientWidth, dsw: document.documentElement.scrollWidth, vw, out, sav: $('impSav').getBoundingClientRect().width > 0};
+    });
+    chk(`37 header: no horizontal overflow at ${vp.width}px`, o.hsw <= o.hcw + 1 && o.dsw <= o.vw && o.out.length === 0, JSON.stringify(o));
+    if (vp.width === 390) {
+      chk('37 390px: Import save still visible in header', o.sav);
+      const f390 = await pg.evaluate(() => !!$('fileL').querySelector('#imp'));
+      chk('37 390px: File menu has no Import JSON item (brief: File menu has no import)', !f390, 'Import JSON is inside File menu at <=1100px (plan slice A6)');
+    }
+  }
+  await pg.setViewportSize({width: 1400, height: 900}); await pg.waitForTimeout(200);
+
+  // JSON import: Import JSON -> file -> Import
+  await pg.click('#imp');
+  await pg.setInputFiles('#impFile', JSONF);
+  await pg.waitForFunction(() => $('impTa').value.trim().startsWith('{'));
+  await pg.click('#impGo');
+  await pg.waitForFunction(() => !$('dImp').open);
+  const j1 = await pg.evaluate(() => ({n: S.blocks.length, lv: $('lvW').hidden}));
+  const jb = await pg.evaluate(() => __fb.build().Blocks.length);
+  chk(`37 JSON import (Import JSON -> file -> Import) applies the blueprint (${jsonObj.Blocks.length} blocks)`, jb === jsonObj.Blocks.length, `build() blocks ${jb}, json ${jsonObj.Blocks.length}`);
+  chk(`37 JSON import: Level window ${levelsOf(jsonObj.Blocks) >= 2 ? 'opens' : 'stays closed'} (${levelsOf(jsonObj.Blocks)} levels)`, (levelsOf(jsonObj.Blocks) >= 2) === !j1.lv, JSON.stringify(j1));
+
+  // .sav import: Import save -> file chooser -> station dialog -> Import
+  const l = await pg.evaluate(b => __fb.parseSav(Uint8Array.from(atob(b), c => c.charCodeAt(0)).buffer).map(s => ({name: s.name, n: s.json.Blocks.length, lv: new Set(s.json.Blocks.map(x => x.Height)).size})), savB64);
+  const pick = l.reduce((bi, s, i) => (s.lv > l[bi].lv ? i : bi), 0);
+  const [fc] = await Promise.all([pg.waitForEvent('filechooser'), pg.click('#impSav')]);
+  chk('37 Import save button opens a file chooser', !!fc);
+  await fc.setFiles(SAVF);
+  if (l.length > 1) {
+    await pg.waitForSelector('#dSav[open]', {timeout: 60000});
+    const opts = await pg.evaluate(() => document.querySelectorAll('#savSt option').length);
+    chk(`37 .sav import: station dialog lists ${l.length} stations`, opts === l.length, `options ${opts}`);
+    await pg.selectOption('#savSt', String(pick));
+    await pg.click('#savGo');
+    await pg.waitForFunction(() => !$('dSav').open, null, {timeout: 60000});
+  }
+  await pg.waitForTimeout(800);
+  const s1 = await pg.evaluate(() => ({n: S.blocks.length, name: $('name').value, lv: $('lvW').hidden, stG: !$('stG').hidden, sel: $('stSel').value}));
+  chk(`37 .sav import: station "${l[pick].name}" applied (name field, ${l[pick].n} json blocks)`, s1.name === l[pick].name && s1.n > 0, JSON.stringify(s1));
+  chk(`37 .sav import: Level window ${l[pick].lv >= 2 ? 'opens' : 'stays closed'} (${l[pick].lv} levels)`, (l[pick].lv >= 2) === !s1.lv, JSON.stringify(s1));
+  chk('37 .sav import: station selector shown with the picked station', s1.stG === (l.length > 1) && (l.length === 1 || s1.sel === String(pick)), JSON.stringify(s1));
+
+  // refresh: same design, layer, zoom/pan (both views), window states, station
+  const hs = await pg.evaluate(() => [...new Set(S.blocks.map(b => b.h))].sort((a, b) => a - b));
+  await pg.evaluate(hs => {
+    setLayer(hs[hs.length - 1]); setView('F'); VF.ox = 111; VF.oy = 77; VF.z = 1.3; VF.init = true;
+    setView('L'); VL.ox = 222; VL.oy = 133; VL.z = 1.6; all();
+  }, hs);
+  await pg.click('#fwWX');   // close Flow (default open)
+  await pg.click('#stB');    // open Settings (Windows menu)
+  await pg.evaluate(() => asvNow());
+  await pg.waitForTimeout(300);
+  const snap = () => pg.evaluate(async () => ({design: build(), view, layer, VL: {ox: VL.ox, oy: VL.oy, z: VL.z}, VF: {ox: VF.ox, oy: VF.oy, z: VF.z},
+    w: {fw: $('fwW').hidden, lv: $('lvW').hidden, st: $('stW').hidden}, stG: !$('stG').hidden, sel: $('stSel').value, idb: !!(await idbGet('sav'))}));
+  const before = await snap();
+  await again(pg);
+  const after = await snap();
+  chk('37 refresh: same blueprint (build() deep equal)', isDeepStrictEqual(before.design, after.design), `blocks ${before.design.Blocks.length} vs ${after.design.Blocks.length}`);
+  chk('37 refresh: same view and level (Layout, same layer)', after.view === before.view && after.view === 'L' && after.layer === before.layer, JSON.stringify([before.view, before.layer, after.view, after.layer]));
+  chk('37 refresh: same zoom and pan (Layout and floor)', JSON.stringify(after.VL) === JSON.stringify(before.VL) && JSON.stringify(after.VF) === JSON.stringify(before.VF), JSON.stringify({before: [before.VL, before.VF], after: [after.VL, after.VF]}));
+  chk('37 refresh: same windows (Flow closed, Level and Settings as before)', JSON.stringify(after.w) === JSON.stringify(before.w) && after.w.fw && !after.w.st, JSON.stringify(after.w));
+  chk('37 refresh: same station (selector shown, same station index)', after.stG === before.stG && (l.length === 1 || (after.stG && after.sel === String(pick))), JSON.stringify({stG: after.stG, sel: after.sel, pick}));
+  chk('37 refresh: .sav kept in IndexedDB (msfb/kv sav)', after.idb);
+
+  // New / Clear: clears design, saved state, station selector and the stored .sav
+  pg.removeAllListeners('dialog'); pg.on('dialog', d => d.accept().catch(() => {}));
+  await pg.click('#nw');
+  await pg.waitForTimeout(300);
+  const nwS = await pg.evaluate(async () => ({n: S.blocks.length, ls: localStorage.getItem(ASK), stG: $('stG').hidden, idb: !!(await idbGet('sav'))}));
+  chk('37 New/Clear: design and saved state cleared (blocks 0, msfb.state removed, station selector hidden)', nwS.n === 0 && nwS.ls === null && nwS.stG, JSON.stringify(nwS));
+  chk('37 New/Clear: stored .sav removed from IndexedDB', !nwS.idb, 'msfb/kv "sav" still present after New');
+  await again(pg);
+  const nwR = await pg.evaluate(() => ({n: S.blocks.length, stG: $('stG').hidden}));
+  chk('37 New/Clear then refresh: nothing restored (empty design, no station selector)', nwR.n === 0 && nwR.stG, JSON.stringify(nwR));
+  await ctx.close();
+
+  // ---- screenshots: imported 2-level .sav design, Level + Flow open (1400 and 390)
+  for (const vp of [{width: 1400, height: 900, tag: '1400'}, {width: 390, height: 844, tag: '390'}]) {
+    const c2 = await br.newContext({viewport: {width: vp.width, height: vp.height}});
+    const p2 = await c2.newPage();
+    wire(p2, 's37shot' + vp.tag);
+    await ready(p2);
+    await p2.setInputFiles('#savFile', SAVF);
+    if (l.length > 1) { await p2.waitForSelector('#dSav[open]', {timeout: 60000}); await p2.selectOption('#savSt', String(pick)); await p2.click('#savGo'); }
+    await p2.waitForTimeout(800);
+    if (await p2.evaluate(() => $('fwW').hidden)) await p2.click('#flwB');
+    if (await p2.evaluate(() => $('lvW').hidden)) await p2.click('#lvB');
+    await p2.waitForTimeout(500);
+    const ov = await p2.evaluate(() => {
+      const h = document.querySelector('header'), vw = innerWidth, out = [];
+      h.querySelectorAll('button,select,input').forEach(e => { const b = e.getBoundingClientRect(); if (b.width > 0 && b.height > 0 && !e.closest('.mnl') && (b.right > vw + 1 || b.left < -1)) out.push(e.id || e.className); });
+      return {hsw: h.scrollWidth, hcw: h.clientWidth, vw, out, savVisible: $('impSav').getBoundingClientRect().right <= vw};
+    });
+    chk(`37 header with imported 2-level design fits ${vp.tag}px (no overflow, Import save in view)`, ov.hsw <= ov.hcw + 1 && ov.out.length === 0 && ov.savVisible, JSON.stringify(ov));
+    const open = await p2.evaluate(() => ({fw: !$('fwW').hidden, lv: !$('lvW').hidden}));
+    chk(`37 screenshot ${vp.tag}px: Level and Flow open`, open.fw && open.lv, JSON.stringify(open));
+    await p2.screenshot({path: path.join(SHOTS, `s37-full-${vp.tag}.png`)});
+    await p2.locator('header').screenshot({path: path.join(SHOTS, `s37-header-${vp.tag}.png`)});
+    await c2.close();
+  }
+}
+
 // ================= main
 const br =await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 try {
@@ -3543,6 +3684,7 @@ try {
   try { console.log('--- 24 r12 user save: sim, perf, shots'); await s24(br); } catch (e) { chk('24 r12: section ran', false, e.stack || String(e)); }
   try { console.log('--- 25b refresh restore'); await s25b(br); } catch (e) { chk('25b refresh restore: section ran', false, e.stack || String(e)); }
   try { console.log('--- 36 default windows'); await s36(br); } catch (e) { chk('36 default windows: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 37 header, import, restore'); await s37(br); } catch (e) { chk('37 header/import/restore: section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }

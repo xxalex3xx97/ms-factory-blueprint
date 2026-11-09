@@ -13,9 +13,9 @@ try {
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
   await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href);
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
-  await pg.evaluate(() => document.getElementById('imp').click()); await pg.setInputFiles('#impFile', SAV); await pg.waitForSelector('#impSt:not([hidden])', {timeout: 60000});
+  await pg.evaluate(() => document.getElementById('impSav').click()); await pg.setInputFiles('#savFile', SAV); await pg.waitForSelector('#dSav[open]', {timeout: 60000});
   const r = await pg.evaluate(async () => {
-    const l = __fb.parseSav(await document.getElementById('impFile').files[0].arrayBuffer());
+    const l = __fb.parseSav(await document.getElementById('savFile').files[0].arrayBuffer());
     const cs = s => s.json.DefaultMachines.filter(m => /^BP_ContainerObject/.test(m.Class));
     const all = l.flatMap(cs), withC = all.filter(m => m.Contents);
     const unk = withC.flatMap(m => m.Contents).filter(c => !ITEMS[c.Item]).map(c => c.Item);
