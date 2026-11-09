@@ -3670,6 +3670,38 @@ async function s37(br) {
   }
 }
 
+// ================= 39 dock shape: drone bay ports + shipyard exit tube (2026-11-09, composed in extract/gen_shapes.py)
+async function s39(br) {
+  const ctx = await br.newContext({viewport: {width: 1400, height: 900}, acceptDownloads: true});
+  const pg = await ctx.newPage();
+  wire(pg, 's39');
+  await pg.goto(PAGE);
+  await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  await pg.waitForTimeout(300);
+  await reset(pg);
+  await pg.evaluate(() => { STRICT = false; __fb.setView('F'); __fb.fit(); });
+  const sh = await pg.evaluate(() => SHAPES.BPO_Dock);
+  const nf = await pg.evaluate(() => CATALOG.blocks.find(b => b.name === 'BPO_Dock').nofloor);
+  chk('39 BPO_Dock has a 16x16 shape and stays nofloor (no buildable floor)', !!sh && sh.fw === 16 && sh.fh === 16 && nf === true, JSON.stringify(sh && {fw: sh.fw, fh: sh.fh}) + ' nofloor ' + nf);
+  chk('39 BPO_Dock: 2 unnumbered west-edge ports at (0,8.5),(0,7.5) like Mining Drone Bay Mk.1', !!sh && sh.ports.length === 2 && sh.ports.every(q => q[0] === null && q[1] === 0) && JSON.stringify(sh.ports.map(q => q[2]).sort()) === '[7.5,8.5]', JSON.stringify(sh && sh.ports));
+  chk('39 BPO_Dock: exit tube runs to the east edge (open-end caps x 15.92)', !!sh && Math.max(...sh.walls.map(w => w[2])) >= 15.9, JSON.stringify(sh && sh.walls));
+  for (const r of [0, 1, 2, 3]) {
+    const o = await pg.evaluate(([cls, r]) => {
+      __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+      const b = __fb.S.blocks.find(q => q.cls.endsWith('/BPO_Dock.BPO_Dock_C')), e = entrances(b);
+      return {eds: e.map(q => q.ed), port: e.every(q => q.port)};
+    }, ['/Game/Blueprints/BuildingBlocks/BPO_Dock.BPO_Dock_C', r]);
+    chk(`39 BPO_Dock rot ${r}: output ports mark the ${'ESWN'[(2 + r) & 3]} side only (same rule as the drone bay)`, JSON.stringify(o.eds) === JSON.stringify([(2 + r) & 3]) && o.port, JSON.stringify(o));
+    if (r === 0 || r === 1) {
+      await pg.evaluate(() => { __fb.setView('F'); const b = __fb.S.blocks.find(q => q.cls.endsWith('/BPO_Dock.BPO_Dock_C')); V.z = Math.min(W, H) / (3.2 * FC * CELLS.F);
+        V.ox = W / 2 - (b.x + .5) * FC * sc(); V.oy = H / 2 - (b.y + .5) * FC * sc(); __fb.paint(); });
+      await pg.waitForTimeout(100);
+      await pg.screenshot({path: path.join(SHOTS, `dock-shape-rot${r}.png`)});
+    }
+  }
+  await pg.close();
+}
+
 // ================= 38 delete mode, config copy/paste, context menu, no auto-select
 async function s38(br) {
   const ctx = await br.newContext({viewport: {width: 1400, height: 900}, acceptDownloads: true});
@@ -3813,6 +3845,7 @@ try {
   try { console.log('--- 36 default windows'); await s36(br); } catch (e) { chk('36 default windows: section ran', false, e.stack || String(e)); }
   try { console.log('--- 37 header, import, restore'); await s37(br); } catch (e) { chk('37 header/import/restore: section ran', false, e.stack || String(e)); }
   try { console.log('--- 38 delete mode, config copy/paste, context menu'); await s38(br); } catch (e) { chk('38 section ran', false, e.stack || String(e)); }
+  try { console.log('--- 39 dock shape'); await s39(br); } catch (e) { chk('39 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }
