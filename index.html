@@ -37,6 +37,7 @@
     <button id="lvB" class="hbt" aria-pressed="false" aria-controls="lvW" title="Level window (up/down, ghost levels)"><span class="tx">Level</span> <span id="lvN">1</span></button>
     <button id="simB" class="hbt" aria-pressed="false" aria-controls="smW" title="Simulation window"><span class="ic" aria-hidden="true">&#9654;</span><span class="tx">Simulation</span></button>
     <button id="flwB" class="hbt" aria-pressed="false" aria-controls="fwW" title="Flow window: links and bottlenecks"><span class="ic" aria-hidden="true">&#8644;</span><span class="tx">Flow</span></button>
+    <button id="thB" class="hbt" aria-pressed="false" aria-controls="dProd" title="Theoretical production: full speed, limited by belts"><span class="ic" aria-hidden="true">&#931;</span><span class="tx">Theoretical</span></button>
     <button id="plnB" class="hbt" aria-label="Planner" title="Planner: target item, rate, machines and belts (schematic only)" aria-pressed="false"><span class="ic" aria-hidden="true">&#9638;</span><span class="tx">Planner</span></button>
   </div>
   <div class="tg" role="group" aria-label="View"><span class="gl">View</span>
@@ -58,14 +59,16 @@
     <div id="dProd" role="region" aria-labelledby="dProdT" hidden>
       <div id="prHd"><h3 id="dProdT">Production</h3><button id="prodC" aria-expanded="true" aria-label="Collapse production" title="Collapse to title bar">&#9650;</button><button id="prodX" aria-label="Close production" title="Close">&times;</button></div>
       <div id="prScroll">
-        <div class="sub">30 s average, sampled every 5 s</div>
+        <div id="prSub" class="sub">30 s average, sampled every 5 s</div>
+        <label id="prAllL" hidden><input id="prAll" type="checkbox" checked aria-label="All floors"> <span class="tx">All floors</span></label>
+        <div id="prElv" class="sub" hidden>Elevator transfers not included</div>
         <div id="prEmpty" class="sub" style="display:none">No production yet</div>
         <div id="prBody">
           <canvas id="prCv" aria-label="Items per minute over simulated time"></canvas>
           <div id="prLeg" class="leg"></div>
           <h4>Now (items/min)</h4><div id="prNow"></div>
           <h4>By machine type</h4><div id="prMt"></div>
-          <h4>Total built</h4><div id="prTot"></div>
+          <div id="prTW"><h4>Total built</h4><div id="prTot"></div></div>
         </div>
       </div>
     </div>
@@ -151,6 +154,7 @@
     <li>Adjacent blocks always connect. Doors are open by default; click a door to close or open it.</li>
     <li>Pick an item in the palette, then click to place. Shift+click an item to put it on the hotbar.</li>
     <li>Simulate, then Production: items per minute per item and machine type, plus totals.</li>
+    <li>Theoretical: items per minute at full speed, limited by belts, no simulation needed.</li>
     <li>Layout, port positions, rotation and machine scale not marked as verified are not confirmed and may differ in the game.</li>
   </ul>
   <h4>Controls</h4>
