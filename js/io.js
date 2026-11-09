@@ -234,28 +234,20 @@ ml.onclick=()=>cl();
 ml.onkeydown=e=>{const a=it(),i=a.indexOf(document.activeElement);if(e.key==="ArrowDown"){e.preventDefault();a[(i+1)%a.length].focus()}else if(e.key==="ArrowUp"){e.preventDefault();a[(i+a.length-1)%a.length].focus()}else if(e.key==="Tab")cl()}}
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!ml.hidden){e.stopPropagation();cl(true)}},true);
 document.addEventListener("pointerdown",e=>{if(!ml.hidden&&!mn.contains(e.target))cl()},true);addEventListener("resize",()=>cl())});
-{const fl=$("fileL"),ids=["fit","fSave","exp","help"].map(i=>{const e=$(i),m=document.createComment(i);e.before(m);return [e,m]}),mq=matchMedia("(max-width:1100px)");
+{const fl=$("fileL"),ids=["fit","fSave","exp","help","imp"].map(i=>{const e=$(i),m=document.createComment(i);e.before(m);return [e,m]}),mq=matchMedia("(max-width:1100px)");
 const mv=()=>ids.forEach(([e,m])=>mq.matches?fl.append(e):m.after(e));mq.addEventListener("change",mv);mv()}
 $("fSave").onclick=()=>fSave(false);$("fSaveAs").onclick=()=>fSave(true);$("fOpen").onclick=fOpen;
-let SAVST=null;   // stations parsed from a chosen *_S.sav, waiting for the user's pick
-$("imp").onclick=()=>{$("impTa").value="";$("impFile").value="";SAVST=null;$("impSt").hidden=true;$("dImp").showModal()};
+$("imp").onclick=()=>{$("impTa").value="";$("impFile").value="";$("dImp").showModal()};
 $("impX").onclick=()=>$("dImp").close();
-$("impTa").oninput=()=>{SAVST=null;$("impSt").hidden=true};
-$("impFile").onchange=async e=>{
-  const f=e.target.files[0];if(!f)return;
-  if(!/\.sav$/i.test(f.name)){SAVST=null;$("impSt").hidden=true;$("impTa").value=await f.text();return}
-  try{
-    const l=parseSav(await f.arrayBuffer());
-    if(!l.length){SAVST=null;$("impSt").hidden=true;toast("No player stations found in this save");return}
-    if(l.length===1){SAVST=null;if(importJson(JSON.stringify(l[0].json)))$("dImp").close();return}
-    SAVST=l;$("impSt").replaceChildren(...l.map((s,i)=>new Option(`${s.name} (${s.json.Blocks.length} blocks, ${s.json.DefaultMachines.length} machines)`,String(i))));
-    $("impSt").hidden=false;toast("Choose a station, then Import");
-  }catch(err){SAVST=null;$("impSt").hidden=true;toast("Save read failed: "+err.message)}
-};
-$("impGo").onclick=()=>{
-  if(SAVST){const l=SAVST,i=+$("impSt").value;if(importJson(JSON.stringify(l[i].json))){stShow(l,i);$("dImp").close()}return}
-  if(importJson($("impTa").value))$("dImp").close();
-};
+$("impFile").onchange=async e=>{const f=e.target.files[0];if(f)$("impTa").value=await f.text()};
+$("impGo").onclick=()=>{if(importJson($("impTa").value))$("dImp").close()};
+let SAVL=null,SAVB=null,SAVN="";
+$("impSav").onclick=()=>{$("savFile").value="";$("savFile").click()};
+$("savFile").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const ab=await f.arrayBuffer(),l=parseSav(ab);if(!l.length){toast("No player stations found in this save");return}
+ if(l.length===1){if(importJson(JSON.stringify(l[0].json)))svPut(ab,f.name,l,0);return}
+ SAVL=l;SAVB=ab;SAVN=f.name;$("savSt").replaceChildren(...l.map((s,i)=>new Option(`${s.name} (${s.json.Blocks.length} blocks, ${s.json.DefaultMachines.length} machines)`,String(i))));$("dSav").showModal()}catch(err){toast("Save read failed: "+err.message)}};
+$("savX").onclick=()=>$("dSav").close();
+$("savGo").onclick=()=>{const l=SAVL,i=+$("savSt").value;if(l&&importJson(JSON.stringify(l[i].json))){svPut(SAVB,SAVN,l,i);$("dSav").close()}};
 // Header station switcher: shown after picking one station of a multi-station save, any other import hides it
 let STL=null;
 function stHide(){STL=null;$("stG").hidden=true}

@@ -24,9 +24,14 @@
       <button id="nw" role="menuitem" aria-label="New design and clear saved" title="Clear the autosaved design and start empty">New / Clear</button>
       <button id="fOpen" role="menuitem" aria-label="Open file" title="Open a .json file and keep it linked for Save">Open</button>
       <button id="fSaveAs" role="menuitem" aria-label="Save as" title="Save to a new file (Ctrl+Shift+S)">Save as</button>
-      <button id="imp" role="menuitem" aria-label="Import JSON">Import</button>
-      <button id="fShot" role="menuitem" title="Open the Screenshot panel (export PNG / SVG)">Screenshot…</button>
+      <button id="comp" role="menuitem" title="Companion mod: Blueprint Unit builds this factory in the game (opens GitHub)" onclick="window.open('https://github.com/xxalex3xx97/MSBlueprintUnit','_blank','noopener')">Companion mod</button>
     </div></div>
+  </div>
+  <div class="grp">
+    <button id="impSav" class="imp-sav" aria-label="Import save" title="Import a Main Sequence save (*_S.sav) and pick a station"><span class="ic" aria-hidden="true">&#8681;</span><span class="tx">Import save</span></button>
+    <button id="imp" aria-label="Import JSON" title="Import a blueprint from JSON (paste or file)"><span class="tx">Import JSON</span></button>
+  </div>
+  <div class="grp">
     <button id="fSave" class="pri" aria-label="Save" title="Save to the opened file (Ctrl+S)">Save</button>
     <button id="exp" class="pri" aria-label="Export JSON">Export</button>
   </div>
@@ -42,7 +47,6 @@
   </div>
   <div class="tg" role="group" aria-label="View"><span class="gl">View</span>
   <div class="grp seg" id="vw" role="group" aria-label="View level"><button id="vwL" class="on" aria-pressed="true" title="Block layout">Layout</button><button id="vwF" aria-pressed="false" title="Factory floor (F)"><span class="lg">Factory </span><span class="fl">floor</span> <kbd>F</kbd></button></div>
-  <button id="comp" title="Companion mod: Blueprint Unit builds this factory in the game (opens GitHub)" onclick="window.open('https://github.com/xxalex3xx97/MSBlueprintUnit','_blank','noopener')">Companion mod</button>
   <button id="help" aria-label="Help" title="Help: how to, controls, simulation rules, legend">?</button>
   </div>
 </header>
@@ -186,10 +190,16 @@
 </dialog>
 <dialog id="dImp" aria-labelledby="dImpT">
   <h3 id="dImpT">Import JSON</h3>
-  <p class="sub">Replaces the current blueprint (undoable). Paste JSON, choose a file, or choose a Main Sequence save (*_S.sav) and pick a player station.</p>
+  <p class="sub">Replaces the current blueprint (undoable). Paste JSON or choose a .json file.</p>
   <textarea id="impTa" aria-label="JSON to import" placeholder='{"Version":1,"Blocks":[...]}'></textarea>
-  <select id="impSt" hidden aria-label="Station to import"></select>
-  <div class="btns"><input id="impFile" type="file" accept=".json,.sav,application/json" aria-label="Choose JSON or save file" style="width:auto"><button id="impGo" class="pri">Import</button><button id="impX">Cancel</button></div>
+  <div class="btns"><input id="impFile" type="file" accept=".json,application/json" aria-label="Choose JSON file" style="width:auto"><button id="impGo" class="pri">Import</button><button id="impX">Cancel</button></div>
+</dialog>
+<input id="savFile" type="file" accept=".sav" hidden aria-label="Choose Main Sequence save (*_S.sav)">
+<dialog id="dSav" aria-labelledby="dSavT">
+  <h3 id="dSavT">Import save</h3>
+  <p class="sub">Pick a player station from the save. Replaces the current blueprint (undoable).</p>
+  <select id="savSt" aria-label="Station to import"></select>
+  <div class="btns"><button id="savGo" class="pri">Import</button><button id="savX">Cancel</button></div>
 </dialog>
 <div id="toast" role="status"></div>
 
