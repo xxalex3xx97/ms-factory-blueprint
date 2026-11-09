@@ -3,7 +3,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 const HUES={Basic:200,Vertical:335,Defence:20,"Functional Blocks":150,Shipyards:265};
 const ORDER=["Basic","Vertical","Defence","Functional Blocks","Shipyards","Balancers","Conveyors","Machine","Splitters","Undergrounds","Storage"];
 const hue=c=>HUES[c]!=null?HUES[c]:[...c].reduce((a,ch)=>(a*31+ch.charCodeAt(0))%360,7);
-const fill=(c,a)=>`hsla(${hue(c)},55%,48%,${a})`;
+const FILLM=new Map();const fill=(c,a)=>{const k=c+"|"+a;let v=FILLM.get(k);if(!v){v=`hsla(${hue(c)},55%,48%,${a})`;FILLM.set(k,v)}return v};
 const short=n=>n.replace(/^(BPO_|DAT_)/,"").replace(/_C$/,"");
 const shortCls=c=>short((c.split(".").pop()||c));
 const lab=d=>d.label||short(d.name);

@@ -47,6 +47,9 @@ async function verify() {
     window.__gh = [];
     const o = window.drawBlock;
     window.drawBlock = function (b, a, ...r) { if (b.h !== layer) __gh.push(b.h); return o.call(this, b, a, ...r) };
+    // flat batch (drawBlocks, below FLAT_S px/cell) draws without drawBlock: count the blocks it is handed too
+    const ob = window.drawBlocks;
+    window.drawBlocks = function (list, a, ...r) { list.forEach(b => { if (b.h !== layer) __gh.push(b.h) }); return ob.call(this, list, a, ...r) };
   });
   const ghostLevels = () => pg.evaluate(() => { const v = [...new Set(__gh)].sort((a, b) => a - b); __gh = []; return v });
 
@@ -112,6 +115,8 @@ async function verify() {
     await pg2.evaluate(() => { __fb.setView('F'); document.getElementById('ghost').checked = false; });
     // pre-fix build has no ring gate: emulate the s<6 gate there so the rest of the pixels can be compared exactly
     // same for flow links: pre-fix draws them at every zoom, so emulate the ARROW_MIN_S gate (links absent at fit now expected)
+    // flat block batch (FLAT_S) off for the parity run: block pixels at fit then match pre-fix exactly, so links/items/rings stay asserted. Flat LOD itself is not pixel-compared
+    if (dir !== BEFORE) await pg2.evaluate(() => { FLAT_S = 0 });
     if (dir === BEFORE) await pg2.evaluate(() => { const of = window.drawSimFull; window.drawSimFull = function (s) { if (s < 6) return; return of.call(this, s) }; const ol = window.drawLinks; window.drawLinks = function (s) { if (s < ARROW_MIN_S) return; return ol.call(this, s) } });
     const fbLayer = fb ? fb.h : 0;
     await pg2.evaluate(h => __fb.setLayer(h), fbLayer);

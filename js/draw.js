@@ -152,6 +152,9 @@ const toCell=(px,py)=>({x:Math.floor((px-V.ox)/sc()),y:Math.floor((py-V.oy)/sc()
 let PF=0,DIRTY=true,USEB=false;
 let raf=0;const draw=()=>{DIRTY=true;asv();if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()})};
 
+const SPR=new Map();
+function spr(key,w,h,fn){const k=key+"|"+dpr;let c=SPR.get(k);if(!c){if(SPR.size>800)SPR.clear();c=document.createElement("canvas");c.width=Math.ceil(w*dpr);c.height=Math.ceil(h*dpr);const g=c.getContext("2d");g.scale(dpr,dpr);g.imageSmoothingQuality="high";fn(g);SPR.set(k,c)}return c}
+const blit=(c,x,y)=>cx.drawImage(c,x,y,c.width/dpr,c.height/dpr);
 function drawIcon(d,x,y,w,h,alpha){
   const i=img(d&&d.icon);if(!i||!i.complete||!i.naturalWidth)return;
   const z=Math.min(w,h)*.72;if(z<10)return;
@@ -387,6 +390,23 @@ let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k
 let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(lyBlocks().all.map(b=>[b.id,b]));return LBM.get(id)};
 const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
 function paint(pk){LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}}
+let FLAT_S=5;   // let: tests set FLAT_S=0 for exact block pixels. below this zoom (px per cell) blocks are batched as flat rects (no icon/arrow/label/door marks are drawn there anyway)
+function drawBlocks(list,alpha,useSel){
+  const s=sc(),flat=s<FLAT_S,fl=new Map(),st=new Map(),full=[];
+  list.forEach(b=>{
+    const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s;
+    if(x>W||y>H||x+w<0||y+h<0)return;
+    if(!flat||(useSel&&sel.has(b.id)&&b.h===layer)||(isM(b)&&RCT&&b.h===layer&&outside(b,RCT))){full.push(b);return}
+    const k=catOf(b)||"";
+    let p=fl.get(k);if(!p)fl.set(k,p=new Path2D());p.rect(x,y,w,h);
+    if(s>=3){let q=st.get(k);if(!q)st.set(k,q=new Path2D());q.rect(x+.5,y+.5,w-1,h-1)}
+  });
+  if(flat){
+    fl.forEach((p,k)=>{cx.fillStyle=k?fill(k,alpha*.8):`rgba(120,125,135,${alpha*.8})`;cx.fill(p)});
+    cx.lineWidth=1;st.forEach((q,k)=>{cx.strokeStyle=k?`hsla(${hue(k)},70%,70%,${alpha})`:`rgba(190,195,205,${alpha})`;cx.stroke(q)});
+  }
+  full.forEach(b=>drawBlock(b,alpha,useSel&&sel.has(b.id)));
+}
 function paint0(){
   cx.setTransform(dpr,0,0,dpr,0,0);cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality="high";cx.clearRect(0,0,W,H);
   const s=sc(),F=view==="F";
@@ -394,9 +414,9 @@ function paint0(){
   if(F&&SM&&SIM&&SIM.sig!==PK){simReset();SIM.sig=PK;smClkUp()}
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8);
-  if($("ghost").checked)ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s))drawBlock(b,Math.max(.08,.3-.07*Math.abs(b.h-layer)),false)});
+  if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*Math.abs(b.h-layer));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
   const cur=lyBlocks().v;CUR=cur;
-  cur.forEach(b=>{const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s;if(x>W||y>H||x+d.w*s<0||y+d.h*s<0)return;drawBlock(b,.92,sel.has(b.id))});   // viewport cull
+  drawBlocks(cur,.92,true);   // viewport cull inside drawBlocks
   cx.fillStyle="rgba(255,60,60,.5)";
   const occ=new Set();   // overlap marks: cell hash instead of all-pairs (was O(n^2) dim() calls)
   cur.forEach(a=>{const d=dim(a);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const k=(a.x+i+32768)*65536+(a.y+j+32768);
