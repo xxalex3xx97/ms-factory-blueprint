@@ -129,4 +129,4 @@ dialog h3{margin:0 0 8px}
 
 #shRef{width:128px;height:128px;border:1px dashed var(--line);display:flex;align-items:flex-end;justify-content:flex-start}#shBox{background:var(--acc);opacity:.45;width:128px;height:128px}#shQ{width:140px;vertical-align:middle}#shQv{display:inline-block;min-width:4ch}
 @media (max-width:1500px){#shB{display:none}}
-@media (max-width:700px){header .tg{gap:4px}}
+@media (max-width:700px){header .hbt{min-width:20px}}
