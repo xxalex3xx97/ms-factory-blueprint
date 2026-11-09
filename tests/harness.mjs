@@ -3408,18 +3408,31 @@ async function s35(br) {
   await pg.evaluate(() => __fb.simRun(60));
   await pg.click('#thB');
   await pg.click('#prodB');
+  await pg.waitForTimeout(150);   // ResizeObserver placement settles
   const rect = id => pg.evaluate(i => { const r = document.getElementById(i).getBoundingClientRect(); return {x: r.left, y: r.top, r: r.right, b: r.bottom} }, id);
+  const s35Ov = (a, b) => !(a.r <= b.x || b.r <= a.x || a.b <= b.y || b.b <= a.y);
   const tr = await rect('dTheo'), pr = await rect('dProd');
   chk('35 both open: both visible, #prCv visible, both aria-pressed true', await pg.isVisible('#dProd') && await pg.isVisible('#dTheo') && await pg.isVisible('#prCv') && (await pg.getAttribute('#prodB', 'aria-pressed')) === 'true' && (await pg.getAttribute('#thB', 'aria-pressed')) === 'true');
   chk('35 both open: bounding rects do not overlap', tr.r <= pr.x || pr.r <= tr.x || tr.b <= pr.y || pr.b <= tr.y, JSON.stringify({tr, pr}));
   await pg.click('#prodX');
   chk('35 #prodX keeps #dTheo open', await pg.isVisible('#dTheo') && !(await pg.isVisible('#dProd')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'true');
   await pg.click('#prodB');
-  chk('35 both open: #dTheo does not cover the Simulation panel (#fms)', await pg.evaluate(() => { const a = document.getElementById('dTheo').getBoundingClientRect(), f = document.getElementById('fms').getBoundingClientRect(); return a.right <= f.left || f.right <= a.left || a.bottom <= f.top || f.bottom <= a.top }), 'known product issue: #fms (sim panel) sits over #dTheo at 1400');
+  const tr3 = await rect('dTheo'), pr3 = await rect('dProd'), fr3 = await rect('fms');
+  chk('35 both open (theo first): #dTheo does not cover the Simulation panel (#fms)', !s35Ov(tr3, fr3), JSON.stringify({tr3, fr3}));
+  chk('35 both open (theo first): #dProd does not cover #fms', !s35Ov(pr3, fr3), JSON.stringify({pr3, fr3}));
+  chk('35 both open (theo first): no overlap among dTheo, dProd, #fms', !s35Ov(tr3, pr3) && !s35Ov(tr3, fr3) && !s35Ov(pr3, fr3), JSON.stringify({tr3, pr3, fr3}));
   await pg.evaluate(() => document.getElementById('thC').click());   // JS click: #fms may cover the header button
   chk('35 #thC collapses theo only (thC false, prodC true, #prCv visible)', (await pg.getAttribute('#thC', 'aria-expanded')) === 'false' && (await pg.getAttribute('#prodC', 'aria-expanded')) === 'true' && await pg.isVisible('#prCv'));
   await pg.evaluate(() => document.getElementById('thC').click());
   chk('35 #thC expands theo again', (await pg.getAttribute('#thC', 'aria-expanded')) === 'true' && await pg.isVisible('#thNow'));
+  // prod first: close both (JS clicks, #fms may cover headers), reopen #prodB then #thB
+  await pg.evaluate(() => { document.getElementById('thX').click(); document.getElementById('prodX').click(); });
+  await pg.click('#prodB');
+  await pg.click('#thB');
+  await pg.waitForTimeout(150);
+  const pr2 = await rect('dProd'), tr2 = await rect('dTheo'), fr2 = await rect('fms');
+  chk('35 both open (prod first): no overlap among dProd, dTheo, #fms', !s35Ov(pr2, tr2) && !s35Ov(pr2, fr2) && !s35Ov(tr2, fr2), JSON.stringify({pr2, tr2, fr2}));
+  chk('35 both open (prod first): #dProd does not cover #fms', !s35Ov(pr2, fr2), JSON.stringify({pr2, fr2}));
   await ctx.close();
   // benchmark: 28k-block station, theoProd(true) on click
   const txt = fs.readFileSync(process.env.BENCH || 'C:/Users/SFidelis/Downloads/Beta_Honor_3_Central.json', 'utf8');

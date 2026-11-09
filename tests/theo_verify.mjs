@@ -290,6 +290,15 @@ async function uiSim(br, R, rOut) {
 
 async function uiLayout(br) {
   const out = {};
+  const rects = pg => pg.evaluate(() => {
+    const rc = id => { const r = document.getElementById(id).getBoundingClientRect(); return {x: r.x, y: r.y, w: r.width, h: r.height, r: r.right, b: r.bottom} };
+    return {th: rc('thB'), flw: rc('flwB'), plan: rc('plnB'), dp: rc('dProd'), dt: rc('dTheo'), fm: rc('fms'), all: rc('thAll'), vw: innerWidth, vh: innerHeight, sw: document.documentElement.scrollWidth};
+  });
+  const ov = (a, b) => !(a.r <= b.x || b.r <= a.x || a.b <= b.y || b.b <= a.y);
+  // first-opened window takes the first slot: side by side -> smaller x; stacked (winPlace stacks from bottom) -> lower on screen (larger y)
+  const firstSlot = (f, s) => (f.r <= s.x || s.r <= f.x) ? f.x < s.x : f.y > s.y;
+  const hit = (pg, id) => pg.evaluate(i => { const b = document.getElementById(i).getBoundingClientRect(), e = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2); const c = e && e.closest('#' + i); return {ok: !!c, what: c ? i : (e ? (e.id || e.tagName) + (e.closest('#fms') ? ' (in #fms)' : '') : 'none')} }, id);
+  const fmtR = o => JSON.stringify(Object.fromEntries(Object.entries(o).map(([k, v]) => [k, typeof v === 'number' ? Math.round(v) : v])));
   for (const [tag, vp] of [['1400', {width: 1400, height: 900}], ['390', {width: 390, height: 844}]]) {
     const {ctx, pg} = await open(br, vp, 'lay' + tag);
     const tk = toolkit(pg);
@@ -300,10 +309,8 @@ async function uiLayout(br) {
     await pg.evaluate(() => __fb.simRun(30));
     await pg.click('#thB');
     await pg.click('#prodB');
-    const bb = await pg.evaluate(() => {
-      const rc = id => { const r = document.getElementById(id).getBoundingClientRect(); return {x: r.x, y: r.y, w: r.width, h: r.height, r: r.right, b: r.bottom} };
-      return {th: rc('thB'), flw: rc('flwB'), plan: rc('plnB'), dp: rc('dProd'), dt: rc('dTheo'), fm: rc('fms'), all: rc('thAll'), vw: innerWidth, vh: innerHeight, sw: document.documentElement.scrollWidth};
-    });
+    await pg.waitForTimeout(150);   // ResizeObserver placement settles
+    const bb = await rects(pg);
     const lblVis = await pg.isVisible('#thB .tx');
     out[tag] = {...bb, lblVis};
     await shot(pg, `theo-verify-both-${tag}.png`);
@@ -319,6 +326,26 @@ async function uiLayout(br) {
     chk(`5 ${tag}px: All floors checkbox visible`, await pg.isVisible('#thAll'));
     chk(`5 ${tag}px: note "Elevator transfers not included" shown`, await pg.isVisible('#thElv') && (await pg.innerText('#thElv')).trim() === 'Elevator transfers not included');
     chk(`5 ${tag}px: checkbox has accessible name "All floors"`, (await pg.getAttribute('#thAll', 'aria-label')) === 'All floors' && (await pg.innerText('#thAllL')).includes('All floors'));
+    chk(`5 ${tag}px: dProd (sim Production) does not cover #fms`, !ov(bb.dp, bb.fm), fmtR({dp: [bb.dp.x, bb.dp.y, bb.dp.r, bb.dp.b], fm: [bb.fm.x, bb.fm.y, bb.fm.r, bb.fm.b]}));
+    chk(`5 ${tag}px: theo first (opened first): no overlap among dProd, dTheo, #fms`, !ov(bb.dp, bb.dt) && !ov(bb.dt, bb.fm) && !ov(bb.dp, bb.fm), fmtR({dt: [bb.dt.x, bb.dt.y, bb.dt.r, bb.dt.b], dp: [bb.dp.x, bb.dp.y, bb.dp.r, bb.dp.b], fm: [bb.fm.x, bb.fm.y, bb.fm.r, bb.fm.b]}));
+    chk(`5 ${tag}px: theo first (opened first) takes first slot`, firstSlot(bb.dt, bb.dp), fmtR({dt: [bb.dt.x, bb.dt.y], dp: [bb.dp.x, bb.dp.y]}));
+    const hT = await hit(pg, 'thX'), hP = await hit(pg, 'prodX');
+    chk(`5 ${tag}px: #thX and #prodX centre hit-testable (both open, sim on)`, hT.ok && hP.ok, `thX: ${hT.what}; prodX: ${hP.what}`);
+    // prod first: close both, reopen prodB then thB
+    await pg.evaluate(() => { document.getElementById('thX').click(); document.getElementById('prodX').click(); });
+    await pg.click('#prodB');
+    await pg.click('#thB');
+    await pg.waitForTimeout(150);
+    const pf = await rects(pg);
+    await shot(pg, `theo-verify-prodfirst-${tag}.png`);
+    chk(`5 ${tag}px prod first: no overlap among dProd, dTheo, #fms`, !ov(pf.dp, pf.dt) && !ov(pf.dt, pf.fm) && !ov(pf.dp, pf.fm), fmtR({dp: [pf.dp.x, pf.dp.y, pf.dp.r, pf.dp.b], dt: [pf.dt.x, pf.dt.y, pf.dt.r, pf.dt.b], fm: [pf.fm.x, pf.fm.y, pf.fm.r, pf.fm.b]}));
+    chk(`5 ${tag}px prod first: dProd (opened first) takes first slot`, firstSlot(pf.dp, pf.dt), fmtR({dp: [pf.dp.x, pf.dp.y], dt: [pf.dt.x, pf.dt.y]}));
+    chk(`5 ${tag}px prod first: both windows inside viewport`, [pf.dp, pf.dt].every(w => w.r <= pf.vw + 1 && w.b <= pf.vh + 1 && w.x >= -1 && w.y >= -1 && w.w > 0), fmtR({dp: [pf.dp.x, pf.dp.y, pf.dp.r, pf.dp.b], dt: [pf.dt.x, pf.dt.y, pf.dt.r, pf.dt.b], vw: pf.vw, vh: pf.vh}));
+    const pT = await hit(pg, 'thX'), pP = await hit(pg, 'prodX');
+    chk(`5 ${tag}px prod first: #thX and #prodX centre hit-testable (both open, sim on)`, pT.ok && pP.ok, `thX: ${pT.what}; prodX: ${pP.what}`);
+    await pg.evaluate(() => { document.getElementById('thX').click(); document.getElementById('prodX').click(); });   // leave clean for keyboard checks
+    await pg.click('#prodB');
+    await pg.click('#thB');
     if (tag === '1400') {
       // keyboard: focus button, Enter opens; focus close, Enter closes; Space toggles checkbox
       await pg.focus('#thX'); await pg.keyboard.press('Enter');   // keyboard close (sim on: #fms may cover the button)
@@ -328,10 +355,12 @@ async function uiLayout(br) {
       await pg.focus('#thX'); await pg.keyboard.press('Enter');
       const kClose = !(await pg.isVisible('#dTheo')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'false' && await pg.isVisible('#dProd');
       chk('5 keyboard: Enter on #thB opens, Enter on close (thX) hides, #dProd untouched', kOpen && kClose, `open ${kOpen} close ${kClose}`);
-      // Space on a focused checkbox: global keydown handler (snippets.js: e.code==='Space' -> pan, preventDefault) swallows it
+      // Space on a focused checkbox must toggle it (global Space=pan handler must skip checkbox/button targets)
       await pg.focus('#thB'); await pg.keyboard.press('Enter');
-      await pg.focus('#thAll'); await pg.keyboard.press('Space');
-      chk('5 keyboard: Space toggles All floors checkbox (known: global Space=pan handler swallows it)', !(await pg.isChecked('#thAll')), `checked after Space: ${await pg.isChecked('#thAll')}`);
+      await pg.focus('#thAll');
+      const spBefore = await pg.isChecked('#thAll');
+      await pg.keyboard.press('Space');
+      chk('5 keyboard: Space toggles All floors checkbox', (await pg.isChecked('#thAll')) !== spBefore, `checked before ${spBefore}, after ${await pg.isChecked('#thAll')}`);
       await pg.focus('#thB'); await pg.keyboard.press('Enter');
       chk('5 keyboard: Enter on #thB again closes', !(await pg.isVisible('#dTheo')));
     }
