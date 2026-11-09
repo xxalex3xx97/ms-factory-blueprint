@@ -43,7 +43,7 @@ $("smRst").onclick=()=>{if(!SIM)return;simReset();SIM.sig=simSig();smPh=0;smClkU
 [1,10,60].forEach(v=>$("sm"+v).onclick=()=>{SPD=v;smSync();asv()});
 function drawSimMach(s){
   cx.save();
-  S.blocks.forEach(b=>{if(b.h!==layer||!isM(b)||isBelt(b)||isStore(b)||SIM.R.has(b.id))return;const id=b.id,m=smS().mach.get(id)||{st:"idle",cycles:0,none:1};
+  CUR.forEach(b=>{if(b.h!==layer||!isM(b)||isBelt(b)||isStore(b)||SIM.R.has(b.id)||!vis(V.ox+b.x*s-CULLM,V.oy+b.y*s-CULLM,dim(b).w*s+2*CULLM,dim(b).h*s+2*CULLM))return;const id=b.id,m=smS().mach.get(id)||{st:"idle",cycles:0,none:1};
     const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s,col=SMC[m.st]||SMC.idle;
     cx.globalAlpha=.3;cx.fillStyle=col;cx.fillRect(x,y,w,h);cx.globalAlpha=1;
     cx.strokeStyle=col;cx.lineWidth=2;cx.strokeRect(x+1,y+1,w-2,h-2);

@@ -72,10 +72,12 @@ function drawLinks(s){
   });
   cx.restore();
 }
+const CULLM=120;   // px slack around a block for the cull: badge text and port bars can spill past its rect
+let CUR=[];   // this paint's layer blocks in view (set in paint0, cleared in paint)
 function drawPorts(s){
   if(s<6)return;
   const Ln=Math.min(.6*s,18),T=Math.min(5,Math.max(3,.2*s));cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
-  S.blocks.forEach(b=>{if(b.h!==layer)return;const bars=barPorts(b);
+  S.blocks.forEach(b=>{if(b.h!==layer||!vis(V.ox+b.x*s-CULLM,V.oy+b.y*s-CULLM,dim(b).w*s+2*CULLM,dim(b).h*s+2*CULLM))return;const bars=barPorts(b);
     // splitter input (back) face: no bar; small neutral chevron pointing into the machine (not clickable, no hover state)
     portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.min(8,Math.max(3,s*.2)),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
       cx.strokeStyle="rgba(230,240,255,.45)";cx.lineWidth=Math.max(1.5,s*.08);cx.beginPath();
@@ -99,7 +101,7 @@ function drawBadges(s){
   if(s<10)return;
   cx.save();cx.textBaseline="top";cx.textAlign="center";
   const sm=smOn(),K=sm?null:linksC(layer);
-  S.blocks.forEach(b=>{if(b.h!==layer||!isM(b))return;const sto=isStore(b),r=recOf(b);if(!r&&!sto)return;
+  CUR.forEach(b=>{if(b.h!==layer||!isM(b)||!vis(V.ox+b.x*s-CULLM,V.oy+b.y*s-CULLM,dim(b).w*s+2*CULLM,dim(b).h*s+2*CULLM))return;const sto=isStore(b),r=recOf(b);if(!r&&!sto)return;
     const si=sto&&!sm?K.sto.get(b.id):null;if(sto&&!sm&&!(si&&(si.in||si.out||si.rows.length)))return;
     const cs=sm&&sto?smS().cont.get(b.id):null,ms=sm&&r?smS().mach.get(b.id):null;
     const d=dim(b),bw=d.w*s,bh=d.h*s,v=r?pm(r.o[1],r.t):0,txt=sm?(sto?"stock "+(cs?cs.have+(cs.rows.some(x=>x.inf)?" +∞":"")+" · in "+cs.in+" · out "+cs.out:"0 · in 0 · out 0")+" /min":ms?ms.st:"idle"):sto?"in "+si.in+" · out "+si.out+" /min":(v==null?"?":v)+"/min",ic=r?img(r.o[0]):cs&&cs.rows[0]?img(cs.rows[0].item):((b.ct||[]).length?img(b.ct[0].item):null);
@@ -377,11 +379,11 @@ function ugLine(a,b,s,over,pv){
 function drawUG(s){
   if(s<ARROW_MIN_S)return;   // zoomed out: same threshold as the belt arrows
   const c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s];
-  ugPairs(S.blocks.filter(b=>isM(b)&&b.h===layer&&inView(b))).forEach(({u,t,n,max})=>ugLine(c(u),c(t),s,n>max));
+  ugPairs(CUR.filter(isM)).forEach(({u,t,n,max})=>ugLine(c(u),c(t),s,n>max));
 }
 let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(S.blocks.filter(b=>b.h===layer).map(b=>[b.id,b]));return LBM.get(id)};
 const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
-function paint(){LKP=true;PK=blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null}}
+function paint(){LKP=true;PK=blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}}
 function paint0(){
   cx.setTransform(dpr,0,0,dpr,0,0);cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality="high";cx.clearRect(0,0,W,H);
   const s=sc(),F=view==="F";
@@ -390,7 +392,7 @@ function paint0(){
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8);
   if($("ghost").checked)S.blocks.filter(inView).forEach(b=>{if(b.h!==layer&&($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s))drawBlock(b,Math.max(.08,.3-.07*Math.abs(b.h-layer)),false)});
-  const cur=S.blocks.filter(b=>b.h===layer&&inView(b));
+  const cur=S.blocks.filter(b=>b.h===layer&&inView(b));CUR=cur;
   cur.forEach(b=>{const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s;if(x>W||y>H||x+d.w*s<0||y+d.h*s<0)return;drawBlock(b,.92,sel.has(b.id))});   // viewport cull
   cx.fillStyle="rgba(255,60,60,.5)";
   const occ=new Set();   // overlap marks: cell hash instead of all-pairs (was O(n^2) dim() calls)
