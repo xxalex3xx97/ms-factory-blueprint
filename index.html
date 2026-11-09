@@ -60,8 +60,6 @@
       <div id="prHd"><h3 id="dProdT">Production</h3><button id="prodC" aria-expanded="true" aria-label="Collapse production" title="Collapse to title bar">&#9650;</button><button id="prodX" aria-label="Close production" title="Close">&times;</button></div>
       <div id="prScroll">
         <div id="prSub" class="sub">30 s average, sampled every 5 s</div>
-        <label id="prAllL" hidden><input id="prAll" type="checkbox" checked aria-label="All floors"> <span class="tx">All floors</span></label>
-        <div id="prElv" class="sub" hidden>Elevator transfers not included</div>
         <div id="prEmpty" class="sub" style="display:none">No production yet</div>
         <div id="prBody">
           <canvas id="prCv" aria-label="Items per minute over simulated time"></canvas>
@@ -69,6 +67,19 @@
           <h4>Now (items/min)</h4><div id="prNow"></div>
           <h4>By machine type</h4><div id="prMt"></div>
           <div id="prTW"><h4>Total built</h4><div id="prTot"></div></div>
+        </div>
+      </div>
+    </div>
+    <div id="dTheo" role="region" aria-labelledby="dTheoT" hidden>
+      <div id="thHd"><h3 id="dTheoT">Theoretical production</h3><button id="thC" aria-expanded="true" aria-label="Collapse theoretical production" title="Collapse to title bar">&#9650;</button><button id="thX" aria-label="Close theoretical production" title="Close">&times;</button></div>
+      <div id="thScroll">
+        <div class="sub">Full speed, limited by belt throughput. Snapshot at click.</div>
+        <label id="thAllL"><input id="thAll" type="checkbox" checked aria-label="All floors"> <span class="tx">All floors</span></label>
+        <div id="thElv" class="sub">Elevator transfers not included</div>
+        <div id="thEmpty" class="sub" style="display:none">No production</div>
+        <div id="thBody">
+          <h4>Now (items/min)</h4><div id="thNow"></div>
+          <h4>By machine type</h4><div id="thMt"></div>
         </div>
       </div>
     </div>
