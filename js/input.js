@@ -98,7 +98,7 @@ const end=e=>{
     if(noBuild(nb.map(mItem)))toast(NOBUILD);
     else{push();cutBelts(nb);S.blocks.push(...nb);sel=new Set();placeRot=cells[0].rot}
   }
-  if(k==="box"&&mode){const m=mode;drag=null;cv.style.cursor=space?"grab":"";boxMode(m);return}
+  if(k==="box"&&mode){const m=mode;drag=null;cv.style.cursor=space?"grab":"";if(e.type==="pointercancel"){sel=new Set();all();return}boxMode(m);return}   // a cancelled gesture never applies the mode
   drag=null;cv.style.cursor=space?"grab":"";
   if(rc){if(pasting){pasting=null;all();return}const b=hit(toCell(rc.x,rc.y));if(b){sel=new Set([b.id]);del();return}if(active){active=null;all();return}ctxOpen(e.clientX,e.clientY);return}
   if(k!=="pan")all();else draw();
@@ -192,7 +192,7 @@ function pasteAt(){
 function setMode(m){mode=m||null;if(mode){active=null;pasting=null}all()}
 function boxMode(m){   // a box drag ended inside a mode; each action is one undo step
   if(m==="del"){if(sel.size)del();else all();return}
-  if(m==="copy"){mode=null;copy();all();return}
+  if(m==="copy"){mode=null;if(!sel.size)toast("Nothing selected to copy");copy();all();return}
   if(m==="cfgpaste"){cfgApplyBox();all()}
 }
 const CFGK=["rec","recn","ct","off","fl","pr"];

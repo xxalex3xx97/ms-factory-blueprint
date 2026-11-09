@@ -139,7 +139,8 @@ function simProd(){
   return{series:Z.ser,byItem:l.it,byType:l.mt,totals:Z.tot,totalsByType:tm}}
 // theoretical production (no sim): steady state at full machine speed, capped by belt throughput. Per level, from links1(L); inj = elevator transfers from other levels (theoProd iterates them).
 function theoLevel(L,inj){
-  const K=links1(L),feeds=e=>{const d=DIR[e.b.rot],p=e.port;return d[0]===-p.nx&&d[1]===-p.ny};
+  let K=TK&&TK.get(L);if(!K){K=links1(L);if(TK)TK.set(L,K)}   // one links1 per level per theoProd call (passes reuse it)
+  const feeds=e=>{const d=DIR[e.b.rot],p=e.port;return d[0]===-p.nx&&d[1]===-p.ny};
   const ms=S.blocks.filter(b=>b.h===L&&isM(b)&&!isBelt(b)&&!isStore(b)&&recOf(b)),R=new Map(ms.map(m=>[m.id,recOf(m)])),f=new Map(ms.map(m=>[m.id,R.get(m.id).i.length?1:0]));
   const sp=new Map(),spR=new Map();   // splitter/balancer in-ports -> out-ports (same as links())
   K.ports.forEach(e=>{const c=(def(e.m.cls)||{}).category;if(c!=="Splitters"&&c!=="Balancers")return;const p=e.port;
@@ -172,7 +173,11 @@ function theoLevel(L,inj){
     out.byItem[r.o[0]]=(out.byItem[r.o[0]]||0)+rate;out.byType[c]=(out.byType[c]||0)+rate});
   return out;
 }
+let TK=null;
 function theoProd(allFloors){
+  TK=new Map();try{return theoProd0(allFloors)}finally{TK=null}
+}
+function theoProd0(allFloors){
   const all=[...new Set([...S.blocks.map(b=>b.h),layer])],levels=allFloors?all:[layer],out={byItem:{},byType:{},count:{}};
   let inj=new Map(all.map(l=>[l,[]])),res,prev="";   // elevator transfers need every level: repeat until the flow stops changing
   for(let pass=0;pass<Math.min(all.length,6)+1;pass++){

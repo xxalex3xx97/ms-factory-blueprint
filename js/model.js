@@ -159,10 +159,9 @@ function portsOf(b){
   });
   return o;
 }
-// estimate over ALL levels: an elevator input forwards what its belt carries to the same port on the levels above/below (same rule as the sim: even split over existing outputs); passes repeat until the flow stops changing
-// estimate over ALL levels, cached PER LEVEL: a placement only recomputes the level it touched (plus levels whose elevator inflow changed)
+// estimate over ALL levels, cached PER LEVEL (a placement only recomputes the level it touched, plus levels whose elevator inflow changed): an elevator input forwards what its belt carries to the same port on the levels above/below (same rule as the sim: even split over existing outputs); passes repeat until the flow stops changing
 const sh=s=>{let h=0;s=String(s);for(let i=0;i<s.length;i++)h=(Math.imul(h,31)+s.charCodeAt(i))|0;return h};
-const lvHash=()=>{const m=new Map(),cl=sh(JSON.stringify(S.closed||[]));
+const lvHash=()=>{const m=new Map(),cl=sh(JSON.stringify(S.closed||[])+JSON.stringify(OV||{}));   // OV = rate overrides (Settings)
   S.blocks.forEach(b=>{let h=m.has(b.h)?m.get(b.h):cl;h=(Math.imul(h,31)+b.id+b.x*7+b.y*13+b.rot*19+(b.pid|0)*23+(b.mid|0)*29+(b.off?sh(b.off.join()):0)+(b.rec?sh(b.rec):0)+sh(b.cls))|0;
     if(b.ct)b.ct.forEach(x=>{h=(Math.imul(h,31)+(+x.n||0)+(x.inf?7:0)+sh(x.item))|0});m.set(b.h,h)});return m};
 const L1M=new Map();
