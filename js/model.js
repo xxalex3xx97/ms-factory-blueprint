@@ -159,6 +159,27 @@ function portsOf(b){
   });
   return o;
 }
+// estimate over ALL levels: an elevator input forwards what its belt carries to the same port on the levels above/below (same rule as the sim: even split over existing outputs); passes repeat until the flow stops changing
+let LKM=null;   // all-level result memo (blkKey misses container contents, so those are hashed in)
+const ctKey=()=>{let h=0;S.blocks.forEach(b=>{if(b.ct)b.ct.forEach(x=>{h=(Math.imul(h,31)+(+x.n||0)+(x.inf?7:0)+String(x.item).length)|0})});return h};
+function links(L){
+  const k=blkKey()+"|"+ctKey()+"|"+LK;if(LKM&&LKM.k===k&&LKM.res.has(L))return LKM.res.get(L);
+  const res=linksAll(L);LKM={k,res};return res.get(L);
+}
+function linksAll(L){
+  const lv=[...new Set(S.blocks.map(b=>b.h))];if(!lv.includes(L))lv.push(L);
+  let res=new Map(lv.map(l=>[l,links1(l)])),prev="";
+  if(!lv.some(l=>res.get(l).elvIn.length))return res;
+  for(let pass=0;pass<Math.min(lv.length,6);pass++){
+    const inj=new Map(lv.map(l=>[l,[]])),sig=[];
+    lv.forEach(l=>{const K=res.get(l);K.elvIn.forEach(({k,id})=>{const ld=K.load.get(id);if(!ld)return;
+      const dst=[l+1,l-1].filter(h=>res.has(h)&&res.get(h).elvOut.has(k));if(!dst.length)return;
+      ld.items.forEach((v,item)=>dst.forEach(h=>{inj.get(h).push({id:res.get(h).elvOut.get(k),item,rate:v/dst.length});sig.push(h+k+item+r2(v/dst.length))}))})});
+    const sg=sig.join();if(sg===prev)break;prev=sg;
+    res=new Map(lv.map(l=>[l,links1(l,inj.get(l))]));
+  }
+  return res;
+}
 // ports drawn as bars: splitter input (back) face is not a port, so no bar (draw.js draws a neutral chevron there)
 const barPorts=b=>portsOf(b).filter(p=>!(p.dir==="in"&&isSplitterCls(b.cls)));
 const togglePort=(b,k)=>{if(!portsOf(b).some(p=>p.key===k&&p.tg))return;const o=b.off||[];b.off=o.includes(k)?o.filter(q=>q!==k):o.concat(k)};
@@ -203,7 +224,7 @@ const isBelt=b=>{const d=def(b.cls);return !!(d&&d.directional&&(d.category==="C
 const isStore=b=>!!(isM(b)&&def(b.cls)&&def(b.cls).category==="Storage");
 const ctFirst=b=>(b.ct||[]).find(x=>x.inf||x.n>0)||null;
 const nameOf=b=>{const d=def(b.cls);return (d?lab(d):shortCls(b.cls))+" @"+b.x+","+b.y};
-function links(L){
+function links1(L,inj){
   const ms=S.blocks.filter(b=>b.h===L&&isM(b)),belts=ms.filter(isBelt),occ=new Map();
   ms.forEach(b=>{const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)occ.set((b.x+i)+","+(b.y+j),b)});
   // 0) splitter/balancer OUTPUT port touching another machine's matching enabled port directly (no belt between): synthetic 1-cell belt (negative id, never in S.blocks) so sim + estimate treat it as a belt
@@ -250,9 +271,13 @@ function links(L){
   o.ports.forEach(e=>{const r=recOf(e.m);if(!r)return;const d=DIR[e.b.rot],p=e.port;if(d[0]===-p.nx&&d[1]===-p.ny)return;   // belt feeding INTO this machine carries no output
     const v=pm(r.o[1],r.t);if(v)src.push({id:e.b.id,item:r.o[0],rate:v})});
   o.pull=[];o.push=[];
+  (inj||[]).forEach(x=>src.push(x));   // elevator transfers from other levels (see links)
   o.ports.forEach(e=>{if(!isStore(e.m))return;const d=DIR[e.b.rot],p=e.port;
     if(!(d[0]===-p.nx&&d[1]===-p.ny)){const it=ctFirst(e.m),c=beltMax(e.b);if(it&&c){src.push({id:e.b.id,item:it.item,rate:c});o.pull.push({m:e.m,belt:e.b,item:it.item,rate:c})}}
     else if(d[0]===-p.nx&&d[1]===-p.ny)o.push.push({m:e.m,belt:e.b})});
+  o.elvIn=[];o.elvOut=new Map();   // elevator ports on this level: input belt (key, belt id), output belt key -> belt id
+  o.ports.forEach(e=>{if(!(def(e.m.cls)||{}).elevator)return;const p=e.port,d=DIR[e.b.rot],k=[e.m.x,e.m.y,p.key].join();
+    if(d[0]===p.io[0]&&d[1]===p.io[1])o.elvIn.push({k,id:e.b.id});else o.elvOut.set(k,e.b.id)});
   o.nx=nx;o.cp=cp;o.belts=belts;o.chain=id=>root(id);   // for the simulation snapshot
   const spR=new Map(),sp=new Map();
   o.ports.forEach(e=>{const c=(def(e.m.cls)||{}).category;if(c!=="Splitters"&&c!=="Balancers")return;const d=DIR[e.b.rot],p=e.port;
@@ -260,14 +285,16 @@ function links(L){
     if(d[0]===-p.nx&&d[1]===-p.ny&&p.dir!=="out")r.ins.push(e.b.id);else if(!(d[0]===-p.nx&&d[1]===-p.ny)&&p.dir!=="in")r.outs.push(e.b.id)});
   spR.forEach(r=>r.ins.forEach(i=>sp.set(i,r.outs)));
   o.load=flowLoad(nx,src,cp,sp);
-  // unstocked container relays its inflow: each pull belt carries min(belt speed, inflow / pull belts), split by item share; 4 passes cover container->container chains
+  // unstocked container relays its inflow: each pull belt carries min(belt speed, inflow / pull belts), split by item share; repeat until the relayed flow stops changing (long container->container chains)
   const fed=o.ports.filter(e=>{const p=e.port,d=DIR[e.b.rot];return isStore(e.m)&&!ctFirst(e.m)&&!(d[0]===-p.nx&&d[1]===-p.ny)});
-  for(let pass=0;pass<4&&fed.length;pass++){
+  let ps="";
+  for(let pass=0;pass<30&&fed.length;pass++){
     const rel=[];
     fed.forEach(e=>{const c=beltMax(e.b);if(!c)return;const inM=new Map();let tot=0;
       o.push.forEach(x=>{if(x.m!==e.m)return;const l=o.load.get(x.belt.id);if(l)l.items.forEach((v,k)=>{inM.set(k,(inM.get(k)||0)+v);tot+=v})});
       if(!(tot>0))return;const f=Math.min(c,tot/fed.filter(q=>q.m===e.m).length)/tot;
       inM.forEach((v,k)=>rel.push({id:e.b.id,item:k,rate:v*f,m:e.m,belt:e.b}))});
+    const sg=rel.map(r=>r.id+r.item+r2(r.rate)).join();if(sg===ps)break;ps=sg;
     o.pull=o.pull.filter(x=>!x.rel).concat(rel.map(r=>({m:r.m,belt:r.belt,item:r.item,rate:r.rate,rel:true})));
     o.load=flowLoad(nx,src.concat(rel),cp,sp);
   }
