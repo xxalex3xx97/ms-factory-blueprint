@@ -33,9 +33,9 @@ function plan(item,rate,mk,ovr,pick,opts){
     const m=e.to==null?1:nodes[e.to].machines,belts=Math.ceil(e.flow/cap(mk)-1e-9),lane=e.flow/belts;
     let fits=null;for(let i=0;i<MKS.length;i++)if(e.flow<=cap(i)+1e-9){fits=i;break}
     let split="",warn="",note="";
-    if(belts===1&&m>1){split="1->3 splitter x"+Math.ceil((m-1)/2);const si=ovr.sp==null?mk:ovr.sp;if(cap(si)<lane-1e-9)warn="splitter "+MKS[si][0]+" below "+plnR2(lane)+"/min"}
-    else if(belts>=2){split=belts+"->"+Math.max(belts,m)+" balancer";const bi=ovr.bal==null?mk:ovr.bal;if(cap(bi)<lane-1e-9)warn="balancer "+MKS[bi][0]+" below "+plnR2(lane)+"/min"}
-    if(belts>1)note="needs "+belts+" belts"+(fits!=null?"; "+MKS[fits][0]+" carries it on 1 belt":"; no single belt carries "+plnR2(e.flow)+"/min");
+    if(belts===1&&m>1){split="1->3 splitter x"+Math.ceil((m-1)/2);const si=ovr.sp==null?mk:ovr.sp;if(cap(si)<lane-1e-9)warn="splitter "+MKS[si][0]+" below "+plnR2(lane)+"/min; set it to "+MKS[mk][0]+" or higher, or follow belt"}
+    else if(belts>=2){split=belts+"->"+Math.max(belts,m)+" balancer";const bi=ovr.bal==null?mk:ovr.bal;if(cap(bi)<lane-1e-9)warn="balancer "+MKS[bi][0]+" below "+plnR2(lane)+"/min; set it to "+MKS[mk][0]+" or higher, or follow belt"}
+    if(belts>1)note="needs "+belts+" belts"+(fits!=null?"; "+MKS[fits][0]+" carries it on 1 belt":" (+ balancer); no single belt carries "+plnR2(e.flow)+"/min");
     return {from:e.from,to:e.to,flow:e.flow,m,belts,fits,split,warn,note,label:plnR2(e.flow)+" items/min, "+belts+" belts ("+MKS[mk][0]+")"};
   });
   E.forEach(e=>{if(e.to!=null)nodes[e.to].in.push(e)});
@@ -46,8 +46,10 @@ function plnDraw(){
   if(!it||!(rate>0)){$("plnOut").innerHTML='<div class="sub">Pick a craftable item and a rate above 0.</div>';return}
   const pr=plnProto(),BY=plnBy(pr),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
   const P=plan(it,rate,mk,{sp:sp===""?null:+sp,bal:bal===""?null:+bal},PLN_PICK,{proto:pr,enr:$("plnEnr").checked});
+  const inn={};P.edges.forEach(e=>{if(e.to!=null)(inn[e.to]=inn[e.to]||[]).push(e.from)});
+  const stk=new Set(),seen=new Set(),back=new Set(),dfs=n=>{seen.add(n);stk.add(n);(inn[n]||[]).forEach(f=>{if(stk.has(f))back.add(f+"|"+n);else if(!seen.has(f))dfs(f)});stk.delete(n)};dfs(it);   // back-edges (recipe loops) ignored for depth
   const col={[it]:0};   // depth from target (target = rightmost column)
-  for(let k=0;k<=Object.keys(P.nodes).length;k++)P.edges.forEach(e=>{if(e.to!=null)col[e.from]=Math.max(col[e.from]||0,(col[e.to]||0)+1)});
+  for(let k=0;k<=Object.keys(P.nodes).length;k++)P.edges.forEach(e=>{if(e.to!=null&&!back.has(e.from+"|"+e.to))col[e.from]=Math.max(col[e.from]||0,(col[e.to]||0)+1)});
   const ns=Object.values(P.nodes),rw=ns.filter(n=>!n.rec).length,D0=Math.max(0,...ns.filter(n=>n.rec).map(n=>col[n.item]||0));
   if(rw)ns.forEach(n=>{if(!n.rec)col[n.item]=D0+1});   // all raw inputs (ores...) in the leftmost column
   const D=rw?D0+1:D0,cols=[];
@@ -63,8 +65,8 @@ function plnDraw(){
   };
   const boxes=n=>n.rec&&PLN_EX?Array.from({length:n.machines},(_,i)=>box(n,i)):[box(n)];
   const wasOpen=!!$("plnOut").querySelector(".plnFl[open]");
-  $("plnOut").innerHTML=`<div class="plnVp"><div class="plnGrid">${cols.map(c=>`<div class="plnCol">${c.map(n=>boxes(n).join("")).join("")}</div>`).join("")}</div></div>`
-    +`<details class="plnFl"${wasOpen?" open":""}><summary>Flows</summary><div class="plnEdges">${P.edges.map(e=>`<div class="plnEdge">${itemHtml(e.from)} &rarr; ${e.to==null?"output":itemHtml(e.to)}: ${esc(e.label)}${e.split?" &middot; "+esc(e.split):""}${e.note?` <span class="sub plnNote${e.fits==null?" bad":""}">${esc(e.note)}</span>`:""}${e.warn?` <b class="plnWarn">${esc(e.warn)}</b>`:""}</div>`).join("")}</div></details>`
+  $("plnOut").innerHTML=`<div class="plnVp"><div class="plnGrid">${cols.filter(c=>c.length).map(c=>`<div class="plnCol">${c.map(n=>boxes(n).join("")).join("")}</div>`).join("")}</div></div>`
+    +`<details class="plnFl"${wasOpen?" open":""}><summary>Flows</summary><div class="plnEdges">${P.edges.map(e=>`<div class="plnEdge">${itemHtml(e.from)} &rarr; ${e.to==null?"output":itemHtml(e.to)}: ${esc(e.label)}${e.split?" &middot; "+esc(e.split):""}${e.note?` <span class="sub plnNote">${esc(e.note)}</span>`:""}${e.warn?` <b class="plnWarn">${esc(e.warn)}</b>`:""}</div>`).join("")}</div></details>`
     +(P.cycle?'<div class="sub">Recipe loop detected: flows approximate.</div>':"");
   PLN_E=P.edges;
   plnArrows(P.edges);
@@ -84,7 +86,7 @@ function plnArrows(E){
     const a=bx[e.from];if(!a)return;
     const x1=a.r,y1=ys(a,out[e.from],e);let x2,y2;
     if(e.to==null){x2=x1+110;y2=y1}else{const b=bx[e.to];x2=b.l;y2=ys(b,inn[e.to],e)}
-    const c=(x2-x1)/2,cl=e.warn?"warn":e.fits==null&&e.belts>1?"bad":"";
+    const c=(x2-x1)/2,cl=e.warn?"warn":"";
     sv+=`<path class="plnArr ${cl}" d="M${x1} ${y1}C${x1+c} ${y1} ${x2-c} ${y2} ${x2-7} ${y2}"/><path class="plnHead ${cl}" d="M${x2} ${y2}l-8 -4.5v9z"/>`;
     const lx=e.to==null?x1+55:x2-95;let ly=y1,bd=1e9;
     for(let t=0;t<=1;t+=.02){const s=1-t,X=s*s*s*x1+3*s*s*t*(x1+c)+3*s*t*t*(x2-c)+t*t*t*x2,d=Math.abs(X-lx);if(d<bd){bd=d;ly=s*s*s*y1+3*s*s*t*y1+3*s*t*t*y2+t*t*t*y2}}

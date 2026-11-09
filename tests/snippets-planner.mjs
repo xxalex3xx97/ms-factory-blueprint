@@ -318,6 +318,31 @@ try {
   const out11b = await pg.textContent('#plnOut');
   chk('(p11) choosing alt re-plans (4 x Refinery)', /4 x Refinery/.test(out11b) && !/5 x Refinery/.test(out11b), out11b.slice(0, 200));
 
+  // (p12) real Exosuit 1/min Mk1: recipe loop flagged; multi-belt flows are not errors (no warn, '(+ balancer)' note)
+  const EX12 = await PL(1, 0, {}, {}, 'ITEM_Exosuit');
+  const exMulti = EX12.edges.filter(e => e.belts > 1 && e.fits == null);
+  chk('(p12) Exosuit 1/min: recipe loop flagged', EX12.cycle === true);
+  chk('(p12) Exosuit 1/min: some edge needs >1 belt, no single belt', exMulti.length > 0, String(exMulti.length));
+  chk('(p12) Exosuit 1/min: no edge warns', EX12.edges.every(e => e.warn === ''), JSON.stringify(EX12.edges.filter(e => e.warn)));
+  chk('(p12) Exosuit 1/min: multi-belt notes say (+ balancer)', exMulti.every(e => /\(\+ balancer\)/.test(e.note)), JSON.stringify(exMulti.map(e => e.note)).slice(0, 200));
+  // UI: every column has a box, no more columns than nodes, no red (.bad) element, no warning
+  await pg.selectOption('#plnItem', 'ITEM_Exosuit');
+  await pg.fill('#plnRate', '1');
+  const lay12 = await pg.evaluate(() => ({cols: [...document.querySelectorAll('#plnOut .plnCol')].map(c => c.querySelectorAll('.plnBox').length), nodes: new Set([...document.querySelectorAll('#plnOut .plnBox')].map(b => b.dataset.item)).size, bad: document.querySelectorAll('#plnOut .bad').length, warn: document.querySelectorAll('#plnOut .plnWarn').length}));
+  chk('(p12) UI Exosuit 1/min: every column has a box, cols <= nodes', lay12.cols.length > 0 && lay12.cols.every(n => n > 0) && lay12.cols.length <= lay12.nodes, JSON.stringify(lay12));
+  chk('(p12) UI Exosuit 1/min: zero .bad, zero warnings', lay12.bad === 0 && lay12.warn === 0, JSON.stringify(lay12));
+  // synthetic loop: LpA needs LpB, LpB needs LpC, LpC needs LpA + CobaltOre. Depth must not run away: 4 columns (LpA, LpB, LpC, CobaltOre)
+  await pg.evaluate(() => { CATALOG.recipes.CRAFT_LoopTest = [
+    {o: ['ITEM_LpA', 1], i: [['ITEM_LpB', 1], ['ITEM_CobaltOre', 1]], t: 30},
+    {o: ['ITEM_LpB', 1], i: [['ITEM_LpC', 1]], t: 30},
+    {o: ['ITEM_LpC', 1], i: [['ITEM_LpA', 1], ['ITEM_CobaltOre', 1]], t: 30}]; });
+  const lp12 = await PL(10, 0, {}, {}, 'ITEM_LpA');
+  chk('(p12) synthetic loop: cycle flagged', lp12.cycle === true);
+  await pg.evaluate(() => { const s = document.getElementById('plnItem'); s.add(new Option('LpA', 'ITEM_LpA')); s.value = 'ITEM_LpA'; s.dispatchEvent(new Event('change')); });
+  const lpCols = await pg.evaluate(() => [...document.querySelectorAll('#plnOut .plnCol')].map(c => c.querySelectorAll('.plnBox').length));
+  chk('(p12) synthetic loop UI: <=4 columns, none empty', lpCols.length >= 1 && lpCols.length <= 4 && lpCols.every(n => n > 0), JSON.stringify(lpCols));
+  await pg.evaluate(() => { delete CATALOG.recipes.CRAFT_LoopTest; const s = document.getElementById('plnItem'); s.querySelector('option[value="ITEM_LpA"]')?.remove(); s.value = ''; s.dispatchEvent(new Event('change')); });
+
   // ---- (u) UI path: panel buttons, prompt/confirm dialogs, file download + upload
   const fs = require('fs');
   const ctxU = await br.newContext({viewport: {width: 1400, height: 900}, acceptDownloads: true});
