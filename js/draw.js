@@ -49,13 +49,17 @@ function drawLinks(s){
     cx.setLineDash([]);
   }
   if(!BN){
+  const P=[new Path2D(),new Path2D()],HD=[new Path2D(),new Path2D()];   // batched: 0 normal, 1 merge; one stroke + one fill per colour
   K.flow.forEach(({u,t,merge})=>{
-    const a=c(u.x,u.y),b=c(t.x,t.y),col=merge?"hsl(150,60%,58%)":"rgba(120,220,240,.9)";
+    const a=c(u.x,u.y),b=c(t.x,t.y);
     if(!vis(Math.min(a[0],b[0])-s,Math.min(a[1],b[1])-s,Math.abs(a[0]-b[0])+2*s,Math.abs(a[1]-b[1])+2*s))return;
-    cx.strokeStyle=col;cx.lineWidth=merge?lw+1.5:lw;cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke();
-    head(a,b,col,Math.max(3,s*.17));
-    if(merge){cx.beginPath();cx.arc(b[0],b[1],Math.max(3,s*.18),0,7);cx.stroke()}
+    const k=merge?1:0,p=P[k],h=HD[k],r=Math.max(3,s*.17),mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,an=Math.atan2(b[1]-a[1],b[0]-a[0]),co=Math.cos(an),si=Math.sin(an);
+    p.moveTo(a[0],a[1]);p.lineTo(b[0],b[1]);
+    h.moveTo(mx+r*co,my+r*si);h.lineTo(mx+(-r)*co-(-.8*r)*si,my+(-r)*si+(-.8*r)*co);h.lineTo(mx+(-r)*co-(.8*r)*si,my+(-r)*si+(.8*r)*co);h.closePath();
+    if(merge){const q=Math.max(3,s*.18);p.moveTo(b[0]+q,b[1]);p.arc(b[0],b[1],q,0,7)}
   });
+  const COL=["rgba(120,220,240,.9)","hsl(150,60%,58%)"];
+  [0,1].forEach(k=>{cx.strokeStyle=COL[k];cx.fillStyle=COL[k];cx.lineWidth=k?lw+1.5:lw;cx.stroke(P[k]);cx.fill(HD[k])});
   cx.setLineDash([4,3]);cx.strokeStyle="hsl(210,80%,72%)";cx.lineWidth=lw;
   if(s>=ARROW_MIN_S)K.ug.forEach(({u,t})=>{const a=c(u.x,u.y),b=c(t.x,t.y);cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke()});
   cx.setLineDash([]);
