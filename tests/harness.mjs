@@ -3308,6 +3308,19 @@ async function s33(br) {
   const lk4 = await linkCalls(4), lk12 = await linkCalls(12);
   chk('33 flow links hidden when zoomed out (s=4 < ARROW_MIN_S): drawLinks not called', lk4 === 0, `calls ${lk4}`);
   chk('33 flow links drawn when zoomed in (s=12): drawLinks called', lk12 > 0, `calls ${lk12}`);
+  const lk = await pg.evaluate(() => {   // persistent links cache: same object while blocks unchanged, new object after a block moves
+    const o = window.drawLinks, got = [];
+    window.drawLinks = function (s) { got.push(linksC(layer)); return o.apply(this, [s]) };
+    try {
+      V.z = 12 / CELLS[view];
+      paint(); paint();
+      const same = got.length === 2 && got[0] === got[1];
+      S.blocks.find(q => q.h === layer).x++; paint();
+      return {same, changed: got.length === 3 && got[2] !== got[0], n: got.length};
+    } finally { window.drawLinks = o }
+  });
+  chk('33 links cache: two paints, blocks unchanged -> same linksC object', lk.same, JSON.stringify(lk));
+  chk('33 links cache: block moved (x++) -> new linksC object on next paint', lk.changed, JSON.stringify(lk));
   await ctx.close();
 }
 

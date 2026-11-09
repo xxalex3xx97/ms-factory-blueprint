@@ -7,7 +7,7 @@ const SIM_NOTES="Approximate, informational. Fixed 1 s steps. Containers start f
   "Elevator ports sit on the lateral edges of the door slots. A belt pointing ALONG the wall INTO the port edge is an input; any other belt beside the port (pointing away, or sideways) is an output, as for machines. An input sends items to the SAME-numbered port of the elevator at the same x,y on the level above or below, when an output belt is attached to that port; no such belt = input blocked. A splitter whose output face touches an elevator port edge is an input of that port; a splitter input (back) face touching it takes the elevator output. Items move at belt speed, no elevator speed limit. "+
   "DEFAULT (not specified by the user): with both neighbours valid, items alternate round-robin between them, skipping a full destination. The whole factory runs on all levels in one simulation. With 'Simulate only current floor' on, only the shown floor runs; elevator inputs there discard their items and elevator outputs receive nothing.";
 let SIM=null;
-const simSig=()=>JSON.stringify(S.blocks);
+const simSig=()=>blkKey();
 const simOk=c=>SIM.cr.get(c)>1-1e-9;
 const simInc=(m,a,b)=>{let x=m.get(a);if(!x){x=new Map();m.set(a,x)}x.set(b,(x.get(b)||0)+1)};
 const simPath=(eb,xb)=>{const nx=SIM.nx,p=[],seen=new Set();for(let i=eb;i!=null&&!seen.has(i);i=nx.get(i)){seen.add(i);p.push(i);if(i===xb)break}return p};

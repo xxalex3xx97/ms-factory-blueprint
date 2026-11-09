@@ -133,9 +133,12 @@ function ugPairs(ms){
   });
   return out;
 }
+let UWC=null;
 function ugWarn(){
+  if(LKP&&UWC&&UWC.k===PK)return UWC.v;
   const out=new Map();
   ugPairs(S.blocks.filter(isM)).forEach(({u,t,n,max})=>{if(n>max)out.set(u.id,{n,max,to:t})});
+  if(LKP)UWC={k:PK,v:out};
   return out;
 }
 // ---- ports: {face N/E/S/W relative to machine rotation, index along face, enabled}; layout per type (guessed), enabled per placed machine (b.off = disabled keys, b.xp = unknown pass-through)

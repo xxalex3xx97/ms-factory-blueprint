@@ -21,7 +21,7 @@ const def=c=>BASE[c]?(DEFC[c]||(DEFC[c]=Object.assign({},BASE[c],OV[c]||{}))):nu
 const kindOf=c=>BASE[c]?BASE[c].kind:"b";   // unknown classes behave as blocks
 const catSort=(a,b)=>{const i=ORDER.indexOf(a),j=ORDER.indexOf(b);return (i<0?99:i)-(j<0?99:j)||(a<b?-1:a>b?1:0)};
 const cats=k=>[...new Set(Object.keys(BASE).filter(c=>BASE[c].kind===k).map(c=>def(c).category))].sort(catSort);
-function setOV(cls,f,v){
+function setOV(cls,f,v){SV++;
   const o=OV[cls]=OV[cls]||{};
   if(JSON.stringify(v)===JSON.stringify(BASE[cls][f]))delete o[f];else o[f]=v;
   if(!Object.keys(o).length)delete OV[cls];
@@ -68,8 +68,10 @@ const sc=()=>CELLS[view]*V.z;
 const FC=16,DW=2;   // floor cells per block cell, doorway width
 const snap=()=>JSON.stringify({b:S.blocks,n:S.name,ov:OV,d:S.dm,c:S.closed});
 let ASH=false,ASO=false,AST=0;const ASK="msfb.state";   // autosave: hold (after New), enabled (after restore), debounce timer
-function push(){ASH=false;undoS.push(snap());if(undoS.length>200)undoS.shift();redoS=[]}
-function restore(s){ASH=false;const o=JSON.parse(s);S.blocks=o.b;S.name=o.n;OV=o.ov;if(o.d)S.dm=o.d;S.closed=o.c||[];saveOV();sel=new Set([...sel].filter(i=>S.blocks.some(b=>b.id===i)));$("name").value=S.name;all()}
+let SV=0;   // bumped by push(), restore(), all(), setOV(), impCfg/impPorts: any "block set may differ" event
+const blkKey=()=>{let h=SV;const a=S.blocks;for(let i=0;i<a.length;i++){const b=a[i];h=(Math.imul(h,31)+b.id+b.x*7+b.y*13+b.h*17+b.rot*19+(b.pid|0)*23+(b.mid|0)*29+(b.off?b.off.length*37:0))|0}return a.length+":"+h};
+function push(){SV++;ASH=false;undoS.push(snap());if(undoS.length>200)undoS.shift();redoS=[]}
+function restore(s){SV++;ASH=false;const o=JSON.parse(s);S.blocks=o.b;S.name=o.n;OV=o.ov;if(o.d)S.dm=o.d;S.closed=o.c||[];saveOV();sel=new Set([...sel].filter(i=>S.blocks.some(b=>b.id===i)));$("name").value=S.name;all()}
 function undo(){if(!undoS.length)return;redoS.push(snap());restore(undoS.pop())}
 function redo(){if(!redoS.length)return;undoS.push(snap());restore(redoS.pop())}
 

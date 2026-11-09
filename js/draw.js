@@ -361,8 +361,8 @@ function paintFloorBase(s){
   }));
   return A;
 }
-let LKC=null,LKP=false;   // links() memo, valid only during one paint (state cannot change mid-paint)
-const linksC=L=>{if(!LKP)return links(L);if(!LKC||LKC.L!==L)LKC={L,K:links(L)};return LKC.K};
+let LKC=null,LKP=false,PK="";   // links() cache persists across paints, keyed by layer + block-set key
+const linksC=L=>{if(!LKP)return links(L);if(!LKC||LKC.L!==L||LKC.k!==PK)LKC={L,k:PK,K:links(L)};return LKC.K};
 // underground belt tunnel: thin dashed line (dark halo + light core) entrance centre -> exit centre; the gap cells stay free
 function ugLine(a,b,s,over,pv){
   cx.save();cx.lineCap="round";cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);
@@ -377,12 +377,12 @@ function drawUG(s){
 }
 let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(S.blocks.filter(b=>b.h===layer).map(b=>[b.id,b]));return LBM.get(id)};
 const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
-function paint(){LKP=true;LKC=null;LBM=null;try{paint0()}finally{LKP=false;LKC=null;LBM=null}}
+function paint(){LKP=true;PK=blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null}}
 function paint0(){
   cx.setTransform(dpr,0,0,dpr,0,0);cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality="high";cx.clearRect(0,0,W,H);
   const s=sc(),F=view==="F";
   RCT=null;
-  if(F&&SM&&SIM&&SIM.sig!==simSig()){simReset();SIM.sig=simSig();smClkUp()}
+  if(F&&SM&&SIM&&SIM.sig!==PK){simReset();SIM.sig=PK;smClkUp()}
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8);
   if($("ghost").checked)S.blocks.filter(inView).forEach(b=>{if(b.h!==layer&&($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s))drawBlock(b,Math.max(.08,.3-.07*Math.abs(b.h-layer)),false)});
