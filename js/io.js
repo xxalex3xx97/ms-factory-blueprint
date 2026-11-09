@@ -4,7 +4,7 @@ const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.
 // game splitter config bytes = [front, right, left] at rot 0, as local faces (port identity is fixed in the machine, so rotation needs no mapping). The back/input face (W at rot 0) is never a game byte.
 const SPL_FACES=["S","E","N"];
 let spFix=0;   // splitter input-face "off" entries in an import, forced on (counted for the import message)
-const impPorts=(b,L)=>{if(!Array.isArray(L))return;const ps=portsOf(b),off=[],xp=[];L.forEach(e=>{const p=e&&ps.find(q=>q.f===e.Face&&q.i===e.Index);if(p){if(e.Enabled===false){if(p.tg)off.push(p.key);else if(p.dir==="in"&&isSplitterCls(b.cls))spFix++}}else xp.push(e)});if(off.length)b.off=off;if(xp.length)b.xp=xp};
+const impPorts=(b,L)=>{SV++;if(!Array.isArray(L))return;const ps=portsOf(b),off=[],xp=[];L.forEach(e=>{const p=e&&ps.find(q=>q.f===e.Face&&q.i===e.Index);if(p){if(e.Enabled===false){if(p.tg)off.push(p.key);else if(p.dir==="in"&&isSplitterCls(b.cls))spFix++}}else xp.push(e)});if(off.length)b.off=off;if(xp.length)b.xp=xp};
 // game-ready SerializedMachineConfig per machine (ConfigHex = exact bytes the game applies; Recipe/Ports/Filters stay for humans). Only when the machine has something to configure.
 // Underground: ONE config on the pair's entrance (Length = cells entrance..exit inclusive); the mod's paste tool merges entrance+exit into one game machine. Recipe ports: game port order (config.js gamePortMap; verified Refinery/Assembler, others rule-derived -> PortOrderUnverified).
 // Contents (containers only): totals per item, duplicates summed, Count >= 1, empty = field omitted. Infinite sources are site/simulation only: written under SiteOnly.Infinite (the mod's parser ignores SiteOnly), never in Contents.
@@ -143,7 +143,7 @@ function parseSav(buf){
   return out;
 }
 // ConfigHex (game bytes) -> model: recipe (key, or raw game name in recn when unknown), disabled ports (game port order when mapped, else portsOf order), splitter filters/priorities, underground Length (b.ugl, expanded by importJson)
-function impCfg(b,d,m){
+function impCfg(b,d,m){SV++;
   const k=cfgKind(d.id),dc=k&&cfgDec(d.id,m.ConfigHex);
   if(k==="underground"){const l=n0(m.Length)||(dc?dc.length:0);if(l>1)b.ugl=l;return}   // Length field (world record) first, ConfigHex as fallback
   if(!dc)return;

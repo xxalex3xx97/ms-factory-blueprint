@@ -2031,6 +2031,7 @@ async function s17(br) {
   await pg.click('#simB'); await pg.click('#sm10'); await pg.click('#simB');   // speed 10, sim off again
   await pg.click('#bn'); await pg.click('#bnF'); await pg.click('#lk');
   await pg.uncheck('#ghost');
+  await pg.check('#ghostAll');
   await pg.click('#lUp');
   await pg.evaluate(() => { __fb.V.z = 2.5; __fb.V.ox = 111; __fb.V.oy = 77; });
   await pg.click('#lDn');   // draws -> debounced save
@@ -2054,6 +2055,7 @@ async function s17(br) {
   chk('17 Bottlenecks on + Flow/Blockage restored', s.bn === true && s.bm === 'F' && await pg.getAttribute('#bn', 'aria-pressed') === 'true' && await pg.isEnabled('#bnF') && await pg.isEnabled('#bnB'));
   await pg.keyboard.press('Escape');
   chk('17 link overlay off + ghost layers off restored', await pg.getAttribute('#lk', 'aria-pressed') === 'false' && !(await pg.isChecked('#ghost')));
+  chk('17 show all levels (ghostAll) restored', await pg.isChecked('#ghostAll'));
   chk('17 sim speed restored, sim not running/active', s.spd === 10 && s.sm === false && s.sim === null);
   // selection on layer 0
   await pg.click('#lDn'); await pg.evaluate(() => __fb.click(40, 40)); await pg.waitForTimeout(700);
@@ -3290,6 +3292,71 @@ async function s24(br) {
   }
 }
 
+// ================= 33 ghost layers: only level below/above unless "show all levels"; simulation ring hidden when zoomed out (s<6)
+async function s33(br) {
+  const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's33');
+  await imp(pg, bp([], [mac('DAT_Container_2', 0, 0, {h: 0}), mac('DAT_Container_2', 4, 0, {h: 1}), mac('DAT_Container_2', 8, 0, {h: 2}), mac('DAT_Container_2', 12, 0, {h: 3})]));
+  await pg.evaluate(() => { __fb.setView('F'); __fb.setLayer(1); V.z = 1; V.ox = 40; V.oy = 40; });   // all four levels on screen (fit() frames only the current level)
+  await pg.evaluate(() => { window.__gh = []; const o = window.drawBlock; window.drawBlock = function (b, a, ...r) { if (b.h !== layer) __gh.push(b.h); return o.call(this, b, a, ...r) }; });
+  const ghosted = async (all) => pg.evaluate(all => { $('ghost').checked = true; $('ghostAll').checked = all; window.__gh = []; paint(); return [...new Set(__gh)].sort() }, all);
+  const one = await ghosted(false), every = await ghosted(true);
+  chk('33 ghost on, show-all off: only level below/above ghosted', JSON.stringify(one) === '[0,2]', JSON.stringify(one));
+  chk('33 ghost on, show-all on: every other level ghosted', JSON.stringify(every) === '[0,2,3]', JSON.stringify(every));
+  const arcs = await pg.evaluate(() => { const p = CanvasRenderingContext2D.prototype, o = p.arc; let k = 0; p.arc = function (...a) { k++; return o.apply(this, a) }; try { drawSimFull(5) } finally { p.arc = o } return k });
+  chk('33 sim full ring: nothing drawn when zoomed out (s<6)', arcs === 0, `arc calls ${arcs}`);
+  const linkCalls = async (s) => pg.evaluate(s => { const o = window.drawLinks; let k = 0; window.drawLinks = function (...a) { k++; return o.apply(this, a) }; try { V.z = s / CELLS[view]; paint() } finally { window.drawLinks = o } return k }, s);
+  const lk4 = await linkCalls(4), lk12 = await linkCalls(12);
+  chk('33 flow links hidden when zoomed out (s=4 < ARROW_MIN_S): drawLinks not called', lk4 === 0, `calls ${lk4}`);
+  chk('33 flow links drawn when zoomed in (s=12): drawLinks called', lk12 > 0, `calls ${lk12}`);
+  const lk = await pg.evaluate(() => {   // persistent links cache: same object while blocks unchanged, new object after a block moves
+    const o = window.drawLinks, got = [];
+    window.drawLinks = function (s) { got.push(linksC(layer)); return o.apply(this, [s]) };
+    try {
+      V.z = 12 / CELLS[view];
+      paint(); paint();
+      const same = got.length === 2 && got[0] === got[1];
+      S.blocks.find(q => q.h === layer).x++; paint();
+      return {same, changed: got.length === 3 && got[2] !== got[0], n: got.length};
+    } finally { window.drawLinks = o }
+  });
+  chk('33 links cache: two paints, blocks unchanged -> same linksC object', lk.same, JSON.stringify(lk));
+  chk('33 links cache: block moved (x++) -> new linksC object on next paint', lk.changed, JSON.stringify(lk));
+  // idle sim repaint: playing with no sim step (<1 s of fake time) repaints only when zoomed in (s>=10)
+  await pg.click('#simB');
+  const frames = async (s) => pg.evaluate(s => {
+    smHalt(); V.z = s / CELLS[view]; smLast = 0; let k = 0; const o = window.paint;
+    window.paint = function (...a) { k++; return o.apply(this, a) };
+    try { SMP = true; let ts = 1000; for (let i = 0; i < 5; i++) { smFrame(ts); ts += 200 } } finally { window.paint = o; smHalt() }
+    return k;
+  }, s);
+  const f4 = await frames(4), f12 = await frames(12);
+  chk('33 idle sim frames zoomed out (s=4): no repaint when no sim step ran', f4 === 0, `paints ${f4}`);
+  chk('33 idle sim frames zoomed in (s=12): repaint every frame', f12 > 0, `paints ${f12}`);
+  await ctx.close();
+}
+
+// ================= 34 elevator ports: F view ports sit on the floorRect, so the cull must use it (not the 1x1 block cell)
+async function s34(br) {
+  const ELV = 'BPO_ElevatorBlock_03';
+  const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's34');
+  await imp(pg, bp([blk(ELV, 20, 0, {h: 0})]));   // 1x1 anchor 20 cells from origin; its 12x12 floor sits at x=320 floor units
+  for (const s of [20, 46]) {
+    const r = await pg.evaluate(s => {
+      __fb.setView('F'); __fb.setLayer(0);
+      const b = __fb.S.blocks[0], f = floorRect(b);
+      V.z = s / CELLS.F; V.ox = W / 2 - (f.x + f.w / 2) * s; V.oy = H / 2 - (f.y + f.h / 2) * s;   // floor centred, anchor cell far off-screen
+      const ax = V.ox + b.x * s, ay = V.oy + b.y * s, off = ax + 120 < 0 || ax - 120 > W || ay + 120 < 0 || ay - 120 > H;
+      const g = document.createElement('canvas').getContext('2d'), G = []; for (const c of ['hsl(140,70%,48%)', 'hsl(0,75%,55%)']) { g.strokeStyle = c; G.push(g.strokeStyle) }
+      let tk = 0; const o = CanvasRenderingContext2D.prototype.stroke;
+      CanvasRenderingContext2D.prototype.stroke = function (...a) { if (G.includes(this.strokeStyle)) tk++; return o.apply(this, a) };
+      try { paint() } finally { CanvasRenderingContext2D.prototype.stroke = o }
+      return {tk, off};
+    }, s);
+    chk(`34 elevator ports drawn with anchor off-screen (s=${s}, floor in view)`, r.off && r.tk > 0, JSON.stringify(r));
+  }
+  await ctx.close();
+}
+
 // ================= main
 const br =await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 try {
@@ -3324,6 +3391,8 @@ try {
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }
   try { console.log('--- 31 ground floors centred'); await s31(br); } catch (e) { chk('31 section ran', false, e.stack || String(e)); }
   try { console.log('--- 32 door passage rule, underground link zoom'); await s32(br); } catch (e) { chk('32 section ran', false, e.stack || String(e)); }
+  try { console.log('--- 33 ghost levels, sim ring zoom cull'); await s33(br); } catch (e) { chk('33 section ran', false, e.stack || String(e)); }
+  try { console.log('--- 34 elevator ports cull'); await s34(br); } catch (e) { chk('34 elevator ports: section ran', false, e.stack || String(e)); }
   try { console.log('--- 28 data-driven shapes'); await s28(br); } catch (e) { chk('28 shapes: section ran', false, e.stack || String(e)); }
   try { console.log('--- 29 icons, Command Module, Blueprint Unit, shipyards'); await s29(br); } catch (e) { chk('29 section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {

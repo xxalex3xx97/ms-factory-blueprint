@@ -11,7 +11,7 @@ const bnK=()=>simLive()?simView():linksC(layer);
 const bnU=(K,id)=>{const e=K.load.get(id),u=e?e.util:0;return BM==="B"&&simLive()&&smS().full.has(id)?Math.max(u||0,1.25):u};
 function drawBnCells(s){
   const K=bnK();cx.save();cx.globalAlpha=.6;
-  S.blocks.forEach(b=>{if(b.h!==layer||!isBelt(b)||!inView(b))return;const d=dim(b);cx.fillStyle=bnCol(bnU(K,b.id),BM);cx.fillRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)});
+  lyBlocks().all.forEach(b=>{if(!isBelt(b)||!inView(b))return;const d=dim(b);cx.fillStyle=bnCol(bnU(K,b.id),BM);cx.fillRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)});
   cx.restore();
 }
 const AMB="hsl(40,95%,55%)";
@@ -27,8 +27,8 @@ function drawBeltItems(s){
       if(ic&&ic.complete)cx.drawImage(ic,x-sz/2,y-sz/2,sz,sz);
       else{cx.fillStyle="rgba(255,255,255,.7)";cx.beginPath();cx.arc(x,y,sz/4,0,7);cx.fill()}}
     if(e.mixed){const m=b?[(a[0]+b[0])/2,(a[1]+b[1])/2]:a;mixMark(m[0],m[1]-(b?0:sz*.5),s)}};
-  segs.forEach(({u,t:tg})=>{const e=K.load.get(u.id);if(!e)return;seen.add(u.id);icons(e,u,c(u.x,u.y),c(tg.x,tg.y))});
-  K.load.forEach((e,id)=>{if(seen.has(id))return;const b=S.blocks.find(q=>q.id===id);if(b&&b.h===layer)icons(e,b,c(b.x,b.y),null)});
+  segs.forEach(({u,t:tg})=>{const e=K.load.get(u.id);if(!e)return;seen.add(u.id);const a=c(u.x,u.y);if(!vis(a[0]-s,a[1]-s,3*s,3*s))return;icons(e,u,a,c(tg.x,tg.y))});
+  K.load.forEach((e,id)=>{if(seen.has(id))return;const b=lblk(id);if(b&&vis(V.ox+(b.x-1)*s,V.oy+(b.y-1)*s,3*s,3*s))icons(e,b,c(b.x,b.y),null)});
 }
 function drawLinks(s){
   const K=smOn()?smK():linksC(layer),c=(x,y)=>[V.ox+(x+.5)*s,V.oy+(y+.5)*s],lw=s>=12?2:1.5,BNK=bnK();
@@ -38,7 +38,7 @@ function drawLinks(s){
   if(BN){
     const seg=(u,t,dash)=>{const a=c(u.x,u.y),b=c(t.x,t.y),cu=bnCol(bnU(BNK,u.id),BM),ct=bnCol(bnU(BNK,t.id),BM),g=cx.createLinearGradient(a[0],a[1],b[0],b[1]);
       g.addColorStop(0,cu);g.addColorStop(1,ct);return{a,b,cu,g}};
-    K.flow.forEach(({u,t,merge})=>{const{a,b,cu,g}=seg(u,t);
+    K.flow.forEach(({u,t,merge})=>{const a0=c(u.x,u.y);if(!vis(a0[0]-2*s,a0[1]-2*s,4*s,4*s))return;const{a,b,cu,g}=seg(u,t);
       cx.strokeStyle=g;cx.lineWidth=merge?lw+1.5:lw;cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke();
       head(a,b,cu,Math.max(3,s*.17));
       if(merge){cx.beginPath();cx.arc(b[0],b[1],Math.max(3,s*.18),0,7);cx.stroke()}
@@ -49,12 +49,17 @@ function drawLinks(s){
     cx.setLineDash([]);
   }
   if(!BN){
+  const P=[new Path2D(),new Path2D()],HD=[new Path2D(),new Path2D()];   // batched: 0 normal, 1 merge; one stroke + one fill per colour
   K.flow.forEach(({u,t,merge})=>{
-    const a=c(u.x,u.y),b=c(t.x,t.y),col=merge?"hsl(150,60%,58%)":"rgba(120,220,240,.9)";
-    cx.strokeStyle=col;cx.lineWidth=merge?lw+1.5:lw;cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke();
-    head(a,b,col,Math.max(3,s*.17));
-    if(merge){cx.beginPath();cx.arc(b[0],b[1],Math.max(3,s*.18),0,7);cx.stroke()}
+    const a=c(u.x,u.y),b=c(t.x,t.y);
+    if(!vis(Math.min(a[0],b[0])-s,Math.min(a[1],b[1])-s,Math.abs(a[0]-b[0])+2*s,Math.abs(a[1]-b[1])+2*s))return;
+    const k=merge?1:0,p=P[k],h=HD[k],r=Math.max(3,s*.17),mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,an=Math.atan2(b[1]-a[1],b[0]-a[0]),co=Math.cos(an),si=Math.sin(an);
+    p.moveTo(a[0],a[1]);p.lineTo(b[0],b[1]);
+    h.moveTo(mx+r*co,my+r*si);h.lineTo(mx+(-r)*co-(-.8*r)*si,my+(-r)*si+(-.8*r)*co);h.lineTo(mx+(-r)*co-(.8*r)*si,my+(-r)*si+(.8*r)*co);h.closePath();
+    if(merge){const q=Math.max(3,s*.18);p.moveTo(b[0]+q,b[1]);p.arc(b[0],b[1],q,0,7)}
   });
+  const COL=["rgba(120,220,240,.9)","hsl(150,60%,58%)"];
+  [0,1].forEach(k=>{cx.strokeStyle=COL[k];cx.fillStyle=COL[k];cx.lineWidth=k?lw+1.5:lw;cx.stroke(P[k]);cx.fill(HD[k])});
   cx.setLineDash([4,3]);cx.strokeStyle="hsl(210,80%,72%)";cx.lineWidth=lw;
   if(s>=ARROW_MIN_S)K.ug.forEach(({u,t})=>{const a=c(u.x,u.y),b=c(t.x,t.y);cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke()});
   cx.setLineDash([]);
@@ -67,10 +72,16 @@ function drawLinks(s){
   });
   cx.restore();
 }
+const CULLM=120;   // px slack around a block for the cull: badge text and port bars can spill past its rect
+let CUR=[];   // this paint's layer blocks in view (set in paint0, cleared in paint)
+// px box for a block's ports (CULLM slack): elevator ports + ring sit on its floorRect (F-view floor units), not on the 1x1 block cell
+const portBox=(b,s)=>{const r=(def(b.cls)||{}).elevator&&floorRect(b);
+  if(r){const m=CULLM+s;return[V.ox+r.x*s-m,V.oy+r.y*s-m,r.w*s+2*m,r.h*s+2*m]}   // +s: ring cell is one floor unit outside the floor
+  const d=dim(b);return[V.ox+b.x*s-CULLM,V.oy+b.y*s-CULLM,d.w*s+2*CULLM,d.h*s+2*CULLM]};
 function drawPorts(s){
   if(s<6)return;
   const Ln=Math.min(.6*s,18),T=Math.min(5,Math.max(3,.2*s));cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
-  S.blocks.forEach(b=>{if(b.h!==layer)return;const bars=barPorts(b);
+  lyBlocks().all.forEach(b=>{if(!vis(...portBox(b,s)))return;const bars=barPorts(b);
     // splitter input (back) face: no bar; small neutral chevron pointing into the machine (not clickable, no hover state)
     portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.min(8,Math.max(3,s*.2)),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
       cx.strokeStyle="rgba(230,240,255,.45)";cx.lineWidth=Math.max(1.5,s*.08);cx.beginPath();
@@ -94,7 +105,7 @@ function drawBadges(s){
   if(s<10)return;
   cx.save();cx.textBaseline="top";cx.textAlign="center";
   const sm=smOn(),K=sm?null:linksC(layer);
-  S.blocks.forEach(b=>{if(b.h!==layer||!isM(b))return;const sto=isStore(b),r=recOf(b);if(!r&&!sto)return;
+  CUR.forEach(b=>{if(b.h!==layer||!isM(b)||!vis(V.ox+b.x*s-CULLM,V.oy+b.y*s-CULLM,dim(b).w*s+2*CULLM,dim(b).h*s+2*CULLM))return;const sto=isStore(b),r=recOf(b);if(!r&&!sto)return;
     const si=sto&&!sm?K.sto.get(b.id):null;if(sto&&!sm&&!(si&&(si.in||si.out||si.rows.length)))return;
     const cs=sm&&sto?smS().cont.get(b.id):null,ms=sm&&r?smS().mach.get(b.id):null;
     const d=dim(b),bw=d.w*s,bh=d.h*s,v=r?pm(r.o[1],r.t):0,txt=sm?(sto?"stock "+(cs?cs.have+(cs.rows.some(x=>x.inf)?" +∞":"")+" · in "+cs.in+" · out "+cs.out:"0 · in 0 · out 0")+" /min":ms?ms.st:"idle"):sto?"in "+si.in+" · out "+si.out+" /min":(v==null?"?":v)+"/min",ic=r?img(r.o[0]):cs&&cs.rows[0]?img(cs.rows[0].item):((b.ct||[]).length?img(b.ct[0].item):null);
@@ -142,8 +153,12 @@ let W=0,H=0,dpr=1,RCT=null;
 function resize(){const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio||1;W=r.width;H=r.height;cv.width=Math.max(1,W*dpr);cv.height=Math.max(1,H*dpr);paint()}
 new ResizeObserver(resize).observe(cv);
 const toCell=(px,py)=>({x:Math.floor((px-V.ox)/sc()),y:Math.floor((py-V.oy)/sc())});
-let raf=0;const draw=()=>{asv();if(!raf)raf=requestAnimationFrame(()=>{raf=0;paint()})};
+let PF=0,DIRTY=true,USEB=false;
+let raf=0;const draw=()=>{DIRTY=true;asv();if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()})};
 
+const SPR=new Map();
+function spr(key,w,h,fn){const k=key+"|"+dpr;let c=SPR.get(k);if(!c){if(SPR.size>800)SPR.clear();c=document.createElement("canvas");c.width=Math.ceil(w*dpr);c.height=Math.ceil(h*dpr);const g=c.getContext("2d");g.scale(dpr,dpr);g.imageSmoothingQuality="high";fn(g);SPR.set(k,c)}return c}
+const blit=(c,x,y)=>cx.drawImage(c,x,y,c.width/dpr,c.height/dpr);
 function drawIcon(d,x,y,w,h,alpha){
   const i=img(d&&d.icon);if(!i||!i.complete||!i.naturalWidth)return;
   const z=Math.min(w,h)*.72;if(z<10)return;
@@ -338,7 +353,7 @@ function paintFloorBase(s){
     if(w>70){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
   });
   drawShapeFloor(A,s);
-  const NF=S.blocks.filter(b=>b.h===layer&&!isM(b)&&nfRect(b));
+  const NF=lyBlocks().all.filter(b=>!isM(b)&&nfRect(b));
   NF.forEach(b=>{const r=nfRect(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
   NF.forEach(b=>{const t=shapeTf(b);if(t&&t.sh.hatch)return hatchShape(b,t,s);const r=nfRect(b);nbHatch(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s,true)});   // grey no-build hatch on the whole tile, behind the shape
   drawShapeFloor({floors:NF.map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
@@ -360,8 +375,8 @@ function paintFloorBase(s){
   }));
   return A;
 }
-let LKC=null,LKP=false;   // links() memo, valid only during one paint (state cannot change mid-paint)
-const linksC=L=>{if(!LKP)return links(L);if(!LKC||LKC.L!==L)LKC={L,K:links(L)};return LKC.K};
+let LKC=null,LKP=false,PK="";   // links() cache persists across paints, keyed by layer + block-set key
+const linksC=L=>{if(!LKP)return links(L);if(!LKC||LKC.L!==L||LKC.k!==PK)LKC={L,k:PK,K:links(L)};return LKC.K};
 // underground belt tunnel: thin dashed line (dark halo + light core) entrance centre -> exit centre; the gap cells stay free
 function ugLine(a,b,s,over,pv){
   cx.save();cx.lineCap="round";cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);
@@ -372,26 +387,67 @@ function ugLine(a,b,s,over,pv){
 function drawUG(s){
   if(s<ARROW_MIN_S)return;   // zoomed out: same threshold as the belt arrows
   const c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s];
-  ugPairs(S.blocks.filter(b=>isM(b)&&b.h===layer&&inView(b))).forEach(({u,t,n,max})=>ugLine(c(u),c(t),s,n>max));
+  ugPairs(CUR.filter(isM)).forEach(({u,t,n,max})=>ugLine(c(u),c(t),s,n>max));
 }
-function paint(){LKP=true;LKC=null;try{paint0()}finally{LKP=false;LKC=null}}
+let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(b=>b.h===layer);LYB={k,all,v:all.filter(inView)}}return LYB}
+let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k!==k)GHB={k,v:S.blocks.filter(b=>b.h!==layer&&inView(b))};return GHB.v}
+let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(lyBlocks().all.map(b=>[b.id,b]));return LBM.get(id)};
+const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
+// static layer cache: only smFrame paints (USEB) read it; any other paint (edits, resize, export) repaints fresh and marks DIRTY
+const OFFC={};let BASEFILL=false;
+function cached(name,fn){
+  if(!USEB)return fn();
+  const k=[view,layer,V.ox,V.oy,V.z,W,H,dpr,PK].join();let o=OFFC[name];
+  if(!o||o.k!==k||DIRTY||o.c.width!==cv.width||o.c.height!==cv.height){
+    // fill: draw on the main canvas exactly like a fresh paint, then copy the result out (copy is exact; drawing on a 2nd canvas is not)
+    if(!o)o=OFFC[name]={c:document.createElement("canvas")};
+    o.c.width=cv.width;o.c.height=cv.height;o.g=o.c.getContext("2d");o.k=k;
+    o.st=fn();
+    o.g.setTransform(1,0,0,1,0,0);o.g.drawImage(cv,0,0);
+    BASEFILL=true;
+    return;
+  }
+  RCT=o.st.RCT;CUR=o.st.CUR;
+  cx.setTransform(1,0,0,1,0,0);cx.drawImage(o.c,0,0);cx.setTransform(dpr,0,0,dpr,0,0);
+}
+function paint(pk){if(!USEB)DIRTY=true;LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}}
+let FLAT_S=5;   // let: tests set FLAT_S=0 for exact block pixels. below this zoom (px per cell) blocks are batched as flat rects (no icon/arrow/label/door marks are drawn there anyway)
+function drawBlocks(list,alpha,useSel){
+  const s=sc(),flat=s<FLAT_S,fl=new Map(),st=new Map(),full=[];
+  list.forEach(b=>{
+    const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s;
+    if(x>W||y>H||x+w<0||y+h<0)return;
+    if(!flat||(useSel&&sel.has(b.id)&&b.h===layer)||(isM(b)&&RCT&&b.h===layer&&outside(b,RCT))){full.push(b);return}
+    const k=catOf(b)||"";
+    let p=fl.get(k);if(!p)fl.set(k,p=new Path2D());p.rect(x,y,w,h);
+    if(s>=3){let q=st.get(k);if(!q)st.set(k,q=new Path2D());q.rect(x+.5,y+.5,w-1,h-1)}
+  });
+  if(flat){
+    fl.forEach((p,k)=>{cx.fillStyle=k?fill(k,alpha*.8):`rgba(120,125,135,${alpha*.8})`;cx.fill(p)});
+    cx.lineWidth=1;st.forEach((q,k)=>{cx.strokeStyle=k?`hsla(${hue(k)},70%,70%,${alpha})`:`rgba(190,195,205,${alpha})`;cx.stroke(q)});
+  }
+  full.forEach(b=>drawBlock(b,alpha,useSel&&sel.has(b.id)));
+}
 function paint0(){
   cx.setTransform(dpr,0,0,dpr,0,0);cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality="high";cx.clearRect(0,0,W,H);
   const s=sc(),F=view==="F";
+  if(F&&SM&&SIM&&SIM.sig!==PK){simReset();SIM.sig=PK;smClkUp()}
+  cached("base",()=>{
   RCT=null;
-  if(F&&SM&&SIM&&SIM.sig!==simSig()){simReset();SIM.sig=simSig();smClkUp()}
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8);
-  if($("ghost").checked)S.blocks.filter(inView).forEach(b=>{if(b.h!==layer)drawBlock(b,Math.max(.08,.3-.07*Math.abs(b.h-layer)),false)});
-  const cur=S.blocks.filter(b=>b.h===layer&&inView(b));
-  cur.forEach(b=>{const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s;if(x>W||y>H||x+d.w*s<0||y+d.h*s<0)return;drawBlock(b,.92,sel.has(b.id))});   // viewport cull
+  if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*Math.abs(b.h-layer));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
+  const cur=lyBlocks().v;CUR=cur;
+  drawBlocks(cur,.92,true);   // viewport cull inside drawBlocks
   cx.fillStyle="rgba(255,60,60,.5)";
   const occ=new Set();   // overlap marks: cell hash instead of all-pairs (was O(n^2) dim() calls)
   cur.forEach(a=>{const d=dim(a);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const k=(a.x+i+32768)*65536+(a.y+j+32768);
     if(occ.has(k)){const X=V.ox+(a.x+i)*s,Y=V.oy+(a.y+j)*s;if(X<W&&Y<H&&X+s>0&&Y+s>0)cx.fillRect(X,Y,s,s)}else occ.add(k)}});
+  return{RCT,CUR};
+  });
   if(F&&smOn())drawSimMach(s);
-  if(F&&BN&&!LK)drawBnCells(s);
-  if(F&&LK)drawLinks(s);
+  if(F&&BN&&(!LK||s<ARROW_MIN_S))drawBnCells(s);
+  if(F&&LK&&s>=ARROW_MIN_S)drawLinks(s);   // live: flow links read sim state (smK) when sim is on
   if(F&&smOn())drawSimFull(s);
   if(F)drawUG(s);
   if(F&&ugPend&&ugPend.cls&&ugTool(def(ugPend.cls))){   // pending underground: blue dotted line + n / max, red when the second click would be refused
@@ -432,6 +488,7 @@ function paint0(){
     cx.strokeStyle=d.kind==="m"&&noBuild([{id:-1,x:hover.x,y:hover.y,w:bw,h:bh,l:layer,belt:isBelt({cls:active})}])?"hsl(0,85%,60%)":d.kind==="m"&&RCT&&!onArea(hover.x,hover.y,bw,bh,RCT)?"hsl(45,95%,62%)":"#fff";
     cx.setLineDash([5,4]);cx.lineWidth=1.5;cx.strokeRect(px+.5,py+.5,bw*s-1,bh*s-1);cx.setLineDash([]);
   }
+  if(USEB&&BASEFILL){DIRTY=false;BASEFILL=false}
 }
 const boxRect=()=>({x:Math.min(drag.sx,drag.px),y:Math.min(drag.sy,drag.py),w:Math.abs(drag.px-drag.sx),h:Math.abs(drag.py-drag.sy)});
 

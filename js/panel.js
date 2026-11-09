@@ -100,7 +100,7 @@ $("insp").addEventListener("change",e=>{
   if(t.dataset.port&&bs.length===1){push();togglePort(bs[0],t.dataset.port);all();return}
   if(t.dataset.ct&&bs.length===1){
     const m=bs[0],i=+t.dataset.i;push();
-    m.ct=(m.ct||[]).map((x,j)=>j!==i?x:t.dataset.ct==="inf"?{...x,inf:t.checked}:{...x,n:Math.max(0,Math.round(Number(t.value))||0)});all();return}
+    SV++;m.ct=(m.ct||[]).map((x,j)=>j!==i?x:t.dataset.ct==="inf"?{...x,inf:t.checked}:{...x,n:Math.max(0,Math.round(Number(t.value))||0)});all();return}
   if(t.dataset.pl){
     const cls=bs.length===1?bs[0].cls:active;if(!cls||!BASE[cls]||!BASE[cls].portsLayout)return;
     const old=def(cls).portsLayout,ports=[];

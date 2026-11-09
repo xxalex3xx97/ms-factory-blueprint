@@ -28,9 +28,9 @@ function smStop(){smHalt();if(SIM)SIM.sig=null}   // next paint re-inits for the
 function smFrame(ts){
   smRaf=0;if(!SMP||!smOn()||document.hidden)return;
   const dt=smLast?Math.min((ts-smLast)/1000,.25):0;smLast=ts;
-  if(SIM.sig!==simSig()){simReset();SIM.sig=simSig()}
-  simAdvance(Math.min(dt,.25),SPD);if(!RM.matches)smPh=(smPh+dt*.6)%1;
-  smClkUp();paint();
+  const sg=simSig();if(SIM.sig!==sg){simReset();SIM.sig=sg}
+  const n=simAdvance(Math.min(dt,.25),SPD);if(!RM.matches)smPh=(smPh+dt*.6)%1;
+  if(n>0||(sc()>=10&&!RM.matches)){PF=ts;smClkUp();USEB=true;try{paint(sg)}finally{USEB=false}}   // zoomed out (belt items hidden) or reduced motion: repaint only when a sim step ran
   if(ts-smLv>=250){smLv=ts;simLiveUp()}
   smRaf=requestAnimationFrame(smFrame);
 }
@@ -43,7 +43,7 @@ $("smRst").onclick=()=>{if(!SIM)return;simReset();SIM.sig=simSig();smPh=0;smClkU
 [1,10,60].forEach(v=>$("sm"+v).onclick=()=>{SPD=v;smSync();asv()});
 function drawSimMach(s){
   cx.save();
-  S.blocks.forEach(b=>{if(b.h!==layer||!isM(b)||isBelt(b)||isStore(b)||SIM.R.has(b.id))return;const id=b.id,m=smS().mach.get(id)||{st:"idle",cycles:0,none:1};
+  CUR.forEach(b=>{if(b.h!==layer||!isM(b)||isBelt(b)||isStore(b)||SIM.R.has(b.id)||!vis(V.ox+b.x*s-CULLM,V.oy+b.y*s-CULLM,dim(b).w*s+2*CULLM,dim(b).h*s+2*CULLM))return;const id=b.id,m=smS().mach.get(id)||{st:"idle",cycles:0,none:1};
     const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s,col=SMC[m.st]||SMC.idle;
     cx.globalAlpha=.3;cx.fillStyle=col;cx.fillRect(x,y,w,h);cx.globalAlpha=1;
     cx.strokeStyle=col;cx.lineWidth=2;cx.strokeRect(x+1,y+1,w-2,h-2);
@@ -53,8 +53,9 @@ function drawSimMach(s){
   cx.restore();
 }
 function drawSimFull(s){
+  if(s<6)return;
   cx.save();cx.strokeStyle="hsl(0,80%,60%)";cx.lineWidth=Math.max(1.5,s*.1);
-  smS().full.forEach(id=>{const b=S.blocks.find(q=>q.id===id);if(!b||b.h!==layer)return;
+  smS().full.forEach(id=>{const b=lblk(id);if(!b||!vis(V.ox+b.x*s,V.oy+b.y*s,s,s))return;
     cx.beginPath();cx.arc(V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s,Math.max(3,s*.4),0,7);cx.stroke()});
   cx.restore();
 }
