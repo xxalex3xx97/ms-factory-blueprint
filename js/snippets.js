@@ -37,17 +37,20 @@ $("fit").onclick=fit;
 addEventListener("keydown",e=>{
   const t=e.target,typing=t.matches&&t.matches("input[type=text],input[type=number],textarea,select");
   const dlg=document.querySelector("dialog[open]");
-  if(e.key==="Escape"){if(!dlg&&ugCancel())return;if(!dlg){active=null;pasting=null;if(!typing)sel=new Set();all()}return}
+  if(e.key==="Escape"){hideCtx();if(!dlg&&ugCancel())return;if(!dlg){active=null;pasting=null;mode=null;if(!typing)sel=new Set();all()}return}
   if(typing||dlg)return;
   const k=e.key.toLowerCase(),ctl=e.ctrlKey||e.metaKey;
   if(e.code==="Space"){if(e.target.closest&&e.target.closest("input,select,textarea,button,[contenteditable]"))return;space=true;cv.style.cursor="grab";e.preventDefault();return}
   if(ctl&&k==="z"){e.preventDefault();e.shiftKey?redo():undo()}
   else if(ctl&&k==="y"){e.preventDefault();redo()}
   else if(ctl&&k==="s"){e.preventDefault();fSave(e.shiftKey)}
+  else if(ctl&&e.shiftKey&&k==="c"){e.preventDefault();cfgCopy()}
+  else if(ctl&&e.shiftKey&&k==="v"){e.preventDefault();cfgPasteMode()}
   else if(ctl&&k==="c"){copy()}
   else if(ctl&&k==="v"){e.preventDefault();paste()}
   else if(ctl&&k==="a"){e.preventDefault();sel=new Set(S.blocks.filter(b=>b.h===layer&&inView(b)).map(b=>b.id));all()}
   else if(!ctl&&k==="r"){rotate()}
+  else if(!ctl&&!e.altKey&&k==="x"){setMode(mode==="del"?null:"del")}
   else if(!ctl&&k==="v"&&pasting){pasting.fl=!pasting.fl;all()}
   else if(!ctl&&k==="f"){setView(view==="F"?"L":"F")}
   else if(!ctl&&!e.altKey&&/^[1-9]$/.test(k)){const c=HB[tab][+k-1];if(c&&BASE[c])pick(c)}

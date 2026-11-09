@@ -154,7 +154,11 @@ function resize(){const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio
 new ResizeObserver(resize).observe(cv);
 const toCell=(px,py)=>({x:Math.floor((px-V.ox)/sc()),y:Math.floor((py-V.oy)/sc())});
 let PF=0,DIRTY=true,USEB=false;
-let raf=0;const draw=()=>{DIRTY=true;asv();if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()})};
+// body[data-mode] + #modeb badge (CSS in style.css); a pasting session is mode "paste"
+const MODE_TXT={del:"Delete mode: click or drag a box to delete - X or Esc to exit",copy:"Copy: drag a box, then click to place",cfgcopy:"Copy config: click one building",cfgpaste:"Paste config: drag a box over buildings of the same type - Esc to exit",paste:"Paste: click to place - R rotate - V flip - Esc cancel"};
+let modeKey="";
+function syncMode(){const m=pasting?"paste":mode||"";if(m===modeKey)return;modeKey=m;document.body.dataset.mode=m;let el=$("modeb");if(!el){el=document.createElement("div");el.id="modeb";document.body.appendChild(el)}el.textContent=MODE_TXT[m]||""}
+let raf=0;const draw=()=>{syncMode();DIRTY=true;asv();if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()})};
 
 const SPR=new Map();
 function spr(key,w,h,fn){const k=key+"|"+dpr;let c=SPR.get(k);if(!c){if(SPR.size>800)SPR.clear();c=document.createElement("canvas");c.width=Math.ceil(w*dpr);c.height=Math.ceil(h*dpr);const g=c.getContext("2d");g.scale(dpr,dpr);g.imageSmoothingQuality="high";fn(g);SPR.set(k,c)}return c}
@@ -471,7 +475,7 @@ function paint0(){
     cx.restore();
   }
   if(drag&&drag.k==="box"){
-    const r=boxRect();cx.fillStyle="rgba(120,220,240,.12)";cx.strokeStyle="rgba(120,220,240,.9)";cx.lineWidth=1;
+    const r=boxRect(),dl=mode==="del";cx.fillStyle=dl?"rgba(255,90,90,.15)":"rgba(120,220,240,.12)";cx.strokeStyle=dl?"rgba(255,90,90,.9)":"rgba(120,220,240,.9)";cx.lineWidth=1;
     cx.fillRect(r.x,r.y,r.w,r.h);cx.strokeRect(r.x+.5,r.y+.5,r.w,r.h);
   }else if(drag&&drag.k==="belt"){
     const d=def(active);

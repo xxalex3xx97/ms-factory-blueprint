@@ -3669,6 +3669,116 @@ async function s37(br) {
   }
 }
 
+// ================= 38 delete mode, config copy/paste, context menu, no auto-select
+async function s38(br) {
+  const ctx = await br.newContext({viewport: {width: 1400, height: 900}, acceptDownloads: true});
+  const pg = await ctx.newPage();
+  wire(pg, 's38');
+  await pg.goto(PAGE);
+  await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  await pg.waitForTimeout(300);
+  await reset(pg);
+  await pg.evaluate(() => { STRICT = false; __fb.setView('F'); __fb.fit(); });
+  const MACH = 'DAT_Refinery', SPL = 'DAT_Splitter', BELT = 'DAT_ConveyorBelt3';
+  const px = (x, y) => pg.evaluate(([x, y]) => __fb.px(x, y), [x, y]);
+  const clickAt = async a => { const [x, y] = await px(a[0], a[1]); await pg.mouse.move(x, y); await pg.mouse.down(); await pg.mouse.up(); };
+  const rightAt = async a => { const [x, y] = await px(a[0], a[1]); await pg.mouse.move(x, y); await pg.mouse.down({button: 'right'}); await pg.mouse.up({button: 'right'}); };
+  const boxAt = async (a, b, shot) => { const [x0, y0] = await px(a[0], a[1]), [x1, y1] = await px(b[0], b[1]); await pg.mouse.move(x0, y0); await pg.mouse.down(); await pg.mouse.move(x1, y1, {steps: 6}); if (shot) await pg.screenshot({path: path.join(SHOTS, shot)}); await pg.mouse.up(); };
+  const place = (cls, a) => pg.evaluate(([c, a]) => { if (active !== c) pick(c); __fb.click(a[0], a[1]); }, [cls, a]);
+  const st = () => pg.evaluate(() => ({n: __fb.S.blocks.length, sel: __fb.sel.size, mode: document.body.dataset.mode || '', badge: $('modeb') ? $('modeb').textContent : ''}));
+
+  // ---- 1. no auto-select; R rotates the ghost, placed items keep their rotation
+  await place(MACH, [2, 2]);
+  let s = await st();
+  chk('38 place machine: nothing selected afterwards', s.n === 1 && s.sel === 0, JSON.stringify(s));
+  await pg.keyboard.press('r');
+  await place(MACH, [10, 2]);
+  const rots = await pg.evaluate(() => __fb.S.blocks.map(b => b.rot));
+  chk('38 R after a placement: placed machine keeps rot 0, next placement uses the rotated ghost', rots[0] === 0 && rots[1] === 1, JSON.stringify(rots));
+  await pg.evaluate(c => pick(c), BELT);
+  await boxAt([2, 12], [8, 12]);
+  s = await st();
+  const belts = await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls === 'DAT_ConveyorBelt3').length);
+  chk('38 belt run placed, nothing selected afterwards', belts > 0 && s.sel === 0, JSON.stringify({belts, s}));
+  await pg.keyboard.press('Escape');
+
+  // ---- 2. X = delete mode (click, box, undo, Esc, right-click)
+  await pg.keyboard.press('x');
+  s = await st();
+  chk('38 X enters delete mode: body[data-mode]=del and #modeb says Delete mode', s.mode === 'del' && /^Delete mode/.test(s.badge), JSON.stringify(s));
+  const n0 = s.n;
+  await clickAt([3, 3]);
+  s = await st();
+  chk('38 delete mode: click deletes the machine under the cursor', s.n === n0 - 1 && s.sel === 0, JSON.stringify({n0, s}));
+  const n1 = s.n;
+  await boxAt([1, 11], [9, 13], 's38-delete-mode-box.png');
+  s = await st();
+  chk('38 delete mode: box deletes the blocks it covers, nothing left selected', s.n < n1 && s.sel === 0, JSON.stringify({n1, s}));
+  await pg.keyboard.press('Control+z');
+  s = await st();
+  chk('38 box delete is one undo step (Ctrl+Z restores the whole box)', s.n === n1, JSON.stringify({n1, n: s.n}));
+  await pg.keyboard.press('Escape');
+  s = await st();
+  chk('38 Esc exits delete mode (no mode, empty badge)', s.mode === '' && s.badge === '', JSON.stringify(s));
+  const n2 = s.n;
+  await rightAt([10, 2]);
+  s = await st();
+  chk('38 right-click on a building still deletes it (outside delete mode)', s.n === n2 - 1, JSON.stringify({n2, n: s.n}));
+
+  // ---- 3. config copy / paste: same class only, one undo step, toast count
+  await reset(pg);
+  await pg.evaluate(() => { STRICT = false; __fb.setView('F'); __fb.fit(); });
+  await place(MACH, [2, 2]);
+  await place(MACH, [2, 12]);
+  await place(SPL, [12, 2]);
+  await pg.keyboard.press('Escape');   // leave placement mode so the clicks below select
+  const cfgRec = await pg.evaluate(c => __fb.rk(__fb.recsOf(__fb.def(c))[0]), MACH);
+  const itemId = await pg.evaluate(c => __fb.recsOf(__fb.def(c))[0].i[0][0], MACH);
+  await pg.evaluate(([rec, item]) => {
+    const a1 = __fb.S.blocks[0];
+    a1.rec = rec; a1.ct = [{item, n: 7, inf: false}]; a1.off = [__fb.portsOf(a1)[0].key];
+    all();
+  }, [cfgRec, itemId]);
+  await clickAt([3, 3]);
+  await pg.keyboard.press('Control+Shift+C');
+  const c1 = await pg.evaluate(() => cfgClip);
+  chk('38 Ctrl+Shift+C copies the config (recipe, contents, disabled port) of the one selected machine', !!c1 && c1.cls === MACH && c1.rec === cfgRec && c1.ct.length === 1 && c1.off.length === 1, JSON.stringify(c1));
+  await pg.keyboard.press('Control+Shift+V');
+  s = await st();
+  chk('38 Ctrl+Shift+V enters paste config mode (body[data-mode]=cfgpaste)', s.mode === 'cfgpaste' && /^Paste config/.test(s.badge), JSON.stringify(s));
+  await boxAt([1, 1], [14, 14], 's38-paste-config-box.png');
+  const after = await pg.evaluate(() => __fb.S.blocks.map(b => ({cls: b.cls, rec: b.rec, ct: b.ct, off: b.off})));
+  chk('38 paste config box: same-class machine gets recipe, contents and disabled ports', after[1].rec === cfgRec && JSON.stringify(after[1].ct) === JSON.stringify(c1.ct) && JSON.stringify(after[1].off) === JSON.stringify(c1.off), JSON.stringify(after[1]));
+  chk('38 paste config box: splitter (other class) in the box is untouched', after[2].rec === undefined && after[2].ct === undefined && after[2].off === undefined, JSON.stringify(after[2]));
+  const tt = await pg.evaluate(() => $('toast').textContent);
+  chk('38 paste config: toast says "2 updated" (the two machines of the class)', tt.includes('2 updated'), tt);
+  await pg.keyboard.press('Control+z');
+  const undone = await pg.evaluate(() => __fb.S.blocks[1].rec);
+  chk('38 paste config is one undo step (Ctrl+Z restores the second machine)', undone === undefined, String(undone));
+  await pg.keyboard.press('Escape');
+
+  // ---- 4. context menu: right-click on an empty cell
+  await rightAt([8, 8]);
+  const menu = await pg.evaluate(() => [...document.querySelectorAll('#ctx .ctxi')].map(b => [b.textContent, b.disabled]));
+  chk('38 right-click on an empty cell opens #ctx with 5 entries', menu.length === 5, JSON.stringify(menu));
+  chk('38 context menu: Paste mode disabled (nothing copied), Paste config mode enabled (config copied)', menu.length === 5 && menu[3][1] === true && menu[4][1] === false, JSON.stringify(menu));
+  await pg.screenshot({path: path.join(SHOTS, 's38-context-menu.png')});
+  await pg.locator('#ctx .ctxi', {hasText: 'Delete mode'}).click();
+  s = await st();
+  chk('38 menu entry Delete mode: enters delete mode and closes the menu', s.mode === 'del' && (await pg.locator('#ctx').count()) === 0, JSON.stringify(s));
+  await pg.keyboard.press('Escape');
+  await rightAt([8, 8]);
+  await pg.keyboard.press('Escape');
+  chk('38 Esc closes the context menu', (await pg.locator('#ctx').count()) === 0);
+  await rightAt([8, 8]);
+  await clickAt([9, 9]);
+  chk('38 click away closes the context menu', (await pg.locator('#ctx').count()) === 0);
+  await rightAt([3, 3]);
+  s = await st();
+  chk('38 right-click on a building deletes it and opens no menu', s.n === 2 && (await pg.locator('#ctx').count()) === 0, JSON.stringify(s));
+  await ctx.close();
+}
+
 // ================= main
 const br =await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 try {
@@ -3701,6 +3811,7 @@ try {
   try { console.log('--- 25b refresh restore'); await s25b(br); } catch (e) { chk('25b refresh restore: section ran', false, e.stack || String(e)); }
   try { console.log('--- 36 default windows'); await s36(br); } catch (e) { chk('36 default windows: section ran', false, e.stack || String(e)); }
   try { console.log('--- 37 header, import, restore'); await s37(br); } catch (e) { chk('37 header/import/restore: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 38 delete mode, config copy/paste, context menu'); await s38(br); } catch (e) { chk('38 section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }
