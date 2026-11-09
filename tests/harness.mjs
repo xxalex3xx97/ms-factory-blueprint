@@ -3557,7 +3557,7 @@ async function s37(br) {
     if (vp.width === 390) {
       chk('37 390px: Import save still visible in header', o.sav);
       const f390 = await pg.evaluate(() => !!$('fileL').querySelector('#imp'));
-      chk('37 390px: File menu has no Import JSON item (brief: File menu has no import)', !f390, 'Import JSON is inside File menu at <=1100px (plan slice A6)');
+      chk('37 390px: Import JSON lives in the File menu (narrow header; both Import buttons visible above 1100px)', !!f390, 'Import JSON missing from File menu at <=1100px');
     }
   }
   await pg.setViewportSize({width: 1400, height: 900}); await pg.waitForTimeout(200);
