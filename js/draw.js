@@ -74,10 +74,14 @@ function drawLinks(s){
 }
 const CULLM=120;   // px slack around a block for the cull: badge text and port bars can spill past its rect
 let CUR=[];   // this paint's layer blocks in view (set in paint0, cleared in paint)
+// px box for a block's ports (CULLM slack): elevator ports + ring sit on its floorRect (F-view floor units), not on the 1x1 block cell
+const portBox=(b,s)=>{const r=(def(b.cls)||{}).elevator&&floorRect(b);
+  if(r){const m=CULLM+s;return[V.ox+r.x*s-m,V.oy+r.y*s-m,r.w*s+2*m,r.h*s+2*m]}   // +s: ring cell is one floor unit outside the floor
+  const d=dim(b);return[V.ox+b.x*s-CULLM,V.oy+b.y*s-CULLM,d.w*s+2*CULLM,d.h*s+2*CULLM]};
 function drawPorts(s){
   if(s<6)return;
   const Ln=Math.min(.6*s,18),T=Math.min(5,Math.max(3,.2*s));cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
-  lyBlocks().all.forEach(b=>{if(!vis(V.ox+b.x*s-CULLM,V.oy+b.y*s-CULLM,dim(b).w*s+2*CULLM,dim(b).h*s+2*CULLM))return;const bars=barPorts(b);
+  lyBlocks().all.forEach(b=>{if(!vis(...portBox(b,s)))return;const bars=barPorts(b);
     // splitter input (back) face: no bar; small neutral chevron pointing into the machine (not clickable, no hover state)
     portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.min(8,Math.max(3,s*.2)),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
       cx.strokeStyle="rgba(230,240,255,.45)";cx.lineWidth=Math.max(1.5,s*.08);cx.beginPath();

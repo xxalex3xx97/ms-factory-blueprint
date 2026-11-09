@@ -3335,6 +3335,28 @@ async function s33(br) {
   await ctx.close();
 }
 
+// ================= 34 elevator ports: F view ports sit on the floorRect, so the cull must use it (not the 1x1 block cell)
+async function s34(br) {
+  const ELV = 'BPO_ElevatorBlock_03';
+  const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's34');
+  await imp(pg, bp([blk(ELV, 20, 0, {h: 0})]));   // 1x1 anchor 20 cells from origin; its 12x12 floor sits at x=320 floor units
+  for (const s of [20, 46]) {
+    const r = await pg.evaluate(s => {
+      __fb.setView('F'); __fb.setLayer(0);
+      const b = __fb.S.blocks[0], f = floorRect(b);
+      V.z = s / CELLS.F; V.ox = W / 2 - (f.x + f.w / 2) * s; V.oy = H / 2 - (f.y + f.h / 2) * s;   // floor centred, anchor cell far off-screen
+      const ax = V.ox + b.x * s, ay = V.oy + b.y * s, off = ax + 120 < 0 || ax - 120 > W || ay + 120 < 0 || ay - 120 > H;
+      const g = document.createElement('canvas').getContext('2d'), G = []; for (const c of ['hsl(140,70%,48%)', 'hsl(0,75%,55%)']) { g.strokeStyle = c; G.push(g.strokeStyle) }
+      let tk = 0; const o = CanvasRenderingContext2D.prototype.stroke;
+      CanvasRenderingContext2D.prototype.stroke = function (...a) { if (G.includes(this.strokeStyle)) tk++; return o.apply(this, a) };
+      try { paint() } finally { CanvasRenderingContext2D.prototype.stroke = o }
+      return {tk, off};
+    }, s);
+    chk(`34 elevator ports drawn with anchor off-screen (s=${s}, floor in view)`, r.off && r.tk > 0, JSON.stringify(r));
+  }
+  await ctx.close();
+}
+
 // ================= main
 const br =await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 try {
@@ -3370,6 +3392,7 @@ try {
   try { console.log('--- 31 ground floors centred'); await s31(br); } catch (e) { chk('31 section ran', false, e.stack || String(e)); }
   try { console.log('--- 32 door passage rule, underground link zoom'); await s32(br); } catch (e) { chk('32 section ran', false, e.stack || String(e)); }
   try { console.log('--- 33 ghost levels, sim ring zoom cull'); await s33(br); } catch (e) { chk('33 section ran', false, e.stack || String(e)); }
+  try { console.log('--- 34 elevator ports cull'); await s34(br); } catch (e) { chk('34 elevator ports: section ran', false, e.stack || String(e)); }
   try { console.log('--- 28 data-driven shapes'); await s28(br); } catch (e) { chk('28 shapes: section ran', false, e.stack || String(e)); }
   try { console.log('--- 29 icons, Command Module, Blueprint Unit, shipyards'); await s29(br); } catch (e) { chk('29 section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {
