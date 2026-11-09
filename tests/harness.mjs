@@ -220,8 +220,8 @@ async function s3(pg, C) {
   await pg.evaluate(() => { __fb.setView('F'); __fb.click(5, 5); });
   const txt = await pg.locator('#insp').textContent();
   chk('Assembler selected -> #insp contains "Recipes (17)"', txt.includes('Recipes (17)'), txt.slice(0, 200));
-  const nIc = await pg.locator('#insp .rec img.ic').count();
-  chk('#insp .rec img.ic count > 0', nIc > 0, `count ${nIc}`);
+  const nIc = await pg.locator('#insp .rtile img.ic').count();
+  chk('#insp .rtile img.ic count > 0', nIc > 0, `count ${nIc}`);
 }
 
 // ================= 4. doors / floors / elevator
@@ -589,15 +589,15 @@ async function s8(pg, C) {
   chk('unknown Recipe key survives roundtrip', (await pg.evaluate(() => __fb.build().DefaultMachines[0].Recipe))==='ITEM_X>ITEM_Y');
   await imp(pg, bp([], [mac('DAT_Refinery', 3, 3, {mid: 1})]));
   await pg.evaluate(() => { __fb.setView('F'); __fb.click(4, 4); });
-  const nRec = await pg.locator('#insp .rec[data-rk]').count();
-  chk('selected Refinery: clickable recipes with icons (count = Refinery recipe count)', nRec>0 && (await pg.locator('#insp .rec[data-rk] img.ic').count())>0, 'count '+nRec);
-  await pg.locator(`#insp .rec[data-rk="${KEY}"]`).click();
+  const nRec = await pg.locator('#insp .rtile[data-rk]').count();
+  chk('selected Refinery: clickable recipes with icons (count = Refinery recipe count)', nRec>0 && (await pg.locator('#insp .rtile[data-rk] img.ic').count())>0, 'count '+nRec);
+  await pg.locator(`#insp .rtile[data-rk="${KEY}"]`).click();
   chk('click recipe -> export has Recipe', (await pg.evaluate(() => __fb.build().DefaultMachines[0].Recipe))===KEY);
   const it = await pg.locator('#insp').textContent();
   chk('inspector shows Rates, 20/min, saturation Mk1 60/min = 3, time 3 s, no unverified flag', it.includes('Rates') && it.includes('20/min') && it.includes('Mk1 60/min = 3') && it.includes('3 s') && !/unverified/.test(it), it.slice(0,300));
-  await pg.locator(`#insp .rec[data-rk="${KEY}"]`).click();
+  await pg.locator(`#insp .rtile[data-rk="${KEY}"]`).click();
   chk('click selected recipe again clears it', (await pg.evaluate(() => __fb.build().DefaultMachines[0].Recipe))===undefined);
-  await pg.locator(`#insp .rec[data-rk="${KEY}"]`).click();
+  await pg.locator(`#insp .rtile[data-rk="${KEY}"]`).click();
   await pg.locator('#bRecClr').click();
   chk('Clear recipe button clears it', (await pg.evaluate(() => __fb.build().DefaultMachines[0].Recipe))===undefined);
   // belt next to the Refinery's first enabled port, then select the belt: Belt rate section

@@ -1,8 +1,10 @@
 function recipesHtml(d,b){
   const rs=recsOf(d);if(!rs.length)return"";
-  return `<h2>Recipes (${rs.length})</h2><div class="pad">`
-    +rs.map(r=>`<div class="rec${b&&b.rec===rk(r)?" sel":""}"${b?` data-rk="${esc(rk(r))}" role="button" tabindex="0"`:""}>${r.i.map(x=>itemHtml(x[0],x[1])).join("+ ")} &rarr; ${itemHtml(r.o[0],r.o[1])} <span class="sub">${r.t==null?"":secs(r.t)+" s &middot; "}${rateTxt(pm(r.o[1],r.t))}</span></div>`).join("")
-    +(b&&b.rec?`<div class="btns"><button id="bRecClr">Clear recipe</button></div>`:"")
+  const nm=id=>(ITEMS[id]||{}).n||String(id).replace(/^ITEM_/,"");
+  return `<h2>Recipes (${rs.length})</h2><div class="pad"><div class="rgrid">`
+    +rs.map(r=>{const tip=r.i.map(x=>x[1]+"x "+nm(x[0])).join(" + ")+" -> "+r.o[1]+"x "+nm(r.o[0])+(r.t==null?"":" | "+secs(r.t)+" s")+" | "+rateTxt(pm(r.o[1],r.t));
+      return `<div class="rtile${b&&b.rec===rk(r)?" sel":""}"${b?` data-rk="${esc(rk(r))}" role="button" tabindex="0"`:""} title="${esc(tip)}">${iurl(r.o[0])?`<img class="ic" alt="" src="${iurl(r.o[0])}">`:""}<span class="rn">${esc(nm(r.o[0]))}</span></div>`}).join("")
+    +`</div>`+(b&&b.rec?`<div class="btns"><button id="bRecClr">Clear recipe</button></div>`:"")
     +`</div>`;
 }
 const RST=m=>m&&m.st?'<span class="st st-'+esc(m.st)+'">'+esc(m.st)+'</span>':"";
@@ -33,7 +35,7 @@ function panel(){
       if(dd)h+='<div class="sum"><div class="sn">'+ico(dd)+'<b>'+esc(lab(dd))+'</b>'+(dd.verified?"":BQ)+'</div><div id="sumLive">'+sumBody(one,dd)+'</div></div>';
       else h+='<div class="sub pad">Unknown class: shown as grey 1&times;1, kept as-is on export.</div>';
     }else h+='<h2>Selection ('+bs.length+')</h2>';
-    h+='<div class="pad"><div class="btns"><button id="bRot">Rotate</button><button id="bDup">Duplicate</button><button id="bDel" class="danger">Delete</button></div>';
+    h+='<div class="pad"><div class="btns"><button id="bRot">Rotate</button><button id="bDup">Duplicate</button><button id="bDel" class="danger">Delete</button></div><div class="btns">'+(one&&isM(one)?'<button id="bCfgCopy">Copy config</button>':'')+'<button id="bCfgPaste"'+(typeof cfgClip!=="undefined"&&cfgClip?'':' disabled')+'>Paste config</button></div>';
     if(one){
       const et=entText(one);if(et)h+='<div class="sub" title="'+esc(ENT_HINT)+'" id="entInfo"><b>'+et.kind+':</b> '+et.sides.join(", ")+'<br>'+esc(ENT_HINT)+'.</div>';
       if(F){
@@ -132,6 +134,7 @@ $("insp").addEventListener("click",e=>{
   if((rr||id==="bRecClr")&&bs1.length===1&&isM(bs1[0])){push();const m=bs1[0];if(id==="bRecClr"||m.rec===rr.dataset.rk)delete m.rec;else m.rec=rr.dataset.rk;all();return}
   if(id==="bRot")rotate();
   else if(id==="bDel")del();
+  else if(id==="bCfgCopy"&&typeof cfgCopy==="function")cfgCopy();else if(id==="bCfgPaste"&&typeof cfgPasteMode==="function")cfgPasteMode();
   else if(id==="bDup"){const nb=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null,id:uid++,mid:0,x:b.x+1,y:b.y+1}));if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}push();S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));all()}
   else if(id==="bStop"){active=null;all()}
   else if(id==="bClear"){if(S.blocks.length&&confirm("Remove all blocks and buildables?")){push();S.blocks=[];S.closed=[];sel=new Set();all()}}
