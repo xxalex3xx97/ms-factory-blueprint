@@ -16,7 +16,7 @@ function cfgKind(cls){
 // game splitter (DAT_Splitter, _2, _3): 1 input (back) face, never a game port; 3 controllable outputs = config bytes [right, front, left] at rot 0 (N=left confirmed in game; byte0=right S, byte1=front E from Main_Base (6) test; rot 1-3 inferred) (local faces, see io.js SPL_FACES). Balancers keep the generic 4-port model.
 const isSplitterCls=c=>/^DAT_Splitter(_\d+)?$/.test(String(c||""));
 function cfgEnc(k,d){
-  const o=[1,0],i32=v=>{for(let i=0;i<4;i++)o.push((v>>(8*i))&255)},fs=s=>{if(!s)return i32(0);i32(s.length+1);for(let i=0;i<s.length;i++)o.push(s.charCodeAt(i)&255);o.push(0)},bl=a=>{i32(a.length);a.forEach(p=>o.push(p?1:0))};
+  const o=[1,0],i32=v=>{for(let i=0;i<4;i++)o.push((v>>(8*i))&255)},fs=s=>{if(!s)return i32(0);if(/[^\x00-\xff]/.test(s)){i32(-(s.length+1));for(let i=0;i<s.length;i++)o.push(s.charCodeAt(i)&255,s.charCodeAt(i)>>8);o.push(0,0);return}i32(s.length+1);for(let i=0;i<s.length;i++)o.push(s.charCodeAt(i)&255);o.push(0)},bl=a=>{i32(a.length);a.forEach(p=>o.push(p?1:0))};
   if(k==="recipe"){fs(d.recipe||"");bl(d.ports)}
   else if(k==="splitter"){i32(d.filters.length);d.filters.forEach(fs);i32(d.prioA==null?-1:d.prioA);i32(d.prioB==null?-1:d.prioB);bl(d.ports)}
   else if(k==="dock"){fs(d.name||"");i32(d.filters.length);d.filters.forEach(f=>{fs(f.item);i32(f.bLoading)})}

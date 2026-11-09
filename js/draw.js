@@ -201,11 +201,12 @@ function drawBlock(b,alpha,isSel){
   entMark(b,x,y,alpha,s,w,h);
   if(isSel){cx.lineWidth=2.5;cx.strokeStyle="#fff";cx.strokeRect(x+1,y+1,w-2,h-2)}
   if(s>=(m?10:18)&&alpha>.5&&(!m||Math.max(w,h)>=2*s)&&!(df&&df.directional)){
-    const t=df?lab(df):shortCls(b.cls),fs=Math.min(12,Math.max(9,s/3));
+    const t0=b.nm&&nmOk(b.cls)?b.nm:df?lab(df):shortCls(b.cls),fs=Math.min(12,Math.max(9,s/3));
     cx.save();cx.beginPath();cx.rect(x+2,y+2,w-4,h-4);cx.clip();
     cx.fillStyle="#fff";cx.font=fs+"px system-ui,sans-serif";cx.textBaseline="top";
     cx.shadowColor="rgba(0,0,0,.8)";cx.shadowBlur=3;
-    cx.fillText(t,x+4,y+4);
+    const ell=(q,max)=>{if(cx.measureText(q).width<=max)return q;let r=q;while(r&&cx.measureText(r+"…").width>max)r=r.slice(0,-1);return r+"…"};   // label cut to the block width with an ellipsis
+    cx.fillText(ell(t0,w-8),x+4,y+4);
     if(b.rot){cx.fillStyle="rgba(255,255,255,.7)";cx.fillText("r"+b.rot,x+4,y+6+fs)}
     cx.restore();
   }
