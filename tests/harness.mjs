@@ -3321,6 +3321,17 @@ async function s33(br) {
   });
   chk('33 links cache: two paints, blocks unchanged -> same linksC object', lk.same, JSON.stringify(lk));
   chk('33 links cache: block moved (x++) -> new linksC object on next paint', lk.changed, JSON.stringify(lk));
+  // idle sim repaint: playing with no sim step (<1 s of fake time) repaints only when zoomed in (s>=10)
+  await pg.click('#simB');
+  const frames = async (s) => pg.evaluate(s => {
+    smHalt(); V.z = s / CELLS[view]; smLast = 0; let k = 0; const o = window.paint;
+    window.paint = function (...a) { k++; return o.apply(this, a) };
+    try { SMP = true; let ts = 1000; for (let i = 0; i < 5; i++) { smFrame(ts); ts += 200 } } finally { window.paint = o; smHalt() }
+    return k;
+  }, s);
+  const f4 = await frames(4), f12 = await frames(12);
+  chk('33 idle sim frames zoomed out (s=4): no repaint when no sim step ran', f4 === 0, `paints ${f4}`);
+  chk('33 idle sim frames zoomed in (s=12): repaint every frame', f12 > 0, `paints ${f12}`);
   await ctx.close();
 }
 
