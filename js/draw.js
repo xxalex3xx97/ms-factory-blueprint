@@ -177,10 +177,10 @@ function arrow(x,y,w,h,rot,alpha){
 }
 // entrance marks (Layout, model.js entrances()): door slot = light bar on the edge + white chevron pointing INTO the block; ports side (no doors) = mint bar + chevron pointing out to the ports. Rotates with the block
 const ENT_DOOR_S=44;
-function entMark(b,x,y,alpha,s,w,h){
+function entMark(b,x,y,alpha,s,w,h,force){   // force: placement/paste ghost, always show the door marks (they show the rotation)
   if(alpha<.5||s<5)return;const E=entrances(b,true);if(!E.length)return;   // bar = full door slot length (scales with zoom); only the chevron is capped (r <= 9); door marks (many on stations) only when a cell is >= ENT_DOOR_S px
   const t=Math.max(2,Math.min(5,s*.12)),r=Math.min(9,Math.max(3,s*.12)),L=Math.max(5,DOORW/FC*s),lh=s>=18?Math.min(12,Math.max(9,s/3))+6:0;
-  E.forEach(e=>{if(!e.port&&s<ENT_DOOR_S)return;const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,bw=hz?L:t,bh=hz?t:L,
+  E.forEach(e=>{if(!e.port&&s<ENT_DOOR_S&&!force)return;const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,bw=hz?L:t,bh=hz?t:L,
     bx=D[0]>0?ex-t:D[0]<0?ex:ex-L/2,by=D[1]>0?ey-t:D[1]<0?ey:ey-L/2,sg=e.port?1:-1,   // door: chevron looks inward, port: outward
     dd=r+t+(D[1]<0?lh:0),cx0=ex-D[0]*dd,cy0=ey-D[1]*dd;
     cx.save();cx.fillStyle=e.port?`hsla(140,85%,75%,${alpha})`:`hsla(${hue(catOf(b)||"")},90%,86%,${alpha*.9})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.6})`;cx.lineWidth=1;
@@ -482,13 +482,14 @@ function paint0(){
     beltCells(drag).forEach(c=>{const px=V.ox+c.x*s,py=V.oy+c.y*s;cx.fillStyle=fill(d.category,.5);cx.fillRect(px,py,s,s);drawIcon(d,px,py,s,s,.8);arrow(px,py,s,s,c.rot,.9)});
   }else if(pasting&&!drag&&hoverIn){
     const g=clipT(pasting.rot,pasting.fl).map(b=>({...b,x:b.x+hover.x,y:b.y+hover.y,h:layer}));
-    g.forEach(b=>drawBlock(b,.45,false));
+    g.forEach(b=>{drawBlock(b,.45,false);if(!isM(b)){const d=dim(b);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)}});
     if(noBuild(g.filter(isM).map(mItem))){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;g.forEach(b=>{const d=dim(b);cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)})}
   }else if(active&&!drag&&hoverIn){
     const d=def(active),dd=dimOf(d,placeRot),bw=dd.w,bh=dd.h,px=V.ox+hover.x*s,py=V.oy+hover.y*s;
     cx.fillStyle=fill(d.category,.5);cx.fillRect(px,py,bw*s,bh*s);
     drawIcon(d,px,py,bw*s,bh*s,.8);
     if(d.directional)arrow(px,py,bw*s,bh*s,placeRot,.9);
+    if(d.kind!=="m")entMark({id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot},px,py,.9,s,bw*s,bh*s,true);   // doors/ports show which way the block is rotated
     cx.strokeStyle=d.kind==="m"&&noBuild([{id:-1,x:hover.x,y:hover.y,w:bw,h:bh,l:layer,belt:isBelt({cls:active})}])?"hsl(0,85%,60%)":d.kind==="m"&&RCT&&!onArea(hover.x,hover.y,bw,bh,RCT)?"hsl(45,95%,62%)":"#fff";
     cx.setLineDash([5,4]);cx.lineWidth=1.5;cx.strokeRect(px+.5,py+.5,bw*s-1,bh*s-1);cx.setLineDash([]);
   }
