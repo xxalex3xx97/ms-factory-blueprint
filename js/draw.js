@@ -149,7 +149,8 @@ let W=0,H=0,dpr=1,RCT=null;
 function resize(){const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio||1;W=r.width;H=r.height;cv.width=Math.max(1,W*dpr);cv.height=Math.max(1,H*dpr);paint()}
 new ResizeObserver(resize).observe(cv);
 const toCell=(px,py)=>({x:Math.floor((px-V.ox)/sc()),y:Math.floor((py-V.oy)/sc())});
-let raf=0;const draw=()=>{asv();if(!raf)raf=requestAnimationFrame(()=>{raf=0;paint()})};
+let PF=0,DIRTY=true,USEB=false;
+let raf=0;const draw=()=>{DIRTY=true;asv();if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()})};
 
 function drawIcon(d,x,y,w,h,alpha){
   const i=img(d&&d.icon);if(!i||!i.complete||!i.naturalWidth)return;
@@ -383,7 +384,7 @@ function drawUG(s){
 }
 let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(S.blocks.filter(b=>b.h===layer).map(b=>[b.id,b]));return LBM.get(id)};
 const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
-function paint(){LKP=true;PK=blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}}
+function paint(pk){LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}}
 function paint0(){
   cx.setTransform(dpr,0,0,dpr,0,0);cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality="high";cx.clearRect(0,0,W,H);
   const s=sc(),F=view==="F";

@@ -28,9 +28,9 @@ function smStop(){smHalt();if(SIM)SIM.sig=null}   // next paint re-inits for the
 function smFrame(ts){
   smRaf=0;if(!SMP||!smOn()||document.hidden)return;
   const dt=smLast?Math.min((ts-smLast)/1000,.25):0;smLast=ts;
-  if(SIM.sig!==simSig()){simReset();SIM.sig=simSig()}
+  const sg=simSig();if(SIM.sig!==sg){simReset();SIM.sig=sg}
   const n=simAdvance(Math.min(dt,.25),SPD);if(!RM.matches)smPh=(smPh+dt*.6)%1;
-  if(n>0||(sc()>=10&&!RM.matches)){smClkUp();paint()}   // zoomed out (belt items hidden) or reduced motion: repaint only when a sim step ran
+  if(n>0||(sc()>=10&&!RM.matches)){PF=ts;smClkUp();USEB=true;try{paint(sg)}finally{USEB=false}}   // zoomed out (belt items hidden) or reduced motion: repaint only when a sim step ran
   if(ts-smLv>=250){smLv=ts;simLiveUp()}
   smRaf=requestAnimationFrame(smFrame);
 }
