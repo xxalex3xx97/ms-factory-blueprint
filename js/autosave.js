@@ -3,7 +3,7 @@
 let asWarned=false;
 const asFail=()=>{if(!asWarned){asWarned=true;toast("Autosave failed (browser storage full?). Refresh may not restore this design.")}};
 const asNow=()=>{if(!ASO||ASH)return;let js;try{js=JSON.stringify({v:2,d:build(),u:{view,layer,tab,spd:SPD,gh:$("ghost").checked,gha:$("ghostAll").checked,st:STRICT,lk:LK,bn:BN,bm:BM,po:[...po],io:[...io],
-  sel:S.blocks.filter(b=>sel.has(b.id)).map(b=>[b.cls,b.x,b.y,b.h]),vl:{ox:VL.ox,oy:VL.oy,z:VL.z},vf:{ox:VF.ox,oy:VF.oy,z:VF.z,init:VF.init},si:SIK,w:{st:!$("stW").hidden,lv:!$("lvW").hidden,fw:!$("fwW").hidden,sh:!$("shW").hidden}}})}catch(e){return asFail()}
+  sel:S.blocks.filter(b=>sel.has(b.id)).map(b=>[b.cls,b.x,b.y,b.h]),vl:{ox:VL.ox,oy:VL.oy,z:VL.z},vf:{ox:VF.ox,oy:VF.oy,z:VF.z,init:VF.init},si:SIK,w:{st:!$("stW").hidden,lv:!$("lvW").hidden,fw:!$("fwW").hidden,sh:!$("shW").hidden,wn:!$("wnW").hidden}}})}catch(e){return asFail()}
   let ls=true;try{localStorage.setItem(ASK,js)}catch(e){ls=false;try{localStorage.removeItem(ASK)}catch(_){}}   // too big for localStorage: drop the stale copy (IndexedDB has the latest)
   idbSet("state",js).catch(()=>{if(!ls)asFail()})};
 const asv=()=>{if(!ASO||ASH)return;clearTimeout(AST);AST=setTimeout(asNow,400)};
@@ -27,7 +27,7 @@ async function asRestore(){   // resolves after the saved state is read; boot ap
     if(!importJson(JSON.stringify(o.d),true))return;
     undoS=[];redoS=[];
     if(Number.isInteger(u.si)&&u.si>=0)SIK=u.si;
-    if(u.w&&typeof u.w==="object"){WINSET=true;[["stB","st"],["lvB","lv"],["flwB","fw"],["shB","sh"]].forEach(([b,k])=>{if(typeof u.w[k]==="boolean")winSet(b,u.w[k])})}
+    if(u.w&&typeof u.w==="object"){WINSET=true;[["stB","st"],["lvB","lv"],["flwB","fw"],["shB","sh"],["winM","wn"]].forEach(([b,k])=>{if(typeof u.w[k]==="boolean")winSet(b,u.w[k])})}
     if(u.view==="F"||u.view==="L"){view=u.view;V=view==="F"?VF:VL;tab=view==="F"?"m":"b"}
     if(u.tab==="b"||u.tab==="m")tab=u.tab;
     if(fin(u.layer))layer=Math.trunc(u.layer);

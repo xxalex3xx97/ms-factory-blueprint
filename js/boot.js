@@ -1,5 +1,5 @@
 // ---- Simulation / Flow modals (top right of the canvas, independent toggles)
-function fmSync(){const o=!$("stW").hidden||!$("lvW").hidden||!$("smW").hidden||!$("fwW").hidden||!$("shW").hidden;$("stage").classList.toggle("fm1",o&&!$("pln").hidden);if(!$("pln").hidden)plnDraw()}
+function fmSync(){const o=!$("stW").hidden||!$("lvW").hidden||!$("smW").hidden||!$("fwW").hidden||!$("shW").hidden||!$("wnW").hidden;$("stage").classList.toggle("fm1",o&&!$("pln").hidden);if(!$("pln").hidden)plnDraw()}
 $("plnB").addEventListener("click",fmSync);$("plnX").addEventListener("click",fmSync);
 $("help").onclick=()=>{
   $("helpCtl").innerHTML=`<p><b>Layout:</b> ${HINTS.L}</p><p><b>Factory floor:</b> ${HINTS.F}</p>`;

@@ -131,7 +131,8 @@ dialog h3{margin:0 0 8px}
 header #impSav{background:var(--warn);color:oklch(0.2 0.04 80);border-color:var(--warn);font-weight:600}
 header #impSav:hover{filter:brightness(1.08)}
 header .mnl .hbt{flex-direction:row;min-height:34px;gap:6px;width:100%;justify-content:flex-start;padding:4px 10px;line-height:normal}header .mnl .hbt .tx{display:inline;font-size:inherit}header .mnl .hbt .ic{display:inline;font-size:inherit}header .mnl .hbt[aria-pressed=true]{border-color:var(--acc)}
-@media (max-width:700px){header #winM span{display:none}header #stSel{max-width:64px}header #name{width:56px}header #impSav .tx{display:none}}
+@media (max-width:700px){header #stSel{max-width:64px}header #name{width:56px}header #impSav .tx{display:none}}
 @media (min-width:701px) and (max-width:1300px){header,header .tg{gap:8px}header #name{width:110px}header #stSel{max-width:100px}header #impSav .tx{display:none}header #vwF .lg{display:none}header #vwF .fl::first-letter{text-transform:uppercase}}
 @media (max-width:700px){header .mnl #simB .tx{font-size:inherit}header .mnl #simB .tx::after{content:none}}
 @media (max-width:1300px){header .tg[aria-label=Plan]{flex:0 1 auto;flex-wrap:wrap;min-width:0}header .tg[aria-label=Tools]:not(:last-child){flex:none;min-width:auto}}
+#wnL .hbt{display:flex;align-items:center;justify-content:flex-start;gap:8px;min-height:34px;padding:4px 10px;line-height:normal}#wnL .hbt .ic{width:1.4em;text-align:center}#wnL .hbt .tx{font-size:inherit}#wnL #lvB::before{content:"\21D5";display:inline-block;width:1.4em;text-align:center}#wnL .hbt[aria-pressed=true],header #winM[aria-pressed=true]{border-color:var(--acc)}

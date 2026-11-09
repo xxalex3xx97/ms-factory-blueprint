@@ -37,7 +37,11 @@ function wire(pg, tag) {
   // index.html places a menu once, at open; after Simulate is switched on inside Floor tools the list
   // grows past the viewport edge. A control there is reached the way a user would: close and reopen.
   const rawClick = pg.click.bind(pg);
+  // Windows panel (#wnW, header #winM): the window toggles (#lvB #flwB #simB ...) live inside it; open it like a user would
+  const wnEnsure = async sel => { if (await pg.evaluate(s => { const e = document.querySelector(s); return !!e && !!e.closest('#wnL') && document.getElementById('wnW').hidden; }, sel)) { await rawClick('#winM'); wnOpened = true; } };
+  let wnOpened = false;   // panel opened by the helper for this action: closed again afterwards (old menus auto-closed; an open panel would shift/cover the other windows)
   const reveal = async sel => {
+    await wnEnsure(sel);
     const m = await pg.evaluate(s => {
       const el = document.querySelector(s), shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
       if (!el) return null;
@@ -53,13 +57,14 @@ function wire(pg, tag) {
       return {btn: '#' + btn.id, list: '#' + list.id, reopen: !list.hidden};
     }, sel);
     if (!m) return;
+    await wnEnsure(m.btn);
     if (m.reopen) { await rawClick(m.btn); MENU_NOTE++; }   // close the open menu first
     await rawClick(m.btn);
     await pg.waitForFunction(l => !document.querySelector(l).hidden, m.list);
   };
   for (const k of ['click', 'check', 'uncheck']) {
     const f = pg[k].bind(pg);
-    pg[k] = async (sel, ...a) => { await reveal(sel); return f(sel, ...a); };
+    pg[k] = async (sel, ...a) => { wnOpened = false; await reveal(sel); const r = await f(sel, ...a); if (wnOpened) { wnOpened = false; await pg.evaluate(() => { const w = document.getElementById('wnW'); if (!w.hidden) document.getElementById('wnWX').click(); }); } return r; };
   }
 }
 async function open(br, vp, tag) {
@@ -3430,7 +3435,7 @@ async function s35(br) {
   chk('35 starved refinery (no input) -> 0', z === 0, String(z));
   // UI: two windows. #thB -> #dTheo (sim off); #prodB -> #dProd (sim on). Independent.
   await scene(pg, INF);
-  await pg.click('#winM'); chk('35 Theoretical button visible (Windows menu open) with sim off', await pg.isVisible('#thB')); await pg.keyboard.press('Escape');
+  await pg.click('#winM'); chk('35 Theoretical button visible (Windows panel open) with sim off', await pg.isVisible('#thB')); await pg.click('#winM');
   await pg.click('#thB');
   chk('35 #thB opens #dTheo with title Theoretical production', await pg.isVisible('#dTheo') && (await pg.innerText('#dTheoT')) === 'Theoretical production');
   chk('35 #thB leaves #dProd hidden (separate window), aria-pressed true', !(await pg.isVisible('#dProd')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'true');
@@ -3530,6 +3535,7 @@ async function s37(br) {
   wire(pg, 's37');
   await ready(pg);
   const d0 = await wins(pg);
+  chk('37 boot, no saved state: Windows panel (#wnW) closed, #winM not pressed', await pg.evaluate(() => $('wnW').hidden && $('winM').getAttribute('aria-pressed') === 'false'));
   chk('37 boot, no saved state: Flow window open (#flwB pressed), Level closed, link overlay off (#lk)', !d0.fw && d0.fwP === 'true' && d0.lv && d0.lvP === 'false' && d0.lk === 'false', JSON.stringify(d0));
   const hd = await pg.evaluate(() => {
     const bb = id => { const b = $(id).getBoundingClientRect(); return {w: Math.round(b.width), h: Math.round(b.height), x: Math.round(b.left), r: Math.round(b.right)}; };
@@ -3648,6 +3654,16 @@ async function s37(br) {
     const open = await p2.evaluate(() => ({fw: !$('fwW').hidden, lv: !$('lvW').hidden}));
     chk(`37 screenshot ${vp.tag}px: Level and Flow open`, open.fw && open.lv, JSON.stringify(open));
     await p2.screenshot({path: path.join(SHOTS, `s37-full-${vp.tag}.png`)});
+    // Windows panel: one header toggle (#winM) opens a floating panel (#wnW) with all window toggles; Level/Flow no longer in the header
+    await p2.click('#winM');
+    const pw = await p2.evaluate(() => ({vis: !$('wnW').hidden, pr: $('winM').getAttribute('aria-pressed'), ids: [...$('wnL').querySelectorAll('button')].map(b => b.id), lvN: $('lvN').textContent.trim(), inLv: $('lvB').contains($('lvN')), sw: document.documentElement.scrollWidth, iw: innerWidth, r: Math.round($('wnW').getBoundingClientRect().right), hdr: !!document.querySelector('header #lvB, header #flwB, header #winL')}));
+    chk(`37 ${vp.tag}px: #winM opens the Windows panel (aria-pressed), lists the 7 window toggles, #lvN in the Level entry`, pw.vis && pw.pr === 'true' && ['stB', 'shB', 'lvB', 'flwB', 'simB', 'thB', 'plnB'].every(i => pw.ids.includes(i)) && pw.inLv && /^\d+$/.test(pw.lvN) && !pw.hdr, JSON.stringify(pw));
+    chk(`37 ${vp.tag}px: Windows panel open, no horizontal page overflow, panel inside the viewport`, pw.sw <= pw.iw && pw.r <= pw.iw, JSON.stringify(pw));
+    await p2.screenshot({path: path.join(SHOTS, `s37-windows-open-${vp.tag}.png`)});
+    await p2.evaluate(() => asvNow()); await p2.reload(); await p2.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await p2.waitForTimeout(1000);
+    chk(`37 ${vp.tag}px: Windows panel open state restored on refresh (autosaved)`, await p2.evaluate(() => !$('wnW').hidden && $('winM').getAttribute('aria-pressed') === 'true'));
+    await p2.click('#winM');
+    chk(`37 ${vp.tag}px: #winM toggles the panel closed`, await p2.evaluate(() => $('wnW').hidden && $('winM').getAttribute('aria-pressed') === 'false'));
     await p2.locator('header').screenshot({path: path.join(SHOTS, `s37-header-${vp.tag}.png`)});
     await c2.close();
   }

@@ -115,6 +115,6 @@ const winMo=new MutationObserver(r=>{r.forEach(m=>{m.target._o=m.target.hidden?0
 WS.forEach(d=>winMo.observe(d,{attributes:true,attributeFilter:["hidden"]}));
 const winRo=new ResizeObserver(winPlace);[$("stage"),$("fms"),...WS].forEach(e=>winRo.observe(e));
 const WT={};
-[["stB","stW","stWX"],["lvB","lvW","lvWX"],["simB","smW","smWX"],["flwB","fwW","fwWX"],["shB","shW","shWX"]].forEach(([b,w,x])=>{const t=h=>{$(w).hidden=h;$(b).setAttribute("aria-pressed",!h);if(b==="simB")smSet(!h);fmSync();asv()};WT[b]=t;$(b).onclick=()=>t(!$(w).hidden);$(x).onclick=()=>{t(true);$(b).focus()}});
+[["stB","stW","stWX"],["lvB","lvW","lvWX"],["simB","smW","smWX"],["flwB","fwW","fwWX"],["shB","shW","shWX"],["winM","wnW","wnWX"]].forEach(([b,w,x])=>{const t=h=>{$(w).hidden=h;$(b).setAttribute("aria-pressed",!h);if(b==="simB")smSet(!h);fmSync();asv()};WT[b]=t;$(b).onclick=()=>t(!$(w).hidden);$(x).onclick=()=>{t(true);$(b).focus()}});
 function winSet(b,open){WT[b](!open)}   // open=true opens, false closes (restore + boot defaults)
 function lvAuto(){if(new Set(S.blocks.map(b=>b.h)).size>=2)winSet("lvB",true)}   // Level window opens when the design has 2+ levels

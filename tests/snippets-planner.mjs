@@ -36,7 +36,11 @@ function wire(pg, tag) {
   // index.html places a menu once, at open; after Simulate is switched on inside Floor tools the list
   // grows past the viewport edge. A control there is reached the way a user would: close and reopen.
   const rawClick = pg.click.bind(pg);
+  // Windows panel (#wnW, header #winM): the window toggles (#lvB #flwB #simB ...) live inside it; open it like a user would
+  const wnEnsure = async sel => { if (await pg.evaluate(s => { const e = document.querySelector(s); return !!e && !!e.closest('#wnL') && document.getElementById('wnW').hidden; }, sel)) { await rawClick('#winM'); wnOpened = true; } };
+  let wnOpened = false;   // panel opened by the helper for this action: closed again afterwards (old menus auto-closed; an open panel would shift/cover the other windows)
   const reveal = async sel => {
+    await wnEnsure(sel);
     const m = await pg.evaluate(s => {
       const el = document.querySelector(s), shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
       if (!el) return null;
@@ -52,13 +56,14 @@ function wire(pg, tag) {
       return {btn: '#' + btn.id, list: '#' + list.id, reopen: !list.hidden};
     }, sel);
     if (!m) return;
+    await wnEnsure(m.btn);
     if (m.reopen) { await rawClick(m.btn); MENU_NOTE++; }   // close the open menu first
     await rawClick(m.btn);
     await pg.waitForFunction(l => !document.querySelector(l).hidden, m.list);
   };
   for (const k of ['click', 'check', 'uncheck']) {
     const f = pg[k].bind(pg);
-    pg[k] = async (sel, ...a) => { await reveal(sel); return f(sel, ...a); };
+    pg[k] = async (sel, ...a) => { wnOpened = false; await reveal(sel); const r = await f(sel, ...a); if (wnOpened) { wnOpened = false; await pg.evaluate(() => { const w = document.getElementById('wnW'); if (!w.hidden) document.getElementById('wnWX').click(); }); } return r; };
   }
 }
 async function newPage(ctx, tag) {
@@ -617,8 +622,8 @@ try {
   const hb = await box('header');
   chk('(R5) header 80..96px tall at 1400x900', hb.h >= 80 && hb.h <= 96, String(hb.h));
   const ctr = [];
-  for (const s of ['#name', '#lvB', '#undo', '#fit', '#winM', '#flwB']) ctr.push(s + ' ' + ((await box(s)).cy - hb.cy).toFixed(1));
-  chk('(R5) controls vertically centred on the header (within 4px): #name #lvB #undo #fit #winM #flwB', ctr.every(x => Math.abs(+x.split(' ')[1]) <= 4), ctr.join(' | '));
+  for (const s of ['#name', '#undo', '#fit', '#winM']) ctr.push(s + ' ' + ((await box(s)).cy - hb.cy).toFixed(1));
+  chk('(R5) controls vertically centred on the header (within 4px): #name #undo #fit #winM', ctr.every(x => Math.abs(+x.split(' ')[1]) <= 4), ctr.join(' | '));
   chk('(R5) #rot, #rotv, #tabs, #simM, #simL, #dockTabs, #dtI, #dtS absent', (await pr.locator('#rot, #rotv, #tabs, #simM, #simL, #dockTabs, #dtI, #dtS').count()) === 0);
   await pr.evaluate(() => __fb.setView('L'));
   const palL = await pr.evaluate(() => [...document.querySelectorAll('#palList details[data-c]')].map(d => d.dataset.c));
@@ -891,9 +896,11 @@ try {
   // (H5) Round 5: Floor tools menu and Rotate are gone; Simulation/Flow/Planner are header toggles in both views
   await ph.evaluate(() => __fb.setView('L'));
   chk('(H5) #simM, #simL, #rot, #rotv absent', (await ph.locator('#simM, #simL, #rot, #rotv').count()) === 0);
-  chk('(H5) #winM, #flwB, #lvB visible in layout view', await allVis(['#winM', '#flwB', '#lvB']));
+  chk('(H5) #winM visible in layout view; Windows panel (#wnW) lists #flwB, #lvB (header no longer has them)', (await allVis(['#winM'])) && (await ph.locator('header #flwB, header #lvB').count()) === 0 && (await ph.locator('#wnW #flwB, #wnW #lvB').count()) === 2);
+  await ph.click('#winM'); chk('(H5) layout view: Windows panel open shows #flwB, #lvB', await allVis(['#wnW', '#flwB', '#lvB'])); await ph.click('#winM');
   await ph.evaluate(() => __fb.setView('F'));
-  chk('(H5) #winM, #flwB, #lvB visible in floor view', await allVis(['#winM', '#flwB', '#lvB']));
+  chk('(H5) #winM visible in floor view; Windows panel (#wnW) lists #flwB, #lvB (header no longer has them)', (await allVis(['#winM'])) && (await ph.locator('header #flwB, header #lvB').count()) === 0 && (await ph.locator('#wnW #flwB, #wnW #lvB').count()) === 2);
+  await ph.click('#winM'); chk('(H5) floor view: Windows panel open shows #flwB, #lvB', await allVis(['#wnW', '#flwB', '#lvB'])); await ph.click('#winM');
 
   // (H6) 390px: Fit/Save/Export/Help live in the File menu (<=1100px); they work from there
   await ph.setViewportSize({width: 390, height: 800});
