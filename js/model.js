@@ -219,12 +219,15 @@ function links(L){
       const q=portsOf(t).find(q=>q.en&&q.dir!=="out"&&q.x===tx&&q.y===ty&&q.nx===-p.nx&&q.ny===-p.ny);if(!q)return;
       vb.push({v:{id:-(sp.id*4+p.i+1),cls:"__v",x:tx,y:ty,h:L,rot:DIR.findIndex(d=>d[0]===p.nx&&d[1]===p.ny)},sp,p,t,q})})});
   vb.forEach(e=>belts.push(e.v));
+  // underground belts have ONE input (behind the entrance) and ONE output (front of the exit): other contacts never link
+  const upr=ugPairs(belts),uEn=new Set(upr.map(q=>q.u.id)),uEx=new Set(upr.map(q=>q.t.id));
+  const ugBad=(t,nx,ny)=>{const d=DIR[t.rot];return uEn.has(t.id)&&!(nx===d[0]&&ny===d[1])||uEx.has(t.id)&&!(nx===-d[0]&&ny===-d[1])};   // (nx,ny) = port normal pointing from the machine into belt cell t
   const o={ports:[],off:[],flow:[],ug:[],nb:new Map(),mach:new Map()};
   const nb=(a,b,k,p)=>{if(!o.nb.has(a.id))o.nb.set(a.id,[]);const l=o.nb.get(a.id);let e=l.find(e=>e.b===b&&e.k===k);if(!e){e={b,k,ps:[]};l.push(e)}if(p)e.ps.push(p)};
   const par=new Map(belts.map(b=>[b.id,b.id])),root=i=>{while(par.get(i)!==i)i=par.get(i);return i},uni=(a,b)=>par.set(root(a.id),root(b.id));
   // 1) machine <-> belt: only an ENABLED port facing a belt cell links; a disabled one facing a belt only gets a red tick
   ms.filter(m=>!isBelt(m)).concat(S.blocks.filter(b=>b.h===L&&!isM(b)&&def(b.cls)&&def(b.cls).elevator)).forEach(m=>portsOf(m).forEach(p=>{
-    const bx=p.x+p.nx,by=p.y+p.ny,t=occ.get(bx+","+by);if(!t||t===m||!isBelt(t))return;
+    const bx=p.x+p.nx,by=p.y+p.ny,t=occ.get(bx+","+by);if(!t||t===m||!isBelt(t)||ugBad(t,p.nx,p.ny))return;
     const e={b:t,m,bx,by,mx:p.x,my:p.y,port:p};
     if(p.en){o.ports.push(e);nb(t,m,"port",p);nb(m,t,"port",p)}else o.off.push(e);
   }));
@@ -232,7 +235,7 @@ function links(L){
   // 2) belt -> belt in facing direction (chain / T-join merge)
   const inc=new Map(),fl=[];
   belts.forEach(u=>{const t=occ.get((u.x+DIR[u.rot][0])+","+(u.y+DIR[u.rot][1]));
-    if(t&&t!==u&&isBelt(t)&&t.rot!==(u.rot+2)%4){fl.push({u,t});inc.set(t.id,(inc.get(t.id)||0)+1)}});
+    if(t&&t!==u&&isBelt(t)&&t.rot!==(u.rot+2)%4&&!uEn.has(u.id)&&!uEx.has(t.id)&&!(uEn.has(t.id)&&t.rot!==u.rot)){fl.push({u,t});inc.set(t.id,(inc.get(t.id)||0)+1)}});
   fl.forEach(({u,t})=>{const side=t.rot!==u.rot;o.flow.push({u,t,merge:side&&inc.get(t.id)>1});uni(u,t);nb(u,t,"out");nb(t,u,"in")});
   // 3) underground pairs (ugPairs, same as the length warning)
   ugPairs(belts).forEach(({u,t})=>{o.ug.push({u,t});uni(u,t);nb(u,t,"pair");nb(t,u,"pair")});
