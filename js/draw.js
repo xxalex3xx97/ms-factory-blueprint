@@ -27,8 +27,8 @@ function drawBeltItems(s){
       if(ic&&ic.complete)cx.drawImage(ic,x-sz/2,y-sz/2,sz,sz);
       else{cx.fillStyle="rgba(255,255,255,.7)";cx.beginPath();cx.arc(x,y,sz/4,0,7);cx.fill()}}
     if(e.mixed){const m=b?[(a[0]+b[0])/2,(a[1]+b[1])/2]:a;mixMark(m[0],m[1]-(b?0:sz*.5),s)}};
-  segs.forEach(({u,t:tg})=>{const e=K.load.get(u.id);if(!e)return;seen.add(u.id);icons(e,u,c(u.x,u.y),c(tg.x,tg.y))});
-  K.load.forEach((e,id)=>{if(seen.has(id))return;const b=S.blocks.find(q=>q.id===id);if(b&&b.h===layer)icons(e,b,c(b.x,b.y),null)});
+  segs.forEach(({u,t:tg})=>{const e=K.load.get(u.id);if(!e)return;seen.add(u.id);const a=c(u.x,u.y);if(!vis(a[0]-s,a[1]-s,3*s,3*s))return;icons(e,u,a,c(tg.x,tg.y))});
+  K.load.forEach((e,id)=>{if(seen.has(id))return;const b=lblk(id);if(b&&vis(V.ox+(b.x-1)*s,V.oy+(b.y-1)*s,3*s,3*s))icons(e,b,c(b.x,b.y),null)});
 }
 function drawLinks(s){
   const K=smOn()?smK():linksC(layer),c=(x,y)=>[V.ox+(x+.5)*s,V.oy+(y+.5)*s],lw=s>=12?2:1.5,BNK=bnK();
@@ -38,7 +38,7 @@ function drawLinks(s){
   if(BN){
     const seg=(u,t,dash)=>{const a=c(u.x,u.y),b=c(t.x,t.y),cu=bnCol(bnU(BNK,u.id),BM),ct=bnCol(bnU(BNK,t.id),BM),g=cx.createLinearGradient(a[0],a[1],b[0],b[1]);
       g.addColorStop(0,cu);g.addColorStop(1,ct);return{a,b,cu,g}};
-    K.flow.forEach(({u,t,merge})=>{const{a,b,cu,g}=seg(u,t);
+    K.flow.forEach(({u,t,merge})=>{const a0=c(u.x,u.y);if(!vis(a0[0]-2*s,a0[1]-2*s,4*s,4*s))return;const{a,b,cu,g}=seg(u,t);
       cx.strokeStyle=g;cx.lineWidth=merge?lw+1.5:lw;cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke();
       head(a,b,cu,Math.max(3,s*.17));
       if(merge){cx.beginPath();cx.arc(b[0],b[1],Math.max(3,s*.18),0,7);cx.stroke()}
@@ -51,6 +51,7 @@ function drawLinks(s){
   if(!BN){
   K.flow.forEach(({u,t,merge})=>{
     const a=c(u.x,u.y),b=c(t.x,t.y),col=merge?"hsl(150,60%,58%)":"rgba(120,220,240,.9)";
+    if(!vis(Math.min(a[0],b[0])-s,Math.min(a[1],b[1])-s,Math.abs(a[0]-b[0])+2*s,Math.abs(a[1]-b[1])+2*s))return;
     cx.strokeStyle=col;cx.lineWidth=merge?lw+1.5:lw;cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);cx.stroke();
     head(a,b,col,Math.max(3,s*.17));
     if(merge){cx.beginPath();cx.arc(b[0],b[1],Math.max(3,s*.18),0,7);cx.stroke()}
@@ -374,7 +375,9 @@ function drawUG(s){
   const c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s];
   ugPairs(S.blocks.filter(b=>isM(b)&&b.h===layer&&inView(b))).forEach(({u,t,n,max})=>ugLine(c(u),c(t),s,n>max));
 }
-function paint(){LKP=true;LKC=null;try{paint0()}finally{LKP=false;LKC=null}}
+let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(S.blocks.filter(b=>b.h===layer).map(b=>[b.id,b]));return LBM.get(id)};
+const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
+function paint(){LKP=true;LKC=null;LBM=null;try{paint0()}finally{LKP=false;LKC=null;LBM=null}}
 function paint0(){
   cx.setTransform(dpr,0,0,dpr,0,0);cx.imageSmoothingEnabled=true;cx.imageSmoothingQuality="high";cx.clearRect(0,0,W,H);
   const s=sc(),F=view==="F";
@@ -382,7 +385,7 @@ function paint0(){
   if(F&&SM&&SIM&&SIM.sig!==simSig()){simReset();SIM.sig=simSig();smClkUp()}
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8);
-  if($("ghost").checked)S.blocks.filter(inView).forEach(b=>{if(b.h!==layer)drawBlock(b,Math.max(.08,.3-.07*Math.abs(b.h-layer)),false)});
+  if($("ghost").checked)S.blocks.filter(inView).forEach(b=>{if(b.h!==layer&&($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s))drawBlock(b,Math.max(.08,.3-.07*Math.abs(b.h-layer)),false)});
   const cur=S.blocks.filter(b=>b.h===layer&&inView(b));
   cur.forEach(b=>{const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s;if(x>W||y>H||x+d.w*s<0||y+d.h*s<0)return;drawBlock(b,.92,sel.has(b.id))});   // viewport cull
   cx.fillStyle="rgba(255,60,60,.5)";

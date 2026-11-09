@@ -2031,6 +2031,7 @@ async function s17(br) {
   await pg.click('#simB'); await pg.click('#sm10'); await pg.click('#simB');   // speed 10, sim off again
   await pg.click('#bn'); await pg.click('#bnF'); await pg.click('#lk');
   await pg.uncheck('#ghost');
+  await pg.check('#ghostAll');
   await pg.click('#lUp');
   await pg.evaluate(() => { __fb.V.z = 2.5; __fb.V.ox = 111; __fb.V.oy = 77; });
   await pg.click('#lDn');   // draws -> debounced save
@@ -2054,6 +2055,7 @@ async function s17(br) {
   chk('17 Bottlenecks on + Flow/Blockage restored', s.bn === true && s.bm === 'F' && await pg.getAttribute('#bn', 'aria-pressed') === 'true' && await pg.isEnabled('#bnF') && await pg.isEnabled('#bnB'));
   await pg.keyboard.press('Escape');
   chk('17 link overlay off + ghost layers off restored', await pg.getAttribute('#lk', 'aria-pressed') === 'false' && !(await pg.isChecked('#ghost')));
+  chk('17 show all levels (ghostAll) restored', await pg.isChecked('#ghostAll'));
   chk('17 sim speed restored, sim not running/active', s.spd === 10 && s.sm === false && s.sim === null);
   // selection on layer 0
   await pg.click('#lDn'); await pg.evaluate(() => __fb.click(40, 40)); await pg.waitForTimeout(700);
@@ -3290,6 +3292,21 @@ async function s24(br) {
   }
 }
 
+// ================= 33 ghost layers: only level below/above unless "show all levels"; simulation ring hidden when zoomed out (s<6)
+async function s33(br) {
+  const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's33');
+  await imp(pg, bp([], [mac('DAT_Container_2', 0, 0, {h: 0}), mac('DAT_Container_2', 4, 0, {h: 1}), mac('DAT_Container_2', 8, 0, {h: 2}), mac('DAT_Container_2', 12, 0, {h: 3})]));
+  await pg.evaluate(() => { __fb.setView('F'); __fb.setLayer(1); V.z = 1; V.ox = 40; V.oy = 40; });   // all four levels on screen (fit() frames only the current level)
+  await pg.evaluate(() => { window.__gh = []; const o = window.drawBlock; window.drawBlock = function (b, a, ...r) { if (b.h !== layer) __gh.push(b.h); return o.call(this, b, a, ...r) }; });
+  const ghosted = async (all) => pg.evaluate(all => { $('ghost').checked = true; $('ghostAll').checked = all; window.__gh = []; paint(); return [...new Set(__gh)].sort() }, all);
+  const one = await ghosted(false), every = await ghosted(true);
+  chk('33 ghost on, show-all off: only level below/above ghosted', JSON.stringify(one) === '[0,2]', JSON.stringify(one));
+  chk('33 ghost on, show-all on: every other level ghosted', JSON.stringify(every) === '[0,2,3]', JSON.stringify(every));
+  const arcs = await pg.evaluate(() => { const p = CanvasRenderingContext2D.prototype, o = p.arc; let k = 0; p.arc = function (...a) { k++; return o.apply(this, a) }; try { drawSimFull(5) } finally { p.arc = o } return k });
+  chk('33 sim full ring: nothing drawn when zoomed out (s<6)', arcs === 0, `arc calls ${arcs}`);
+  await ctx.close();
+}
+
 // ================= main
 const br =await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 try {
@@ -3324,6 +3341,7 @@ try {
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }
   try { console.log('--- 31 ground floors centred'); await s31(br); } catch (e) { chk('31 section ran', false, e.stack || String(e)); }
   try { console.log('--- 32 door passage rule, underground link zoom'); await s32(br); } catch (e) { chk('32 section ran', false, e.stack || String(e)); }
+  try { console.log('--- 33 ghost levels, sim ring zoom cull'); await s33(br); } catch (e) { chk('33 section ran', false, e.stack || String(e)); }
   try { console.log('--- 28 data-driven shapes'); await s28(br); } catch (e) { chk('28 shapes: section ran', false, e.stack || String(e)); }
   try { console.log('--- 29 icons, Command Module, Blueprint Unit, shipyards'); await s29(br); } catch (e) { chk('29 section ran', false, e.stack || String(e)); }
   for (const vp of VIEWPORTS) {

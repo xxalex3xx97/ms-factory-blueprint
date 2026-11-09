@@ -53,8 +53,9 @@ function drawSimMach(s){
   cx.restore();
 }
 function drawSimFull(s){
+  if(s<6)return;
   cx.save();cx.strokeStyle="hsl(0,80%,60%)";cx.lineWidth=Math.max(1.5,s*.1);
-  smS().full.forEach(id=>{const b=S.blocks.find(q=>q.id===id);if(!b||b.h!==layer)return;
+  smS().full.forEach(id=>{const b=lblk(id);if(!b||!vis(V.ox+b.x*s,V.oy+b.y*s,s,s))return;
     cx.beginPath();cx.arc(V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s,Math.max(3,s*.4),0,7);cx.stroke()});
   cx.restore();
 }

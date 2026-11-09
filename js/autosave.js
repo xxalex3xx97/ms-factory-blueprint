@@ -1,6 +1,6 @@
 // ---- autosave (localStorage msfb.state): design (= export JSON) + UI settings. Sim running state/clock are never saved.
 // autosave schema v2 (Version 2 export); older autosaves (v1) are ignored on restore
-const asNow=()=>{if(!ASO||ASH)return;try{localStorage.setItem(ASK,JSON.stringify({v:2,d:build(),u:{view,layer,tab,spd:SPD,gh:$("ghost").checked,st:STRICT,lk:LK,bn:BN,bm:BM,po:[...po],io:[...io],
+const asNow=()=>{if(!ASO||ASH)return;try{localStorage.setItem(ASK,JSON.stringify({v:2,d:build(),u:{view,layer,tab,spd:SPD,gh:$("ghost").checked,gha:$("ghostAll").checked,st:STRICT,lk:LK,bn:BN,bm:BM,po:[...po],io:[...io],
   sel:S.blocks.filter(b=>sel.has(b.id)).map(b=>[b.cls,b.x,b.y,b.h]),vl:{ox:VL.ox,oy:VL.oy,z:VL.z},vf:{ox:VF.ox,oy:VF.oy,z:VF.z,init:VF.init}}}))}catch(e){}};
 const asv=()=>{if(!ASO||ASH)return;clearTimeout(AST);AST=setTimeout(asNow,400)};
 const asvNow=()=>{clearTimeout(AST);asNow()};
@@ -20,6 +20,7 @@ function asRestore(){
     pv(VL,u.vl);pv(VF,u.vf);
     if(Array.isArray(u.sel))sel=new Set(u.sel.map(k=>Array.isArray(k)&&S.blocks.find(b=>b.cls===k[0]&&b.x===k[1]&&b.y===k[2]&&b.h===k[3])).filter(Boolean).map(b=>b.id));
     if(typeof u.gh==="boolean")$("ghost").checked=u.gh;
+    if(typeof u.gha==="boolean")$("ghostAll").checked=u.gha;
     if(typeof u.st==="boolean")STRICT=u.st;
     if(typeof u.lk==="boolean"){LK=u.lk;bt("lk",LK)}
     if(typeof u.bn==="boolean"){BN=u.bn;bt("bn",BN);bnSub()}

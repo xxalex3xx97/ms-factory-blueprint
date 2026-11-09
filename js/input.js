@@ -112,6 +112,7 @@ cv.addEventListener("dblclick",e=>{
 function setLayer(n){layer=n;if(SIM&&SIM.opts.cur)SIM.sig=null;sel=new Set([...sel].filter(i=>S.blocks.find(b=>b.id===i&&b.h===n)));all()}
 $("lay").onchange=e=>{const v=parseInt(e.target.value,10);if(isFinite(v)&&v-1!==layer)setLayer(v-1);else e.target.value=layer+1};$("lUp").onclick=()=>setLayer(layer+1);$("lDn").onclick=()=>setLayer(layer-1);
 $("ghost").onchange=draw;
+$("ghostAll").onchange=draw;
 function setView(v){
   if(v===view)return;
   smStop();pasting=null;
