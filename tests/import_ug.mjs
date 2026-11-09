@@ -59,10 +59,10 @@ try {
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
 
   // JS parseSav vs python oracle (whole station JSON, incl. Length); file goes through the page's own Import input
-  await pg.evaluate(() => document.getElementById('imp').click());   // menu item is hidden; its onclick opens the dialog
-  await pg.setInputFiles('#impFile', SAV);
-  await pg.waitForFunction(() => document.getElementById('impFile').files.length === 1, null, {timeout: 60000});
-  const stations = await pg.evaluate(async () => __fb.parseSav(await document.getElementById('impFile').files[0].arrayBuffer()));
+  await pg.evaluate(() => document.getElementById('impSav').click());   // menu item is hidden; its onclick opens the dialog
+  await pg.setInputFiles('#savFile', SAV);
+  await pg.waitForFunction(() => document.getElementById('savFile').files.length === 1, null, {timeout: 60000});
+  const stations = await pg.evaluate(async () => __fb.parseSav(await document.getElementById('savFile').files[0].arrayBuffer()));
   const st = stations.find(s => s.name === STN);
   chk(`"${STN}" found by parseSav`, !!st);
   chk(`parseSav "${STN}" JSON deep-equals python oracle`, !!st && isDeepStrictEqual(st.json, oracle),

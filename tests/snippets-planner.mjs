@@ -36,7 +36,11 @@ function wire(pg, tag) {
   // index.html places a menu once, at open; after Simulate is switched on inside Floor tools the list
   // grows past the viewport edge. A control there is reached the way a user would: close and reopen.
   const rawClick = pg.click.bind(pg);
+  // Windows panel (#wnW, header #winM): the window toggles (#lvB #flwB #simB ...) live inside it; open it like a user would
+  const wnEnsure = async sel => { if (await pg.evaluate(s => { const e = document.querySelector(s); return !!e && !!e.closest('#wnL') && document.getElementById('wnW').hidden; }, sel)) { await rawClick('#winM'); wnOpened = true; } };
+  let wnOpened = false;   // panel opened by the helper for this action: closed again afterwards (old menus auto-closed; an open panel would shift/cover the other windows)
   const reveal = async sel => {
+    await wnEnsure(sel);
     const m = await pg.evaluate(s => {
       const el = document.querySelector(s), shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
       if (!el) return null;
@@ -52,13 +56,14 @@ function wire(pg, tag) {
       return {btn: '#' + btn.id, list: '#' + list.id, reopen: !list.hidden};
     }, sel);
     if (!m) return;
+    await wnEnsure(m.btn);
     if (m.reopen) { await rawClick(m.btn); MENU_NOTE++; }   // close the open menu first
     await rawClick(m.btn);
     await pg.waitForFunction(l => !document.querySelector(l).hidden, m.list);
   };
   for (const k of ['click', 'check', 'uncheck']) {
     const f = pg[k].bind(pg);
-    pg[k] = async (sel, ...a) => { await reveal(sel); return f(sel, ...a); };
+    pg[k] = async (sel, ...a) => { wnOpened = false; await reveal(sel); const r = await f(sel, ...a); if (wnOpened) { wnOpened = false; await pg.evaluate(() => { const w = document.getElementById('wnW'); if (!w.hidden) document.getElementById('wnWX').click(); }); } return r; };
   }
 }
 async function newPage(ctx, tag) {
@@ -617,8 +622,8 @@ try {
   const hb = await box('header');
   chk('(R5) header 80..96px tall at 1400x900', hb.h >= 80 && hb.h <= 96, String(hb.h));
   const ctr = [];
-  for (const s of ['#name', '#lvB', '#undo', '#fit', '#simB', '#flwB', '#plnB']) ctr.push(s + ' ' + ((await box(s)).cy - hb.cy).toFixed(1));
-  chk('(R5) controls vertically centred on the header (within 4px): #name #lvB #undo #fit #simB #flwB #plnB', ctr.every(x => Math.abs(+x.split(' ')[1]) <= 4), ctr.join(' | '));
+  for (const s of ['#name', '#undo', '#fit', '#winM']) ctr.push(s + ' ' + ((await box(s)).cy - hb.cy).toFixed(1));
+  chk('(R5) controls vertically centred on the header (within 4px): #name #undo #fit #winM', ctr.every(x => Math.abs(+x.split(' ')[1]) <= 4), ctr.join(' | '));
   chk('(R5) #rot, #rotv, #tabs, #simM, #simL, #dockTabs, #dtI, #dtS absent', (await pr.locator('#rot, #rotv, #tabs, #simM, #simL, #dockTabs, #dtI, #dtS').count()) === 0);
   await pr.evaluate(() => __fb.setView('L'));
   const palL = await pr.evaluate(() => [...document.querySelectorAll('#palList details[data-c]')].map(d => d.dataset.c));
@@ -860,7 +865,7 @@ try {
   await ph.evaluate(() => __fb.setView('L'));
   chk('(H2) File closed by default: aria-expanded=false, list hidden', (await expanded('#fileM')) === 'false' && !(await ph.isVisible('#fileL')));
   await ph.click('#fileM');
-  chk('(H2) click File: aria-expanded=true, New/Open/Save as/Import visible', (await expanded('#fileM')) === 'true' && (await allVis(['#nw', '#fOpen', '#fSaveAs', '#imp'])));
+  chk('(H2) click File: aria-expanded=true, New/Open/Save as visible; Import save + Import JSON in header', (await expanded('#fileM')) === 'true' && (await allVis(['#nw', '#fOpen', '#fSaveAs'])) && (await allVis(['#imp', '#impSav'])));
   await ph.keyboard.press('Escape');
   chk('(H2) Escape closes File and returns focus to #fileM', (await expanded('#fileM')) === 'false' && !(await ph.isVisible('#fileL')) && (await active()) === 'fileM', `focus ${await active()}`);
   await ph.click('#fileM');
@@ -871,10 +876,10 @@ try {
   await ph.focus('#fileM');
   await ph.keyboard.press('ArrowDown');
   const ks = [await active()];
-  for (let i = 0; i < 5; i++) { await ph.keyboard.press('ArrowDown'); ks.push(await active()); }   // New, Open, Save as, Import, Screenshot, wrap
+  for (let i = 0; i < 3; i++) { await ph.keyboard.press('ArrowDown'); ks.push(await active()); }   // New, Open, Save as, wrap
   await ph.keyboard.press('ArrowUp'); ks.push(await active());
-  chk('(H3) ArrowDown opens File and focuses New, then Open, Save as, Import, Screenshot, wraps to New; ArrowUp back to Screenshot',
-    (await expanded('#fileM')) === 'true' && ks.join() === 'nw,fOpen,fSaveAs,imp,fShot,nw,fShot', ks.join());
+  chk('(H3) ArrowDown opens File and focuses New, then Open, Save as, wraps to New; ArrowUp back to Save as',
+    (await expanded('#fileM')) === 'true' && ks.join() === 'nw,fOpen,fSaveAs,nw,fSaveAs', ks.join());
   await ph.keyboard.press('Escape');
 
   // (H4) picking New from the menu still runs its normal flow (confirm, clear), and the menu closes
@@ -891,19 +896,21 @@ try {
   // (H5) Round 5: Floor tools menu and Rotate are gone; Simulation/Flow/Planner are header toggles in both views
   await ph.evaluate(() => __fb.setView('L'));
   chk('(H5) #simM, #simL, #rot, #rotv absent', (await ph.locator('#simM, #simL, #rot, #rotv').count()) === 0);
-  chk('(H5) #simB, #flwB, #plnB visible in layout view', await allVis(['#simB', '#flwB', '#plnB']));
+  chk('(H5) #winM visible in layout view; Windows panel (#wnW) lists #flwB, #lvB (header no longer has them)', (await allVis(['#winM'])) && (await ph.locator('header #flwB, header #lvB').count()) === 0 && (await ph.locator('#wnW #flwB, #wnW #lvB').count()) === 2);
+  await ph.click('#winM'); chk('(H5) layout view: Windows panel open shows #flwB, #lvB', await allVis(['#wnW', '#flwB', '#lvB'])); await ph.click('#winM');
   await ph.evaluate(() => __fb.setView('F'));
-  chk('(H5) #simB, #flwB, #plnB visible in floor view', await allVis(['#simB', '#flwB', '#plnB']));
+  chk('(H5) #winM visible in floor view; Windows panel (#wnW) lists #flwB, #lvB (header no longer has them)', (await allVis(['#winM'])) && (await ph.locator('header #flwB, header #lvB').count()) === 0 && (await ph.locator('#wnW #flwB, #wnW #lvB').count()) === 2);
+  await ph.click('#winM'); chk('(H5) floor view: Windows panel open shows #flwB, #lvB', await allVis(['#wnW', '#flwB', '#lvB'])); await ph.click('#winM');
 
   // (H6) 390px: Fit/Save/Export/Help live in the File menu (<=1100px); they work from there
   await ph.setViewportSize({width: 390, height: 800});
   await settle();
   await ph.evaluate(() => __fb.setView('F'));
-  const FM = ['fSave', 'exp', 'fit', 'help'];
+  const FM = ['fSave', 'exp', 'fit', 'help', 'imp'];
   chk('(H6) 390: Save/Export/Fit/Help are inside #fileL', (await inList('fileL', FM)).every(Boolean), JSON.stringify(await inList('fileL', FM)));
-  chk('(H6) 390: those are hidden until File opens', await noneVis(['#fSave', '#exp', '#fit', '#help']));
+  chk('(H6) 390: those are hidden until File opens', await noneVis(['#fSave', '#exp', '#fit', '#help', '#imp']));
   await ph.click('#fileM');
-  chk('(H6) 390: File open shows Save/Export/Fit/Help', await allVis(['#fSave', '#exp', '#fit', '#help']));
+  chk('(H6) 390: File open shows Save/Export/Fit/Help', await allVis(['#fSave', '#exp', '#fit', '#help', '#imp']));
   await ph.keyboard.press('Escape');
   await ph.click('#fileM');
   const [dlH] = await Promise.all([ph.waitForEvent('download'), ph.click('#fSave')]);
@@ -917,7 +924,7 @@ try {
   chk('(H6) 390: ghost layers toggle from the Level window', !(await ph.isChecked('#ghost')));
   await ph.setViewportSize({width: 1400, height: 900});
   await settle();
-  chk('(H6) back at 1400: Save/Export/Fit/Help inline in the header, not in #fileL', (await inList('fileL', FM)).every(x => !x) && await allVis(['#fSave', '#exp', '#fit', '#help']));
+  chk('(H6) back at 1400: Save/Export/Fit/Help inline in the header, not in #fileL', (await inList('fileL', FM)).every(x => !x) && await allVis(['#fSave', '#exp', '#fit', '#help', '#imp']));
 
   chk('(H-h) header tests: no pageerror / console.error', errs.length === 0, errs.join('\n     '));
   await ctxH.close();

@@ -43,10 +43,10 @@ try {
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
 
   // open the Import dialog and choose the save file (same path as a user)
-  await pg.click('#imp');
-  await pg.setInputFiles('#impFile', SAV);
-  await pg.waitForSelector('#impSt:not([hidden])', {timeout: 60000});
-  const opts = await pg.$$eval('#impSt option', os => os.map(o => o.textContent));
+  await pg.click('#impSav');
+  await pg.setInputFiles('#savFile', SAV);
+  await pg.waitForSelector('#dSav[open]', {timeout: 60000});
+  const opts = await pg.$$eval('#savSt option', os => os.map(o => o.textContent));
   chk('picker lists 3 player stations', opts.length === 3, `options: ${JSON.stringify(opts)}`);
   for (const n of ['Cobalt station', 'Silica Station', 'Main Base']) {
     chk(`picker has "${n}"`, opts.some(o => o.startsWith(n + ' (')), `options: ${JSON.stringify(opts)}`);
@@ -54,7 +54,7 @@ try {
 
   // parse in page (same function the picker used) and compare with the python oracle
   const got = await pg.evaluate(async () => {
-    const f = document.getElementById('impFile').files[0];
+    const f = document.getElementById('savFile').files[0];
     return __fb.parseSav(await f.arrayBuffer());
   });
   const mb = got.find(s => s.name === EXP_NAME);
@@ -65,13 +65,13 @@ try {
   chk(`DefaultMachines = ${EXP_MACH}`, !!mb && mb.json.DefaultMachines.length === EXP_MACH);
 
   // pick the station and import through the normal Import button
-  const v = await pg.locator('#impSt option', {hasText: `${EXP_NAME} (`}).getAttribute('value');
-  await pg.selectOption('#impSt', v);
-  await pg.click('#impGo');
+  const v = await pg.locator('#savSt option', {hasText: `${EXP_NAME} (`}).getAttribute('value');
+  await pg.selectOption('#savSt', v);
+  await pg.click('#savGo');
   await pg.waitForFunction(() => document.getElementById('toast').textContent.startsWith('Imported'), null, {timeout: 60000});
   const toast = (await pg.locator('#toast').textContent()) || '';
   const name = await pg.inputValue('#name');
-  const dlgOpen = await pg.evaluate(() => document.getElementById('dImp').open);
+  const dlgOpen = await pg.evaluate(() => document.getElementById('dSav').open);
   chk(`name field = "${EXP_NAME}"`, name === EXP_NAME, `name field "${name}"`);
   chk(`toast starts "Imported ${EXP_BLOCKS} blocks"`, toast.startsWith(`Imported ${EXP_BLOCKS} blocks`), `toast "${toast}"`);
   chk('Import dialog closed after import', !dlgOpen);

@@ -137,9 +137,10 @@ function simProd(){
   const Z=SIM;if(!Z)return null;const l=Z.ser[Z.ser.length-1]||{it:{},mt:{}},tm={};
   Z.mt.forEach((n,id)=>{const c=Z.M.get(id).b.cls;tm[c]=(tm[c]||0)+n});
   return{series:Z.ser,byItem:l.it,byType:l.mt,totals:Z.tot,totalsByType:tm}}
-// theoretical production (no sim): steady state at full machine speed, capped by belt throughput. Per level, from links(L); elevator transfers not included.
-function theoLevel(L){
-  const K=links(L),feeds=e=>{const d=DIR[e.b.rot],p=e.port;return d[0]===-p.nx&&d[1]===-p.ny};
+// theoretical production (no sim): steady state at full machine speed, capped by belt throughput. Per level, from links1(L); inj = elevator transfers from other levels (theoProd iterates them).
+function theoLevel(L,inj){
+  let K=TK&&TK.get(L);if(!K){K=links1(L);if(TK)TK.set(L,K)}   // one links1 per level per theoProd call (passes reuse it)
+  const feeds=e=>{const d=DIR[e.b.rot],p=e.port;return d[0]===-p.nx&&d[1]===-p.ny};
   const ms=S.blocks.filter(b=>b.h===L&&isM(b)&&!isBelt(b)&&!isStore(b)&&recOf(b)),R=new Map(ms.map(m=>[m.id,recOf(m)])),f=new Map(ms.map(m=>[m.id,R.get(m.id).i.length?1:0]));
   const sp=new Map(),spR=new Map();   // splitter/balancer in-ports -> out-ports (same as links())
   K.ports.forEach(e=>{const c=(def(e.m.cls)||{}).category;if(c!=="Splitters"&&c!=="Balancers")return;const p=e.port;
@@ -147,14 +148,15 @@ function theoLevel(L){
     if(feeds(e)&&p.dir!=="out")r.ins.push(e.b.id);else if(!feeds(e)&&p.dir!=="in")r.outs.push(e.b.id)});
   spR.forEach(r=>r.ins.forEach(i=>sp.set(i,r.outs)));
   const outs=K.ports.filter(e=>R.has(e.m.id)&&!feeds(e)),ins=K.ports.filter(e=>R.has(e.m.id)&&feeds(e));
-  const base=outs.map(e=>({id:e.b.id,item:R.get(e.m.id).o[0],rate:pm(R.get(e.m.id).o[1],R.get(e.m.id).t)||0,m:e.m.id})).concat(K.pull.map(x=>({id:x.belt.id,item:x.item,rate:x.rate,m:null})));
+  const base=outs.map(e=>({id:e.b.id,item:R.get(e.m.id).o[0],rate:pm(R.get(e.m.id).o[1],R.get(e.m.id).t)||0,m:e.m.id})).concat(K.pull.map(x=>({id:x.belt.id,item:x.item,rate:x.rate,m:null})),(inj||[]).map(x=>({...x,m:null})));
   let th=new Map();const tf=id=>th.get(id)||1;   // belt throttle of this pass: 1/(max utilisation of the chain at full demand), so no chain carries more than its belt speed
   const util=(load,id)=>{let u=0;const seen=new Set();for(let i=id;i!=null&&!seen.has(i);i=K.nx.get(i)){seen.add(i);const e=load.get(i);if(e&&e.util>u)u=e.util}return u};
+  let load;
   for(let pass=0;pass<10;pass++){
     const dem=base.map(s=>({id:s.id,item:s.item,rate:s.rate*(s.m==null?1:f.get(s.m))}));
     const dl=flowLoad(K.nx,dem,K.cp,sp);
     th=new Map();dem.forEach(s=>{if(!th.has(s.id))th.set(s.id,1/Math.max(1,util(dl,s.id)))});
-    const load=flowLoad(K.nx,dem.map(s=>({...s,rate:s.rate*tf(s.id)})),K.cp,sp);
+    load=flowLoad(K.nx,dem.map(s=>({...s,rate:s.rate*tf(s.id)})),K.cp,sp);
     // machine supply from its input belts (each belt scaled down to its capacity), f = min over inputs of supply/need
     const sup=new Map();ins.forEach(e=>{const l=load.get(e.b.id);if(!l)return;let s=sup.get(e.m.id);if(!s){s=new Map();sup.set(e.m.id,s)}
       const k=Math.max(1,l.util||1);l.items.forEach((v,it)=>s.set(it,(s.get(it)||0)+v/k))});
@@ -165,15 +167,28 @@ function theoLevel(L){
     if(dm<1e-3)break;
   }
   const outT=new Map();outs.forEach(e=>outT.set(e.m.id,Math.max(outT.get(e.m.id)||0,tf(e.b.id))));
-  const out={byItem:{},byType:{},count:{}};
+  const out={byItem:{},byType:{},count:{},K,load};
   ms.forEach(m=>{const r=R.get(m.id),c=m.cls,rate=(pm(r.o[1],r.t)||0)*f.get(m.id)*(outT.get(m.id)||0);
     out.count[c]=(out.count[c]||0)+1;if(!rate)return;
     out.byItem[r.o[0]]=(out.byItem[r.o[0]]||0)+rate;out.byType[c]=(out.byType[c]||0)+rate});
   return out;
 }
+let TK=null;
 function theoProd(allFloors){
-  const levels=allFloors?[...new Set(S.blocks.map(b=>b.h))]:[layer],out={byItem:{},byType:{},count:{}};
-  levels.forEach(L=>{const t=theoLevel(L);['byItem','byType','count'].forEach(k=>Object.entries(t[k]).forEach(([id,v])=>out[k][id]=(out[k][id]||0)+v))});
+  TK=new Map();try{return theoProd0(allFloors)}finally{TK=null}
+}
+function theoProd0(allFloors){
+  const all=[...new Set([...S.blocks.map(b=>b.h),layer])],levels=allFloors?all:[layer],out={byItem:{},byType:{},count:{}};
+  let inj=new Map(all.map(l=>[l,[]])),res,prev="";   // elevator transfers need every level: repeat until the flow stops changing
+  for(let pass=0;pass<Math.min(all.length,6)+1;pass++){
+    res=new Map(all.map(l=>[l,theoLevel(l,inj.get(l))]));
+    const nj=new Map(all.map(l=>[l,[]])),sig=[];
+    all.forEach(l=>{const{K,load}=res.get(l);K.elvIn.forEach(({k,id})=>{const ld=load.get(id);if(!ld)return;
+      const dst=[l+1,l-1].filter(h=>res.has(h)&&res.get(h).K.elvOut.has(k));if(!dst.length)return;   // even split over existing outputs, like the sim
+      ld.items.forEach((v,item)=>dst.forEach(h=>{nj.get(h).push({id:res.get(h).K.elvOut.get(k),item,rate:v/dst.length});sig.push(h+k+item+r2(v/dst.length))}))})});
+    const sg=sig.join();if(sg===prev)break;prev=sg;inj=nj;
+  }
+  levels.forEach(L=>{const t=res.get(L);['byItem','byType','count'].forEach(k=>Object.entries(t[k]).forEach(([id,v])=>out[k][id]=(out[k][id]||0)+v))});
   ['byItem','byType'].forEach(k=>Object.keys(out[k]).forEach(id=>out[k][id]=r2(out[k][id])));
   return out;
 }

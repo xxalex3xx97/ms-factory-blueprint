@@ -15,8 +15,8 @@ try {
   await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href);
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
   chk('selector hidden before any save', await pg.isHidden('#stG'));
-  await pg.evaluate(() => document.getElementById('imp').click()); await pg.setInputFiles('#impFile', SAV); await pg.waitForSelector('#impSt:not([hidden])', {timeout: 60000});
-  await pg.selectOption('#impSt', '0'); await pg.evaluate(() => document.getElementById('impGo').click());
+  await pg.evaluate(() => document.getElementById('impSav').click()); await pg.setInputFiles('#savFile', SAV); await pg.waitForSelector('#dSav[open]', {timeout: 60000});
+  await pg.selectOption('#savSt', '0'); await pg.evaluate(() => document.getElementById('savGo').click());
   chk('selector shown after picking a station', await pg.isVisible('#stSel'));
   const names = await pg.$$eval('#stSel option', o => o.map(x => x.textContent));
   chk('lists all stations', names.length >= 2, JSON.stringify(names));

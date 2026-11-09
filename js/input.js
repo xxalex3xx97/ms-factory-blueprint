@@ -1,5 +1,7 @@
 // ---- interaction
 let drag=null,space=false,hoverIn=false;
+// mode: null | del | copy | cfgcopy | cfgpaste (paste = pasting set; syncMode in draw.js). cfgClip = {cls, rec, recn, ct, off, fl, pr}: config of one machine
+let mode=null,cfgClip=null;
 // underground = click, click: 1st click places the entrance and starts ugPend {id,cls,c0,cur}; a line (n / max) follows the mouse on the 4 axes; 2nd click places the exit if valid; Esc / right click removes the entrance
 let ugPend=null;
 const ugOk=g=>{const d=def(ugPend.cls);if(g.n<2)return false;const q={id:-1,cls:ugPend.cls,x:g.b.x,y:g.b.y,h:layer,rot:g.rot,pid:0};
@@ -14,19 +16,24 @@ cv.addEventListener("pointerdown",e=>{
   if(e.button!==0)return;
   const c=toCell(p.x,p.y);
   if(pasting){hover=c;pasteAt();return}
+  if(mode){
+    if(mode==="cfgcopy"){const b=hit(c);if(!b){toast("Click one building to copy its config");return}sel=new Set([b.id]);if(cfgCopy())setMode("cfgpaste");return}
+    if(mode==="del"){const b=hit(c);if(b){sel=new Set([b.id]);del();return}}
+    drag={k:"box",sx:p.x,sy:p.y,px:p.x,py:p.y,add:false,base:new Set()};sel=new Set();panel();draw();return
+  }
   if(active){
     if(view==="F"&&runTool(def(active))){drag={k:"belt",c0:c,cur:c,tr:[c]};draw();return}
     if(ugPend&&(active!==ugPend.cls||view!=="F"||!S.blocks.some(b=>b.id===ugPend.id)))ugPend=null;
     if(view==="F"&&ugTool(def(active))){
       if(ugPend){   // 2nd click: exit only when the line is valid, else nothing
         const g=ugDrag(ugPend),en=S.blocks.find(b=>b.id===ugPend.id);
-        if(ugOk(g)){const x={id:uid++,cls:active,x:g.b.x,y:g.b.y,h:layer,rot:g.rot,pid:0};en.rot=g.rot;S.blocks.push(x);sel=new Set([en.id,x.id]);placeRot=g.rot;ugPend=null;all()}
+        if(ugOk(g)){const x={id:uid++,cls:active,x:g.b.x,y:g.b.y,h:layer,rot:g.rot,pid:0};en.rot=g.rot;S.blocks.push(x);sel=new Set();placeRot=g.rot;ugPend=null;all()}
         return;
       }
       const b={id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:placeRot,pid:0};
       if(noBuild([mItem(b)])){toast(NOBUILD);return}
-      push();cutBelts([b]);S.blocks.push(b);sel=new Set([b.id]);ugPend={id:b.id,cls:active,c0:c,cur:c};all();return}
-    const b={id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:placeRot,pid:0};if(isM(b)&&noBuild([mItem(b)])){toast(NOBUILD);return}push();if(isBelt(b))cutBelts([b]);S.blocks.push(b);sel=new Set([b.id]);all();return}
+      push();cutBelts([b]);S.blocks.push(b);sel=new Set();ugPend={id:b.id,cls:active,c0:c,cur:c};all();return}
+    const b={id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:placeRot,pid:0};if(isM(b)&&noBuild([mItem(b)])){toast(NOBUILD);return}push();if(isBelt(b))cutBelts([b]);S.blocks.push(b);sel=new Set();all();return}
   if(view==="F"){const q=portAt(p);if(q){push();togglePort(q.b,q.p.key);all();return}}
   const b=hit(c);
   if(b){
@@ -89,10 +96,11 @@ const end=e=>{
     const cells=beltCells(drag);
     const nb=cells.map(c=>({id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:c.rot,pid:0}));
     if(noBuild(nb.map(mItem)))toast(NOBUILD);
-    else{push();cutBelts(nb);S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));placeRot=cells[0].rot}
+    else{push();cutBelts(nb);S.blocks.push(...nb);sel=new Set();placeRot=cells[0].rot}
   }
+  if(k==="box"&&mode){const m=mode;drag=null;cv.style.cursor=space?"grab":"";if(e.type==="pointercancel"){sel=new Set();all();return}boxMode(m);return}   // a cancelled gesture never applies the mode
   drag=null;cv.style.cursor=space?"grab":"";
-  if(rc){if(pasting){pasting=null;all();return}const b=hit(toCell(rc.x,rc.y));if(b){sel=new Set([b.id]);del();return}if(active){active=null;all();return}}
+  if(rc){if(pasting){pasting=null;all();return}const b=hit(toCell(rc.x,rc.y));if(b){sel=new Set([b.id]);del();return}if(active){active=null;all();return}ctxOpen(e.clientX,e.clientY);return}
   if(k!=="pan")all();else draw();
 };
 cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end);
@@ -115,7 +123,7 @@ $("ghost").onchange=draw;
 $("ghostAll").onchange=draw;
 function setView(v){
   if(v===view)return;
-  smStop();pasting=null;
+  smStop();pasting=null;mode=null;
   // sync: the world point under the viewport centre stays under it, and a block cell keeps its on-screen size (Layout cell = CELLS.L*z px, Factory floor block cell = FC floor cells = FC*CELLS.F*z px)
   const o=V,n=v==="F"?VF:VL,pl=CELLS.L,pf=CELLS.F*FC,po=view==="F"?pf:pl,pn=v==="F"?pf:pl,cxc=(W/2-o.ox)/(po*o.z),cyc=(H/2-o.oy)/(po*o.z);
   n.z=o.z*po/pn;n.ox=W/2-cxc*pn*n.z;n.oy=H/2-cyc*pn*n.z;if(v==="F")VF.init=true;
@@ -173,10 +181,43 @@ function clipT(n,fl){   // clip mirrored (fl) then rotated n x 90deg clockwise, 
 }
 function paste(){
   if(!clip.length||isM(clip[0])!==(view==="F"))return;
-  active=null;sel=new Set();pasting={rot:0,fl:false};toast("Click to place, R rotates, V flips, Esc cancels");all();
+  active=null;mode=null;sel=new Set();pasting={rot:0,fl:false};toast("Click to place, R rotates, V flips, Esc cancels");all();
 }
 function pasteAt(){
   const nb=clipT(pasting.rot,pasting.fl).map(b=>({...b,id:uid++,mid:0,x:b.x+hover.x,y:b.y+hover.y,h:b.h+layer}));
   if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}
-  push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));pasting=null;all();
+  push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set();pasting=null;all();
 }
+// ---- modes: del = click or box deletes (X toggles); copy = box then paste like Ctrl+C; cfgcopy = click one machine; cfgpaste = box applies cfgClip to same-class machines
+function setMode(m){mode=m||null;if(mode){active=null;pasting=null}all()}
+function boxMode(m){   // a box drag ended inside a mode; each action is one undo step
+  if(m==="del"){if(sel.size)del();else all();return}
+  if(m==="copy"){mode=null;if(!sel.size)toast("Nothing selected to copy");copy();all();return}
+  if(m==="cfgpaste"){cfgApplyBox();all()}
+}
+const CFGK=["rec","recn","ct","off","fl","pr"];
+const cfgOf=b=>{const o={cls:b.cls};CFGK.forEach(k=>{if(b[k]!=null)o[k]=JSON.parse(JSON.stringify(b[k]))});return o};
+function cfgCopy(){
+  const bs=S.blocks.filter(b=>sel.has(b.id));
+  if(bs.length!==1||!isM(bs[0])){toast("Select one building to copy its config");return false}
+  cfgClip=cfgOf(bs[0]);toast("Config copied");all();return true;
+}
+function cfgPasteMode(){if(!cfgClip){toast("Copy a building's config first");return}setMode("cfgpaste");toast("Drag a box over buildings of the same type")}
+function cfgApplyBox(){
+  const ts=S.blocks.filter(b=>sel.has(b.id)&&isM(b)&&b.cls===cfgClip.cls);
+  toast(ts.length+" updated");
+  if(!ts.length)return;
+  push();ts.forEach(b=>CFGK.forEach(k=>{if(cfgClip[k]==null)delete b[k];else b[k]=JSON.parse(JSON.stringify(cfgClip[k]))}));sel=new Set(ts.map(b=>b.id));
+}
+// ---- right-click menu on an empty cell (built in JS so index.html stays untouched; CSS #ctx / .ctxi in style.css)
+let ctxEl=null;
+function hideCtx(){if(ctxEl)ctxEl.remove();ctxEl=null}
+function ctxOpen(x,y){
+  hideCtx();
+  const items=[["Delete mode",()=>setMode("del")],["Copy mode",()=>setMode("copy")],["Copy config mode",()=>setMode("cfgcopy")],["Paste mode",paste,!clip.length||isM(clip[0])!==(view==="F")],["Paste config mode",cfgPasteMode,!cfgClip]];
+  ctxEl=document.createElement("div");ctxEl.id="ctx";ctxEl.setAttribute("role","menu");
+  items.forEach(([t,f,off])=>{const b=document.createElement("button");b.className="ctxi";b.setAttribute("role","menuitem");b.textContent=t;b.disabled=!!off;b.onclick=()=>{hideCtx();f()};ctxEl.appendChild(b)});
+  document.body.appendChild(ctxEl);
+  ctxEl.style.left=Math.max(0,Math.min(x,innerWidth-ctxEl.offsetWidth-4))+"px";ctxEl.style.top=Math.max(0,Math.min(y,innerHeight-ctxEl.offsetHeight-4))+"px";
+}
+addEventListener("pointerdown",e=>{if(ctxEl&&!ctxEl.contains(e.target))hideCtx()},true);

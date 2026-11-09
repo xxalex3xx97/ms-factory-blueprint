@@ -14,10 +14,10 @@ try {
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
   await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href);
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
-  await pg.evaluate(() => document.getElementById('imp').click()); await pg.setInputFiles('#impFile', SAV); await pg.waitForSelector('#impSt:not([hidden])', {timeout: 60000});
-  await pg.selectOption('#impSt', {label: /Main Base/}.test ? undefined : undefined).catch(() => {});
-  const idx = await pg.$$eval('#impSt option', o => o.findIndex(x => /^Main Base/.test(x.textContent)));
-  await pg.selectOption('#impSt', String(Math.max(0, idx))); await pg.evaluate(() => document.getElementById('impGo').click());
+  await pg.evaluate(() => document.getElementById('impSav').click()); await pg.setInputFiles('#savFile', SAV); await pg.waitForSelector('#dSav[open]', {timeout: 60000});
+  await pg.selectOption('#savSt', {label: /Main Base/}.test ? undefined : undefined).catch(() => {});
+  const idx = await pg.$$eval('#savSt option', o => o.findIndex(x => /^Main Base/.test(x.textContent)));
+  await pg.selectOption('#savSt', String(Math.max(0, idx))); await pg.evaluate(() => document.getElementById('savGo').click());
   const st = () => pg.evaluate(() => JSON.stringify({z: V.z, ox: V.ox, oy: V.oy, W, H, cw: cv.width, ch: cv.height, view}));
   for (const v of ['L', 'F']) {
     await pg.evaluate(v => { __fb.setView(v); __fb.fit(); }, v);

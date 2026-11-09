@@ -24,25 +24,22 @@
       <button id="nw" role="menuitem" aria-label="New design and clear saved" title="Clear the autosaved design and start empty">New / Clear</button>
       <button id="fOpen" role="menuitem" aria-label="Open file" title="Open a .json file and keep it linked for Save">Open</button>
       <button id="fSaveAs" role="menuitem" aria-label="Save as" title="Save to a new file (Ctrl+Shift+S)">Save as</button>
-      <button id="imp" role="menuitem" aria-label="Import JSON">Import</button>
-      <button id="fShot" role="menuitem" title="Open the Screenshot panel (export PNG / SVG)">Screenshot…</button>
     </div></div>
+  </div>
+  <div class="grp">
+    <button id="impSav" class="imp-sav" aria-label="Import save" title="Import a Main Sequence save (*_S.sav) and pick a station"><span class="ic" aria-hidden="true">&#8681;</span><span class="tx">Import save</span></button>
+    <button id="imp" aria-label="Import JSON" title="Import a blueprint from JSON (paste or file)"><span class="tx">Import JSON</span></button>
+  </div>
+  <div class="grp">
     <button id="fSave" class="pri" aria-label="Save" title="Save to the opened file (Ctrl+S)">Save</button>
     <button id="exp" class="pri" aria-label="Export JSON">Export</button>
   </div>
   </div>
   <div class="tg" role="group" aria-label="Tools">
-    <button id="stB" class="hbt" aria-pressed="false" aria-controls="stW" aria-label="Settings" title="Settings"><span class="ic" aria-hidden="true">&#9881;</span><span class="tx">Settings</span></button>
-    <button id="shB" class="hbt" aria-pressed="false" aria-controls="shW" aria-label="Screenshot" title="Screenshot: export the plan as PNG or SVG"><span class="ic" aria-hidden="true">&#128247;</span><span class="tx">Screenshot</span></button>
-    <button id="lvB" class="hbt" aria-pressed="false" aria-controls="lvW" title="Level window (up/down, ghost levels)"><span class="tx">Level</span> <span id="lvN">1</span></button>
-    <button id="simB" class="hbt" aria-pressed="false" aria-controls="smW" title="Simulation window"><span class="ic" aria-hidden="true">&#9654;</span><span class="tx">Simulation</span></button>
-    <button id="flwB" class="hbt" aria-pressed="false" aria-controls="fwW" title="Flow window: links and bottlenecks"><span class="ic" aria-hidden="true">&#8644;</span><span class="tx">Flow</span></button>
-    <button id="thB" class="hbt" aria-pressed="false" aria-controls="dProd" title="Theoretical production: full speed, limited by belts"><span class="ic" aria-hidden="true">&#931;</span><span class="tx">Theoretical</span></button>
-    <button id="plnB" class="hbt" aria-label="Planner" title="Planner: target item, rate, machines and belts (schematic only)" aria-pressed="false"><span class="ic" aria-hidden="true">&#9638;</span><span class="tx">Planner</span></button>
+    <button id="winM" aria-pressed="false" aria-controls="wnW" title="Windows: Settings, Screenshot, Level, Flow, Simulation, Theoretical, Planner">Windows</button>
   </div>
   <div class="tg" role="group" aria-label="View"><span class="gl">View</span>
   <div class="grp seg" id="vw" role="group" aria-label="View level"><button id="vwL" class="on" aria-pressed="true" title="Block layout">Layout</button><button id="vwF" aria-pressed="false" title="Factory floor (F)"><span class="lg">Factory </span><span class="fl">floor</span> <kbd>F</kbd></button></div>
-  <button id="comp" title="Companion mod: Blueprint Unit builds this factory in the game (opens GitHub)" onclick="window.open('https://github.com/xxalex3xx97/MSBlueprintUnit','_blank','noopener')">Companion mod</button>
   <button id="help" aria-label="Help" title="Help: how to, controls, simulation rules, legend">?</button>
   </div>
 </header>
@@ -104,6 +101,18 @@
       </div>
     </div>
     <div id="fms">
+    <div id="wnW" class="fm" role="region" aria-labelledby="wnWT" hidden>
+      <div class="fmh"><h3 id="wnWT">Windows</h3><button id="wnWX" aria-label="Close windows" title="Close">&times;</button></div>
+      <div class="fmb" id="wnL">
+        <button id="stB" class="hbt" aria-pressed="false" aria-controls="stW" aria-label="Settings" title="Settings"><span class="ic" aria-hidden="true">&#9881;</span><span class="tx">Settings</span></button>
+        <button id="shB" class="hbt" aria-pressed="false" aria-controls="shW" aria-label="Screenshot" title="Screenshot: export the plan as PNG or SVG"><span class="ic" aria-hidden="true">&#128247;</span><span class="tx">Screenshot</span></button>
+        <button id="lvB" class="hbt" aria-pressed="false" aria-controls="lvW" title="Level window (up/down, ghost levels)"><span class="tx">Level</span> <span id="lvN">1</span></button>
+        <button id="flwB" class="hbt" aria-pressed="false" aria-controls="fwW" title="Flow window: links and bottlenecks"><span class="ic" aria-hidden="true">&#8644;</span><span class="tx">Flow</span></button>
+        <button id="simB" class="hbt" aria-pressed="false" aria-controls="smW" title="Simulation window"><span class="ic" aria-hidden="true">&#9654;</span><span class="tx">Simulation</span></button>
+        <button id="thB" class="hbt" aria-pressed="false" aria-controls="dProd" title="Theoretical production: full speed, limited by belts"><span class="ic" aria-hidden="true">&#931;</span><span class="tx">Theoretical</span></button>
+        <button id="plnB" class="hbt" aria-label="Planner" title="Planner: target item, rate, machines and belts (schematic only)" aria-pressed="false"><span class="ic" aria-hidden="true">&#9638;</span><span class="tx">Planner</span></button>
+      </div>
+    </div>
     <div id="stW" class="fm" role="region" aria-labelledby="stWT" hidden>
       <div class="fmh"><h3 id="stWT">Settings</h3><button id="stWX" aria-label="Close settings" title="Close">&times;</button></div>
       <div class="fmb">
@@ -140,7 +149,7 @@
     <div id="fwW" class="fm" role="region" aria-labelledby="fwWT" hidden>
       <div class="fmh"><h3 id="fwWT">Flow</h3><button id="fwWX" aria-label="Close flow" title="Close">&times;</button></div>
       <div class="fmb">
-        <div class="chips" id="lkg" role="group" aria-label="Flow overlays"><button id="lk" class="on" aria-pressed="true" title="Informational link overlay (no rules, nothing blocked). Machine&lt;-&gt;belt marker = an ENABLED port faces a belt cell (disabled port = no link, faint red tick); input/output direction is unknown, so it is undirected. Ports: layout inferred from screenshots, not verified vs game data. Arrows = belt flow; green thick = T-join merge; dashed = underground pair.">Links</button><button id="bn" aria-pressed="false" title="Bottlenecks: belt load = items/min passing / belt capacity. Links on: gradient on the flow arrows; links off: belt cells are coloured. While a simulation has run, colours use the simulated values, otherwise the planning estimate. Informational only.">Bottlenecks</button><button id="bnF" aria-pressed="false" disabled title="Flow: grey (no flow) to green (full capacity). Uses simulated load once the simulation has run.">Flow</button><button id="bnB" class="on" aria-pressed="true" disabled title="Blockage: green up to capacity, red when over capacity (simulation: or when the belt chain is full/blocked)">Blockage</button></div>
+        <div class="chips" id="lkg" role="group" aria-label="Flow overlays"><button id="lk" aria-pressed="false" title="Informational link overlay (no rules, nothing blocked). Machine&lt;-&gt;belt marker = an ENABLED port faces a belt cell (disabled port = no link, faint red tick); input/output direction is unknown, so it is undirected. Ports: layout inferred from screenshots, not verified vs game data. Arrows = belt flow; green thick = T-join merge; dashed = underground pair.">Links</button><button id="bn" aria-pressed="false" title="Bottlenecks: belt load = items/min passing / belt capacity. Links on: gradient on the flow arrows; links off: belt cells are coloured. While a simulation has run, colours use the simulated values, otherwise the planning estimate. Informational only.">Bottlenecks</button><button id="bnF" aria-pressed="false" disabled title="Flow: grey (no flow) to green (full capacity). Uses simulated load once the simulation has run.">Flow</button><button id="bnB" class="on" aria-pressed="true" disabled title="Blockage: green up to capacity, red when over capacity (simulation: or when the belt chain is full/blocked)">Blockage</button></div>
       </div>
     </div>
     </div>
@@ -186,10 +195,16 @@
 </dialog>
 <dialog id="dImp" aria-labelledby="dImpT">
   <h3 id="dImpT">Import JSON</h3>
-  <p class="sub">Replaces the current blueprint (undoable). Paste JSON, choose a file, or choose a Main Sequence save (*_S.sav) and pick a player station.</p>
+  <p class="sub">Replaces the current blueprint (undoable). Paste JSON or choose a .json file.</p>
   <textarea id="impTa" aria-label="JSON to import" placeholder='{"Version":1,"Blocks":[...]}'></textarea>
-  <select id="impSt" hidden aria-label="Station to import"></select>
-  <div class="btns"><input id="impFile" type="file" accept=".json,.sav,application/json" aria-label="Choose JSON or save file" style="width:auto"><button id="impGo" class="pri">Import</button><button id="impX">Cancel</button></div>
+  <div class="btns"><input id="impFile" type="file" accept=".json,application/json" aria-label="Choose JSON file" style="width:auto"><button id="impGo" class="pri">Import</button><button id="impX">Cancel</button></div>
+</dialog>
+<input id="savFile" type="file" accept=".sav" hidden aria-label="Choose Main Sequence save (*_S.sav)">
+<dialog id="dSav" aria-labelledby="dSavT">
+  <h3 id="dSavT">Import save</h3>
+  <p class="sub">Pick a player station from the save. Replaces the current blueprint (undoable).</p>
+  <select id="savSt" aria-label="Station to import"></select>
+  <div class="btns"><button id="savGo" class="pri">Import</button><button id="savX">Cancel</button></div>
 </dialog>
 <div id="toast" role="status"></div>
 

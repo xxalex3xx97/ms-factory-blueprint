@@ -37,7 +37,11 @@ function wire(pg, tag) {
   // index.html places a menu once, at open; after Simulate is switched on inside Floor tools the list
   // grows past the viewport edge. A control there is reached the way a user would: close and reopen.
   const rawClick = pg.click.bind(pg);
+  // Windows panel (#wnW, header #winM): the window toggles (#lvB #flwB #simB ...) live inside it; open it like a user would
+  const wnEnsure = async sel => { if (await pg.evaluate(s => { const e = document.querySelector(s); return !!e && !!e.closest('#wnL') && document.getElementById('wnW').hidden; }, sel)) { await rawClick('#winM'); wnOpened = true; } };
+  let wnOpened = false;   // panel opened by the helper for this action: closed again afterwards (old menus auto-closed; an open panel would shift/cover the other windows)
   const reveal = async sel => {
+    await wnEnsure(sel);
     const m = await pg.evaluate(s => {
       const el = document.querySelector(s), shown = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
       if (!el) return null;
@@ -53,13 +57,14 @@ function wire(pg, tag) {
       return {btn: '#' + btn.id, list: '#' + list.id, reopen: !list.hidden};
     }, sel);
     if (!m) return;
+    await wnEnsure(m.btn);
     if (m.reopen) { await rawClick(m.btn); MENU_NOTE++; }   // close the open menu first
     await rawClick(m.btn);
     await pg.waitForFunction(l => !document.querySelector(l).hidden, m.list);
   };
   for (const k of ['click', 'check', 'uncheck']) {
     const f = pg[k].bind(pg);
-    pg[k] = async (sel, ...a) => { await reveal(sel); return f(sel, ...a); };
+    pg[k] = async (sel, ...a) => { wnOpened = false; await reveal(sel); const r = await f(sel, ...a); if (wnOpened) { wnOpened = false; await pg.evaluate(() => { const w = document.getElementById('wnW'); if (!w.hidden) document.getElementById('wnWX').click(); }); } return r; };
   }
 }
 async function open(br, vp, tag) {
@@ -68,11 +73,14 @@ async function open(br, vp, tag) {
   wire(pg, tag);
   await pg.goto(PAGE);
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  await lkOn(pg);
+  await pg.evaluate(() => { $('lvWX').click(); $('fwWX').click(); });   // default windows (Flow, and Level with 2+ levels) start open; old tests assume closed
   return {ctx, pg};
 }
 
 // ---- blueprint builders (importJson input = build() output format)
 let C, BMAP, BLK;
+const lkOn = p => p.evaluate(() => { LK = true; $('lk').classList.add('on'); $('lk').setAttribute('aria-pressed', 'true'); });   // flow links default off; the suite predates that
 const mclass = id => BMAP[id].machineClass || id;
 const mac = (id, x, y, o = {}) => ({
   Class: mclass(id), DefaultName: id,
@@ -84,7 +92,7 @@ const blk = (name, x, y, o = {}) => ({
   Class: BLK[name], GridLocation: {X: x * 2, Y: y * 2}, Height: o.h || 0, GridRotation: o.rot || 0, BlockID: 0, PaletteID: 0,
 });
 const bp = (Blocks = [], DefaultMachines = [], extra = {}) => ({Version: 1, DisplayName: 't', Blocks, DefaultMachines, ...extra});
-const imp = (pg, obj) => pg.evaluate(t => __fb.importJson(t), JSON.stringify(obj));
+const imp = async (pg, obj) => { const ok = await pg.evaluate(t => __fb.importJson(t), JSON.stringify(obj)); await pg.evaluate(() => { if (!$('lvW').hidden) $('lvWX').click(); }); return ok; };   // import opens Level for 2+ levels; old tests assume closed
 const reset = async pg => { await imp(pg, bp()); await pg.evaluate(() => __fb.setView('L')); };
 function firstDiff(a, b) {
   const x = JSON.stringify(a, null, 1), y = JSON.stringify(b, null, 1);
@@ -212,8 +220,8 @@ async function s3(pg, C) {
   await pg.evaluate(() => { __fb.setView('F'); __fb.click(5, 5); });
   const txt = await pg.locator('#insp').textContent();
   chk('Assembler selected -> #insp contains "Recipes (17)"', txt.includes('Recipes (17)'), txt.slice(0, 200));
-  const nIc = await pg.locator('#insp .rec img.ic').count();
-  chk('#insp .rec img.ic count > 0', nIc > 0, `count ${nIc}`);
+  const nIc = await pg.locator('#insp .rtile img.ic').count();
+  chk('#insp .rtile img.ic count > 0', nIc > 0, `count ${nIc}`);
 }
 
 // ================= 4. doors / floors / elevator
@@ -581,15 +589,15 @@ async function s8(pg, C) {
   chk('unknown Recipe key survives roundtrip', (await pg.evaluate(() => __fb.build().DefaultMachines[0].Recipe))==='ITEM_X>ITEM_Y');
   await imp(pg, bp([], [mac('DAT_Refinery', 3, 3, {mid: 1})]));
   await pg.evaluate(() => { __fb.setView('F'); __fb.click(4, 4); });
-  const nRec = await pg.locator('#insp .rec[data-rk]').count();
-  chk('selected Refinery: clickable recipes with icons (count = Refinery recipe count)', nRec>0 && (await pg.locator('#insp .rec[data-rk] img.ic').count())>0, 'count '+nRec);
-  await pg.locator(`#insp .rec[data-rk="${KEY}"]`).click();
+  const nRec = await pg.locator('#insp .rtile[data-rk]').count();
+  chk('selected Refinery: clickable recipes with icons (count = Refinery recipe count)', nRec>0 && (await pg.locator('#insp .rtile[data-rk] img.ic').count())>0, 'count '+nRec);
+  await pg.locator(`#insp .rtile[data-rk="${KEY}"]`).click();
   chk('click recipe -> export has Recipe', (await pg.evaluate(() => __fb.build().DefaultMachines[0].Recipe))===KEY);
   const it = await pg.locator('#insp').textContent();
   chk('inspector shows Rates, 20/min, saturation Mk1 60/min = 3, time 3 s, no unverified flag', it.includes('Rates') && it.includes('20/min') && it.includes('Mk1 60/min = 3') && it.includes('3 s') && !/unverified/.test(it), it.slice(0,300));
-  await pg.locator(`#insp .rec[data-rk="${KEY}"]`).click();
+  await pg.locator(`#insp .rtile[data-rk="${KEY}"]`).click();
   chk('click selected recipe again clears it', (await pg.evaluate(() => __fb.build().DefaultMachines[0].Recipe))===undefined);
-  await pg.locator(`#insp .rec[data-rk="${KEY}"]`).click();
+  await pg.locator(`#insp .rtile[data-rk="${KEY}"]`).click();
   await pg.locator('#bRecClr').click();
   chk('Clear recipe button clears it', (await pg.evaluate(() => __fb.build().DefaultMachines[0].Recipe))===undefined);
   // belt next to the Refinery's first enabled port, then select the belt: Belt rate section
@@ -866,6 +874,7 @@ async function s12(br) {
   const offReq = []; po.on('request', r => offReq.push(r.url()));
   await po.goto(PAGE);
   await po.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  await lkOn(po);
   await po.evaluate(t => __fb.importJson(t), JSON.stringify(bp([st], [mac('DAT_Refinery', 10, 22, {mid: 1, rec: KC})])));
   await po.evaluate(() => __fb.setView('F'));
   await po.click('#bn'); await po.click('#lk');
@@ -2577,6 +2586,43 @@ async function s26(br) {
   await ctx.close();
 }
 
+// ================= 36 default windows: boot opens Flow (LK off); Level opens after a 2+ level import and at boot with 2+ levels
+async function s36(br) {
+  const ctx = await br.newContext({viewport: {width: 1400, height: 900}});   // fresh context: no saved state
+  const pg = await ctx.newPage();
+  wire(pg, 's36');
+  await pg.goto(PAGE);
+  await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  const ws = () => pg.evaluate(() => ({fw: $('fwW').hidden, lv: $('lvW').hidden, fwP: $('flwB').getAttribute('aria-pressed'), lvP: $('lvB').getAttribute('aria-pressed'), lk: $('lk').getAttribute('aria-pressed')}));
+  const d0 = await ws();
+  chk('36 boot, no saved state: Flow window open, #flwB pressed', !d0.fw && d0.fwP === 'true', JSON.stringify(d0));
+  chk('36 boot, no saved state: Level closed (empty design)', d0.lv && d0.lvP === 'false', JSON.stringify(d0));
+  chk('36 boot: flow links (LK) off by default', d0.lk === 'false', JSON.stringify(d0));
+  const P = '/Game/Blueprints/BuildingBlocks/';
+  const B = (n, X, Y, h, r) => ({Class: `${P}${n}.${n}_C`, GridLocation: {X, Y}, Height: h, GridRotation: r, BlockID: 1, PaletteID: 0});
+  const impB = blocks => pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: blocks, DefaultMachines: []}));
+  const two = [B('BPO_Station_01', 2, 2, 0, 0), B('BPO_Station_01', 14, 10, -4, 0)];
+  await impB(two);
+  const a = await ws();
+  chk('36 import of a 2-level design opens Level', !a.lv && a.lvP === 'true', JSON.stringify(a));
+  await pg.evaluate(() => $('lvWX').click());
+  await impB([B('BPO_Station_01', 2, 2, 0, 0)]);
+  const b1 = await ws();
+  chk('36 import of a 1-level design leaves Level closed', b1.lv, JSON.stringify(b1));
+  // boot with a saved design (2 levels) but no window state: boot defaults apply (Flow + Level open)
+  await impB(two);
+  await pg.evaluate(() => { const d = __fb.build(); ASO = false; localStorage.setItem('msfb.state', JSON.stringify({v: 2, d, u: {}})); });   // ASO=false: pagehide must not overwrite the seeded state
+  await pg.reload(); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await pg.waitForTimeout(300);
+  const c = await ws();
+  chk('36 boot with 2-level design and no window state: Level and Flow open', !c.lv && !c.fw, JSON.stringify(c));
+  // saved window state wins over boot defaults
+  await pg.evaluate(() => { const o = JSON.parse(localStorage.getItem('msfb.state')); o.u.w = {st: false, lv: false, fw: false, sh: false}; ASO = false; localStorage.setItem('msfb.state', JSON.stringify(o)); });
+  await pg.reload(); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await pg.waitForTimeout(300);
+  const e = await ws();
+  chk('36 boot with saved window state: saved states used (Level and Flow closed)', e.lv && e.fw, JSON.stringify(e));
+  await ctx.close();
+}
+
 // ================= 27 Industrial Dock real shape: shapeTf per rot, Layout + Factory floor paint (screenshots)
 async function s27(br) {
   const {ctx, pg} = await open(br, {width: 1000, height: 700}, 's27');
@@ -3389,7 +3435,7 @@ async function s35(br) {
   chk('35 starved refinery (no input) -> 0', z === 0, String(z));
   // UI: two windows. #thB -> #dTheo (sim off); #prodB -> #dProd (sim on). Independent.
   await scene(pg, INF);
-  chk('35 Theoretical button visible with sim off', await pg.isVisible('#thB'));
+  await pg.click('#winM'); chk('35 Theoretical button visible (Windows panel open) with sim off', await pg.isVisible('#thB')); await pg.click('#winM');
   await pg.click('#thB');
   chk('35 #thB opens #dTheo with title Theoretical production', await pg.isVisible('#dTheo') && (await pg.innerText('#dTheoT')) === 'Theoretical production');
   chk('35 #thB leaves #dProd hidden (separate window), aria-pressed true', !(await pg.isVisible('#dProd')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'true');
@@ -3444,6 +3490,296 @@ async function s35(br) {
   await bm.ctx.close();
 }
 
+// ---- slice B: refresh restores window states, the imported .sav (IndexedDB) and its station picker
+async function s25b(br) {
+  const SAVF = 'C:/Users/SFidelis/AppData/Local/MainSequence/Saved/SaveGames/blueprint module-Autosave_S.sav';
+  const {ctx, pg} = await open(br, {width: 1400, height: 900}, 's25b');
+  const again = async () => { await pg.reload(); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await pg.waitForTimeout(1000); };
+  await pg.evaluate(() => { if (!$('fwW').hidden) $('flwB').click(); if ($('stW').hidden) $('stB').click(); asvNow(); });
+  await again();
+  const w = await pg.evaluate(() => ({fw: $('fwW').hidden, st: $('stW').hidden}));
+  chk('25b refresh: window states restored (Flow closed, Settings open)', w.fw === true && w.st === false, JSON.stringify(w));
+  if (fs.existsSync(SAVF)) {
+    const n = await pg.evaluate(b => { const u = Uint8Array.from(atob(b), c => c.charCodeAt(0)); return __fb.parseSav(u.buffer).length; }, fs.readFileSync(SAVF).toString('base64'));
+    await pg.setInputFiles('#savFile', SAVF);
+    if (n > 1) { await pg.waitForSelector('#dSav[open]'); await pg.selectOption('#savSt', '1'); await pg.click('#savGo'); }
+    else await pg.waitForTimeout(500);
+    await pg.waitForTimeout(300);
+    const before = await pg.evaluate(() => ({n: S.name, b: S.blocks.length}));
+    await pg.evaluate(() => asvNow());
+    await pg.waitForTimeout(300);
+    await again();
+    const after = await pg.evaluate(async () => ({n: S.name, b: S.blocks.length, stG: !$('stG').hidden, sel: $('stSel').value, idb: !!(await idbGet('sav'))}));
+    chk('25b refresh: same design after reload (name + block count)', after.n === before.n && after.b === before.b && after.b > 0, JSON.stringify({before, after}));
+    if (n > 1) chk('25b refresh: station picker shows station 1 after reload', after.stG && after.sel === '1', JSON.stringify(after));
+    chk('25b refresh: imported save kept in IndexedDB (msfb/kv sav)', after.idb);
+  }
+  await ctx.close();
+}
+
+// ================= 37 header, import buttons, default windows, refresh restore, New/Clear (header/import/restore brief)
+async function s37(br) {
+  const SAVF = 'C:/Users/SFidelis/Downloads/Discovery Next 20261108-2121_S.sav';
+  const JSONF = 'C:/Users/SFidelis/Downloads/Beta_Honor_3_Central.json';
+  if (!fs.existsSync(SAVF) || !fs.existsSync(JSONF)) { chk('37 fixtures present (Downloads: Discovery Next _S.sav, Beta_Honor_3_Central.json)', false, SAVF); return; }
+  const jsonObj = JSON.parse(fs.readFileSync(JSONF, 'utf8'));
+  const levelsOf = blocks => new Set(blocks.map(b => b.Height)).size;
+  const ready = async pg => { await pg.goto(PAGE); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await pg.waitForTimeout(300); };
+  const again = async pg => { await pg.reload(); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await pg.waitForTimeout(1000); };
+  const wins = pg => pg.evaluate(() => ({fw: $('fwW').hidden, lv: $('lvW').hidden, st: $('stW').hidden, fwP: $('flwB').getAttribute('aria-pressed'), lvP: $('lvB').getAttribute('aria-pressed'), lk: $('lk').getAttribute('aria-pressed')}));
+  const savB64 = fs.readFileSync(SAVF).toString('base64');
+
+  // ---- context A, 1400px: header buttons, File menu, default windows (fresh storage)
+  const ctx = await br.newContext({viewport: {width: 1400, height: 900}, acceptDownloads: true});
+  const pg = await ctx.newPage();
+  wire(pg, 's37');
+  await ready(pg);
+  const d0 = await wins(pg);
+  chk('37 boot, no saved state: Windows panel (#wnW) closed, #winM not pressed', await pg.evaluate(() => $('wnW').hidden && $('winM').getAttribute('aria-pressed') === 'false'));
+  chk('37 boot, no saved state: Flow window open (#flwB pressed), Level closed, link overlay off (#lk)', !d0.fw && d0.fwP === 'true' && d0.lv && d0.lvP === 'false' && d0.lk === 'false', JSON.stringify(d0));
+  const hd = await pg.evaluate(() => {
+    const bb = id => { const b = $(id).getBoundingClientRect(); return {w: Math.round(b.width), h: Math.round(b.height), x: Math.round(b.left), r: Math.round(b.right)}; };
+    const cs = getComputedStyle($('impSav'));
+    return {sav: bb('impSav'), imp: bb('imp'), savTx: $('impSav').querySelector('.tx').textContent.trim(), impTx: $('imp').querySelector('.tx').textContent.trim(), bg: cs.backgroundColor, fg: cs.color,
+      fileIds: [...$('fileL').querySelectorAll('button')].map(b => b.id), fileImp: !!$('fileL').querySelector('#imp,#impSav')};
+  });
+  chk('37 header has "Import save" button, visible at 1400px', hd.sav.w > 0 && hd.savTx === 'Import save', JSON.stringify(hd.sav));
+  chk('37 header has "Import JSON" button, visible and separate from Import save', hd.imp.w > 0 && hd.impTx === 'Import JSON' && hd.imp.x !== hd.sav.x, JSON.stringify([hd.sav, hd.imp]));
+  const ok = hd.bg.match(/oklch\(([\d.]+)\s+([\d.]+)\s+([\d.]+)/), amber = !!ok && +ok[1] > 0.7 && +ok[2] > 0.08 && +ok[3] >= 55 && +ok[3] <= 100;   // amber = light, saturated, hue ~80
+  chk('37 Import save is a colored (amber) button', amber, `bg ${hd.bg} fg ${hd.fg}`);
+  chk('37 File menu has no import item at 1400px (New, Open, Save as)', !hd.fileImp && hd.fileIds.join(',') === 'nw,fOpen,fSaveAs', hd.fileIds.join(','));
+  const helpLink = await pg.evaluate(() => !!$('dHelp').querySelector('a[href*="MSBlueprintUnit"]'));
+  chk('37 Companion mod link: moved to ? (help dialog) after leaving the File menu', helpLink);
+
+  // header fits at 1400 / 900 / 390: no horizontal overflow, nothing outside the viewport
+  for (const vp of [{width: 1400, height: 900}, {width: 900, height: 700}, {width: 390, height: 844}]) {
+    await pg.setViewportSize(vp); await pg.waitForTimeout(300);
+    const o = await pg.evaluate(() => {
+      const h = document.querySelector('header'), vw = innerWidth, out = [];
+      h.querySelectorAll('button,select,input').forEach(e => { const b = e.getBoundingClientRect(); if (b.width > 0 && b.height > 0 && !e.closest('.mnl') && (b.right > vw + 1 || b.left < -1)) out.push(e.id || e.className); });
+      return {hsw: h.scrollWidth, hcw: h.clientWidth, dsw: document.documentElement.scrollWidth, vw, out, sav: $('impSav').getBoundingClientRect().width > 0};
+    });
+    chk(`37 header: no horizontal overflow at ${vp.width}px`, o.hsw <= o.hcw + 1 && o.dsw <= o.vw && o.out.length === 0, JSON.stringify(o));
+    if (vp.width === 390) {
+      chk('37 390px: Import save still visible in header', o.sav);
+      const f390 = await pg.evaluate(() => !!$('fileL').querySelector('#imp'));
+      chk('37 390px: Import JSON lives in the File menu (narrow header; both Import buttons visible above 1100px)', !!f390, 'Import JSON missing from File menu at <=1100px');
+    }
+  }
+  await pg.setViewportSize({width: 1400, height: 900}); await pg.waitForTimeout(200);
+
+  // JSON import: Import JSON -> file -> Import
+  await pg.click('#imp');
+  await pg.setInputFiles('#impFile', JSONF);
+  await pg.waitForFunction(() => $('impTa').value.trim().startsWith('{'));
+  await pg.click('#impGo');
+  await pg.waitForFunction(() => !$('dImp').open);
+  const j1 = await pg.evaluate(() => ({n: S.blocks.length, lv: $('lvW').hidden}));
+  const jb = await pg.evaluate(() => __fb.build().Blocks.length);
+  chk(`37 JSON import (Import JSON -> file -> Import) applies the blueprint (${jsonObj.Blocks.length} blocks)`, jb === jsonObj.Blocks.length, `build() blocks ${jb}, json ${jsonObj.Blocks.length}`);
+  chk(`37 JSON import: Level window ${levelsOf(jsonObj.Blocks) >= 2 ? 'opens' : 'stays closed'} (${levelsOf(jsonObj.Blocks)} levels)`, (levelsOf(jsonObj.Blocks) >= 2) === !j1.lv, JSON.stringify(j1));
+
+  // .sav import: Import save -> file chooser -> station dialog -> Import
+  const l = await pg.evaluate(b => __fb.parseSav(Uint8Array.from(atob(b), c => c.charCodeAt(0)).buffer).map(s => ({name: s.name, n: s.json.Blocks.length, lv: new Set(s.json.Blocks.map(x => x.Height)).size})), savB64);
+  const pick = l.reduce((bi, s, i) => (s.lv > l[bi].lv ? i : bi), 0);
+  const [fc] = await Promise.all([pg.waitForEvent('filechooser'), pg.click('#impSav')]);
+  chk('37 Import save button opens a file chooser', !!fc);
+  await fc.setFiles(SAVF);
+  if (l.length > 1) {
+    await pg.waitForSelector('#dSav[open]', {timeout: 60000});
+    const opts = await pg.evaluate(() => document.querySelectorAll('#savSt option').length);
+    chk(`37 .sav import: station dialog lists ${l.length} stations`, opts === l.length, `options ${opts}`);
+    await pg.selectOption('#savSt', String(pick));
+    await pg.click('#savGo');
+    await pg.waitForFunction(() => !$('dSav').open, null, {timeout: 60000});
+  }
+  await pg.waitForTimeout(800);
+  const s1 = await pg.evaluate(() => ({n: S.blocks.length, name: $('name').value, lv: $('lvW').hidden, stG: !$('stG').hidden, sel: $('stSel').value}));
+  chk(`37 .sav import: station "${l[pick].name}" applied (name field, ${l[pick].n} json blocks)`, s1.name === l[pick].name && s1.n > 0, JSON.stringify(s1));
+  chk(`37 .sav import: Level window ${l[pick].lv >= 2 ? 'opens' : 'stays closed'} (${l[pick].lv} levels)`, (l[pick].lv >= 2) === !s1.lv, JSON.stringify(s1));
+  chk('37 .sav import: station selector shown with the picked station', s1.stG === (l.length > 1) && (l.length === 1 || s1.sel === String(pick)), JSON.stringify(s1));
+
+  // refresh: same design, layer, zoom/pan (both views), window states, station
+  const hs = await pg.evaluate(() => [...new Set(S.blocks.map(b => b.h))].sort((a, b) => a - b));
+  await pg.evaluate(hs => {
+    setLayer(hs[hs.length - 1]); setView('F'); VF.ox = 111; VF.oy = 77; VF.z = 1.3; VF.init = true;
+    setView('L'); VL.ox = 222; VL.oy = 133; VL.z = 1.6; all();
+  }, hs);
+  await pg.click('#fwWX');   // close Flow (default open)
+  await pg.click('#stB');    // open Settings (Windows menu)
+  await pg.evaluate(() => asvNow());
+  await pg.waitForTimeout(300);
+  const snap = () => pg.evaluate(async () => ({design: build(), view, layer, VL: {ox: VL.ox, oy: VL.oy, z: VL.z}, VF: {ox: VF.ox, oy: VF.oy, z: VF.z},
+    w: {fw: $('fwW').hidden, lv: $('lvW').hidden, st: $('stW').hidden}, stG: !$('stG').hidden, sel: $('stSel').value, idb: !!(await idbGet('sav'))}));
+  const before = await snap();
+  await again(pg);
+  const after = await snap();
+  chk('37 refresh: same blueprint (build() deep equal)', isDeepStrictEqual(before.design, after.design), `blocks ${before.design.Blocks.length} vs ${after.design.Blocks.length}`);
+  chk('37 refresh: same view and level (Layout, same layer)', after.view === before.view && after.view === 'L' && after.layer === before.layer, JSON.stringify([before.view, before.layer, after.view, after.layer]));
+  chk('37 refresh: same zoom and pan (Layout and floor)', JSON.stringify(after.VL) === JSON.stringify(before.VL) && JSON.stringify(after.VF) === JSON.stringify(before.VF), JSON.stringify({before: [before.VL, before.VF], after: [after.VL, after.VF]}));
+  chk('37 refresh: same windows (Flow closed, Level and Settings as before)', JSON.stringify(after.w) === JSON.stringify(before.w) && after.w.fw && !after.w.st, JSON.stringify(after.w));
+  chk('37 refresh: same station (selector shown, same station index)', after.stG === before.stG && (l.length === 1 || (after.stG && after.sel === String(pick))), JSON.stringify({stG: after.stG, sel: after.sel, pick}));
+  chk('37 refresh: .sav kept in IndexedDB (msfb/kv sav)', after.idb);
+
+  // New / Clear: clears design, saved state, station selector and the stored .sav
+  pg.removeAllListeners('dialog'); pg.on('dialog', d => d.accept().catch(() => {}));
+  await pg.click('#nw');
+  await pg.waitForTimeout(300);
+  const nwS = await pg.evaluate(async () => ({n: S.blocks.length, ls: localStorage.getItem(ASK), stG: $('stG').hidden, idb: !!(await idbGet('sav'))}));
+  chk('37 New/Clear: design and saved state cleared (blocks 0, msfb.state removed, station selector hidden)', nwS.n === 0 && nwS.ls === null && nwS.stG, JSON.stringify(nwS));
+  chk('37 New/Clear: stored .sav removed from IndexedDB', !nwS.idb, 'msfb/kv "sav" still present after New');
+  await again(pg);
+  const nwR = await pg.evaluate(() => ({n: S.blocks.length, stG: $('stG').hidden}));
+  chk('37 New/Clear then refresh: nothing restored (empty design, no station selector)', nwR.n === 0 && nwR.stG, JSON.stringify(nwR));
+  await ctx.close();
+
+  // ---- screenshots: imported 2-level .sav design, Level + Flow open (1400 and 390)
+  for (const vp of [{width: 1400, height: 900, tag: '1400'}, {width: 390, height: 844, tag: '390'}]) {
+    const c2 = await br.newContext({viewport: {width: vp.width, height: vp.height}});
+    const p2 = await c2.newPage();
+    wire(p2, 's37shot' + vp.tag);
+    await ready(p2);
+    await p2.setInputFiles('#savFile', SAVF);
+    if (l.length > 1) { await p2.waitForSelector('#dSav[open]', {timeout: 60000}); await p2.selectOption('#savSt', String(pick)); await p2.click('#savGo'); }
+    await p2.waitForTimeout(800);
+    if (await p2.evaluate(() => $('fwW').hidden)) await p2.click('#flwB');
+    if (await p2.evaluate(() => $('lvW').hidden)) await p2.click('#lvB');
+    await p2.waitForTimeout(500);
+    const ov = await p2.evaluate(() => {
+      const h = document.querySelector('header'), vw = innerWidth, out = [];
+      h.querySelectorAll('button,select,input').forEach(e => { const b = e.getBoundingClientRect(); if (b.width > 0 && b.height > 0 && !e.closest('.mnl') && (b.right > vw + 1 || b.left < -1)) out.push(e.id || e.className); });
+      return {hsw: h.scrollWidth, hcw: h.clientWidth, vw, out, savVisible: $('impSav').getBoundingClientRect().right <= vw};
+    });
+    chk(`37 header with imported 2-level design fits ${vp.tag}px (no overflow, Import save in view)`, ov.hsw <= ov.hcw + 1 && ov.out.length === 0 && ov.savVisible, JSON.stringify(ov));
+    const open = await p2.evaluate(() => ({fw: !$('fwW').hidden, lv: !$('lvW').hidden}));
+    chk(`37 screenshot ${vp.tag}px: Level and Flow open`, open.fw && open.lv, JSON.stringify(open));
+    await p2.screenshot({path: path.join(SHOTS, `s37-full-${vp.tag}.png`)});
+    // Windows panel: one header toggle (#winM) opens a floating panel (#wnW) with all window toggles; Level/Flow no longer in the header
+    await p2.click('#winM');
+    const pw = await p2.evaluate(() => ({vis: !$('wnW').hidden, pr: $('winM').getAttribute('aria-pressed'), ids: [...$('wnL').querySelectorAll('button')].map(b => b.id), lvN: $('lvN').textContent.trim(), inLv: $('lvB').contains($('lvN')), sw: document.documentElement.scrollWidth, iw: innerWidth, r: Math.round($('wnW').getBoundingClientRect().right), hdr: !!document.querySelector('header #lvB, header #flwB, header #winL')}));
+    chk(`37 ${vp.tag}px: #winM opens the Windows panel (aria-pressed), lists the 7 window toggles, #lvN in the Level entry`, pw.vis && pw.pr === 'true' && ['stB', 'shB', 'lvB', 'flwB', 'simB', 'thB', 'plnB'].every(i => pw.ids.includes(i)) && pw.inLv && /^\d+$/.test(pw.lvN) && !pw.hdr, JSON.stringify(pw));
+    chk(`37 ${vp.tag}px: Windows panel open, no horizontal page overflow, panel inside the viewport`, pw.sw <= pw.iw && pw.r <= pw.iw, JSON.stringify(pw));
+    await p2.screenshot({path: path.join(SHOTS, `s37-windows-open-${vp.tag}.png`)});
+    await p2.evaluate(() => asvNow()); await p2.waitForTimeout(2500);   // a 5MB IndexedDB write needs time to land before the reload (users refresh after the 400ms debounce)
+    await p2.reload(); await p2.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await p2.waitForFunction(() => ASO === true, null, {timeout: 60000}); await p2.waitForTimeout(300);   // big design: restore is async (IndexedDB read + import)
+    chk(`37 ${vp.tag}px: Windows panel open state restored on refresh (autosaved)`, await p2.evaluate(() => !$('wnW').hidden && $('winM').getAttribute('aria-pressed') === 'true'));
+    await p2.click('#winM');
+    chk(`37 ${vp.tag}px: #winM toggles the panel closed`, await p2.evaluate(() => $('wnW').hidden && $('winM').getAttribute('aria-pressed') === 'false'));
+    await p2.locator('header').screenshot({path: path.join(SHOTS, `s37-header-${vp.tag}.png`)});
+    await c2.close();
+  }
+}
+
+// ================= 38 delete mode, config copy/paste, context menu, no auto-select
+async function s38(br) {
+  const ctx = await br.newContext({viewport: {width: 1400, height: 900}, acceptDownloads: true});
+  const pg = await ctx.newPage();
+  wire(pg, 's38');
+  await pg.goto(PAGE);
+  await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  await pg.waitForTimeout(300);
+  await reset(pg);
+  await pg.evaluate(() => { STRICT = false; __fb.setView('F'); __fb.fit(); });
+  const MACH = 'DAT_Refinery', SPL = 'DAT_Splitter', BELT = 'DAT_ConveyorBelt3';
+  const px = (x, y) => pg.evaluate(([x, y]) => __fb.px(x, y), [x, y]);
+  const clickAt = async a => { const [x, y] = await px(a[0], a[1]); await pg.mouse.move(x, y); await pg.mouse.down(); await pg.mouse.up(); };
+  const rightAt = async a => { const [x, y] = await px(a[0], a[1]); await pg.mouse.move(x, y); await pg.mouse.down({button: 'right'}); await pg.mouse.up({button: 'right'}); };
+  const boxAt = async (a, b, shot) => { const [x0, y0] = await px(a[0], a[1]), [x1, y1] = await px(b[0], b[1]); await pg.mouse.move(x0, y0); await pg.mouse.down(); await pg.mouse.move(x1, y1, {steps: 6}); if (shot) await pg.screenshot({path: path.join(SHOTS, shot)}); await pg.mouse.up(); };
+  const place = (cls, a) => pg.evaluate(([c, a]) => { if (active !== c) pick(c); __fb.click(a[0], a[1]); }, [cls, a]);
+  const st = () => pg.evaluate(() => ({n: __fb.S.blocks.length, sel: __fb.sel.size, mode: document.body.dataset.mode || '', badge: $('modeb') ? $('modeb').textContent : ''}));
+
+  // ---- 1. no auto-select; R rotates the ghost, placed items keep their rotation
+  await place(MACH, [2, 2]);
+  let s = await st();
+  chk('38 place machine: nothing selected afterwards', s.n === 1 && s.sel === 0, JSON.stringify(s));
+  await pg.keyboard.press('r');
+  await place(MACH, [10, 2]);
+  const rots = await pg.evaluate(() => __fb.S.blocks.map(b => b.rot));
+  chk('38 R after a placement: placed machine keeps rot 0, next placement uses the rotated ghost', rots[0] === 0 && rots[1] === 1, JSON.stringify(rots));
+  await pg.evaluate(c => pick(c), BELT);
+  await boxAt([2, 12], [8, 12]);
+  s = await st();
+  const belts = await pg.evaluate(() => __fb.S.blocks.filter(b => b.cls === 'DAT_ConveyorBelt3').length);
+  chk('38 belt run placed, nothing selected afterwards', belts > 0 && s.sel === 0, JSON.stringify({belts, s}));
+  await pg.keyboard.press('Escape');
+
+  // ---- 2. X = delete mode (click, box, undo, Esc, right-click)
+  await pg.keyboard.press('x');
+  s = await st();
+  chk('38 X enters delete mode: body[data-mode]=del and #modeb says Delete mode', s.mode === 'del' && /^Delete mode/.test(s.badge), JSON.stringify(s));
+  const n0 = s.n;
+  await clickAt([3, 3]);
+  s = await st();
+  chk('38 delete mode: click deletes the machine under the cursor', s.n === n0 - 1 && s.sel === 0, JSON.stringify({n0, s}));
+  const n1 = s.n;
+  await boxAt([1, 11], [9, 13], 's38-delete-mode-box.png');
+  s = await st();
+  chk('38 delete mode: box deletes the blocks it covers, nothing left selected', s.n < n1 && s.sel === 0, JSON.stringify({n1, s}));
+  await pg.keyboard.press('Control+z');
+  s = await st();
+  chk('38 box delete is one undo step (Ctrl+Z restores the whole box)', s.n === n1, JSON.stringify({n1, n: s.n}));
+  await pg.keyboard.press('Escape');
+  s = await st();
+  chk('38 Esc exits delete mode (no mode, empty badge)', s.mode === '' && s.badge === '', JSON.stringify(s));
+  const n2 = s.n;
+  await rightAt([10, 2]);
+  s = await st();
+  chk('38 right-click on a building still deletes it (outside delete mode)', s.n === n2 - 1, JSON.stringify({n2, n: s.n}));
+
+  // ---- 3. config copy / paste: same class only, one undo step, toast count
+  await reset(pg);
+  await pg.evaluate(() => { STRICT = false; __fb.setView('F'); __fb.fit(); });
+  await place(MACH, [2, 2]);
+  await place(MACH, [2, 12]);
+  await place(SPL, [12, 2]);
+  await pg.keyboard.press('Escape');   // leave placement mode so the clicks below select
+  const cfgRec = await pg.evaluate(c => __fb.rk(__fb.recsOf(__fb.def(c))[0]), MACH);
+  const itemId = await pg.evaluate(c => __fb.recsOf(__fb.def(c))[0].i[0][0], MACH);
+  await pg.evaluate(([rec, item]) => {
+    const a1 = __fb.S.blocks[0];
+    a1.rec = rec; a1.ct = [{item, n: 7, inf: false}]; a1.off = [__fb.portsOf(a1)[0].key];
+    all();
+  }, [cfgRec, itemId]);
+  await clickAt([3, 3]);
+  await pg.keyboard.press('Control+Shift+C');
+  const c1 = await pg.evaluate(() => cfgClip);
+  chk('38 Ctrl+Shift+C copies the config (recipe, contents, disabled port) of the one selected machine', !!c1 && c1.cls === MACH && c1.rec === cfgRec && c1.ct.length === 1 && c1.off.length === 1, JSON.stringify(c1));
+  await pg.keyboard.press('Control+Shift+V');
+  s = await st();
+  chk('38 Ctrl+Shift+V enters paste config mode (body[data-mode]=cfgpaste)', s.mode === 'cfgpaste' && /^Paste config/.test(s.badge), JSON.stringify(s));
+  await boxAt([1, 1], [14, 14], 's38-paste-config-box.png');
+  const after = await pg.evaluate(() => __fb.S.blocks.map(b => ({cls: b.cls, rec: b.rec, ct: b.ct, off: b.off})));
+  chk('38 paste config box: same-class machine gets recipe, contents and disabled ports', after[1].rec === cfgRec && JSON.stringify(after[1].ct) === JSON.stringify(c1.ct) && JSON.stringify(after[1].off) === JSON.stringify(c1.off), JSON.stringify(after[1]));
+  chk('38 paste config box: splitter (other class) in the box is untouched', after[2].rec === undefined && after[2].ct === undefined && after[2].off === undefined, JSON.stringify(after[2]));
+  const tt = await pg.evaluate(() => $('toast').textContent);
+  chk('38 paste config: toast says "2 updated" (the two machines of the class)', tt.includes('2 updated'), tt);
+  await pg.keyboard.press('Control+z');
+  const undone = await pg.evaluate(() => __fb.S.blocks[1].rec);
+  chk('38 paste config is one undo step (Ctrl+Z restores the second machine)', undone === undefined, String(undone));
+  await pg.keyboard.press('Escape');
+
+  // ---- 4. context menu: right-click on an empty cell
+  await rightAt([8, 8]);
+  const menu = await pg.evaluate(() => [...document.querySelectorAll('#ctx .ctxi')].map(b => [b.textContent, b.disabled]));
+  chk('38 right-click on an empty cell opens #ctx with 5 entries', menu.length === 5, JSON.stringify(menu));
+  chk('38 context menu: Paste mode disabled (nothing copied), Paste config mode enabled (config copied)', menu.length === 5 && menu[3][1] === true && menu[4][1] === false, JSON.stringify(menu));
+  await pg.screenshot({path: path.join(SHOTS, 's38-context-menu.png')});
+  await pg.locator('#ctx .ctxi', {hasText: 'Delete mode'}).click();
+  s = await st();
+  chk('38 menu entry Delete mode: enters delete mode and closes the menu', s.mode === 'del' && (await pg.locator('#ctx').count()) === 0, JSON.stringify(s));
+  await pg.keyboard.press('Escape');
+  await rightAt([8, 8]);
+  await pg.keyboard.press('Escape');
+  chk('38 Esc closes the context menu', (await pg.locator('#ctx').count()) === 0);
+  await rightAt([8, 8]);
+  await clickAt([9, 9]);
+  chk('38 click away closes the context menu', (await pg.locator('#ctx').count()) === 0);
+  await rightAt([3, 3]);
+  s = await st();
+  chk('38 right-click on a building deletes it and opens no menu', s.n === 2 && (await pg.locator('#ctx').count()) === 0, JSON.stringify(s));
+  await ctx.close();
+}
+
 // ================= main
 const br =await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 try {
@@ -3473,6 +3809,10 @@ try {
   try { console.log('--- 22 U2 inspector'); await s22(br); } catch (e) { chk('22 U2: section ran', false, e.stack || String(e)); }
   try { console.log('--- 23 U3 production'); await s23(br); } catch (e) { chk('23 U3: section ran', false, e.stack || String(e)); }
   try { console.log('--- 24 r12 user save: sim, perf, shots'); await s24(br); } catch (e) { chk('24 r12: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 25b refresh restore'); await s25b(br); } catch (e) { chk('25b refresh restore: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 36 default windows'); await s36(br); } catch (e) { chk('36 default windows: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 37 header, import, restore'); await s37(br); } catch (e) { chk('37 header/import/restore: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 38 delete mode, config copy/paste, context menu'); await s38(br); } catch (e) { chk('38 section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }
