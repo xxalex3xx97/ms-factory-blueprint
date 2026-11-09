@@ -222,36 +222,36 @@ async function ui(br) {
   chk('1 Theoretical button visible with sim off', await pg.isVisible('#thB'));
   chk('1 aria-pressed false before open', (await pg.getAttribute('#thB', 'aria-pressed')) === 'false');
   const t0 = await pg.evaluate(() => { const b = document.getElementById('thB'); const t = performance.now(); b.click(); return performance.now() - t });
-  chk('1 click opens #dProd, title Theoretical production', await pg.isVisible('#dProd') && (await pg.innerText('#dProdT')) === 'Theoretical production');
+  chk('1 click opens #dTheo, title Theoretical production, #dProd stays hidden', await pg.isVisible('#dTheo') && (await pg.innerText('#dTheoT')) === 'Theoretical production' && !(await pg.isVisible('#dProd')));
   chk('1 aria-pressed true after open, prodB false', (await pg.getAttribute('#thB', 'aria-pressed')) === 'true' && (await pg.getAttribute('#prodB', 'aria-pressed')) === 'false');
   console.log(`click-to-window (sync handler) ms: ${t0.toFixed(1)}`);
   const all3 = await pg.evaluate(o => theoProd(true).byItem[o] || 0, rOut);
-  const shownAll = await pg.innerText('#prNow');
-  chk('3 All floors checked by default', await pg.isChecked('#prAll'));
+  const shownAll = await pg.innerText('#thNow');
+  chk('3 All floors checked by default', await pg.isChecked('#thAll'));
   chk('3 All floors on: window sums floors (3R)', near(all3, 3 * R, 0.02), `theoProd(true) ${all3} R ${R}`);
   chk('3 window shows sum (3R) in Now list', shownAll.includes(String(Math.round(all3 * 100) / 100).split('.')[0]) || shownAll.includes(String(all3)), shownAll.replace(/\s+/g, ' ').slice(0, 120));
-  const tog = await pg.evaluate(() => { const c = document.getElementById('prAll'); const t = performance.now(); c.click(); return performance.now() - t });
+  const tog = await pg.evaluate(() => { const c = document.getElementById('thAll'); const t = performance.now(); c.click(); return performance.now() - t });
   const cur = await pg.evaluate(o => theoProd(false).byItem[o] || 0, rOut);
-  chk('3 unchecking All floors -> current floor only (L0 = R)', near(cur, R, 0.02) && !(await pg.isChecked('#prAll')), `${cur} vs R ${R}`);
-  const nowAfter = await pg.innerText('#prNow');
+  chk('3 unchecking All floors -> current floor only (L0 = R)', near(cur, R, 0.02) && !(await pg.isChecked('#thAll')), `${cur} vs R ${R}`);
+  const nowAfter = await pg.innerText('#thNow');
   chk('3 unchecked window re-rendered with current floor value', nowAfter.replace(/\s+/g, ' ') !== shownAll.replace(/\s+/g, ' '));
   console.log(`All floors toggle handler ms: ${tog.toFixed(2)}`);
-  await pg.click('#prAll');
-  chk('3 re-checking restores sum (3R)', near(await pg.evaluate(o => theoProd(true).byItem[o] || 0, rOut), 3 * R, 0.02) && (await pg.isChecked('#prAll')));
+  await pg.click('#thAll');
+  chk('3 re-checking restores sum (3R)', near(await pg.evaluate(o => theoProd(true).byItem[o] || 0, rOut), 3 * R, 0.02) && (await pg.isChecked('#thAll')));
   await pg.screenshot({path: path.join(SHOTS, 'theo-verify-1400.png')});
   // switch layer while open: snapshot stays (checkbox mode), then close + reopen on layer 1 with All floors off
-  await pg.click('#prAll');   // unchecked
+  await pg.click('#thAll');   // unchecked
   await pg.evaluate(() => __fb.setLayer(1));
   await pg.click('#thB');   // close
-  chk('3 Theoretical click while open closes it', !(await pg.isVisible('#dProd')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'false');
+  chk('3 Theoretical click while open closes it', !(await pg.isVisible('#dTheo')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'false');
   await pg.click('#thB');   // reopen on layer 1
   const L1v = await pg.evaluate(o => theoProd(false).byItem[o] || 0, rOut);
-  chk('3 after layer switch + reopen (All floors off) = current floor (L1 = 2R)', near(L1v, 2 * R, 0.02) && !(await pg.isChecked('#prAll')), `L1 ${L1v} R ${R}`);
-  await pg.click('#prAll');
+  chk('3 after layer switch + reopen (All floors off) = current floor (L1 = 2R)', near(L1v, 2 * R, 0.02) && !(await pg.isChecked('#thAll')), `L1 ${L1v} R ${R}`);
+  await pg.click('#thAll');
   chk('3 after layer switch, All floors on = 3R', near(await pg.evaluate(o => theoProd(true).byItem[o] || 0, rOut), 3 * R, 0.02));
   await pg.evaluate(() => __fb.setLayer(0));
-  await pg.click('#prodX');
-  chk('1 Close (prodX) hides window, aria-pressed false', !(await pg.isVisible('#dProd')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'false');
+  await pg.click('#thX');
+  chk('1 Close (thX) hides window, aria-pressed false', !(await pg.isVisible('#dTheo')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'false');
   return {ctx, pg, R, rOut};
 }
 
@@ -264,28 +264,26 @@ async function uiSim(br, R, rOut) {
   await pg.click('#simB');   // sim on
   await pg.evaluate(() => __fb.simRun(30));
   await pg.click('#prodB');
-  chk('1 sim Production (#prodB) opens Production title, chart, Total built', (await pg.innerText('#dProdT')) === 'Production' && await pg.isVisible('#prCv') && await pg.isVisible('#prTW') && await pg.isVisible('#dProd') && !(await pg.isVisible('#prAllL')));
-  chk('1 sub line restored to 30 s average', (await pg.innerText('#prSub')).startsWith('30 s average'));
-  await pg.click('#prodX');
-  await pg.click('#thB');   // theoretical while sim on
-  const snap1 = await pg.innerText('#prNow');
-  chk('1 theo opened while sim on: title + sub', (await pg.innerText('#dProdT')) === 'Theoretical production' && (await pg.innerText('#prSub')).startsWith('Full speed'));
+  chk('1 sim Production (#prodB) opens Production title, chart, Total built', (await pg.innerText('#dProdT')) === 'Production' && await pg.isVisible('#prCv') && await pg.isVisible('#prTW') && await pg.isVisible('#dProd') && !(await pg.isVisible('#dTheo')));
+  chk('1 sub line 30 s average', (await pg.innerText('#prSub')).startsWith('30 s average'));
+  await pg.click('#thB');   // theoretical beside production
+  chk('1 #thB with Production open: both visible, #dProdT still Production, #prCv still visible', await pg.isVisible('#dTheo') && await pg.isVisible('#dProd') && (await pg.innerText('#dProdT')) === 'Production' && await pg.isVisible('#prCv'));
+  chk('1 theo title + sub ("Full speed")', (await pg.innerText('#dTheoT')) === 'Theoretical production' && (await pg.innerText('#thScroll')).startsWith('Full speed'));
+  const snap1 = await pg.innerText('#thNow');
   await pg.click('#smPlay');   // sim running
   await pg.waitForTimeout(1500);
-  const snap2 = await pg.innerText('#prNow');
-  chk('1 sim playing does not change theo snapshot', snap1 === snap2 && (await pg.innerText('#dProdT')) === 'Theoretical production');
+  chk('1 sim playing does not change theo snapshot', (await pg.innerText('#thNow')) === snap1);
   await pg.click('#smPlay');   // pause
-  await pg.click('#simB');     // sim off while theo open
-  chk('1 sim off (#simB) keeps theo window open', await pg.isVisible('#dProd') && (await pg.innerText('#dProdT')) === 'Theoretical production' && (await pg.innerText('#prNow')) === snap1);
+  await pg.click('#simB');     // sim off
+  chk('1 sim off (#simB): #dTheo visible with same snapshot, #dProd hidden', await pg.isVisible('#dTheo') && !(await pg.isVisible('#dProd')) && (await pg.innerText('#thNow')) === snap1);
   await pg.click('#simB');     // sim on again
-  chk('1 sim on again: theo window still open, snapshot unchanged', await pg.isVisible('#dProd') && (await pg.innerText('#dProdT')) === 'Theoretical production' && (await pg.innerText('#prNow')) === snap1);
-  await pg.evaluate(() => __fb.simRun(30));   // sim was switched off/on (fresh run): give it production
-  await pg.click('#prodB');   // Production while sim on
-  const vis = () => pg.evaluate(() => ({title: document.getElementById('dProdT').textContent, cv: !!document.getElementById('prCv').offsetParent, leg: document.getElementById('prLeg').innerHTML.length > 0, tw: !document.getElementById('prTW').hidden, elv: document.getElementById('prElv').hidden, legSw: document.querySelectorAll('#prLeg span').length}));
-  const vp = await vis();
-  chk('1 #prodB from theo restores Production title + chart + legend + Total', vp.title === 'Production' && vp.cv && vp.tw && vp.elv && vp.leg, JSON.stringify(vp));
-  await pg.click('#thB');
-  chk('1 #thB from Production switches to theo (title)', (await pg.innerText('#dProdT')) === 'Theoretical production' && !(await pg.isVisible('#prCv')));
+  await pg.evaluate(() => __fb.simRun(30));   // fresh run: give it production
+  await pg.click('#prodB');
+  chk('1 sim on again + #prodB: both visible, theo snapshot unchanged', await pg.isVisible('#dProd') && await pg.isVisible('#dTheo') && await pg.isVisible('#prCv') && (await pg.innerText('#thNow')) === snap1 && (await pg.innerText('#dProdT')) === 'Production');
+  const hit = await pg.evaluate(() => { const b = document.getElementById('thX').getBoundingClientRect(), e = document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2); return e ? (e.closest('#thX') ? 'thX' : (e.id || e.tagName) + (e.closest('#fms') ? ' (in #fms)' : '')) : 'none' });
+  chk('1 #thX not covered by the Simulation panel (#fms): hit-test at its centre is #thX', hit === 'thX', `hit-test: ${hit}`);
+  await pg.evaluate(() => document.getElementById('thX').click());   // JS click so the run continues when #fms covers the button
+  chk('1 #thX closes theo only: #dProd still visible, thB aria-pressed false',await pg.isVisible('#dProd') && !(await pg.isVisible('#dTheo')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'false');
   await pg.click('#prodX');
   await ctx.close();
 }
@@ -298,38 +296,44 @@ async function uiLayout(br) {
     tk.resetMid();
     await imp(pg, bp([], await refChain(tk, {x: 40, y: 40}, INF)));
     await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); });
+    await pg.click('#simB');
+    await pg.evaluate(() => __fb.simRun(30));
     await pg.click('#thB');
+    await pg.click('#prodB');
     const bb = await pg.evaluate(() => {
-      const q = id => { const r = document.getElementById(id).getBoundingClientRect(); return {x: r.x, y: r.y, w: r.width, h: r.height, r: r.right, b: r.bottom} };
-      const dp = document.getElementById('dProd').getBoundingClientRect();
-      return {th: q('thB'), flw: q('flwB'), plan: q('plnB'), dp: {x: dp.x, y: dp.y, w: dp.width, h: dp.height, r: dp.right, b: dp.bottom}, all: q('prAll'), vw: innerWidth, vh: innerHeight, sw: document.documentElement.scrollWidth};
+      const rc = id => { const r = document.getElementById(id).getBoundingClientRect(); return {x: r.x, y: r.y, w: r.width, h: r.height, r: r.right, b: r.bottom} };
+      return {th: rc('thB'), flw: rc('flwB'), plan: rc('plnB'), dp: rc('dProd'), dt: rc('dTheo'), fm: rc('fms'), all: rc('thAll'), vw: innerWidth, vh: innerHeight, sw: document.documentElement.scrollWidth};
     });
-    out[tag] = bb;
-    await shot(pg, `theo-verify-${tag}.png`);
+    const lblVis = await pg.isVisible('#thB .tx');
+    out[tag] = {...bb, lblVis};
+    await shot(pg, `theo-verify-both-${tag}.png`);
     const same = Math.abs(bb.th.y - bb.flw.y) < 2;
     chk(`5 ${tag}px: #thB on same toolbar row as Flow`, same, `thB y ${bb.th.y.toFixed(0)} flw y ${bb.flw.y.toFixed(0)}`);
     chk(`5 ${tag}px: #thB right edge inside viewport`, bb.th.r <= bb.vw + 0.5, `right ${bb.th.r.toFixed(0)} vw ${bb.vw}`);
     chk(`5 ${tag}px: no horizontal page overflow`, bb.sw <= bb.vw + 1, `scrollWidth ${bb.sw}`);
-    chk(`5 ${tag}px: Theoretical window inside viewport`, bb.dp.r <= bb.vw + 1 && bb.dp.b <= bb.vh + 1 && bb.dp.w > 0, JSON.stringify({w: bb.dp.w, h: bb.dp.h, r: bb.dp.r}));
-    chk(`5 ${tag}px: All floors checkbox visible`, await pg.isVisible('#prAll'));
-    chk(`5 ${tag}px: note "Elevator transfers not included" shown`, await pg.isVisible('#prElv') && (await pg.innerText('#prElv')).trim() === 'Elevator transfers not included');
-    chk(`5 ${tag}px: checkbox has accessible name "All floors"`, (await pg.getAttribute('#prAll', 'aria-label')) === 'All floors' && (await pg.innerText('#prAllL')).includes('All floors'));
+    chk(`5 ${tag}px: Theoretical window inside viewport`, bb.dt.r <= bb.vw + 1 && bb.dt.b <= bb.vh + 1 && bb.dt.w > 0, JSON.stringify({w: bb.dt.w, h: bb.dt.h, r: bb.dt.r, b: bb.dt.b}));
+    chk(`5 ${tag}px: Production window inside viewport`, bb.dp.r <= bb.vw + 1 && bb.dp.b <= bb.vh + 1 && bb.dp.w > 0, JSON.stringify({w: bb.dp.w, h: bb.dp.h, r: bb.dp.r, b: bb.dp.b}));
+    chk(`5 ${tag}px: both windows open, rects do not overlap`, bb.dt.r <= bb.dp.x || bb.dp.r <= bb.dt.x || bb.dt.b <= bb.dp.y || bb.dp.b <= bb.dt.y, JSON.stringify({dt: [bb.dt.x, bb.dt.y, bb.dt.r, bb.dt.b], dp: [bb.dp.x, bb.dp.y, bb.dp.r, bb.dp.b]}));
+    chk(`5 ${tag}px: Theoretical window does not cover Simulation panel (#fms, sim on)`, bb.dt.r <= bb.fm.x || bb.fm.r <= bb.dt.x || bb.dt.b <= bb.fm.y || bb.fm.b <= bb.dt.y, JSON.stringify({dt: [bb.dt.x, bb.dt.y, bb.dt.r, bb.dt.b], fm: [bb.fm.x, bb.fm.y, bb.fm.r, bb.fm.b]}));
+    chk(`5 ${tag}px: theo toolbar label visible iff tag !== 390`, lblVis === (tag !== '390'), `label visible ${lblVis}`);
+    chk(`5 ${tag}px: All floors checkbox visible`, await pg.isVisible('#thAll'));
+    chk(`5 ${tag}px: note "Elevator transfers not included" shown`, await pg.isVisible('#thElv') && (await pg.innerText('#thElv')).trim() === 'Elevator transfers not included');
+    chk(`5 ${tag}px: checkbox has accessible name "All floors"`, (await pg.getAttribute('#thAll', 'aria-label')) === 'All floors' && (await pg.innerText('#thAllL')).includes('All floors'));
     if (tag === '1400') {
       // keyboard: focus button, Enter opens; focus close, Enter closes; Space toggles checkbox
-      await pg.click('#prodX');
+      await pg.focus('#thX'); await pg.keyboard.press('Enter');   // keyboard close (sim on: #fms may cover the button)
       await pg.focus('#thB'); await pg.keyboard.press('Enter');
-      const kOpen = await pg.isVisible('#dProd');
-      await pg.focus('#prAll'); await pg.keyboard.press('Space');
-      const kBox = true;
-      await pg.focus('#prodX'); await pg.keyboard.press('Enter');
-      const kClose = !(await pg.isVisible('#dProd')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'false';
-      chk('5 keyboard: Enter on #thB opens, Enter on close (prodX) hides', kOpen && kClose, `open ${kOpen} close ${kClose}`);
+      const kOpen = await pg.isVisible('#dTheo');
+      await pg.focus('#thAll'); await pg.keyboard.press('Space');
+      await pg.focus('#thX'); await pg.keyboard.press('Enter');
+      const kClose = !(await pg.isVisible('#dTheo')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'false' && await pg.isVisible('#dProd');
+      chk('5 keyboard: Enter on #thB opens, Enter on close (thX) hides, #dProd untouched', kOpen && kClose, `open ${kOpen} close ${kClose}`);
       // Space on a focused checkbox: global keydown handler (snippets.js: e.code==='Space' -> pan, preventDefault) swallows it
       await pg.focus('#thB'); await pg.keyboard.press('Enter');
-      await pg.focus('#prAll'); await pg.keyboard.press('Space');
-      chk('5 keyboard: Space toggles All floors checkbox (known: global Space=pan handler swallows it)', !(await pg.isChecked('#prAll')), `checked after Space: ${await pg.isChecked('#prAll')}`);
+      await pg.focus('#thAll'); await pg.keyboard.press('Space');
+      chk('5 keyboard: Space toggles All floors checkbox (known: global Space=pan handler swallows it)', !(await pg.isChecked('#thAll')), `checked after Space: ${await pg.isChecked('#thAll')}`);
       await pg.focus('#thB'); await pg.keyboard.press('Enter');
-      chk('5 keyboard: Enter on #thB again closes', !(await pg.isVisible('#dProd')));
+      chk('5 keyboard: Enter on #thB again closes', !(await pg.isVisible('#dTheo')));
     }
     await ctx.close();
   }
@@ -346,21 +350,21 @@ async function bench(br) {
   for (let i = 0; i < 3; i++) {
     const wall = Date.now();
     const ms = await pg.evaluate(() => { const b = document.getElementById('thB'); const t = performance.now(); b.click(); const dt = performance.now() - t; return dt });
-    await pg.waitForFunction(() => !document.getElementById('dProd').hidden);
+    await pg.waitForFunction(() => !document.getElementById('dTheo').hidden);
     const w = Date.now() - wall;
     runs.push({handler: +ms.toFixed(1), wall: w});
-    await pg.click('#prodX');
+    await pg.click('#thX');
   }
   const pw = [];
   for (let i = 0; i < 3; i++) {
-    const t = Date.now(); await pg.click('#thB'); await pg.waitForFunction(() => !document.getElementById('dProd').hidden); pw.push(Date.now() - t); await pg.click('#prodX');
+    const t = Date.now(); await pg.click('#thB'); await pg.waitForFunction(() => !document.getElementById('dTheo').hidden); pw.push(Date.now() - t); await pg.click('#thX');
   }
-  const allTog = await pg.evaluate(() => { const t = performance.now(); document.getElementById('thB').click(); document.getElementById('prAll').click(); const dt = performance.now() - t; document.getElementById('prAll').click(); document.getElementById('prodX').click(); return dt });
+  const allTog = await pg.evaluate(() => { const t = performance.now(); document.getElementById('thB').click(); document.getElementById('thAll').click(); const dt = performance.now() - t; document.getElementById('thAll').click(); document.getElementById('thX').click(); return dt });
   const sim = await pg.evaluate(() => { const t = performance.now(); theoProd(true); return performance.now() - t });
   console.log(`bench: ${n} blocks; click handler ms ${runs.map(r => r.handler).join(', ')}; click-to-visible wall ms ${pw.join(', ')}; open+uncheck ms ${allTog.toFixed(1)}; theoProd(true) ms ${sim.toFixed(1)}`);
   chk('4 bench: click-to-window handler < 250 ms (all runs)', runs.every(r => r.handler < 250), JSON.stringify(runs));
   chk('4 bench: click-to-visible wall < 500 ms (all runs)', pw.every(x => x < 500), pw.join(','));
-  chk('4 bench: window renders values (Now rows > 0)', (await pg.evaluate(() => { document.getElementById('thB').click(); return document.querySelectorAll('#prNow .prr').length })) > 0);
+  chk('4 bench: window renders values (Now rows > 0)', (await pg.evaluate(() => { document.getElementById('thB').click(); return document.querySelectorAll('#thNow .prr').length })) > 0);
   await pg.screenshot({path: path.join(SHOTS, 'theo-verify-bench-1400.png')});
   await ctx.close();
   return {n, runs, pw, allTog, sim};
@@ -377,9 +381,9 @@ try {
   console.log('--- window UI (sim off, All floors, layers, a11y)');
   Ui = await ui(br);
   await Ui.ctx.close();
-  console.log('--- window UI with sim on/off, Production view');
+  console.log('--- two windows: Theoretical + Production side by side (sim on/off)');
   await uiSim(br, Ui.R, Ui.rOut);
-  console.log('--- layout 1400 + 390, keyboard');
+  console.log('--- layout 1400 + 390 (both open), keyboard');
   const lay = await uiLayout(br);
   console.log('layout', JSON.stringify(lay));
   console.log('--- benchmark');

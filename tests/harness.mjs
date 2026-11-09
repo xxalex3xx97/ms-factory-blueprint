@@ -3387,26 +3387,39 @@ async function s35(br) {
   await scene(pg, []);
   const z = await pg.evaluate(() => { const b = S.blocks.find(q => q.cls === 'DAT_Refinery'), o = recOf(b).o[0]; return theoProd(false).byItem[o] || 0 });
   chk('35 starved refinery (no input) -> 0', z === 0, String(z));
-  // UI: sim off, click Theoretical
+  // UI: two windows. #thB -> #dTheo (sim off); #prodB -> #dProd (sim on). Independent.
   await scene(pg, INF);
   chk('35 Theoretical button visible with sim off', await pg.isVisible('#thB'));
   await pg.click('#thB');
-  chk('35 #thB opens #dProd with title Theoretical production', await pg.isVisible('#dProd') && (await pg.innerText('#dProdT')) === 'Theoretical production');
-  chk('35 All floors checked by default', await pg.isChecked('#prAll'));
-  chk('35 chart, legend and Total built hidden', !(await pg.isVisible('#prCv')) && !(await pg.isVisible('#prLeg')) && !(await pg.isVisible('#prTW')));
-  chk('35 Now + By machine type rows drawn', (await pg.locator('#prNow .prr').count()) >= 1 && (await pg.locator('#prMt .prr:not(.hd)').count()) >= 1);
-  chk('35 sub line + elevator note shown', (await pg.innerText('#prSub')).startsWith('Full speed, limited by belt throughput') && await pg.isVisible('#prElv'));
-  await pg.click('#prAll');
-  chk('35 unchecking All floors keeps window drawn', !(await pg.isChecked('#prAll')) && await pg.isVisible('#dProd') && (await pg.locator('#prNow .prr').count()) >= 1);
-  await pg.click('#prAll');
+  chk('35 #thB opens #dTheo with title Theoretical production', await pg.isVisible('#dTheo') && (await pg.innerText('#dTheoT')) === 'Theoretical production');
+  chk('35 #thB leaves #dProd hidden (separate window), aria-pressed true', !(await pg.isVisible('#dProd')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'true');
+  chk('35 All floors checked by default', await pg.isChecked('#thAll'));
+  chk('35 chart hidden while only Theoretical is open', !(await pg.isVisible('#prCv')));
+  chk('35 Now + By machine type rows drawn', (await pg.locator('#thNow .prr').count()) >= 1 && (await pg.locator('#thMt .prr:not(.hd)').count()) >= 1);
+  chk('35 sub line + elevator note shown', (await pg.innerText('#thScroll')).startsWith('Full speed, limited by belt throughput') && await pg.isVisible('#thElv'));
+  await pg.click('#thAll');
+  chk('35 unchecking All floors keeps window drawn', !(await pg.isChecked('#thAll')) && await pg.isVisible('#dTheo') && (await pg.locator('#thNow .prr').count()) >= 1);
+  await pg.click('#thAll');
   await pg.screenshot({path: path.join(SHOTS, 'theo-1400.png')});
-  await pg.click('#prodX');
-  chk('35 Close hides the theoretical window', !(await pg.isVisible('#dProd')));
+  await pg.click('#thX');
+  chk('35 #thX closes the theoretical window (aria-pressed false)', !(await pg.isVisible('#dTheo')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'false');
+  // both open side by side: sim on, Theoretical + Production
   await pg.click('#simB');
   await pg.evaluate(() => __fb.simRun(60));
   await pg.click('#thB');
   await pg.click('#prodB');
-  chk('35 #prodB restores Production title and sim chart', (await pg.innerText('#dProdT')) === 'Production' && await pg.isVisible('#dProd') && await pg.isVisible('#prCv') && !(await pg.isVisible('#prAllL')));
+  const rect = id => pg.evaluate(i => { const r = document.getElementById(i).getBoundingClientRect(); return {x: r.left, y: r.top, r: r.right, b: r.bottom} }, id);
+  const tr = await rect('dTheo'), pr = await rect('dProd');
+  chk('35 both open: both visible, #prCv visible, both aria-pressed true', await pg.isVisible('#dProd') && await pg.isVisible('#dTheo') && await pg.isVisible('#prCv') && (await pg.getAttribute('#prodB', 'aria-pressed')) === 'true' && (await pg.getAttribute('#thB', 'aria-pressed')) === 'true');
+  chk('35 both open: bounding rects do not overlap', tr.r <= pr.x || pr.r <= tr.x || tr.b <= pr.y || pr.b <= tr.y, JSON.stringify({tr, pr}));
+  await pg.click('#prodX');
+  chk('35 #prodX keeps #dTheo open', await pg.isVisible('#dTheo') && !(await pg.isVisible('#dProd')) && (await pg.getAttribute('#thB', 'aria-pressed')) === 'true');
+  await pg.click('#prodB');
+  chk('35 both open: #dTheo does not cover the Simulation panel (#fms)', await pg.evaluate(() => { const a = document.getElementById('dTheo').getBoundingClientRect(), f = document.getElementById('fms').getBoundingClientRect(); return a.right <= f.left || f.right <= a.left || a.bottom <= f.top || f.bottom <= a.top }), 'known product issue: #fms (sim panel) sits over #dTheo at 1400');
+  await pg.evaluate(() => document.getElementById('thC').click());   // JS click: #fms may cover the header button
+  chk('35 #thC collapses theo only (thC false, prodC true, #prCv visible)', (await pg.getAttribute('#thC', 'aria-expanded')) === 'false' && (await pg.getAttribute('#prodC', 'aria-expanded')) === 'true' && await pg.isVisible('#prCv'));
+  await pg.evaluate(() => document.getElementById('thC').click());
+  chk('35 #thC expands theo again', (await pg.getAttribute('#thC', 'aria-expanded')) === 'true' && await pg.isVisible('#thNow'));
   await ctx.close();
   // benchmark: 28k-block station, theoProd(true) on click
   const txt = fs.readFileSync(process.env.BENCH || 'C:/Users/SFidelis/Downloads/Beta_Honor_3_Central.json', 'utf8');
