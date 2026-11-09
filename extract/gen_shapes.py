@@ -64,6 +64,21 @@ def gap_rect(g, w, h, ox, oy):
     return [side, r3(a - ox), r3(ey), r3(b - ox), r3(ey)]
 
 
+# BPO_Dock has no decoded shape in shapes_src.json: hand-composed per user 2026-11-09 ("the dock has 2 ports like the mining drone",
+# "mix the mining drone ports part with the shipyard core exit part"). Tile frame 16x16, rot0 = ship end east.
+# West part = Mining Drone Bay Mk.1 body (top/bottom walls, connector prop, 2 west ports), east part = Shipyard Core exit tube (walls + open-end caps).
+# Join column x 7.537..8.264 = the Shipyard Core closing column (gap y 6.031..9.969 = tube opening).
+COMPOSED = {'BPO_Dock': {
+    'fw': 16, 'fh': 16,
+    'walls': [[0, 4, 8.264, 5], [0, 11, 8.264, 12], [7.537, 4, 8.264, 6.031], [7.537, 9.969, 8.264, 12],
+              [8.295, 5.63, 15.685, 6.504], [8.295, 9.496, 15.685, 10.37], [15.082, 6.163, 15.924, 7.037], [15.082, 8.963, 15.924, 9.837]],
+    'props': [[0, 7, 2, 9]], 'arms': [],
+    'ports': [[None, 0, 8.5], [None, 0, 7.5]],
+    'hatch': 'interior',
+    'entrance': {'kind': 'ports', 'evidence': 'composed 2026-11-09 per user: drone bay output ports on the west edge (rot 0), no doors; ship end east'},
+}}
+
+
 def build():
     src = rd('shapes_src.json')
     fl = rd('floors.json')['blocks']
@@ -135,6 +150,7 @@ def build():
             rg = p['ring']
             entry['ring'] = {'c': [r3(rg['c'][0] - ox), r3(rg['c'][1] - oy)], 'ro': rg['rOut'], 'ri': rg['rIn'], 'gap': rg['gap'], 'n': len(ring_idx)}
         shapes[name] = entry
+    shapes.update(COMPOSED)
     return shapes, patch, adds, icons, src.get('buildables', {})
 
 
