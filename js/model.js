@@ -160,23 +160,30 @@ function portsOf(b){
   return o;
 }
 // estimate over ALL levels: an elevator input forwards what its belt carries to the same port on the levels above/below (same rule as the sim: even split over existing outputs); passes repeat until the flow stops changing
-let LKM=null;   // all-level result memo (blkKey misses container contents, so those are hashed in)
-const ctKey=()=>{let h=0;S.blocks.forEach(b=>{if(b.ct)b.ct.forEach(x=>{h=(Math.imul(h,31)+(+x.n||0)+(x.inf?7:0)+String(x.item).length)|0})});return h};
+// estimate over ALL levels, cached PER LEVEL: a placement only recomputes the level it touched (plus levels whose elevator inflow changed)
+const sh=s=>{let h=0;s=String(s);for(let i=0;i<s.length;i++)h=(Math.imul(h,31)+s.charCodeAt(i))|0;return h};
+const lvHash=()=>{const m=new Map(),cl=sh(JSON.stringify(S.closed||[]));
+  S.blocks.forEach(b=>{let h=m.has(b.h)?m.get(b.h):cl;h=(Math.imul(h,31)+b.id+b.x*7+b.y*13+b.rot*19+(b.pid|0)*23+(b.mid|0)*29+(b.off?sh(b.off.join()):0)+(b.rec?sh(b.rec):0)+sh(b.cls))|0;
+    if(b.ct)b.ct.forEach(x=>{h=(Math.imul(h,31)+(+x.n||0)+(x.inf?7:0)+sh(x.item))|0});m.set(b.h,h)});return m};
+const L1M=new Map();
+const links1c=(l,inj,hk)=>{const ik=inj&&inj.length?inj.map(x=>x.id+x.item+r2(x.rate)).join():"",k=(hk.get(l)||0)+"|"+ik+"|"+LK,c=L1M.get(l);
+  if(c&&c.k===k)return c.res;const res=links1(l,inj);L1M.set(l,{k,res});return res};
+let LKM=null,LKI=new Map(),LKS="";   // LKI/LKS: elevator injection of the last full pass (seed for the next, so an unchanged flow costs one pass)
 function links(L){
-  const k=blkKey()+"|"+ctKey()+"|"+LK;if(LKM&&LKM.k===k&&LKM.res.has(L))return LKM.res.get(L);
-  const res=linksAll(L);LKM={k,res};return res.get(L);
+  const hk=lvHash(),k=[...hk].join(";")+"|"+LK;if(LKM&&LKM.k===k&&LKM.res.has(L))return LKM.res.get(L);
+  const res=linksAll(L,hk);LKM={k,res};return res.get(L);
 }
-function linksAll(L){
+function linksAll(L,hk){
   const lv=[...new Set(S.blocks.map(b=>b.h))];if(!lv.includes(L))lv.push(L);
-  let res=new Map(lv.map(l=>[l,links1(l)])),prev="";
-  if(!lv.some(l=>res.get(l).elvIn.length))return res;
+  let res=new Map(lv.map(l=>[l,links1c(l,LKI.get(l)||null,hk)])),prev=LKS;
+  if(!lv.some(l=>res.get(l).elvIn.length)){LKI=new Map();LKS="";return res}
   for(let pass=0;pass<Math.min(lv.length,6);pass++){
     const inj=new Map(lv.map(l=>[l,[]])),sig=[];
     lv.forEach(l=>{const K=res.get(l);K.elvIn.forEach(({k,id})=>{const ld=K.load.get(id);if(!ld)return;
       const dst=[l+1,l-1].filter(h=>res.has(h)&&res.get(h).elvOut.has(k));if(!dst.length)return;
       ld.items.forEach((v,item)=>dst.forEach(h=>{inj.get(h).push({id:res.get(h).elvOut.get(k),item,rate:v/dst.length});sig.push(h+k+item+r2(v/dst.length))}))})});
-    const sg=sig.join();if(sg===prev)break;prev=sg;
-    res=new Map(lv.map(l=>[l,links1(l,inj.get(l))]));
+    const sg=sig.join();if(sg===prev)break;prev=sg;LKI=inj;LKS=sg;
+    res=new Map(lv.map(l=>[l,links1c(l,inj.get(l),hk)]));
   }
   return res;
 }
