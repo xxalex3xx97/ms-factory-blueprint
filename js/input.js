@@ -145,7 +145,8 @@ function rotate(){
   push();S.blocks.forEach(b=>{if(sel.has(b.id))b.rot=(b.rot+1)&3});all();
 }
 $("undo").onclick=undo;$("redo").onclick=redo;
-function del(){if(!sel.size)return;push();S.blocks=S.blocks.filter(b=>!sel.has(b.id));sel=new Set();all()}
+// deleting a block also deletes the machines/belts on its factory floor (same floor box as carryOf; one undo step restores both)
+function del(){if(!sel.size)return;push();ugPairs(S.blocks.filter(isM)).forEach(({u,t})=>{if(sel.has(u.id)||sel.has(t.id)){sel.add(u.id);sel.add(t.id)}});const fl=new Set();S.blocks.filter(b=>sel.has(b.id)&&!isM(b)).forEach(b=>{const d=fcell(b);S.blocks.forEach(q=>{if(isM(q)&&q.h===b.h&&q.x>=d.cx*FC&&q.x<(d.cx+d.cw)*FC&&q.y>=d.cy*FC&&q.y<(d.cy+d.ch)*FC)fl.add(q)})});S.blocks=S.blocks.filter(b=>!sel.has(b.id)&&!fl.has(b));sel=new Set();all()}
 // Layout move carries the floor machines inside each block's footprint, plus closed doorways of that block. Call BEFORE mutating blocks; returns (dx,dy,dh) applied relative to the originals (idempotent).
 function carryOf(bs){
   const o=bs.map(b=>{const c=fcell(b);return{h:b.h,x:c.cx,y:c.cy}}),cl=S.closed.slice(),s=new Set();   // closed keys use the floor cell anchor (fcell), same as model.js areas()
@@ -156,7 +157,7 @@ function carryOf(bs){
     S.closed=cl.map(k=>{const a=k.split("|"),m=o.find(p=>p.h===+a[0]&&p.x===+a[1]&&p.y===+a[2]);if(m){a[0]=m.h+dh;a[1]=m.x+dx;a[2]=m.y+dy}return a.join("|")});
   };
 }
-function copy(){if(!sel.size)return;clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null}));if(clip.length){toast(clip.length+" copied");paste()}}
+function copy(){if(!sel.size)return;ugPairs(S.blocks.filter(isM)).forEach(({u,t})=>{if(sel.has(u.id)||sel.has(t.id)){sel.add(u.id);sel.add(t.id)}});clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null}));if(clip.length){toast(clip.length+" copied");paste()}}
 // horizontal mirror of a machine: pick the rotation whose port layout is the mirror image (same face/pos/direction), remap disabled ports; null = cannot mirror
 function mirM(b){
   const d=def(b.cls);if(!d||!d.portsLayout||d.elevator)return null;
@@ -181,12 +182,14 @@ function clipT(n,fl){   // clip mirrored (fl) then rotated n x 90deg clockwise, 
 }
 function paste(){
   if(!clip.length||isM(clip[0])!==(view==="F"))return;
-  active=null;mode=null;sel=new Set();pasting={rot:0,fl:false};toast("Click to place, R rotates, V flips, Esc cancels");all();
+  active=null;mode=null;sel=new Set();pasting={rot:0,fl:false};toast("Stamp: click to place copies, R rotates, V flips, Esc or right click stops");all();
 }
 function pasteAt(){
   const nb=clipT(pasting.rot,pasting.fl).map(b=>({...b,id:uid++,mid:0,x:b.x+hover.x,y:b.y+hover.y,h:b.h+layer}));
   if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}
-  push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set();pasting=null;all();
+  const ug=ms=>new Map(ugPairs(ms).flatMap(({u,t})=>[[u.id,t.id],[t.id,u.id]])),old=S.blocks.filter(isM),was=ug(old),now=ug(old.concat(nb.filter(isM)));   // pasted undergrounds must not re-pair existing ones
+  if([...was].some(([a,b])=>now.get(a)!==b)){toast("Underground would change an existing pair: move it so it does not sit inside or next to another underground on that line");return}
+  push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set();all();   // stamp: stays in paste mode (rot/flip kept) until Esc / right click
 }
 // ---- modes: del = click or box deletes (X toggles); copy = box then paste like Ctrl+C; cfgcopy = click one machine; cfgpaste = box applies cfgClip to same-class machines
 function setMode(m){mode=m||null;if(mode){active=null;pasting=null}all()}
