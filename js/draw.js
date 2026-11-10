@@ -491,11 +491,11 @@ function paint0(){
     const d=def(active);
     beltCells(drag).forEach(c=>{const px=V.ox+c.x*s,py=V.oy+c.y*s;cx.fillStyle=kFill(beltKey(d)||d.category,.5);cx.fillRect(px,py,s,s);drawIcon(d,px,py,s,s,.8);arrow(px,py,s,s,c.rot,.9)});
   }else if(pasting&&pasting.pl&&!drag&&hoverIn){
-    const b={id:-1,cls:pasting.pl.cls,x:hover.x,y:hover.y,h:layer,rot:0},d=dim(b);
-    drawBlock(b,.45,false);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true);
+    const bs=pasting.pl.blocks.map(q=>({id:-1,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:0}));
+    bs.forEach(b=>{const d=dim(b);drawBlock(b,.45,false);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)});
     cx.save();cx.fillStyle="hsla(45,95%,62%,.8)";
-    pasting.pl.ms.forEach(m=>{const e=dim(m);cx.fillRect(V.ox+(b.x+m.x/FC)*s,V.oy+(b.y+m.y/FC)*s,e.w/FC*s,e.h/FC*s)});cx.restore();
-    if(S.blocks.some(o=>{if(isM(o)||o.h!==layer)return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)}
+    pasting.pl.ms.forEach(m=>{const e=dim(m);cx.fillRect(V.ox+(hover.x+m.x/FC)*s,V.oy+(hover.y+m.y/FC)*s,e.w/FC*s,e.h/FC*s)});cx.restore();
+    bs.forEach(b=>{const d=dim(b);if(S.blocks.some(o=>{if(isM(o)||o.h!==layer)return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)}});
   }else if(pasting&&!drag&&hoverIn){
     const g=clipT(pasting.rot,pasting.fl).map(b=>({...b,x:b.x+hover.x,y:b.y+hover.y,h:layer}));
     g.forEach(b=>{drawBlock(b,.45,false);if(!isM(b)){const d=dim(b);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)}});
