@@ -86,6 +86,20 @@
       <div id="plnForm">
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
       <label>Rate (items/min) <input id="plnRate" type="number" min="0" value="0" aria-label="Target rate in items per minute"></label>
+      <button id="plnBuild" type="button" title="Place machines, belts and source containers for this plan as a ghost">Build factory</button>
+      <fieldset id="plnBk" title="Block types the factory may use. None ticked = factory only, into an existing floor"><legend>Blocks</legend>
+        <label class="chk"><input type="checkbox" id="plnBk11" value="BPO_Station_01" checked> 1x1</label>
+        <label class="chk"><input type="checkbox" id="plnBk21" value="BPO_Station_2x1" checked> 2x1</label>
+        <label class="chk"><input type="checkbox" id="plnBk22" value="BPO_Station_02" checked> 2x2</label>
+      </fieldset>
+      <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2">Large Container</option></select></label>
+      <label class="chk" title="Open-ended chainable module: input on west edge, output on east edge, no source/sink containers"><input type="checkbox" id="plnMod"> Modular build</label>
+      </div>
+      <div id="plnPrev" hidden>
+        <canvas id="plnPrevMap" width="300" height="180" aria-label="Factory layout preview"></canvas>
+        <dl id="plnPrevCnt"><dt>Machines</dt><dd id="pvMach"></dd><dt>Belts</dt><dd id="pvBelt"></dd><dt>Splitters</dt><dd id="pvSpl"></dd><dt>Containers</dt><dd id="pvBox"></dd><dt>Blocks</dt><dd id="pvBlk"></dd><dt>Cells</dt><dd id="pvCell"></dd><dt>In/Out</dt><dd id="pvIO"></dd></dl>
+        <div id="plnPrevNote"></div>
+        <div class="btns"><button id="plnPlace" type="button">Place</button><button id="plnCancel" type="button">Cancel</button></div>
       </div>
       <div id="plnMain">
       <div id="plnOut" tabindex="0" role="region" aria-label="Planner flow diagram"></div>
@@ -247,6 +261,7 @@
 <script defer src="js/palette.js"></script>
 <script defer src="js/inspector.js"></script>
 <script defer src="js/planner.js"></script>
+<script defer src="js/placer.js"></script>
 <script defer src="js/panel.js"></script>
 <script defer src="js/io.js"></script>
 <script defer src="js/simui.js"></script>
