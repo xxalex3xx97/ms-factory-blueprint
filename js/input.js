@@ -157,6 +157,8 @@ function carryOf(bs){
     S.closed=cl.map(k=>{const a=k.split("|"),m=o.find(p=>p.h===+a[0]&&p.x===+a[1]&&p.y===+a[2]);if(m){a[0]=m.h+dh;a[1]=m.x+dx;a[2]=m.y+dy}return a.join("|")});
   };
 }
+// cut = copy (stamp ghost) + delete the originals; clip holds the ids (copy completes underground pairs); one undo step
+function cut(){if(!sel.size)return;copy();if(!clip.length)return;sel=new Set(clip.map(b=>b.id));del()}
 function copy(){if(!sel.size)return;ugPairs(S.blocks.filter(isM)).forEach(({u,t})=>{if(sel.has(u.id)||sel.has(t.id)){sel.add(u.id);sel.add(t.id)}});clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null}));if(clip.length){toast(clip.length+" copied");paste()}}
 // horizontal mirror of a machine: pick the rotation whose port layout is the mirror image (same face/pos/direction), remap disabled ports; null = cannot mirror
 function mirM(b){

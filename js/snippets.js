@@ -46,6 +46,7 @@ addEventListener("keydown",e=>{
   else if(ctl&&k==="s"){e.preventDefault();fSave(e.shiftKey)}
   else if(ctl&&e.shiftKey&&k==="c"){e.preventDefault();cfgCopy()}
   else if(ctl&&e.shiftKey&&k==="v"){e.preventDefault();cfgPasteMode()}
+  else if(ctl&&k==="x"){e.preventDefault();cut()}
   else if(ctl&&k==="c"){copy()}
   else if(ctl&&k==="v"){e.preventDefault();paste()}
   else if(ctl&&k==="a"){e.preventDefault();sel=new Set(S.blocks.filter(b=>b.h===layer&&inView(b)).map(b=>b.id));all()}
