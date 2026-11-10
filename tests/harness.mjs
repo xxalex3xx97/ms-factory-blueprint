@@ -3084,6 +3084,20 @@ async function s28(br) {
     const [lo, hi] = g.door || [0, 0], mid = (lo + hi) / 2;
     chk(`28 ${n} rot ${r}: both port cells inside the neighbouring station door slot [${lo},${hi}], symmetric about ${mid}, ports on the shifted tile edge ${g.edge - 1}`, !!g.door && g.al.every(a => a > lo && a < hi) && Math.abs((g.al[0] + g.al[1]) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - (g.edge - 1)) < 1e-6), JSON.stringify(g));
   }
+  // belt strip next to a ports block: the 1x6 column in front of the ports (station door, station side) is buildable; the column behind the ports (dock tile side) is refused. Same noBuild as the click path. rot 0..3
+  for (const n of ['BPO_Dock', 'BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) for (const r of [0, 1, 2, 3]) {
+    const g = await pg.evaluate(([dc, sc2, r]) => {
+      const ed = (2 + r) & 3, DD = DIR[ed], B = (cls, x, y, rot, i) => ({Class: cls, GridLocation: {X: x, Y: y}, Height: 0, GridRotation: rot, BlockID: i, PaletteID: 0});
+      __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(dc, 40, 40, r, 1), B(sc2, 40 + 4 * DD[0], 40 + 4 * DD[1], 0, 2)], DefaultMachines: []}));
+      const st = __fb.S.blocks[1], opp = (ed + 2) & 3, door = __fb.areas(0).doors.find(d => d.bx === st.x && d.by === st.y && d.ed === opp);
+      const nb = (x, y) => noBuild([{id: -5, x, y, w: 1, h: 1, l: 0}]);
+      const front = [], back = [];
+      if (door) for (let x = door.x; x < door.x + door.w; x++) for (let y = door.y; y < door.y + door.h; y++) { front.push(!nb(x, y)); back.push(nb(x - DD[0], y - DD[1])); }
+      return {door: door && [door.x, door.y, door.w, door.h], front, back};
+    }, [`${P}${n}.${n}_C`, `${P}BPO_Station_01.BPO_Station_01_C`, r]);
+    chk(`28 ${n} rot ${r}: belt placeable on all 6 front-strip cells (station side of the ports)`, !!g.door && g.door[2] * g.door[3] === 6 && g.front.length === 6 && g.front.every(Boolean), JSON.stringify(g));
+    chk(`28 ${n} rot ${r}: belt refused on the 6 cells behind the ports (dock tile side)`, g.back.length === 6 && g.back.every(Boolean), JSON.stringify(g));
+  }
   // no ports (solar, turret, armour): shape frame = the tile exactly, no shift, all rot
   for (const n of ['BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01', 'BPO_StationArmour_01']) for (const r of [0, 1, 2, 3]) {
     const g = await pg.evaluate(([cls, r]) => { __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: r, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
