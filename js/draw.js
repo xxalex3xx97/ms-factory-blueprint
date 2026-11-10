@@ -101,6 +101,7 @@ function drawPorts(s,only){   // only: [block] = a placement/paste ghost (not in
   })});
   cx.restore();
 }
+let PLC_PREV=false;   // true only while placer.js paints the preview modal: no block-size labels, container badges only when they fit their box
 function drawBadges(s){
   if(s<10)return;
   cx.save();cx.textBaseline="top";cx.textAlign="center";
@@ -114,12 +115,13 @@ function drawBadges(s){
     cx.font="bold "+fs+"px system-ui,sans-serif";
     const ln=sm&&sto?txt.split(" · in "):[txt];if(ln.length>1)ln[1]="in "+ln[1];
     const nl=ln.length,pw=Math.min(W-4,Math.max(...ln.map(t=>cx.measureText(t).width))+8),mx=mx0;
+    const txtOk=!(PLC_PREV&&(pw>bw||sz+gap+th>bh));   // preview: text wider/taller than its box would collide with neighbour labels; icon stays
     cx.globalAlpha=.9;cx.shadowColor="rgba(0,0,0,.6)";cx.shadowBlur=4;cx.shadowOffsetY=1;
     if(ic&&ic.complete)cx.drawImage(ic,mx-sz/2,top,sz,sz);
     cx.shadowBlur=0;cx.shadowOffsetY=0;cx.globalAlpha=1;
     const py=top+sz+gap;
-    cx.fillStyle="rgba(0,0,0,.65)";cx.fillRect(mx-pw/2,py,pw,th);
-    cx.fillStyle="#fff";ln.forEach((t,i)=>cx.fillText(t,mx,py+2+i*(fs+4)))});
+    if(txtOk){cx.fillStyle="rgba(0,0,0,.65)";cx.fillRect(mx-pw/2,py,pw,th);
+    cx.fillStyle="#fff";ln.forEach((t,i)=>cx.fillText(t,mx,py+2+i*(fs+4)))}});
   cx.restore();
 }
 const ugTool=d=>d&&d.kind==="m"&&d.directional&&d.w===1&&d.h===1&&d.category==="Undergrounds";
@@ -364,7 +366,7 @@ function paintFloorBase(s){
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
       });
     }
-    if(w>70){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
+    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
   });
   drawShapeFloor(A,s);
   const NF=lyBlocks().all.filter(b=>!isM(b)&&nfRect(b));
@@ -490,6 +492,12 @@ function paint0(){
   }else if(drag&&drag.k==="belt"){
     const d=def(active);
     beltCells(drag).forEach(c=>{const px=V.ox+c.x*s,py=V.oy+c.y*s;cx.fillStyle=kFill(beltKey(d)||d.category,.5);cx.fillRect(px,py,s,s);drawIcon(d,px,py,s,s,.8);arrow(px,py,s,s,c.rot,.9)});
+  }else if(pasting&&pasting.pl&&!drag&&hoverIn){
+    const bs=pasting.pl.blocks.map(q=>({id:-1,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:0}));
+    bs.forEach(b=>{const d=dim(b);drawBlock(b,.45,false);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)});
+    cx.save();cx.fillStyle="hsla(45,95%,62%,.8)";
+    pasting.pl.ms.forEach(m=>{const e=dim(m);cx.fillRect(V.ox+(hover.x+m.x/FC)*s,V.oy+(hover.y+m.y/FC)*s,e.w/FC*s,e.h/FC*s)});cx.restore();
+    bs.forEach(b=>{const d=dim(b);if(S.blocks.some(o=>{if(isM(o)||o.h!==layer)return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)}});
   }else if(pasting&&!drag&&hoverIn){
     const g=clipT(pasting.rot,pasting.fl).map(b=>({...b,x:b.x+hover.x,y:b.y+hover.y,h:layer}));
     g.forEach(b=>{drawBlock(b,.45,false);if(!isM(b)){const d=dim(b);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)}});

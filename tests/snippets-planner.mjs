@@ -140,7 +140,7 @@ try {
   const pasted = (await pg.evaluate(() => __fb.build())).Blocks;
   chk('(c) pasted layout identical (min-normalised pos, rot, height)',
     isDeepStrictEqual(normBlocks(pasted), normBlocks(origBlocks)), diff(normBlocks(pasted), normBlocks(origBlocks)));
-  chk('(c) paste ends (pasting null)', (await pg.evaluate(() => __fb.pasting)) === null);
+  chk('(c) paste stays active after a click (stamp, ends on Esc)', !!(await pg.evaluate(() => __fb.pasting)));
 
   await imp(pg, bp());
   await pg.evaluate(() => __fb.setView('L'));
@@ -519,7 +519,7 @@ try {
   chk('(Z) wheel up zooms in', (await gw()) > w1 * 1.1, String(w1) + ' -> ' + await gw());
   // pan: drag empty viewport space moves everything; a node can be dragged past the old top-left limit
   const vp = await pp.evaluate(() => { const r = document.querySelector('.plnVp').getBoundingClientRect(); return {x: r.left, y: r.top, w: r.width, h: r.height}; });
-  const p0 = await bb(), ex = Math.round(vp.x + vp.w - 8), ey = Math.round(vp.y + vp.h - 8);
+  const p0 = await bb(), ex = Math.round(vp.x + 8), ey = Math.round(vp.y + vp.h - 8);   // bottom-left: the bottom-right can sit under other windows when the planner fills the stage
   await pp.mouse.move(ex, ey); await pp.mouse.down(); await pp.mouse.move(ex - 50, ey - 30, {steps: 4}); await pp.mouse.up();
   const p1 = await bb();
   chk('(Z) pan: dragging empty space moves the diagram', Math.abs(p1.x - p0.x + 50) < 1.5 && Math.abs(p1.y - p0.y + 30) < 1.5, `${p0.x},${p0.y} -> ${p1.x},${p1.y}`);
@@ -527,7 +527,9 @@ try {
   await pp.mouse.move(Math.round(vp.x - 40), Math.round(vp.y - 40), {steps: 6}); await pp.mouse.up();
   const p2 = await bb();
   chk('(Z) node moves freely beyond the old edge', p2.x < vp.x, `${p2.x} < ${vp.x}`);
-  chk('(Z) planner panel fills the stage height', await pp.evaluate(() => { const p = document.getElementById('pln').getBoundingClientRect(), s = document.getElementById('pln').offsetParent.getBoundingClientRect(); return s.height - p.height < 24; }));
+  // user rule (2026-11-10): planner height FOLLOWS CONTENT (not forced to fill the stage): panel <= stage, and no child sticks out of the panel
+  const zc = await pp.evaluate(() => { const el = document.getElementById('pln'), p = el.getBoundingClientRect(), s = el.offsetParent.getBoundingClientRect(); const out = [...el.querySelectorAll('*')].filter(k => !k.closest('.plnVp') && !k.closest('details:not([open])') && k.getBoundingClientRect().bottom > p.bottom + 1).map(k => k.tagName + '#' + k.id + '.' + k.className); return {ph: p.height, sh: s.height, out}; });
+  chk('(Z) planner panel height follows content (<= stage, no child clipped)', zc.ph <= zc.sh + 1 && zc.out.length === 0, JSON.stringify(zc));
   await pp.selectOption('#plnItem', other); await pp.selectOption('#plnItem', 'ITEM_CobaltPlates');
   // (PR) Protomatter toggle in the panel
   chk('(PR5) #plnProto default "0" = Don\'t use, aria-label set', (await pp.inputValue('#plnProto')) === '0' && (await pp.textContent('#plnProto option:checked')) === "Don't use" && (await pp.getAttribute('#plnProto', 'aria-label')) === 'Protomatter use');

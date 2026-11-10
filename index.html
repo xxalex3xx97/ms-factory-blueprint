@@ -85,7 +85,8 @@
       <div id="plnBody">
       <div id="plnForm">
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
-      <label>Rate (items/min) <input id="plnRate" type="number" min="0" value="0" aria-label="Target rate in items per minute"></label>
+      <label>Rate (items/min) <input id="plnRate" type="number" min="1" step="any" value="1" aria-label="Target rate in items per minute"></label>
+      <button id="plnBuild" type="button" title="Preview and place machines, belts and source containers for this plan">Build factory</button>
       </div>
       <div id="plnMain">
       <div id="plnOut" tabindex="0" role="region" aria-label="Planner flow diagram"></div>
@@ -247,6 +248,7 @@
 <script defer src="js/palette.js"></script>
 <script defer src="js/inspector.js"></script>
 <script defer src="js/planner.js"></script>
+<script defer src="js/placer.js"></script>
 <script defer src="js/panel.js"></script>
 <script defer src="js/io.js"></script>
 <script defer src="js/simui.js"></script>
@@ -255,5 +257,24 @@
 <script defer src="js/help.js"></script>
 <script defer src="js/tutorial.js"></script>
 <script defer src="js/boot.js"></script>
+<dialog id="plnPrev" aria-labelledby="plnPrevT">
+  <div class="pvHd"><h3 id="plnPrevT">Factory preview</h3><div class="pvTb" role="toolbar" aria-label="Preview zoom"><button id="plnZo" type="button" aria-label="Zoom out" title="Zoom out">&minus;</button><button id="plnZi" type="button" aria-label="Zoom in" title="Zoom in">+</button><button id="plnZf" type="button" aria-label="Fit to view" title="Fit to view">Fit</button></div></div>
+  <div id="pvSet">
+    <fieldset id="plnBk" title="Block types the factory may use. None ticked = factory only, into an existing floor"><legend>Blocks</legend>
+      <label class="chk"><input type="checkbox" id="plnBk11" value="BPO_Station_01" checked> 1x1</label>
+      <label class="chk"><input type="checkbox" id="plnBk21" value="BPO_Station_2x1" checked> 2x1</label>
+      <label class="chk"><input type="checkbox" id="plnBk22" value="BPO_Station_02" checked> 2x2</label>
+    </fieldset>
+    <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2">Large Container</option></select></label>
+    <label>Belt <select id="pvMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+    <label>Splitter <select id="pvSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+    <label class="chk" title="Open-ended chainable module: input on west edge, output on east edge, no source/sink containers"><input type="checkbox" id="plnMod"> Modular build</label>
+  </div>
+  <div id="plnPrevView"><canvas id="plnPrevMap" width="300" height="180" aria-label="Factory layout preview"></canvas></div>
+  <dl id="plnPrevCnt"><dt>Machines</dt><dd id="pvMach"></dd><dt>Belts</dt><dd id="pvBelt"></dd><dt>Splitters</dt><dd id="pvSpl"></dd><dt>Containers</dt><dd id="pvBox"></dd><dt>Undergrounds</dt><dd id="pvUg"></dd><dt>Blocks</dt><dd id="pvBlk"></dd><dt>Cells</dt><dd id="pvCell"></dd><dt>In/Out</dt><dd id="pvIO"></dd></dl>
+  <div id="plnPrevNote"></div>
+  <p id="plnPrevErr" role="alert"></p>
+  <div class="btns"><button id="plnPlace" type="button">Place</button><button id="plnCancel" type="button">Cancel</button></div>
+</dialog>
 </body>
 </html>
