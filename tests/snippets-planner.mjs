@@ -415,7 +415,6 @@ try {
   const pp = await newPage(ctxP, 'planner');
   await pp.evaluate(() => __fb.setView('F'));
   await pp.click('#plnB');
-  await pp.click('#plnOptT');   // options start collapsed (round 3): expand for the Belt/Splitter selects below
   chk('(P1) Planner opens via #plnB in floor view (no Simulate)', await pp.evaluate(() => !document.getElementById('pln').hidden && document.getElementById('vwF').getAttribute('aria-pressed') === 'true'));
   chk('(P2) starts empty: item (none), hint shown', (await pp.inputValue('#plnItem')) === '' && /Pick a craftable/.test(await pp.textContent('#plnOut')));
   chk('(P2) item list has Cobalt Plates', (await pp.locator('#plnItem option[value="ITEM_CobaltPlates"]').count()) === 1);
@@ -582,13 +581,11 @@ try {
   await pq.selectOption('#plnItem', 'ITEM_CobaltPlates');
   await pq.fill('#plnRate', '120');
   chk('(UI3) #plnForm holds item + rate, not belt Mk', await pq.evaluate(() => { const f = document.getElementById('plnForm'); return !!f.querySelector('#plnItem') && !!f.querySelector('#plnRate') && !f.querySelector('#plnMk'); }));
-  // intended behaviour change (build factory round 3): options start collapsed
-  chk('(UI3) planner options start collapsed', (await pq.getAttribute('#plnOptT', 'aria-expanded')) === 'false' && (await pq.evaluate(() => document.getElementById('plnOpt').classList.contains('col'))));
+  chk('(UI3) planner options start expanded', (await pq.getAttribute('#plnOptT', 'aria-expanded')) === 'true' && !(await pq.evaluate(() => document.getElementById('plnOpt').classList.contains('col'))));
   await pq.click('#plnOptT');
-  chk('(UI3) #plnOptT click expands options (aria-expanded true)', (await pq.evaluate(() => !document.getElementById('plnOpt').classList.contains('col'))) && (await pq.getAttribute('#plnOptT', 'aria-expanded')) === 'true');
+  chk('(UI3) #plnOptT collapses options (aria-expanded false)', (await pq.evaluate(() => document.getElementById('plnOpt').classList.contains('col'))) && (await pq.getAttribute('#plnOptT', 'aria-expanded')) === 'false');
   await pq.click('#plnOptT');
-  chk('(UI3) second #plnOptT click collapses options again (aria-expanded false)', (await pq.evaluate(() => document.getElementById('plnOpt').classList.contains('col'))) && (await pq.getAttribute('#plnOptT', 'aria-expanded')) === 'false');
-  await pq.click('#plnOptT');   // re-expand for the option selects below
+  chk('(UI3) #plnOptT re-expands options', (await pq.evaluate(() => !document.getElementById('plnOpt').classList.contains('col'))) && (await pq.getAttribute('#plnOptT', 'aria-expanded')) === 'true');
   const lbU = async () => (await pq.locator('.plnLbl').allTextContents()).join(' | ');
   await pq.selectOption('#plnMk', '2');
   chk('(UI3) belt Mk3 from options changes arrow label', (await lbU()).includes('120 items/min, 1 belts (Mk3)'), await lbU());

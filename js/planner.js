@@ -130,13 +130,16 @@ const plnProto=()=>$("plnProto").value==="1";
 // craftable items for the current Protomatter setting; keeps the selection if it is still craftable
 const plnFillItems=()=>{const cur=$("plnItem").value;$("plnItem").innerHTML='<option value="">(none)</option>'+[...plnBy(plnProto()).keys()].sort((a,b)=>plnNm(a).localeCompare(plnNm(b))).map(k=>`<option value="${esc(k)}">${esc(plnNm(k))}</option>`).join("");if([...$("plnItem").options].some(o=>o.value===cur))$("plnItem").value=cur};
 plnFillItems();
-$("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribute("aria-pressed",!d.hidden);if(!d.hidden&&PLNO===null)plnOptFold(true);plnDraw()};
+$("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribute("aria-pressed",!d.hidden);if(!d.hidden&&PLNO===null)plnOptFold(d.clientWidth<720);plnDraw()};
 $("plnX").onclick=()=>{$("pln").hidden=true;$("plnB").setAttribute("aria-pressed",false);$("plnB").focus()};
 $("plnC").onclick=()=>{const c=$("pln").classList.toggle("col");$("plnC").setAttribute("aria-expanded",!c);$("plnC").title=c?"Expand":"Collapse to title bar"};
-$("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDraw()};
+// rate default = what one machine of the crafter makes at 100% (plan pmach), rounded down to 2 decimals, min 1
+const plnDefRate=()=>{const it=$("plnItem").value;if(!it)return;const P=plan(it,1,+$("plnMk").value,{},{},{proto:plnProto(),enr:$("plnEnr").checked}),m=P.nodes[it]&&P.nodes[it].pmach;if(m)$("plnRate").value=Math.max(1,Math.floor(m*100+1e-9)/100)};
+$("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDefRate();plnDraw()};
 $("plnEnr").onchange=plnDraw;
 $("plnProto").onchange=()=>{plnFillItems();plnDraw()};   // PLN_OFF kept: drag offsets survive
-$("plnRate").oninput=$("plnMk").onchange=$("plnSp").onchange=$("plnBal").onchange=plnDraw;
+$("plnRate").oninput=plnDraw;$("plnRate").onchange=()=>{if(!(+$("plnRate").value>=1)){$("plnRate").value=1;plnDraw()}};   // redraw only when clamped: a plain blur must not re-render the diagram under a pointer press
+$("plnMk").onchange=$("plnSp").onchange=$("plnBal").onchange=plnDraw;
 $("plnOut").onchange=ev=>{const t=ev.target;if(t.classList.contains("plnAlt")){PLN_PICK[t.dataset.item]=t.value;plnDraw()}};
 const sgn=v=>(v>0?"+":"")+v,
   tm=v=>v==null?"n/a":v+" min";

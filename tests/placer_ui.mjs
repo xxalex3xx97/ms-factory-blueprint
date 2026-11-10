@@ -72,7 +72,8 @@ async function run(br, W, H) {
   chk(`(1 ${W}) #plnBuild inside viewport`, inside({...form.build, vw: form.vw, vh: form.vh}), JSON.stringify(form.build));
   const cov = await pg.evaluate(() => { const b = $('plnBuild').getBoundingClientRect(), e = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return {hit: e ? (e.id || e.tagName) : null, ok: !!e && (e === $('plnBuild') || $('plnBuild').contains(e))}; });
   chk(`(1 ${W}) #plnBuild not covered by another element (default state, Flow open)`, cov.ok, `top element at centre: ${cov.hit}`);
-  chk(`(1 ${W}) #plnOptT aria-expanded === 'false' at first open`, R.optAria === 'false', String(R.optAria));
+  const optWant = form.plnCW < 720 ? 'false' : 'true';   // main: plnOptFold(#pln.clientWidth < 720) on first open
+  chk(`(1 ${W}) #plnOptT aria-expanded = plnOptFold(width < 720) at first open (${optWant})`, R.optAria === optWant, String(R.optAria));
   console.log(`      #plnOut width ${W}: Flow closed ${R.outFlowClosed.w}px (fm1=${R.outFlowClosed.fm1}), Flow open ${R.outFlow.w}px (fm1=${R.outFlow.fm1})`);
 
   // ---- state snapshot before Build (for step 4)

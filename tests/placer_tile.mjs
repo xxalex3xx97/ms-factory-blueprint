@@ -25,9 +25,11 @@ function chk(name, cond, detail = '') {
 async function setTicks(pg, ids) {
   for (const id of ALL) await pg.setChecked('#' + id, ids.includes(id));
 }
-async function openBuild(pg) {
+// build settings (block types) live in the modal now: tick them after it opens (live preview)
+async function openBuild(pg, ticks) {
   await pg.click('#plnBuild');
   await pg.waitForFunction(() => document.getElementById('plnPrev').open, null, {timeout: 5000}).catch(() => {});
+  if (ticks) await setTicks(pg, ticks);
   return pg.evaluate(() => ({open: $('plnPrev').open, bl: $('pvBlk').textContent, ug: $('pvUg') ? $('pvUg').textContent : null,
     note: $('plnPrevNote').textContent, err: $('plnPrevErr').textContent}));
 }
@@ -86,8 +88,7 @@ try {
   await pg.fill('#plnRate', String(rate));
 
   // ---- A) 1x1 only: spread over several Station_01 blocks, undergrounds in the preview
-  await setTicks(pg, ['plnBk11']);
-  const A = await openBuild(pg);
+  const A = await openBuild(pg, ['plnBk11']);
   await pg.screenshot({path: path.join(SHOTS, 'pt-1400-modal.png')});
   const m = /^(\d+) x BPO_Station_01$/.exec(A.bl || '');
   chk('A) modal open after Build', A.open === true, JSON.stringify(A));
@@ -163,8 +164,8 @@ try {
   for (const set of sets) {
     for (const rv of [rate, 1]) {
       await closeIfOpen(pg); await reset(pg); await openPlanner(pg);
-      await pg.fill('#plnRate', String(rv)); await setTicks(pg, set);
-      const o = await openBuild(pg);
+      await pg.fill('#plnRate', String(rv));
+      const o = await openBuild(pg, set);
       const tag = set.map(s => CLS_OF[s]).join('+') + ' @' + rv;
       if (!o.open || /\S/.test(o.err)) { chk(`E) ${tag}: Build opens preview without error`, false, o.err); await closeIfOpen(pg); continue; }
       await pg.click('#plnPlace');
@@ -180,9 +181,9 @@ try {
   // ---- F) underground reach too short (mock maxApart 3): refused, modal stays, Place adds nothing
   await pg.evaluate(() => { window.__mxa = def(PLC_UG[0]).maxApart; def(PLC_UG[0]).maxApart = 3; });
   await openPlanner(pg);
-  await pg.fill('#plnRate', String(rate)); await setTicks(pg, ['plnBk11']);
+  await pg.fill('#plnRate', String(rate));
   const F0 = await pg.evaluate(() => S.blocks.length);
-  const fo = await openBuild(pg);
+  const fo = await openBuild(pg, ['plnBk11']);
   await pg.click('#plnPlace');
   const fp = await pg.evaluate(() => ({open: $('plnPrev').open, err: $('plnPrevErr').textContent, n: S.blocks.length, pl: !!(pasting && pasting.pl)}));
   await pg.evaluate(() => { def(PLC_UG[0]).maxApart = window.__mxa; });
@@ -192,7 +193,8 @@ try {
 
   // ---- G) Exosuit refused cleanly (one-click refusal, no preview, nothing placed)
   await reset(pg); await openPlanner(pg);
-  await pg.selectOption('#plnItem', 'ITEM_Exosuit'); await pg.fill('#plnRate', '1'); await setTicks(pg, ALL);
+  await pg.selectOption('#plnItem', 'ITEM_Exosuit'); await pg.fill('#plnRate', '1');
+  await pg.evaluate(() => ['plnBk11', 'plnBk21', 'plnBk22'].forEach(i => { document.getElementById(i).checked = true; }));   // modal closed here: plain state set
   await pg.evaluate(() => { $('toast').textContent = ''; });
   await pg.click('#plnBuild');
   await pg.waitForFunction(() => /\S/.test($('toast').textContent), null, {timeout: 20000}).catch(() => {});

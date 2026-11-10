@@ -128,20 +128,46 @@ const placerBk=()=>["plnBk11","plnBk21","plnBk22"].map(i=>$(i).checked);
 function placerGo(){
   const x=placerPlan();
   if(!x){toast("Pick an item and a rate first");return}
+  $("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;   // modal Belt/Splitter = planner selects
   const L=placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:$("plnMod").checked});
   if(!L.ok){toast(L.why);return}
   plcL=L;placerPreview(L);
+}
+// live modal: re-run the layout with the current settings (block types, buffer, modular, Mk); on failure keep the dialog open, show why, draw nothing, Place off
+function placerLive(){
+  if(!$("plnPrev").open)return;
+  const x=placerPlan();if(!x)return;
+  const L=placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:$("plnMod").checked});
+  if(!L.ok){plcL=null;plcT=null;placerClear();$("plnPrevErr").textContent=L.why;$("plnPlace").disabled=true;return}
+  plcL=L;placerPreview(L);
+}
+function placerClear(){
+  ["pvMach","pvBelt","pvSpl","pvBox","pvUg","pvBlk","pvCell","pvIO"].forEach(i=>{if($(i))$(i).textContent="-"});
+  $("plnPrevNote").textContent="";
+  const c=$("plnPrevMap"),g=c.getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,c.width,c.height);
 }
 let plcV={z:1,ox:0,oy:0},plcRaf=0;
 let plcT=null;   // last tile result (placerTile) for the open preview
 const plcTT=()=>plcT&&plcT.ok?plcT:{blocks:[{cls:plcCls("BPO_Station_02"),x:0,y:0}],ms:plcL.items};
 const plcExt=T=>({w:Math.max(...T.blocks.map(q=>(q.x+dim({cls:q.cls,rot:0}).w)*FC),...T.ms.map(m=>m.x+dim(m).w)),h:Math.max(...T.blocks.map(q=>(q.y+dim({cls:q.cls,rot:0}).h)*FC),...T.ms.map(m=>m.y+dim(m).h))});
-function placerSize(){const c=$("plnPrevMap"),r=$("plnPrevView").getBoundingClientRect();c.width=Math.max(1,Math.round(r.width));c.height=Math.max(1,Math.round(r.height));return{w:c.width,h:c.height}}
-function placerFitView(){const {w,h}=placerSize(),E=plcExt(plcTT()),s=Math.min((w-24)/E.w,(h-24)/E.h);plcV.z=Math.min(60,Math.max(.01,s/CELLS.F));const k=CELLS.F*plcV.z;plcV.ox=(w-E.w*k)/2;plcV.oy=(h-E.h*k)/2;placerShot()}
+function placerSize(){const c=$("plnPrevMap"),v=$("plnPrevView");c.width=Math.max(1,v.clientWidth);c.height=Math.max(1,v.clientHeight);return{w:c.width,h:c.height}}   // content box (border excluded): canvas CSS size = attribute size, no rescale
+const PLC_PAD=1;   // floor cells the drawn shell sticks out beyond a block tile (hull wall, doorway strip), all sides
+// pixel box of the last placerShot: alpha >= 140 = block shells, floors, items (grid and axis lines are fainter)
+function placerBox(w,h){const d=$("plnPrevMap").getContext("2d").getImageData(0,0,w,h).data;let l=w,t=h,r=-1,b=-1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(d[(y*w+x)*4+3]>=140){if(x<l)l=x;if(x>r)r=x;if(y<t)t=y;if(y>b)b=y}
+  return r<0?null:{l,t,r:r+1,b:b+1}}
+// pass 1: layout extents + PLC_PAD; pass 2: scale so the measured drawn box (shells, doorways, items) fills the view minus 12px, centred
+function placerFitView(){if(!plcL)return;const {w,h}=placerSize(),E=plcExt(plcTT()),ew=E.w+2*PLC_PAD,eh=E.h+2*PLC_PAD;
+  const s=Math.min((w-24)/ew,(h-24)/eh);plcV.z=Math.min(60,Math.max(.01,s/CELLS.F));let k=CELLS.F*plcV.z;plcV.ox=(w-ew*k)/2+PLC_PAD*k;plcV.oy=(h-eh*k)/2+PLC_PAD*k;
+  placerShot();
+  const bx=placerBox(w,h);if(!bx)return;
+  const qx=(bx.l+bx.r)/2-plcV.ox,qy=(bx.t+bx.b)/2-plcV.oy,f=Math.min((w-24)/(bx.r-bx.l),(h-24)/(bx.b-bx.t));
+  plcV.z=Math.min(60,Math.max(.01,plcV.z*f));const r=CELLS.F*plcV.z/k;
+  plcV.ox=w/2-qx*r;plcV.oy=h/2-qy*r;placerShot()}
 function placerShot(){
   const L=plcL;if(!L||!$("plnPrev").open)return;
-  const {w,h}=placerSize(),T=plcTT(),
-    sv={S:S.blocks,view,layer,V,W,H,dpr,sel,active,pasting,drag,ugPend,mode,SM,OV,hoverIn,cw:cv.width,ch:cv.height};
+  const {w,h}=placerSize(),T=plcTT();
+  const sv={S:S.blocks,view,layer,V,W,H,dpr,sel,active,pasting,drag,ugPend,mode,SM,OV,hoverIn,cw:cv.width,ch:cv.height};PLC_PREV=true;
   try{
     S.blocks=[...T.blocks.map((q,i)=>({id:i+1,cls:q.cls,x:q.x,y:q.y,h:0,rot:0,pid:0})),...T.ms.map((it,i)=>({...it,id:T.blocks.length+i+1,h:0}))];
     view="F";layer=0;V={ox:plcV.ox,oy:plcV.oy,z:plcV.z};W=w;H=h;dpr=1;sel=new Set();active=null;pasting=null;drag=null;ugPend=null;mode=null;SM=false;OV={};hoverIn=false;SV++;
@@ -150,7 +176,7 @@ function placerShot(){
     const g=$("plnPrevMap").getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.drawImage(cv,0,0);
   }finally{
     S.blocks=sv.S;view=sv.view;layer=sv.layer;V=sv.V;W=sv.W;H=sv.H;dpr=sv.dpr;sel=sv.sel;active=sv.active;pasting=sv.pasting;drag=sv.drag;ugPend=sv.ugPend;mode=sv.mode;SM=sv.SM;OV=sv.OV;hoverIn=sv.hoverIn;SV++;
-    cv.width=sv.cw;cv.height=sv.ch;paint();
+    cv.width=sv.cw;cv.height=sv.ch;paint();PLC_PREV=false;
   }
 }
 function placerPreview(L){
@@ -165,7 +191,7 @@ function placerPreview(L){
   $("pvCell").textContent=L.w+" x "+L.h;
   $("pvIO").textContent=L.mod?"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w:"closed: source container in, sink container out";
   $("plnPrevNote").textContent=L.note.concat(plcT&&plcT.ok&&plcT.blocks.length>1?["Spread over "+plcT.blocks.length+" blocks ("+plcT.cols+" x "+plcT.rows+"); "+k.ug/2+" underground pairs cross the walls"]:[]).join(". ");
-  $("plnPrevErr").textContent=plcT&&!plcT.ok?plcT.why:"";const dl=$("plnPrev");if(!dl.open)dl.showModal();placerFitView();
+  $("plnPrevErr").textContent=plcT&&!plcT.ok?plcT.why:"";const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}$("plnPlace").disabled=false;placerFitView();
 }
 function placerPlace(){
   const L=plcL;if(!L)return;
@@ -199,4 +225,10 @@ const plcEnd=()=>{plcSt=null};plcM.addEventListener("pointerup",plcEnd);plcM.add
 $("plnZi").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1.25)};
 $("plnZo").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1/1.25)};
 $("plnZf").onclick=()=>placerFitView();
-window.addEventListener("resize",()=>{if($("plnPrev").open){placerSize();plcDo()}});
+// live wiring: build settings in the modal re-run the preview; Belt/Splitter = the planner selects, synced both ways
+$("plnBk").addEventListener("change",placerLive);$("plnBuf").addEventListener("change",placerLive);$("plnMod").addEventListener("change",placerLive);
+$("pvMk").addEventListener("change",()=>{$("plnMk").value=$("pvMk").value;$("plnMk").dispatchEvent(new Event("change"))});
+$("pvSp").addEventListener("change",()=>{$("plnSp").value=$("pvSp").value;$("plnSp").dispatchEvent(new Event("change"))});
+const plcSync=()=>{if(!$("plnPrev").open)return;$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;placerLive()};
+$("plnMk").addEventListener("change",plcSync);$("plnSp").addEventListener("change",plcSync);
+window.addEventListener("resize",()=>{if($("plnPrev").open)requestAnimationFrame(placerFitView)});

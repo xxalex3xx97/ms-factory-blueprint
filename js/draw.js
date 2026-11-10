@@ -101,6 +101,7 @@ function drawPorts(s,only){   // only: [block] = a placement/paste ghost (not in
   })});
   cx.restore();
 }
+let PLC_PREV=false;   // true only while placer.js paints the preview modal: no block-size labels, container badges only when they fit their box
 function drawBadges(s){
   if(s<10)return;
   cx.save();cx.textBaseline="top";cx.textAlign="center";
@@ -114,12 +115,13 @@ function drawBadges(s){
     cx.font="bold "+fs+"px system-ui,sans-serif";
     const ln=sm&&sto?txt.split(" · in "):[txt];if(ln.length>1)ln[1]="in "+ln[1];
     const nl=ln.length,pw=Math.min(W-4,Math.max(...ln.map(t=>cx.measureText(t).width))+8),mx=mx0;
+    const txtOk=!(PLC_PREV&&(pw>bw||sz+gap+th>bh));   // preview: text wider/taller than its box would collide with neighbour labels; icon stays
     cx.globalAlpha=.9;cx.shadowColor="rgba(0,0,0,.6)";cx.shadowBlur=4;cx.shadowOffsetY=1;
     if(ic&&ic.complete)cx.drawImage(ic,mx-sz/2,top,sz,sz);
     cx.shadowBlur=0;cx.shadowOffsetY=0;cx.globalAlpha=1;
     const py=top+sz+gap;
-    cx.fillStyle="rgba(0,0,0,.65)";cx.fillRect(mx-pw/2,py,pw,th);
-    cx.fillStyle="#fff";ln.forEach((t,i)=>cx.fillText(t,mx,py+2+i*(fs+4)))});
+    if(txtOk){cx.fillStyle="rgba(0,0,0,.65)";cx.fillRect(mx-pw/2,py,pw,th);
+    cx.fillStyle="#fff";ln.forEach((t,i)=>cx.fillText(t,mx,py+2+i*(fs+4)))}});
   cx.restore();
 }
 const ugTool=d=>d&&d.kind==="m"&&d.directional&&d.w===1&&d.h===1&&d.category==="Undergrounds";
@@ -364,7 +366,7 @@ function paintFloorBase(s){
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
       });
     }
-    if(w>70){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
+    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
   });
   drawShapeFloor(A,s);
   const NF=lyBlocks().all.filter(b=>!isM(b)&&nfRect(b));
