@@ -40,10 +40,10 @@ function shapeTf(b){const fl=floorRect(b),r=fl||nfRect(b),d=def(b.cls),sh=r&&d&&
   if(fl)return{sh,f:f0,f0};
   const gp=sh.gaps&&sh.gaps.length,pt=sh.entrance&&sh.entrance.kind==="ports"&&sh.ports.length;
   if(!pt&&!gp)return{sh,f:f0,f0};   // no ports and no door (solar, turret, armour): exact tile placement, no shift
-  return{sh,f0,f:(u,v)=>{const[p,q]=f0(u,v);return[p-NFQ,q-NFQ]}}}   // every shaped block (ports or door gap) takes the full (-1,-1) like the neighbouring floor blocks   // f0 = unshifted (real tile frame), f = site floor model frame (Factory floor)
+  return{sh,f0,f:(u,v)=>{const[p,q]=f0(u,v);return[p-NFQ,q-NFQ]}}}   // f0 = unshifted (real tile frame), f = site floor model frame (Factory floor): every shaped block (ports or door gap) takes the full (-1,-1) like the neighbouring floor blocks
 // entrances (Layout marks + inspector): real door slots (same geometry as areas(): per cell along each open side of the floor cell box, none on the dock's ship side)
 // or, for a no-floor shaped block whose SHAPES entry says entrance.kind==="ports", the side of its output ports. Points in cell units on the footprint edge; ed = world edge 0..3 (E,S,W,N)
-// real=true (Layout): TRUE block-frame positions (door slot +NFQ along the edge = middle of a station tile edge; ports unshifted); default = site floor model positions
+// real=true (Layout): TRUE block-frame positions (door slot +NFQ along the edge = middle of a station tile edge; ports on the real tile edge, f0); default = site floor model positions
 function entrances(b,real){
   const d=def(b.cls),sh=d&&SHAPES[d.name],o=[];if(!d)return o;
   if(!floorRect(b)&&sh&&sh.gaps){const t=shapeTf(b);if(!t)return o;   // no-floor doors (Command Module, shipyards): one mark per gap, at the gap centre on the block edge; rot maps the block-frame side to a world side
