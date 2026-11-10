@@ -175,6 +175,68 @@ try {
   const esc = await pg.evaluate(() => ({pl: !!(pasting && pasting.pl), n: S.blocks.length}));
   chk('(10) Esc clears pasting, nothing placed', !esc.pl && esc.n === 0, JSON.stringify(esc));
 
+  // ---- (11) sweep: single-input candidates, Mk1 @60 and Mk2 @120. Sim <= 105% of N*pmach and >= 95% of min(rate, N*pmach)
+  const sw = await pg.evaluate(() => {
+    const bad = [], seen = [];
+    for (const item of plnBy(false).keys()) {
+      for (const [R, mk] of [[60, 0], [120, 1]]) {
+        const P = plan(item, R, mk, {}, {}, {});
+        const rec = Object.values(P.nodes).filter(q => q.rec);
+        if (rec.length !== 1 || P.raw.length !== 1 || rec[0].rec.i.length !== 1) continue;
+        const L = placerLayout(P, item, mk, mk);
+        if (!L.ok) { if (!/belt/.test(L.why)) bad.push(item + ' R' + R + ' refused: ' + L.why); continue; }   // belt-limited refusals are expected
+        STRICT = false; S.blocks = L.items.map(b => ({...b, id: uid++, x: b.x + 10, y: b.y + 10, h: 0}));
+        simInit({}); simRun(300);
+        const cap = P.nodes[item].machines * P.nodes[item].pmach, got = simProd().byItem[item] || 0;
+        seen.push(item + '@' + R + '/Mk' + (mk + 1));
+        if (got < 0.95 * Math.min(R, cap) || got > 1.05 * cap) bad.push(item + ' R' + R + ' Mk' + (mk + 1) + ': sim ' + got.toFixed(1) + ' cap ' + cap);
+      }
+    }
+    S.blocks = [];
+    return {n: seen.length, bad};
+  });
+  chk('(11) sweep ' + sw.n + ' single-input candidate runs: sim matches machine capacity', sw.bad.length === 0 && sw.n > 0, sw.bad.join('\n     '));
+
+  // ---- (12) unchecked into an existing Station_2x1 / Station_02 floor (STRICT on): Apply adds all items, one undo leaves the block
+  for (const nm of ['BPO_Station_2x1', 'BPO_Station_02']) {
+    const r = await pg.evaluate(([nm]) => {
+      const cls = Object.keys(BASE).find(k => BASE[k].kind === 'b' && BASE[k].name === nm);
+      S = {name: 't', blocks: [{id: uid++, cls, x: 5, y: 5, h: 0, rot: 0, pid: 0}], dm: [], closed: []}; undoS = []; redoS = []; pasting = null; clip = []; STRICT = true; setView('F');
+      $('plnItem').value = 'ITEM_CobaltPlates'; $('plnRate').value = '60'; $('plnMk').value = '0'; $('plnSp').value = ''; $('plnInc').checked = false; plnDraw();
+      const x = placerPlan(), L = placerLayout(x.P, 'ITEM_CobaltPlates', 0, 0), fit = placerFit(L.items, L.w, L.h);
+      document.getElementById('plnBuild').click();
+      if (!fit || !(pasting && !pasting.pl)) return {fit, paste: !!pasting, toast: $('toast').textContent};
+      const before = S.blocks.length; hover = {x: fit.x, y: fit.y}; pasteAt();
+      const ms = S.blocks.filter(isM), f = floorRect(S.blocks[0]);
+      const inside = ms.every(m => { const e = dim(m); return m.x >= f.x && m.y >= f.y && m.x + e.w <= f.x + f.w && m.y + e.h <= f.y + f.h; });
+      const res = {added: S.blocks.length - before, want: L.items.length, inside, bad: noBuild(ms.map(mItem))};
+      undo(); res.afterUndo = S.blocks.length;
+      return res;
+    }, [nm]);
+    chk('(12) unchecked into ' + nm + ' floor: Apply adds all items, inside floor, one undo leaves block only', r.added === r.want && r.inside && r.bad === false && r.afterUndo === 1, JSON.stringify(r));
+  }
+
+  // ---- (13) checked block placed adjacent to an existing block: placed; overlapping: toast, nothing added
+  const adj = await pg.evaluate(() => {
+    const cls = Object.keys(BASE).find(k => BASE[k].kind === 'b' && BASE[k].name === 'BPO_Station_01');
+    const go = hx => {
+      S = {name: 't', blocks: [{id: uid++, cls, x: 5, y: 5, h: 0, rot: 0, pid: 0}], dm: [], closed: []}; undoS = []; redoS = []; pasting = null; clip = []; STRICT = true; setView('L');
+      $('plnItem').value = 'ITEM_CobaltPlates'; $('plnRate').value = '60'; $('plnMk').value = '0'; $('plnSp').value = ''; $('plnInc').checked = true; plnDraw();
+      document.getElementById('plnBuild').click(); hover = {x: hx, y: 5}; pasteAt();
+      return {blocks: S.blocks.filter(b => !isM(b)).length, machines: S.blocks.filter(isM).length, toast: $('toast').textContent, pl: !!(pasting && pasting.pl)};
+    };
+    return {adjacent: go(6), overlap: go(5)};
+  });
+  chk('(13) block adjacent to existing block: placed with factory', adj.adjacent.blocks === 2 && adj.adjacent.machines > 0 && !adj.adjacent.pl, JSON.stringify(adj.adjacent));
+  chk('(13) block overlapping existing block: toast, nothing added', adj.overlap.toast === 'Block overlaps another block' && adj.overlap.blocks === 1 && adj.overlap.pl, JSON.stringify(adj.overlap));
+
+  // ---- (14) multi-input recipe must be refused. ITEM_Xenoeukarya recipe takes Xenoeukarya + Biomass (2 ingredients) and passes the single-raw check. EXPECTED FAIL until fixed.
+  const xe = await pg.evaluate(() => {
+    const P = plan('ITEM_Xenoeukarya', 60, 0, {}, {}, {}), L = placerLayout(P, 'ITEM_Xenoeukarya', 0, 0);
+    return {ok: L.ok, why: L.why || '', ingredients: P.nodes.ITEM_Xenoeukarya.rec.i.length};
+  });
+  chk('(14) two-ingredient recipe (ITEM_Xenoeukarya) refused, not laid out', xe.ok === false && /single-input/.test(xe.why), JSON.stringify(xe));
+
   chk('(h) no pageerror / console.error during the run', errs.length === 0, errs.join('\n     '));
   await ctx.close();
 } finally {
