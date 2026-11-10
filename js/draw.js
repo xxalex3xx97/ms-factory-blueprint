@@ -190,7 +190,7 @@ function entMark(b,x,y,alpha,s,w,h,force){   // force: placement/paste ghost, al
     cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.5,-r*.9);cx.lineTo(-r*.5,r*.9);cx.closePath();cx.fill();cx.stroke();cx.restore()});
 }
 // belts (Conveyors + Undergrounds) are grey, lighter per Mk (name suffix 2/3, none = Mk1); key "~belt<mk>" replaces the category in fills/strokes
-const BELT_L=[0,48,62,76];
+const BELT_L=[0,30,42,54];
 const beltKey=d=>d&&d.directional&&(d.category==="Conveyors"||d.category==="Undergrounds")?"~belt"+Math.min(3,+(/(\d)$/.exec(d.name||"")||[0,1])[1]||1):"";
 const tileKey=b=>beltKey(def(b.cls))||catOf(b)||"";
 const kFill=(k,a)=>k[0]==="~"?`hsla(0,0%,${BELT_L[k[5]]}%,${a})`:k?fill(k,a):`rgba(120,125,135,${a})`;
