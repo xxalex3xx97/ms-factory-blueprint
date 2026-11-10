@@ -145,7 +145,8 @@ function rotate(){
   push();S.blocks.forEach(b=>{if(sel.has(b.id))b.rot=(b.rot+1)&3});all();
 }
 $("undo").onclick=undo;$("redo").onclick=redo;
-function del(){if(!sel.size)return;push();S.blocks=S.blocks.filter(b=>!sel.has(b.id));sel=new Set();all()}
+// deleting a block also deletes the machines/belts on its factory floor (same floor box as carryOf; one undo step restores both)
+function del(){if(!sel.size)return;push();const fl=new Set();S.blocks.filter(b=>sel.has(b.id)&&!isM(b)).forEach(b=>{const d=fcell(b);S.blocks.forEach(q=>{if(isM(q)&&q.h===b.h&&q.x>=d.cx*FC&&q.x<(d.cx+d.cw)*FC&&q.y>=d.cy*FC&&q.y<(d.cy+d.ch)*FC)fl.add(q)})});S.blocks=S.blocks.filter(b=>!sel.has(b.id)&&!fl.has(b));sel=new Set();all()}
 // Layout move carries the floor machines inside each block's footprint, plus closed doorways of that block. Call BEFORE mutating blocks; returns (dx,dy,dh) applied relative to the originals (idempotent).
 function carryOf(bs){
   const o=bs.map(b=>{const c=fcell(b);return{h:b.h,x:c.cx,y:c.cy}}),cl=S.closed.slice(),s=new Set();   // closed keys use the floor cell anchor (fcell), same as model.js areas()
