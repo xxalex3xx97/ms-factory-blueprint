@@ -3082,7 +3082,21 @@ async function s28(br) {
       await pg.screenshot({path: path.join(SHOTS, `align-drone-rot${r}-floor.png`)});
     }
     const [lo, hi] = g.door || [0, 0], mid = (lo + hi) / 2;
-    chk(`28 ${n} rot ${r}: both port cells inside the neighbouring station door slot [${lo},${hi}], symmetric about ${mid}, ports on the tile edge ${g.edge}`, !!g.door && g.al.every(a => a > lo && a < hi) && Math.abs((g.al[0] + g.al[1]) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - g.edge) < 1e-6), JSON.stringify(g));
+    chk(`28 ${n} rot ${r}: both port cells inside the neighbouring station door slot [${lo},${hi}], symmetric about ${mid}, ports on the shifted tile edge ${g.edge - 1}`, !!g.door && g.al.every(a => a > lo && a < hi) && Math.abs((g.al[0] + g.al[1]) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - (g.edge - 1)) < 1e-6), JSON.stringify(g));
+  }
+  // belt strip next to a ports block: the 1x6 column in front of the ports (station door, station side) is buildable; the column behind the ports (dock tile side) is refused. Same noBuild as the click path. rot 0..3
+  for (const n of ['BPO_Dock', 'BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) for (const r of [0, 1, 2, 3]) {
+    const g = await pg.evaluate(([dc, sc2, r]) => {
+      const ed = (2 + r) & 3, DD = DIR[ed], B = (cls, x, y, rot, i) => ({Class: cls, GridLocation: {X: x, Y: y}, Height: 0, GridRotation: rot, BlockID: i, PaletteID: 0});
+      __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(dc, 40, 40, r, 1), B(sc2, 40 + 4 * DD[0], 40 + 4 * DD[1], 0, 2)], DefaultMachines: []}));
+      const st = __fb.S.blocks[1], opp = (ed + 2) & 3, door = __fb.areas(0).doors.find(d => d.bx === st.x && d.by === st.y && d.ed === opp);
+      const nb = (x, y) => noBuild([{id: -5, x, y, w: 1, h: 1, l: 0}]);
+      const front = [], back = [];
+      if (door) for (let x = door.x; x < door.x + door.w; x++) for (let y = door.y; y < door.y + door.h; y++) { front.push(!nb(x, y)); back.push(nb(x - DD[0], y - DD[1])); }
+      return {door: door && [door.x, door.y, door.w, door.h], front, back};
+    }, [`${P}${n}.${n}_C`, `${P}BPO_Station_01.BPO_Station_01_C`, r]);
+    chk(`28 ${n} rot ${r}: belt placeable on all 6 front-strip cells (station side of the ports)`, !!g.door && g.door[2] * g.door[3] === 6 && g.front.length === 6 && g.front.every(Boolean), JSON.stringify(g));
+    chk(`28 ${n} rot ${r}: belt refused on the 6 cells behind the ports (dock tile side)`, g.back.length === 6 && g.back.every(Boolean), JSON.stringify(g));
   }
   // no ports (solar, turret, armour): shape frame = the tile exactly, no shift, all rot
   for (const n of ['BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01', 'BPO_StationArmour_01']) for (const r of [0, 1, 2, 3]) {
@@ -3168,7 +3182,7 @@ async function s28(br) {
     __fb.setView('F'); const b = __fb.S.blocks[0], d = dim(b); V.z = Math.min(W, H) / ((d.w + 1.5) * FC * CELLS.F); V.ox = W / 2 - (b.x + d.w / 2) * FC * sc(); V.oy = H / 2 - (b.y + d.h / 2) * FC * sc();
     const g = document.getElementById('cv').getContext('2d'), k = devicePixelRatio, cvs = document.getElementById('cv'), grab = () => g.getImageData(0, 0, cvs.width, cvs.height).data;
     NBH = false; __fb.paint(); const a = grab().slice(); NBH = true; __fb.paint(); const c = grab(), s = sc(), t = shapeTf(b), P = (u, v) => t.f(u, v).map((n, i) => i ? V.oy + n * s : V.ox + n * s);
-    const rg = t.sh.hatch === 'ring' ? t.sh.ring : null, rects = rg ? [] : interiorRects(t.sh, SHIPEND(b)).map(r => { const p = P(r[0], r[1]), q = P(r[2], r[3]); return [Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1])] }), cc = rg && P(rg.c[0], rg.c[1]);
+    const rg = t.sh.hatch === 'ring' ? t.sh.ring : null, rects = rg ? [] : hatchRects(t.sh, SHIPEND(b)).map(r => { const p = P(r[0], r[1]), q = P(r[2], r[3]); return [Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(p[0], q[0]), Math.max(p[1], q[1])] }), cc = rg && P(rg.c[0], rg.c[1]);
     let n = 0, bad = 0; for (let i = 0; i < a.length; i += 4) if (a[i] !== c[i] || a[i + 1] !== c[i + 1] || a[i + 2] !== c[i + 2]) { n++; const p = i / 4, x = (p % cvs.width) / k, y = Math.floor(p / cvs.width) / k;
       const ok = rg ? Math.hypot(x - cc[0], y - cc[1]) <= rg.ri * s + 1.5 : rects.some(r => x >= r[0] - 1.5 && x <= r[2] + 1.5 && y >= r[1] - 1.5 && y <= r[3] + 1.5); if (!ok) bad++ }
     return {n, bad};
@@ -3176,6 +3190,13 @@ async function s28(br) {
   for (const n of ['BPO_Dock_2', 'BPO_CommandModule', 'BPO_BlueprintUnit', 'BPO_ShipyardSide', 'BPO_ShipyardCore', 'BPO_ShipyardCore_02', 'BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) for (const r of [0, 1, 2, 3]) {
     const h = await inside(`${P}${n}.${n}_C`, r);
     chk(`28 ${n} rot ${r}: hatch (${h.n} px) only inside the closed wall interior`, h.n > 100 && h.bad === 0, JSON.stringify(h));
+  }
+  // ports blocks: hatch reaches the port edge (behind the ports, above and below the port tube), shape frame u=0.2 at v=5.75 and v=10.25 (rows above/below the tube); shape frame is rot-independent
+  for (const n of ['BPO_Dock', 'BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2']) {
+    const g = await pg.evaluate(([cls]) => { __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+      const sh = shapeTf(__fb.S.blocks[0]).sh, R = hatchRects(sh, false), inR = (u, v) => R.some(r => u >= Math.min(r[0], r[2]) && u <= Math.max(r[0], r[2]) && v >= Math.min(r[1], r[3]) && v <= Math.max(r[1], r[3]));
+      return {above: inR(0.2, 5.75), below: inR(0.2, 10.25), rects: R.length}; }, [`${P}${n}.${n}_C`]);
+    chk(`28 ${n}: hatch reaches the port edge behind the ports (above and below the tube)`, g.above && g.below, JSON.stringify(g));
   }
   // hull edges meet on one line: wall on the door side vs the neighbour wall outer face (Station 1x1, Elevator 1x1), rot 0..3
   for (const n of ['BPO_ShipyardCore', 'BPO_ShipyardSide', 'BPO_CommandModule', 'BPO_BlueprintUnit']) for (const nb of ['BPO_Station_01', 'BPO_ElevatorBlock_03']) for (const r of [0, 1, 2, 3]) {

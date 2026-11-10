@@ -291,10 +291,12 @@ function interiorRects(sh,dock){
   return sh._in=out.flatMap(p=>p.runs.map(([a,b])=>[x0+a*RS,y0+p.j*RS,x0+b*RS,y0+(p.j+p.rows)*RS])).concat(sh.chain?Object.values(sh.chain.closing):[]);   // closing-wall strips count as interior: with an attached neighbour there is no wall there and the hatch runs on, drawn closing walls cover it
 }
 // grey no-build hatch of a shaped block, clipped to its enclosed interior (Industrial Dock: minus the buildable floor box; Command Module / Blueprint Unit: inside the ring circle)
+// hatch rects (shape frame): interior; a ports block (dock, drone bay) hatches its wall gap on the port side out to the port edge (u=0), the buildable strip in front of the ports stays outside
+function hatchRects(sh,dock){return interiorRects(sh,dock).map(r=>{const q=r.slice();if(sh.entrance&&sh.entrance.kind==="ports"){if(q[0]>0&&q[0]<=.5)q[0]=0;if(q[2]>0&&q[2]<=.5)q[2]=0}return q})}
 function hatchShape(b,t,s){
   const sh=t.sh,P=(u,v)=>t.f(u,v).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.save();cx.beginPath();
   if(sh.hatch==="ring"){const[a,c]=P(sh.ring.c[0],sh.ring.c[1]);cx.arc(a,c,sh.ring.ri*s,0,2*Math.PI)}
-  else interiorRects(sh,SHIPEND(b)).forEach(r=>{const p=P(r[0],r[1]),q=P(r[2],r[3]);cx.rect(Math.min(p[0],q[0]),Math.min(p[1],q[1]),Math.abs(q[0]-p[0]),Math.abs(q[1]-p[1]))});
+  else hatchRects(sh,SHIPEND(b)).forEach(r=>{const p=P(r[0],r[1]),q=P(r[2],r[3]);cx.rect(Math.min(p[0],q[0]),Math.min(p[1],q[1]),Math.abs(q[0]-p[0]),Math.abs(q[1]-p[1]))});
   cx.clip();
   const fr=SHIPEND(b)&&floorRect(b);if(fr){cx.beginPath();cx.rect(0,0,W,H);cx.rect(V.ox+fr.x*s,V.oy+fr.y*s,fr.w*s,fr.h*s);cx.clip("evenodd")}
   nbHatch(0,0,W,H,false);cx.restore();
