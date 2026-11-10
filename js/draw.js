@@ -78,10 +78,10 @@ let CUR=[];   // this paint's layer blocks in view (set in paint0, cleared in pa
 const portBox=(b,s)=>{const r=(def(b.cls)||{}).elevator&&floorRect(b);
   if(r){const m=CULLM+s;return[V.ox+r.x*s-m,V.oy+r.y*s-m,r.w*s+2*m,r.h*s+2*m]}   // +s: ring cell is one floor unit outside the floor
   const d=dim(b);return[V.ox+b.x*s-CULLM,V.oy+b.y*s-CULLM,d.w*s+2*CULLM,d.h*s+2*CULLM]};
-function drawPorts(s){
+function drawPorts(s,only){   // only: [block] = a placement/paste ghost (not in S.blocks), drawn with the same bars + chevrons
   if(s<6)return;
   const Ln=Math.min(.6*s,18),T=Math.min(5,Math.max(3,.2*s));cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
-  lyBlocks().all.forEach(b=>{if(!vis(...portBox(b,s)))return;const bars=barPorts(b);
+  (only||lyBlocks().all).forEach(b=>{if(!vis(...portBox(b,s)))return;const bars=barPorts(b);
     // splitter input (back) face: no bar; small neutral chevron pointing into the machine (not clickable, no hover state)
     portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.min(8,Math.max(3,s*.2)),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
       cx.strokeStyle="rgba(230,240,255,.45)";cx.lineWidth=Math.max(1.5,s*.08);cx.beginPath();
@@ -189,13 +189,19 @@ function entMark(b,x,y,alpha,s,w,h,force){   // force: placement/paste ghost, al
     cx.fillStyle=e.port?`hsla(140,85%,75%,${alpha})`:`rgba(255,255,255,${alpha})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.7})`;
     cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.5,-r*.9);cx.lineTo(-r*.5,r*.9);cx.closePath();cx.fill();cx.stroke();cx.restore()});
 }
+// belts (Conveyors + Undergrounds) are grey, lighter per Mk (name suffix 2/3, none = Mk1); key "~belt<mk>" replaces the category in fills/strokes
+const BELT_L=[0,48,62,76];
+const beltKey=d=>d&&d.directional&&(d.category==="Conveyors"||d.category==="Undergrounds")?"~belt"+Math.min(3,+(/(\d)$/.exec(d.name||"")||[0,1])[1]||1):"";
+const tileKey=b=>beltKey(def(b.cls))||catOf(b)||"";
+const kFill=(k,a)=>k[0]==="~"?`hsla(0,0%,${BELT_L[k[5]]}%,${a})`:k?fill(k,a):`rgba(120,125,135,${a})`;
+const kStroke=(k,a)=>k[0]==="~"?`hsla(0,0%,${BELT_L[k[5]]+16}%,${a})`:k?`hsla(${hue(k)},70%,70%,${a})`:`rgba(190,195,205,${a})`;
 function drawBlock(b,alpha,isSel){
-  const s=sc(),d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s,cat=catOf(b),df=def(b.cls),m=isM(b);
-  cx.fillStyle=cat?fill(cat,alpha*.8):`rgba(120,125,135,${alpha*.8})`;
+  const s=sc(),d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s,cat=tileKey(b),df=def(b.cls),m=isM(b);
+  cx.fillStyle=kFill(cat,alpha*.8);
   cx.fillRect(x,y,w,h);
   drawIcon(df,x,y,w,h,Math.min(1,alpha));
-  if(df&&df.directional&&s>=ARROW_MIN_S)arrow(x,y,w,h,b.rot,Math.min(1,alpha));
-  cx.lineWidth=1;cx.strokeStyle=cat?`hsla(${hue(cat)},70%,70%,${alpha})`:`rgba(190,195,205,${alpha})`;
+  if(df&&df.directional&&s>=ARROW_MIN_S&&!(LK&&cat[0]==="~"))arrow(x,y,w,h,b.rot,Math.min(1,alpha));   // link mode: the link lines show the direction
+  cx.lineWidth=1;cx.strokeStyle=kStroke(cat,alpha);
   cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
   entMark(b,x,y,alpha,s,w,h);
@@ -403,7 +409,7 @@ const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
 const OFFC={};let BASEFILL=false;
 function cached(name,fn){
   if(!USEB)return fn();
-  const k=[view,layer,V.ox,V.oy,V.z,W,H,dpr,PK].join();let o=OFFC[name];
+  const k=[view,layer,V.ox,V.oy,V.z,W,H,dpr,PK,LK].join();let o=OFFC[name];
   if(!o||o.k!==k||DIRTY||o.c.width!==cv.width||o.c.height!==cv.height){
     // fill: draw on the main canvas exactly like a fresh paint, then copy the result out (copy is exact; drawing on a 2nd canvas is not)
     if(!o)o=OFFC[name]={c:document.createElement("canvas")};
@@ -424,13 +430,13 @@ function drawBlocks(list,alpha,useSel){
     const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s;
     if(x>W||y>H||x+w<0||y+h<0)return;
     if(!flat||(useSel&&sel.has(b.id)&&b.h===layer)||(isM(b)&&RCT&&b.h===layer&&outside(b,RCT))){full.push(b);return}
-    const k=catOf(b)||"";
+    const k=tileKey(b);
     let p=fl.get(k);if(!p)fl.set(k,p=new Path2D());p.rect(x,y,w,h);
     if(s>=3){let q=st.get(k);if(!q)st.set(k,q=new Path2D());q.rect(x+.5,y+.5,w-1,h-1)}
   });
   if(flat){
-    fl.forEach((p,k)=>{cx.fillStyle=k?fill(k,alpha*.8):`rgba(120,125,135,${alpha*.8})`;cx.fill(p)});
-    cx.lineWidth=1;st.forEach((q,k)=>{cx.strokeStyle=k?`hsla(${hue(k)},70%,70%,${alpha})`:`rgba(190,195,205,${alpha})`;cx.stroke(q)});
+    fl.forEach((p,k)=>{cx.fillStyle=kFill(k,alpha*.8);cx.fill(p)});
+    cx.lineWidth=1;st.forEach((q,k)=>{cx.strokeStyle=kStroke(k,alpha);cx.stroke(q)});
   }
   full.forEach(b=>drawBlock(b,alpha,useSel&&sel.has(b.id)));
 }
@@ -481,16 +487,18 @@ function paint0(){
     cx.fillRect(r.x,r.y,r.w,r.h);cx.strokeRect(r.x+.5,r.y+.5,r.w,r.h);
   }else if(drag&&drag.k==="belt"){
     const d=def(active);
-    beltCells(drag).forEach(c=>{const px=V.ox+c.x*s,py=V.oy+c.y*s;cx.fillStyle=fill(d.category,.5);cx.fillRect(px,py,s,s);drawIcon(d,px,py,s,s,.8);arrow(px,py,s,s,c.rot,.9)});
+    beltCells(drag).forEach(c=>{const px=V.ox+c.x*s,py=V.oy+c.y*s;cx.fillStyle=kFill(beltKey(d)||d.category,.5);cx.fillRect(px,py,s,s);drawIcon(d,px,py,s,s,.8);arrow(px,py,s,s,c.rot,.9)});
   }else if(pasting&&!drag&&hoverIn){
     const g=clipT(pasting.rot,pasting.fl).map(b=>({...b,x:b.x+hover.x,y:b.y+hover.y,h:layer}));
     g.forEach(b=>{drawBlock(b,.45,false);if(!isM(b)){const d=dim(b);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)}});
+    if(F)drawPorts(s,g.filter(isM));   // ports show the rotation
     if(noBuild(g.filter(isM).map(mItem))){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;g.forEach(b=>{const d=dim(b);cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)})}
   }else if(active&&!drag&&hoverIn){
     const d=def(active),dd=dimOf(d,placeRot),bw=dd.w,bh=dd.h,px=V.ox+hover.x*s,py=V.oy+hover.y*s;
-    cx.fillStyle=fill(d.category,.5);cx.fillRect(px,py,bw*s,bh*s);
+    cx.fillStyle=kFill(beltKey(d)||d.category,.5);cx.fillRect(px,py,bw*s,bh*s);
     drawIcon(d,px,py,bw*s,bh*s,.8);
     if(d.directional)arrow(px,py,bw*s,bh*s,placeRot,.9);
+    if(F&&d.kind==="m")drawPorts(s,[{id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot}]);   // ports show the rotation (splitter)
     if(d.kind!=="m")entMark({id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot},px,py,.9,s,bw*s,bh*s,true);   // doors/ports show which way the block is rotated
     cx.strokeStyle=d.kind==="m"&&noBuild([{id:-1,x:hover.x,y:hover.y,w:bw,h:bh,l:layer,belt:isBelt({cls:active})}])?"hsl(0,85%,60%)":d.kind==="m"&&RCT&&!onArea(hover.x,hover.y,bw,bh,RCT)?"hsl(45,95%,62%)":"#fff";
     cx.setLineDash([5,4]);cx.lineWidth=1.5;cx.strokeRect(px+.5,py+.5,bw*s-1,bh*s-1);cx.setLineDash([]);
