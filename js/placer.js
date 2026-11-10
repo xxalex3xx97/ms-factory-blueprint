@@ -10,7 +10,7 @@ function placerPlan(){
 function placerLayout(P,item,mk,spMk){
   const no=why=>({ok:false,why});
   const rn=Object.values(P.nodes).filter(n=>n.rec);
-  if(!(rn.length===1&&rn[0].item===item&&P.raw.length===1))return no("Step 1: only single-input single-recipe plans");
+  if(!(rn.length===1&&rn[0].item===item&&P.raw.length===1&&rn[0].rec.i.length===1))return no("Step 1: only single-input single-recipe plans");
   const T=P.nodes[item],N=T.machines,eIn=P.edges.find(e=>e.from===P.raw[0].item&&e.to===item),eOut=P.edges.find(e=>e.to==null);
   if(eIn.belts>1||eOut.belts>1)return no((eIn.belts>1?eIn:eOut).note);
   if(eIn.warn)return no(eIn.warn);
