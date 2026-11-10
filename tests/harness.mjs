@@ -661,7 +661,16 @@ async function s10(pg, C) {
   const cell = k => [pc[0] + k * pc[2], pc[1] + k * pc[3]];
   const loadAt = () => pg.evaluate(() => { const L = __fb.links().load; return [...L].map(([id, e]) => { const b = __fb.S.blocks.find(q => q.id === id); return {x: b.x, y: b.y, tot: e.tot, util: e.util}; }); });
   const belt = (k, mid) => mac('DAT_ConveyorBelt', cell(k)[0], cell(k)[1], {rot, mid});
+  // a belt chain that leads nowhere takes no share of the output: put a container where the chain ends
+  const endWith = (c) => pg.evaluate(([cx, cy]) => { const S = __fb.S;
+    for (let dx = -2; dx <= 3; dx++) for (let dy = -2; dy <= 3; dy++) {
+      const b = {id: 9999, cls: 'DAT_Container', x: cx + dx, y: cy + dy, h: S.blocks[0].h, rot: 0, pid: 0}; S.blocks.push(b);
+      if (__fb.links().ports.some(p => p.m.id === 9999)) return true;
+      S.blocks.pop(); }
+    return false; }, c);
   await imp(pg, bp([], [mac('DAT_Refinery', 10, 10, {mid: 1, rec: KEY}), belt(0, 2), belt(1, 3), belt(2, 4)]));
+  chk('integration: belt chain that leads nowhere carries nothing', (await loadAt()).length === 0);
+  chk('integration: container placed at the end of the belt chain', await endWith(cell(3)));
   const R = await loadAt();
   const rowAt = k => R.find(r => r.x === cell(k)[0] && r.y === cell(k)[1]);
   chk('integration: refinery -> 3 belts: load size 3, each tot 20, util 20/60', R.length === 3 && [0, 1, 2].every(k => rowAt(k) && near(rowAt(k).tot, 20) && near(rowAt(k).util, 20 / 60)), JSON.stringify(R));
@@ -670,6 +679,7 @@ async function s10(pg, C) {
   await reset(pg);
   await imp(pg, bp([], [mac('DAT_Refinery', 10, 10, {mid: 1, rec: KEY}), belt(0, 2), mac('DAT_UndergroundBelt', cell(1)[0], cell(1)[1], {rot, mid: 3}),
     mac('DAT_UndergroundBelt', cell(3)[0], cell(3)[1], {rot, mid: 4}), belt(4, 5)]));
+  await endWith(cell(5));
   const U = await loadAt();
   const uRow = k => U.find(r => r.x === cell(k)[0] && r.y === cell(k)[1]);
   chk('integration: underground pair carries flow: belt at +4 tot 20', !!uRow(4) && near(uRow(4).tot, 20), JSON.stringify(U));
