@@ -3082,7 +3082,7 @@ async function s28(br) {
       await pg.screenshot({path: path.join(SHOTS, `align-drone-rot${r}-floor.png`)});
     }
     const [lo, hi] = g.door || [0, 0], mid = (lo + hi) / 2;
-    chk(`28 ${n} rot ${r}: both port cells inside the neighbouring station door slot [${lo},${hi}], symmetric about ${mid}, ports on the tile edge ${g.edge}`, !!g.door && g.al.every(a => a > lo && a < hi) && Math.abs((g.al[0] + g.al[1]) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - g.edge) < 1e-6), JSON.stringify(g));
+    chk(`28 ${n} rot ${r}: both port cells inside the neighbouring station door slot [${lo},${hi}], symmetric about ${mid}, ports on the shifted tile edge ${g.edge - 1}`, !!g.door && g.al.every(a => a > lo && a < hi) && Math.abs((g.al[0] + g.al[1]) / 2 - mid) < 1e-6 && g.nrm.every(a => Math.abs(a - (g.edge - 1)) < 1e-6), JSON.stringify(g));
   }
   // no ports (solar, turret, armour): shape frame = the tile exactly, no shift, all rot
   for (const n of ['BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01', 'BPO_StationArmour_01']) for (const r of [0, 1, 2, 3]) {
