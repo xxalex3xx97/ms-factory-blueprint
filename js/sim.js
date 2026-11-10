@@ -104,12 +104,15 @@ function simTick(){
       for(let k=0;k<M.pb.length&&M.out>0;k++){const b=M.pb[(k+Z.t)%M.pb.length];
         if(simOk(b.c)&&simEmit(b.c,item,b.belt.id,M.b)){M.out--;prog=true}}}});
   // 2) containers pull
-  Z.pull.forEach((_,q)=>{const P=Z.pull[(q+Z.t)%Z.pull.length],{cn,belt,c}=P;
-    for(let g=0;g<8&&simOk(c);g++){
-      const stk=[...cn.st].filter(([k,r])=>r.inf||r.n>0);if(!stk.length)break;
+  // one item per container per round, handed to its next output belt that takes it (pointer per container), so a container's output belts share its stock evenly, like a big splitter
+  if(!Z.pg){Z.pg=new Map();Z.pull.forEach(P=>{let l=Z.pg.get(P.cn);if(!l)Z.pg.set(P.cn,l={ps:[],i:0});l.ps.push(P)})}
+  for(let g=0;g<8;g++){let any=false;
+    const pg=[...Z.pg];pg.forEach((_,u)=>{const[cn,l]=pg[(u+Z.t)%pg.length];for(let q=0;q<l.ps.length;q++){const i=(l.i+q)%l.ps.length,{belt,c}=l.ps[i];if(!simOk(c))continue;
+      const stk=[...cn.st].filter(([k,r])=>r.inf||r.n>0);if(!stk.length)return;
       const dn=simDn(belt.id),pref=stk.find(([k])=>(Z.mS.get(c)||[]).some(s=>dn.has(s.belt.id)&&simCanM(s.M,k))),item=(pref||stk[0])[0];
-      if(!simEmit(c,item,belt.id,cn.b))break;
-      const r=cn.st.get(item);if(!r.inf)r.n--;simInc(Z.ev.co,cn.b.id,item)}});
+      if(!simEmit(c,item,belt.id,cn.b))continue;
+      const r=cn.st.get(item);if(!r.inf)r.n--;simInc(Z.ev.co,cn.b.id,item);any=true;l.i=(i+1)%l.ps.length;return}});
+    if(!any)break}
   // 3) machines advance
   Z.M.forEach(simMach);
   Z.ring.push(Z.ev);if(Z.ring.length>SIM_WIN)Z.ring.shift();

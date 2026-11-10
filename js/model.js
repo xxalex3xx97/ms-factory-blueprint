@@ -290,7 +290,7 @@ function links1(L,inj){
   spR.forEach(r=>r.ins.forEach(i=>sp.set(i,r.outs)));
   o.load=flowLoad(nx,src,cp,sp);
   // unstocked container relays its inflow: each pull belt carries min(belt speed, inflow / pull belts), split by item share; repeat until the relayed flow stops changing (long container->container chains)
-  const fed=o.ports.filter(e=>{const p=e.port,d=DIR[e.b.rot];return isStore(e.m)&&!ctFirst(e.m)&&!(d[0]===-p.nx&&d[1]===-p.ny)});
+  const fed=o.ports.filter(e=>{const p=e.port,d=DIR[e.b.rot];return isStore(e.m)&&!ctFirst(e.m)&&!(d[0]===-p.nx&&d[1]===-p.ny)&&live(e)});   // dead-end output belts take no share (same rule as machine outputs)
   let ps="";
   for(let pass=0;pass<30&&fed.length;pass++){
     const rel=[];
