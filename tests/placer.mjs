@@ -154,8 +154,8 @@ try {
     $('plnItem').value = item; $('plnRate').value = '60'; $('plnMk').value = '0'; BK(false); plnDraw();
     GO();
   }, [ITEM]);
-  const nof = await pg.evaluate(() => ({toast: $('toast').textContent, pl: !!(pasting && pasting.pl), clip: clip.length}));
-  chk('(8) unchecked, no floor: "Does not fit" toast', /^Does not fit/.test(nof.toast) && nof.clip === 0 && !nof.pl, JSON.stringify(nof));
+  const nof = await pg.evaluate(() => ({err: $('plnPrevErr').textContent, open: document.getElementById('plnPrev').open, pl: !!(pasting && pasting.pl), clip: clip.length}));
+  chk('(8) unchecked, no floor: "Does not fit" in #plnPrevErr, modal stays open', /^Does not fit/.test(nof.err) && nof.open && nof.clip === 0 && !nof.pl, JSON.stringify(nof));
   // 14x14 Station_01 floor is too small for this factory (checked above); use the 30x30 Station_02 floor
   await pg.evaluate(() => { S.blocks = [{id: uid++, cls: Object.keys(BASE).find(k => BASE[k].kind === 'b' && BASE[k].name === 'BPO_Station_02'), x: 5, y: 5, h: 0, rot: 0, pid: 0}]; setView('F'); });
   await pg.evaluate(() => GO());
@@ -251,17 +251,29 @@ try {
     $('plnItem').value = item; $('plnRate').value = '60'; $('plnMk').value = '0'; $('plnSp').value = ''; $('plnBuf').value = 'DAT_Container'; $('plnMod').checked = false; BK(true); plnDraw();
     document.getElementById('plnBuild').click();
   }, [ITEM]);
-  const pv = await pg.evaluate(([item]) => ({shown: !document.getElementById('plnPrev').hidden, N: plan(item, 60, 0, {}, {}, {}).nodes[item].machines,
+  const pv = await pg.evaluate(([item]) => ({shown: document.getElementById('plnPrev').open, N: plan(item, 60, 0, {}, {}, {}).nodes[item].machines,
     mach: $('pvMach').textContent, blk: $('pvBlk').textContent, cell: $('pvCell').textContent, io: $('pvIO').textContent, note: $('plnPrevNote').textContent,
     n: S.blocks.length, pl: !!(pasting && pasting.pl)}), [ITEM]);
   chk('(15) Build shows preview (machines, block, cells, IN/OUT, note), nothing placed', pv.shown && pv.mach === String(pv.N) && !!pv.blk && !!pv.cell && !!pv.io && !!pv.note && pv.n === 0 && !pv.pl, JSON.stringify(pv));
   await pg.evaluate(() => document.getElementById('plnCancel').click());
-  const hid = await pg.evaluate(() => document.getElementById('plnPrev').hidden);
-  chk('(15) Cancel hides preview', hid === true, String(hid));
+  const hid = await pg.evaluate(() => !document.getElementById('plnPrev').open);
+  chk('(15) Cancel closes preview', hid === true, String(hid));
   await pg.evaluate(() => { document.getElementById('plnBuild').click(); document.getElementById('plnPlace').click(); });
-  const pl2 = await pg.evaluate(() => ({pl: !!(pasting && pasting.pl), hidden: document.getElementById('plnPrev').hidden, n: S.blocks.length}));
-  chk('(15) Build then Place: ghost block set, preview hidden, nothing placed yet', pl2.pl && pl2.hidden && pl2.n === 0, JSON.stringify(pl2));
+  const pl2 = await pg.evaluate(() => ({pl: !!(pasting && pasting.pl), hidden: !document.getElementById('plnPrev').open, n: S.blocks.length}));
+  chk('(15) Build then Place: ghost block set, preview closed, nothing placed yet', pl2.pl && pl2.hidden && pl2.n === 0, JSON.stringify(pl2));
   await pg.evaluate(() => { pasting = null; });
+
+  // ---- (15b) modal shows real floor; Build + placerShot + zoom never touch S.blocks (identity, length), view, V, layer; Cancel closes
+  const sh = await pg.evaluate(() => {
+    const b0 = S.blocks, n0 = S.blocks.length, v0 = view, V0 = JSON.stringify(V), l0 = layer;
+    document.getElementById('plnBuild').click(); placerShot();
+    document.getElementById('plnZi').click(); document.getElementById('plnZi').click();
+    const r = {open: document.getElementById('plnPrev').open, sameArr: S.blocks === b0, n: S.blocks.length === n0, view: view === v0, V: JSON.stringify(V) === V0, layer: layer === l0};
+    document.getElementById('plnCancel').click();
+    r.closed = !document.getElementById('plnPrev').open;
+    return r;
+  });
+  chk('(15b) modal: Build opens it; zoom leaves S.blocks identity+length, view, V, layer unchanged; Cancel closes', sh.open && sh.sameArr && sh.n && sh.view && sh.V && sh.layer && sh.closed, JSON.stringify(sh));
 
   // ---- (16) large buffer container: every container DAT_Container_2, 4 per lane, no overlap; sim matches
   const lb = await pg.evaluate(([item]) => {
@@ -334,20 +346,20 @@ try {
   // ---- (21) ITEM_Exosuit (55 nodes, 11 raw inputs, cyclic): refused cleanly and fast, nothing placed
   await pg.evaluate(() => {
     S = {name: 't', blocks: [], dm: [], closed: []}; if (view !== 'L') setView('L');
-    pasting = null; plcL = null; $('plnPrev').hidden = true; $('toast').textContent = '';
+    pasting = null; plcL = null; if ($('plnPrev').open) $('plnPrev').close(); $('toast').textContent = '';
     $('plnItem').value = 'ITEM_Exosuit'; $('plnRate').value = '1'; $('plnMk').value = '0'; BK(true); plnDraw();
   });
   const exo = await pg.evaluate(() => {
     const blk0 = JSON.stringify(S.blocks);
     let err = '', ms = -1;
     try { const t0 = performance.now(); placerGo(); ms = performance.now() - t0; } catch (e) { err = e.message; }
-    const pv = document.getElementById('plnPrev').hidden, same = JSON.stringify(S.blocks) === blk0, toast = $('toast').textContent, pl = !!(pasting && pasting.pl);
+    const pv = !document.getElementById('plnPrev').open, same = JSON.stringify(S.blocks) === blk0, toast = $('toast').textContent, pl = !!(pasting && pasting.pl);
     let Lok = null, Lwhy = '', Lerr = '';
     try { const x = placerPlan(), L = placerLayout(x.P, 'ITEM_Exosuit', 0, 0); Lok = L.ok; Lwhy = L.why || ''; } catch (e) { Lerr = e.message; }
     return {err, ms, pv, same, toast, pl, Lok, Lwhy, Lerr};
   });
   chk('(21) Exosuit: placerGo no exception, < 2000 ms', exo.err === '' && exo.ms >= 0 && exo.ms < 2000, JSON.stringify(exo));
-  chk('(21) Exosuit: #plnPrev hidden, S.blocks unchanged, no ghost', exo.pv === true && exo.same && !exo.pl, JSON.stringify(exo));
+  chk('(21) Exosuit: #plnPrev closed, S.blocks unchanged, no ghost', exo.pv === true && exo.same && !exo.pl, JSON.stringify(exo));
   chk('(21) Exosuit: toast non-empty and says single-input single-recipe', /single-input single-recipe/.test(exo.toast), JSON.stringify(exo));
   chk('(21) Exosuit: placerLayout ok:false with why', exo.Lerr === '' && exo.Lok === false && /single-input single-recipe/.test(exo.Lwhy), JSON.stringify(exo));
 

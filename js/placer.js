@@ -89,8 +89,27 @@ function placerGo(){
   if(!L.ok){toast(L.why);return}
   plcL=L;placerPreview(L);
 }
+let plcV={z:1,ox:0,oy:0},plcRaf=0;
+const plcBlk=()=>{const L=plcL,sb=placerBlock(L,[true,true,true])||{cls:Object.keys(BASE).find(k=>BASE[k].kind==="b"&&BASE[k].name==="BPO_Station_02")};return{cls:sb.cls,f:floorRect({cls:sb.cls,x:0,y:0,h:0,rot:0})}};
+function placerSize(){const c=$("plnPrevMap"),r=$("plnPrevView").getBoundingClientRect();c.width=Math.max(1,Math.round(r.width));c.height=Math.max(1,Math.round(r.height));return{w:c.width,h:c.height}}
+function placerFitView(){const {w,h}=placerSize(),L=plcL,f=plcBlk().f,s=Math.min((w-24)/L.w,(h-24)/L.h);plcV.z=Math.min(60,Math.max(.01,s/CELLS.F));const k=CELLS.F*plcV.z;plcV.ox=(w-L.w*k)/2-f.x*k;plcV.oy=(h-L.h*k)/2-f.y*k;placerShot()}
+function placerShot(){
+  const L=plcL;if(!L||!$("plnPrev").open)return;
+  const {w,h}=placerSize(),b=plcBlk(),f=b.f,
+    sv={S:S.blocks,view,layer,V,W,H,dpr,sel,active,pasting,drag,ugPend,mode,SM,OV,hoverIn,cw:cv.width,ch:cv.height};
+  try{
+    S.blocks=[{id:1,cls:b.cls,x:0,y:0,h:0,rot:0,pid:0},...L.items.map((it,i)=>({...it,id:i+2,x:it.x+f.x,y:it.y+f.y,h:0}))];
+    view="F";layer=0;V={ox:plcV.ox,oy:plcV.oy,z:plcV.z};W=w;H=h;dpr=1;sel=new Set();active=null;pasting=null;drag=null;ugPend=null;mode=null;SM=false;OV={};hoverIn=false;SV++;
+    cv.width=w;cv.height=h;
+    paint();
+    const g=$("plnPrevMap").getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.drawImage(cv,0,0);
+  }finally{
+    S.blocks=sv.S;view=sv.view;layer=sv.layer;V=sv.V;W=sv.W;H=sv.H;dpr=sv.dpr;sel=sv.sel;active=sv.active;pasting=sv.pasting;drag=sv.drag;ugPend=sv.ugPend;mode=sv.mode;SM=sv.SM;OV=sv.OV;hoverIn=sv.hoverIn;SV++;
+    cv.width=sv.cw;cv.height=sv.ch;paint();
+  }
+}
 function placerPreview(L){
-  const k={mach:0,belt:0,spl:0,box:0},col={mach:"#4a8",belt:"#888",spl:"#ca4",box:"#48c"},kd=b=>b.rec?"mach":PLC_BELT.includes(b.cls)?"belt":PLC_SPL.includes(b.cls)?"spl":"box";
+  const k={mach:0,belt:0,spl:0,box:0},kd=b=>b.rec?"mach":PLC_BELT.includes(b.cls)?"belt":PLC_SPL.includes(b.cls)?"spl":"box";
   L.items.forEach(b=>k[kd(b)]++);
   const ok=placerBk(),sb=ok.some(Boolean)?placerBlock(L,ok):null;
   $("pvMach").textContent=k.mach;$("pvBelt").textContent=k.belt;$("pvSpl").textContent=k.spl;$("pvBox").textContent=k.box;
@@ -98,26 +117,38 @@ function placerPreview(L){
   $("pvCell").textContent=L.w+" x "+L.h;
   $("pvIO").textContent=L.mod?"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w:"closed: source container in, sink container out";
   $("plnPrevNote").textContent=L.note.join(". ");
-  const c=$("plnPrevMap"),g=c.getContext("2d"),s=Math.min(c.width/L.w,c.height/L.h);
-  g.clearRect(0,0,c.width,c.height);
-  L.items.forEach(b=>{const e=dim(b);g.fillStyle=col[kd(b)];g.fillRect(b.x*s,b.y*s,Math.max(1,e.w*s-.5),Math.max(1,e.h*s-.5))});
-  $("plnPrev").hidden=false;
+  $("plnPrevErr").textContent="";const dl=$("plnPrev");if(!dl.open)dl.showModal();placerFitView();
 }
 function placerPlace(){
   const L=plcL;if(!L)return;
   const ok=placerBk();
   if(ok.some(Boolean)){
     const sb=placerBlock(L,ok);
-    if(!sb){toast("Does not fit: needs "+L.w+"x"+L.h+" floor cells, larger than the ticked block types");return}
+    if(!sb){$("plnPrevErr").textContent="Does not fit: needs "+L.w+"x"+L.h+" floor cells, larger than the ticked block types";return}
+    plcL=null;$("plnPrev").close();
     setView("L");clip=[];active=null;mode=null;sel=new Set();
     pasting={rot:0,fl:false,pl:{cls:sb.cls,ms:L.items}};
     toast("Click to place the block, then connect it to your blocks. Esc cancels");all();
   }else{
     if(view!=="F")setView("F");
-    if(!placerFit(L.items,L.w,L.h)){toast("Does not fit: needs "+L.w+"x"+L.h+" floor cells");return}
+    if(!placerFit(L.items,L.w,L.h)){$("plnPrevErr").textContent="Does not fit: needs "+L.w+"x"+L.h+" floor cells";return}
+    plcL=null;$("plnPrev").close();
     clip=L.items.map(b=>({...b}));paste();
   }
-  plcL=null;$("plnPrev").hidden=true;
   if(!$("pln").classList.contains("col"))$("plnC").click();
 }
-$("plnBuild").onclick=placerGo;$("plnPlace").onclick=placerPlace;$("plnCancel").onclick=()=>{plcL=null;$("plnPrev").hidden=true};
+const plcDo=()=>{if(!plcRaf)plcRaf=requestAnimationFrame(()=>{plcRaf=0;placerShot()})};
+const plcP=e=>{const r=$("plnPrevMap").getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
+const plcZ=(p,f)=>{const z0=plcV.z,z=Math.min(60,Math.max(.01,z0*f));plcV.ox=p.x-(p.x-plcV.ox)*(z/z0);plcV.oy=p.y-(p.y-plcV.oy)*(z/z0);plcV.z=z;plcDo()};
+$("plnBuild").onclick=placerGo;$("plnPlace").onclick=placerPlace;
+$("plnCancel").onclick=()=>$("plnPrev").close();$("plnPrev").addEventListener("close",()=>{plcL=null});
+$("plnPrevMap").addEventListener("wheel",e=>{e.preventDefault();plcZ(plcP(e),e.deltaY<0?1.12:1/1.12)},{passive:false});
+let plcSt=null;
+const plcM=$("plnPrevMap");
+plcM.addEventListener("pointerdown",e=>{plcM.setPointerCapture(e.pointerId);plcSt={x:e.clientX,y:e.clientY,ox:plcV.ox,oy:plcV.oy}});
+plcM.addEventListener("pointermove",e=>{if(!plcSt)return;plcV.ox=plcSt.ox+(e.clientX-plcSt.x);plcV.oy=plcSt.oy+(e.clientY-plcSt.y);plcDo()});
+const plcEnd=()=>{plcSt=null};plcM.addEventListener("pointerup",plcEnd);plcM.addEventListener("pointercancel",plcEnd);
+$("plnZi").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1.25)};
+$("plnZo").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1/1.25)};
+$("plnZf").onclick=()=>placerFitView();
+window.addEventListener("resize",()=>{if($("plnPrev").open){placerSize();plcDo()}});

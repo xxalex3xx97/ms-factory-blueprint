@@ -130,7 +130,7 @@ const plnProto=()=>$("plnProto").value==="1";
 // craftable items for the current Protomatter setting; keeps the selection if it is still craftable
 const plnFillItems=()=>{const cur=$("plnItem").value;$("plnItem").innerHTML='<option value="">(none)</option>'+[...plnBy(plnProto()).keys()].sort((a,b)=>plnNm(a).localeCompare(plnNm(b))).map(k=>`<option value="${esc(k)}">${esc(plnNm(k))}</option>`).join("");if([...$("plnItem").options].some(o=>o.value===cur))$("plnItem").value=cur};
 plnFillItems();
-$("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribute("aria-pressed",!d.hidden);if(!d.hidden&&PLNO===null)plnOptFold(d.clientWidth<720);plnDraw()};
+$("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribute("aria-pressed",!d.hidden);if(!d.hidden&&PLNO===null)plnOptFold(true);plnDraw()};
 $("plnX").onclick=()=>{$("pln").hidden=true;$("plnB").setAttribute("aria-pressed",false);$("plnB").focus()};
 $("plnC").onclick=()=>{const c=$("pln").classList.toggle("col");$("plnC").setAttribute("aria-expanded",!c);$("plnC").title=c?"Expand":"Collapse to title bar"};
 $("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDraw()};
