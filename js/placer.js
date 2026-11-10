@@ -2,6 +2,71 @@
 const PLC_BELT=["DAT_ConveyorBelt","DAT_ConveyorBelt2","DAT_ConveyorBelt3"],PLC_SPL=["DAT_Splitter","DAT_Splitter_2","DAT_Splitter_3"],PLC_BOX="DAT_Container";
 const PL_STD=["BPO_Station_01","BPO_Station_2x1","BPO_Station_02"];   // smallest first; floors 14x14, 30x14, 30x30
 const PLC_UG=["DAT_UndergroundBelt","DAT_UndergroundBelt_2","DAT_UndergroundBelt_3"];const plcCls=nm=>Object.keys(BASE).find(k=>BASE[k].kind==="b"&&BASE[k].name===nm);
+const PLC_SRC=480;
+let PLC_BANK=false;   // test hook only (slice 1): bank layout instead of the lane layout
+const plcPp=(cls,rot)=>portsOf({cls,x:0,y:0,rot,off:[]});
+function plcMach(cls,inN,outN){
+  for(let r=0;r<4;r++){const ps=plcPp(cls,r),i=ps.find(p=>p.nx===inN[0]&&p.ny===inN[1]&&p.dir!=="out"),o=ps.find(p=>p.nx===outN[0]&&p.ny===outN[1]&&p.dir!=="in");
+    if(i&&o){const e=dim({cls,rot:r});return{rot:r,inP:i,outP:o,off:ps.filter(p=>p!==i&&p!==o),w:e.w,h:e.h}}}
+  return null;
+}
+function plcSpl(cls,rot){
+  const ps=plcPp(cls,rot),e=dim({cls,rot}),f=rot===1?[0,1]:[0,-1],i=ps.find(p=>p.dir==="in"),o=ps.filter(p=>p.dir==="out");
+  return i&&e.w===1&&e.h===1&&i.nx===-f[0]&&i.ny===-f[1]&&o.some(p=>p.nx===f[0]&&p.ny===f[1])&&o.some(p=>p.nx===1&&p.ny===0)&&o.some(p=>p.nx===-1&&p.ny===0)?{i,o}:null;
+}
+function plcStage(n,eI,eU,mk,spMk){
+  const no=why=>({ok:false,why}),cb=plnCb(n.crafter);if(!cb)return no("No machine builds "+plnNm(n.item));
+  const d=def(cb.id),inF=n.pmach*eI.flow/eU.flow,m=Math.floor(MKS[mk][1]/Math.max(n.pmach,inF)+1e-9);
+  if(m<1)return no("One machine needs "+plnR2(Math.max(n.pmach,inF))+"/min but a "+MKS[mk][0]+" belt carries "+MKS[mk][1]+"/min: pick a higher belt Mk");
+  const ML=plcMach(d.key,[1,0],[-1,0]),MR=plcMach(d.key,[-1,0],[1,0]);
+  if(!ML||!MR)return no("Bank: the machine needs an input port and an output port on opposite faces");
+  if(ML.w!==MR.w||ML.h!==MR.h||ML.inP.y!==MR.inP.y)return no("Bank: the two machine columns do not line up (input ports on different rows)");
+  if(ML.off.concat(MR.off).some(p=>!p.tg))return no("Bank: machine has an unused port that cannot be disabled");
+  const sc=PLC_SPL[spMk];if(!plcSpl(sc,1)||!plcSpl(sc,3))return no("Bank: splitter ports not as expected (Mk id unverified?)");
+  return{ok:true,n,dk:d.key,inF,m,N:n.machines,ML,MR,w:ML.w,h:ML.h,cin:ML.inP.y,Wb:2*ML.w+3,sc,rec:rk(n.rec)};
+}
+function plcBanks(g,it){
+  const {ML,MR,sc,w,h,cin,dk,rec}=g.S,{cnt,X0,fRow,lRow,Y0,R,up,xf,xe,bc}=g,s=up?-1:1,vr=up?3:1,Yb=Y0+R*h;
+  const bt=(x,y,r)=>({cls:bc,x,y,h:0,rot:r,pid:0}),mc=(M,x,y)=>({cls:dk,x,y,h:0,rot:M.rot,pid:0,rec,off:M.off.map(p=>p.key)});
+  const my=r=>up?Y0+(R-1-r)*h:Y0+r*h;
+  cnt.forEach((n,k)=>{
+    const x0=X0[k],Tx=x0+w+1,xr=Tx+w+1,nl=Math.ceil(n/2),nr=n-nl,fr=fRow[k],lr=lRow[k],ys=my(nl-1)+cin,sp=new Set(Array.from({length:nl},(_,r)=>my(r)+cin));
+    for(let r=0;r<nl;r++)it.push(mc(ML,x0+1,my(r)));
+    for(let r=0;r<nr;r++)it.push(mc(MR,Tx+1,my(r)));
+    for(let x=xf;x<Tx;x++)it.push(bt(x,fr,0));
+    for(let y=fr;up?y>=ys:y<=ys;y+=s)it.push(sp.has(y)?{cls:sc,x:Tx,y,h:0,rot:vr,pid:0,off:[]}:bt(Tx,y,vr));
+    for(let y=up?Yb-1:Y0;up?y>lr:y<lr;y+=s){it.push(bt(x0,y,vr));if(nr)it.push(bt(xr,y,vr))}
+    for(let x=x0;x<xe;x++)it.push(bt(x,lr,0));
+  });
+}
+function placerBank(P,item,mk,spMk,o){
+  const BX=o.box||PLC_BOX,no=why=>({ok:false,why}),T=P.nodes[item],N=T.machines,cap=i=>MKS[i][1];
+  const eIn=P.edges.find(e=>e.from===P.raw[0].item&&e.to===item),eOut=P.edges.find(e=>e.to==null);
+  const S=plcStage(T,eIn,eOut,mk,spMk);if(!S.ok)return S;
+  const cp=plcPp(BX,0),cE=cp.filter(p=>p.nx===1).sort((a,b)=>a.y-b.y),cW=cp.filter(p=>p.nx===-1).sort((a,b)=>a.y-b.y),seq=a=>a.every((p,i)=>p.y===a[0].y+i);
+  if(!cE.length||!cW.length||!seq(cE)||!seq(cW))return no("Bank: container E/W ports not found or not on consecutive rows");
+  const bw=def(BX).w,bh=def(BX).h,{h,Wb,inF}=S;
+  const size=nT=>{const cnt=[];for(let k=0;k<nT;k++)cnt.push(Math.floor(N/nT)+(k<N%nT?1:0));
+    const R=Math.ceil(cnt[0]/2),ps=Math.max(1,Math.min(cE.length,Math.floor(PLC_SRC/cap(mk)))),nS=Math.ceil(nT/ps),rows=[];
+    for(let i=0;i<nT;i++)rows.push(Math.floor(i/ps)*bh+cE[i%ps].y);
+    const Y0=rows[nT-1]+1,Yend=Y0+R*h;return{nT,cnt,R,nS,rows,Y0,Yend,H:Math.max(nS*bh,Yend+nT,Yend-cW[0].y+bh)}};
+  const g=size(Math.ceil(N/S.m));
+  if(g.nT>1)return no("Bank: several trunks come in slice 2");
+  if(g.nT>cW.length)return no("Output needs "+g.nT+" lanes but a "+lab(def(BX))+" has "+cW.length+" ports per side: pick the bigger container or a faster belt Mk");
+  if(cap(spMk)<g.cnt[0]*inF-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(g.cnt[0]*inF)+"/min): set the splitter Mk higher");
+  const it=[],X0=[];
+  for(let j=0;j<g.nS;j++)it.push({cls:BX,x:0,y:j*bh,h:0,rot:0,pid:0,ct:[{item:P.raw[0].item,n:0,inf:true}]});
+  for(let k=0,x=bw+1;k<g.nT;k++,x+=Wb+1)X0.push(x);
+  const xe=X0[g.nT-1]+Wb+1;
+  plcBanks({S,cnt:g.cnt,X0,fRow:g.cnt.map((_,k)=>g.rows[g.nT-1-k]),lRow:g.cnt.map((_,k)=>g.Yend+g.nT-1-k),Y0:g.Y0,R:g.R,up:false,xf:bw,xe,bc:PLC_BELT[mk]},it);
+  it.push({cls:BX,x:xe,y:g.Yend-cW[0].y,h:0,rot:0,pid:0,ct:[]});
+  const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
+  const nt=["Makes "+plnR2(N*T.pmach)+"/min (target "+plnR2(T.rate)+")",
+    g.nT+" trunk"+(g.nT>1?"s":"")+" ("+g.cnt.join("+")+" machines), "+g.R+" rows, double columns, "+g.nT+" output lane"+(g.nT>1?"s":"")+"; "+g.nS+" source container"+(g.nS>1?"s":"")+", 1 sink container"];
+  if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
+  const W=Math.max(...items.map(b=>b.x+dim(b).w)),H=Math.max(...items.map(b=>b.y+dim(b).h));
+  return{ok:true,items,lanes:g.nT,per:g.cnt,makes:N*T.pmach,note:nt,mod:false,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:g.nT,rows:g.R,nS:g.nS,src:{P,item,mk,spMk,o}};
+}
 function placerPlan(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0,pr=plnProto(),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
   if(!it||!(rate>0))return null;
@@ -13,6 +78,7 @@ function placerLayout(P,item,mk,spMk,o={}){
   const rn=Object.values(P.nodes).filter(n=>n.rec);
   if(!(rn.length===1&&rn[0].item===item&&P.raw.length===1&&rn[0].rec.i.length===1))return no("Step 1: only single-input single-recipe plans");
   const T=P.nodes[item],N=T.machines,eIn=P.edges.find(e=>e.from===P.raw[0].item&&e.to===item),eOut=P.edges.find(e=>e.to==null);
+  if(!o.mod&&(PLC_BANK||o.bank))return placerBank(P,item,mk,spMk,o);
   const cb=plnCb(T.crafter);if(!cb)return no("No machine builds this recipe");
   const d=def(cb.id),pp=cls=>portsOf({cls,x:0,y:0,rot:0,off:[]});
   const mp=pp(d.key),inP=mp.find(p=>p.f==="N"&&p.dir!=="out"),outP=mp.find(p=>p.f==="S"&&p.dir!=="in");
@@ -53,7 +119,7 @@ function placerLayout(P,item,mk,spMk,o={}){
   const nt=["Makes "+plnR2(N*T.pmach)+"/min (target "+plnR2(T.rate)+")"];
   if(nL>1)nt.push(nL+" parallel lanes ("+cnt.join("+")+" machines), each with its own "+(o.mod?"in/out edge":"source and sink container")+", because one "+MKS[mk][0]+" belt carries "+cap(mk)+"/min");
   if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
-  return{ok:true,items,lanes:nL,per:cnt,makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch,w:Math.max(...items.map(b=>b.x+dim(b).w)),h:Math.max(...items.map(b=>b.y+dim(b).h))};
+  return{ok:true,items,lanes:nL,per:cnt,makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch,w:Math.max(...items.map(b=>b.x+dim(b).w)),h:Math.max(...items.map(b=>b.y+dim(b).h)),src:{P,item,mk,spMk,o}};
 }
 // unchecked mode: first anchor inside an existing floor where the factory fits (noBuild with STRICT rules)
 function placerFit(items,w,h){
@@ -77,7 +143,7 @@ function placerBlock(L,ok=[true,true,true]){
 function placerCut(L,cls){
   const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,Fw=f.w,Fh=f.h,nm=BASE[cls].name;
   const mx=def(PLC_UG[L.mk]).maxApart,per=Math.floor((Fh+1)/L.pitch);
-  if(per<1)return{ok:false,why:"one lane is "+(L.pitch-1)+" cells tall, the "+nm+" floor is only "+Fh};
+  if(per<1)return{ok:false,why:(L.bank?"the factory is ":"one lane is ")+(L.pitch-1)+" cells tall, the "+nm+" floor is only "+Fh};
   const occ=new Map();L.items.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set((b.x+i)+","+(b.y+j),b)});
   const isB=b=>!!b&&PLC_BELT.includes(b.cls);
   const tryCut=c=>{
@@ -103,7 +169,7 @@ function placerCut(L,cls){
   const ug=new Set(ugs),pc=x=>cuts.filter(c=>c<=x).length;
   const ms=L.items.map(b=>{const i=pc(b.x),g=Math.floor(Math.floor(b.y/L.pitch)/per);
     return{...b,cls:ug.has(b)?PLC_UG[L.mk]:b.cls,x:i*TW+b.x-(i?cuts[i-1]:0),y:g*TH+b.y-g*per*L.pitch}});
-  const cols=cuts.length+1,rows=Math.ceil(L.lanes/per),blocks=[];
+  const cols=cuts.length+1,rows=Math.ceil((L.bank?1:L.lanes)/per),blocks=[];
   for(let g=0;g<rows;g++)for(let i=0;i<cols;i++)
     if(ms.some(m=>m.x>=i*TW&&m.x<(i+1)*TW&&m.y>=g*TH&&m.y<(g+1)*TH))blocks.push({cls,x:i*d.w,y:g*d.h});
   return{ok:true,blocks,ms,ug:ugs.length,cols,rows,max:mx};
