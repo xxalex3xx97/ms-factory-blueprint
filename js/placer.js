@@ -4,6 +4,7 @@ const PL_STD=["BPO_Station_01","BPO_Station_2x1","BPO_Station_02"];   // smalles
 const PLC_UG=["DAT_UndergroundBelt","DAT_UndergroundBelt_2","DAT_UndergroundBelt_3"];const plcCls=nm=>Object.keys(BASE).find(k=>BASE[k].kind==="b"&&BASE[k].name===nm);
 const PLC_SRC=480;
 let PLC_BANK=false;   // test hook only (slice 1): bank layout instead of the lane layout
+const PLC_MAXBLK=60;   // most station blocks one factory may spread over
 const plcPp=(cls,rot)=>portsOf({cls,x:0,y:0,rot,off:[]});
 function plcMach(cls,inN,outN){
   for(let r=0;r<4;r++){const ps=plcPp(cls,r),i=ps.find(p=>p.nx===inN[0]&&p.ny===inN[1]&&p.dir!=="out"),o=ps.find(p=>p.nx===outN[0]&&p.ny===outN[1]&&p.dir!=="in");
@@ -39,6 +40,14 @@ function plcBanks(g,it){
     for(let x=x0;x<xe;x++)it.push(bt(x,lr,0));
   });
 }
+// cut a bank layout into floor-wide segments: put(x,wid,ctr) places a wid-wide part at x; if it overflows the floor, cut at the free column c (entrance c-1, exit c), c >= segment start + lo
+function plcSeg(fw,lo){const q={s:0,cuts:[],bad:"",put(x,wid,ctr){
+  if(fw&&x+wid+1-q.s>fw){const c=Math.max(x,q.s+lo);if(c-q.s>fw)q.bad="an underground belt cannot reach across the wall (needs "+lo+" free cells, floor is "+fw+" wide)";
+    q.cuts.push(c);if(q.cuts.length+1>PLC_MAXBLK)q.bad="needs more than "+PLC_MAXBLK+" blocks";q.s=c;x=ctr?c+1:c;
+    if(x+wid-q.s>fw)q.bad="a "+wid+" cell wide part does not fit a floor "+fw+" wide: tick a bigger block";}
+  return x}};return q}
+// floor size of a station block class + the shortest underground span (cells) the belt Mk can reach across a wall
+const plcFit=(cls,mk)=>{const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0});return{fw:f.w,fh:f.h,lo:Math.max(2,d.w*FC+2-def(PLC_UG[mk]).maxApart)}};
 function placerBank(P,item,mk,spMk,o){
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why}),T=P.nodes[item],N=T.machines,cap=i=>MKS[i][1];
   const eIn=P.edges.find(e=>e.from===P.raw[0].item&&e.to===item),eOut=P.edges.find(e=>e.to==null);
@@ -51,13 +60,13 @@ function placerBank(P,item,mk,spMk,o){
     for(let i=0;i<nT;i++)rows.push(Math.floor(i/ps)*bh+cE[i%ps].y);
     const Y0=rows[nT-1]+1,Yend=Y0+R*h;return{nT,cnt,R,nS,rows,Y0,Yend,H:Math.max(nS*bh,Yend+nT,Yend-cW[0].y+bh)}};
   const g=size(Math.ceil(N/S.m));
-  if(g.nT>1)return no("Bank: several trunks come in slice 2");
   if(g.nT>cW.length)return no("Output needs "+g.nT+" lanes but a "+lab(def(BX))+" has "+cW.length+" ports per side: pick the bigger container or a faster belt Mk");
   if(cap(spMk)<g.cnt[0]*inF-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(g.cnt[0]*inF)+"/min): set the splitter Mk higher");
-  const it=[],X0=[];
+  const it=[];
   for(let j=0;j<g.nS;j++)it.push({cls:BX,x:0,y:j*bh,h:0,rot:0,pid:0,ct:[{item:P.raw[0].item,n:0,inf:true}]});
-  for(let k=0,x=bw+1;k<g.nT;k++,x+=Wb+1)X0.push(x);
-  const xe=X0[g.nT-1]+Wb+1;
+  const sg=plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo),X0=[];let x=bw+1;
+  for(let k=0;k<g.nT;k++){x=sg.put(x,Wb,false);X0.push(x);x+=Wb+1}   // one empty column between banks
+  const xe=sg.put(x,bw,true);if(sg.bad)return no(sg.bad);
   plcBanks({S,cnt:g.cnt,X0,fRow:g.cnt.map((_,k)=>g.rows[g.nT-1-k]),lRow:g.cnt.map((_,k)=>g.Yend+g.nT-1-k),Y0:g.Y0,R:g.R,up:false,xf:bw,xe,bc:PLC_BELT[mk]},it);
   it.push({cls:BX,x:xe,y:g.Yend-cW[0].y,h:0,rot:0,pid:0,ct:[]});
   const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
@@ -65,7 +74,7 @@ function placerBank(P,item,mk,spMk,o){
     g.nT+" trunk"+(g.nT>1?"s":"")+" ("+g.cnt.join("+")+" machines), "+g.R+" rows, double columns, "+g.nT+" output lane"+(g.nT>1?"s":"")+"; "+g.nS+" source container"+(g.nS>1?"s":"")+", 1 sink container"];
   if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
   const W=Math.max(...items.map(b=>b.x+dim(b).w)),H=Math.max(...items.map(b=>b.y+dim(b).h));
-  return{ok:true,items,lanes:g.nT,per:g.cnt,makes:N*T.pmach,note:nt,mod:false,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:g.nT,rows:g.R,nS:g.nS,src:{P,item,mk,spMk,o}};
+  return{ok:true,items,lanes:g.nT,per:g.cnt,makes:N*T.pmach,note:nt,mod:false,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:g.nT,rows:g.R,nS:g.nS,cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o}};
 }
 function placerPlan(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0,pr=plnProto(),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
@@ -78,7 +87,8 @@ function placerLayout(P,item,mk,spMk,o={}){
   const rn=Object.values(P.nodes).filter(n=>n.rec);
   if(!(rn.length===1&&rn[0].item===item&&P.raw.length===1&&rn[0].rec.i.length===1))return no("Step 1: only single-input single-recipe plans");
   const T=P.nodes[item],N=T.machines,eIn=P.edges.find(e=>e.from===P.raw[0].item&&e.to===item),eOut=P.edges.find(e=>e.to==null);
-  if(!o.mod&&(PLC_BANK||o.bank))return placerBank(P,item,mk,spMk,o);
+  const m0=Math.floor(MKS[mk][1]/Math.max(T.pmach,T.pmach*eIn.flow/eOut.flow)+1e-9);   // machines one belt feeds
+  if(!o.mod&&(PLC_BANK||o.bank||N>m0))return placerBank(P,item,mk,spMk,o);
   const cb=plnCb(T.crafter);if(!cb)return no("No machine builds this recipe");
   const d=def(cb.id),pp=cls=>portsOf({cls,x:0,y:0,rot:0,off:[]});
   const mp=pp(d.key),inP=mp.find(p=>p.f==="N"&&p.dir!=="out"),outP=mp.find(p=>p.f==="S"&&p.dir!=="in");
@@ -150,6 +160,16 @@ function placerCut(L,cls){
     const mk=[];
     for(let y=0;y<L.h;y++){const a=occ.get((c-1)+","+y),b=occ.get(c+","+y);
       if(a&&a===b)return null;
+      if(L.bank){   // bank: only east-flowing belt pairs cross the wall; empty cells and vertical belts are fine
+        if(a&&b){
+          if(!(isB(a)&&isB(b)&&a.rot===0&&b.rot===0))return null;
+          const sd=(q,dy)=>{const n=occ.get(q.x+","+(q.y+dy));return !!n&&isB(n)&&n.rot===(dy<0?1:3)};
+          if(sd(a,-1)||sd(a,1)||sd(b,-1)||sd(b,1))return null;
+          mk.push(a,b);
+        }else if(a&&(!isB(a)||a.rot===0))return null;   // machine/box/belt flowing into nothing across the wall
+        else if(b&&!isB(b))return null;
+        continue;
+      }
       if(isB(a)&&isB(b)&&a.rot===0&&b.rot===0){mk.push(a,b);continue}
       if(isB(a)||isB(b))return null;
     }
@@ -160,7 +180,8 @@ function placerCut(L,cls){
     return mk;
   };
   const cuts=[],ugs=[];let s=0;
-  while(L.w-s>Fw){
+  if(L.cuts){for(const c of L.cuts){const r=tryCut(c);if(!r)return{ok:false,why:"internal: bank cut column "+c+" is not free"};cuts.push(c);ugs.push(...r)}}
+  else while(L.w-s>Fw){
     let ok=null,c=0;
     for(let e=Fw;e>=Math.max(2,d.w*FC+2-mx);e--){const r=tryCut(s+e);if(r){ok=r;c=s+e;break}}
     if(!ok)return{ok:false,why:"no free column to cross a wall within "+mx+" underground cells (a machine, splitter or container is in the way): pick a higher belt Mk or a bigger block type"};
@@ -177,7 +198,9 @@ function placerCut(L,cls){
 // best block type among the ticked ones (fewest blocks); no tick fits -> the reason of the last failure
 function placerTile(L,ok){
   let best=null,why="";
-  PL_STD.forEach((nm,i)=>{if(!ok[i])return;const r=placerCut(L,plcCls(nm));if(r.ok){if(!best||r.blocks.length<best.blocks.length)best=r}else why=r.why});
+  PL_STD.forEach((nm,i)=>{if(!ok[i])return;const cls=plcCls(nm),L2=L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk)}):L;
+    if(!L2.ok){why=L2.why;return}
+    const r=placerCut(L2,cls);if(r.ok){if(!best||r.blocks.length<best.blocks.length)best=r}else why=r.why});
   return best||{ok:false,why:"Does not fit: "+why};
 }
 function placerPaste(){
@@ -255,7 +278,7 @@ function placerPreview(L){
   $("pvBlk").textContent=!plcT?"0 (existing floor)":plcT.ok?Object.entries(bc).map(([n,c])=>c+" x "+n).join(", "):"none fits";
   if($("pvUg"))$("pvUg").textContent=k.ug?k.ug+" ("+k.ug/2+" pairs, span "+(plcT?plcT.max:0)+" max)":"0";
   $("pvCell").textContent=L.w+" x "+L.h;
-  $("pvIO").textContent=L.mod?"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w:"closed: source container in, sink container out";
+  $("pvIO").textContent=L.mod?"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w:L.bank?"closed: "+L.nS+" source container(s) west, 1 sink container east":"closed: source container in, sink container out";
   $("plnPrevNote").textContent=L.note.concat(plcT&&plcT.ok&&plcT.blocks.length>1?["Spread over "+plcT.blocks.length+" blocks ("+plcT.cols+" x "+plcT.rows+"); "+k.ug/2+" underground pairs cross the walls"]:[]).join(". ");
   $("plnPrevErr").textContent=plcT&&!plcT.ok?plcT.why:"";const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}$("plnPlace").disabled=false;placerFitView();
 }

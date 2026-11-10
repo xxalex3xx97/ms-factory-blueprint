@@ -1,4 +1,4 @@
-// Bank layout slice 1 (placer.js placerBank): ONE trunk, double machine column. Test hook PLC_BANK=true only.
+// Bank layout (placer.js placerBank). Slice 1 (sections P, B): ONE trunk behind test hook PLC_BANK=true. Slice 2 (section S2): several trunks, real UI, no hook.
 // REAL UI for the layout checks (clicks, typing, Ctrl+Z). Section P = sim probes of the buffer/splitter assumptions.
 // Run:  node tests/placer_bank.mjs     Exit code 1 on any failed check or page error. Shots: tests/shots/bank-*.png
 import {createRequire} from 'module';
@@ -229,6 +229,145 @@ try {
   const after = await pg.evaluate(() => S.blocks.length);
   chk(`B8) one Control+z removes the whole factory (${before} -> ${after})`, before > 0 && after === 0, `${before} -> ${after}`);
 
+  // ---- S2) bank layout (N > belt capacity): several trunks, REAL UI, no PLC_BANK hook
+  // CobaltPlates: 20/min per machine, Mk1 belt fits 3 machines per trunk (m=3). 140/min = N 7 = T 3; 80/min = N 4 = T 2.
+  const S2 = 'ITEM_CobaltPlates';
+  const s2check = () => pg.evaluate(() => {
+    const items = S.blocks.filter(b => kindOf(b.cls) !== 'b'), occ = new Map();
+    let ov = 0;
+    items.forEach(b => { const e = dim(b); for (let i = 0; i < e.w; i++) for (let j = 0; j < e.h; j++) { const k = (b.x + i) + ',' + (b.y + j); if (occ.has(k)) ov++; occ.set(k, b) } });
+    const ugRows = {};   // underground cells per row, sorted: entrance, exit, entrance, exit ...
+    items.filter(b => PLC_UG.includes(b.cls)).forEach(u => (ugRows[u.y] = ugRows[u.y] || []).push(u.x));
+    let ugOk = true, pairs = 0;
+    for (const y in ugRows) {
+      const xs = ugRows[y].sort((a, b) => a - b);
+      if (xs.length % 2) ugOk = false;
+      for (let k = 0; k + 1 < xs.length; k += 2) { pairs++; const sp = xs[k + 1] - xs[k]; if (sp < 1 || sp > def(PLC_UG[0]).maxApart) ugOk = false }
+    }
+    // flow: from every machine output, follow belts to the sink (an underground entrance jumps to the exit on its row)
+    const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]], isBox = b => /^DAT_Container/.test(b.cls), isSink = b => isBox(b) && !(b.ct || []).length;
+    const reach = (sx, sy) => {
+      const q = [[sx, sy, 0]], seen = new Set();
+      while (q.length) {
+        const [x, y, jp] = q.shift(), key = x + ',' + y + ',' + jp;
+        if (seen.has(key)) continue; seen.add(key);
+        const b = occ.get(x + ',' + y); if (!b) continue;
+        if (isSink(b)) return true;
+        if (b.rec || isBox(b)) continue;
+        if (PLC_BELT.includes(b.cls)) { const d = DIRS[b.rot & 3]; q.push([x + d[0], y + d[1], 0]); continue }
+        if (PLC_UG.includes(b.cls)) { if (jp) q.push([x + 1, y, 0]); else { const ex = ugRows[y].filter(v => v > x).sort((a, c) => a - c)[0]; if (ex !== undefined) q.push([ex, y, 1]) } continue }
+        if (PLC_SPL.includes(b.cls)) q.push([x + 1, y, 0], [x - 1, y, 0], [x, y + 1, 0]);
+      }
+      return false;
+    };
+    const mach = items.filter(b => b.rec);
+    // output port = enabled port whose neighbour is neither a splitter nor a belt pointing back into the machine (ports carry dir null)
+    const outOf = m => portsOf(m).filter(p => {
+      if (!p.en) return false;
+      const n = occ.get((p.x + p.nx) + ',' + (p.y + p.ny));
+      if (!n || n.rec || PLC_SPL.includes(n.cls)) return false;
+      if (PLC_BELT.includes(n.cls)) { const d = DIRS[n.rot & 3]; if (d[0] === -p.nx && d[1] === -p.ny) return false }
+      return true;
+    });
+    const flowOk = mach.length > 0 && mach.every(m => { const outs = outOf(m); return outs.length === 1 && reach(outs[0].x + outs[0].nx, outs[0].y + outs[0].ny) });
+    const blocks = S.blocks.filter(b => kindOf(b.cls) === 'b').map(b => BASE[b.cls].name);
+    return {ov, ugOk, pairs, flowOk, nM: mach.length, sinks: items.filter(isSink).length,
+      sources: items.filter(b => isBox(b) && (b.ct || []).some(c => c.inf)).length,
+      noBuildBad: noBuild(items.map(mItem)), blocks, nItems: items.length};
+  });
+  const s2sim = item => pg.evaluate(item => {
+    simInit({}); simRun(300);
+    const got = simProd().byItem[item] || 0, ms = [...SIM.M.values()];
+    const need = m => 0.8 * 300 / (recOf(m.b).t / 30);
+    return {got, n: ms.length, low: ms.filter(m => m.cycles < need(m)).length, blocked: ms.filter(m => m.st === 'blocked').length};
+  }, item);
+  const s2setup = async (rate, buf) => {
+    await closeIfOpen(pg);
+    await reset(pg);
+    await openPlanner(pg);
+    await pg.selectOption('#plnItem', S2);
+    await pg.evaluate(() => { $('plnMk').value = '0'; $('plnMk').dispatchEvent(new Event('change')); });
+    await pg.fill('#plnRate', String(rate));
+    await pg.evaluate(b => { $('plnBuf').value = b; $('plnMod').checked = false; }, buf);   // buffer + modular live in the preview modal: set before Build
+  };
+  const ALL = ['plnBk11', 'plnBk21', 'plnBk22'];
+
+  // S2a) T=3 with a Large sink (4 ports): modal, shots at 4 sizes, place, sim
+  await s2setup(140, 'DAT_Container_2');
+  const a3 = await openBuild(pg, ALL);
+  const L3 = await pg.evaluate(() => ({open: $('plnPrev').open, bank: !!(plcL && plcL.bank), trunks: plcL && plcL.trunks, lanes: plcL && plcL.lanes, nS: plcL && plcL.nS, note: $('plnPrevNote').textContent, err: $('plnPrevErr').textContent}));
+  chk('S2a) modal opens, bank layout with T=3 trunks = ceil(7/3), 3 lanes', L3.open && L3.bank && L3.trunks === 3 && L3.lanes === 3, JSON.stringify({a3, L3}));
+  chk('S2a) one source container (nS = ceil(3 / min(4 ports, 480/60)) = 1)', L3.nS === 1, JSON.stringify(L3));
+  chk('S2a) note "3 trunks (3+2+2 machines)" and "Makes 140"', /3 trunks \(3\+2\+2 machines\)/.test(L3.note) && /Makes 140\//.test(L3.note), L3.note);
+  chk('S2a) no preview error', L3.err === '', L3.err);
+  fs.mkdirSync(SHOTS, {recursive: true});
+  for (const [w, h] of [[2576, 982], [1400, 800], [1024, 700], [390, 844]]) {
+    await pg.setViewportSize({width: w, height: h});
+    await pg.waitForTimeout(300);
+    const tag = `bank-s2-${w}x${h}`;
+    await pg.locator('#plnPrevMap').screenshot({path: path.join(SHOTS, tag + '.png')}).catch(e => info('modal shot failed: ' + e.message));
+    await pg.screenshot({path: path.join(SHOTS, tag + '-full.png')});
+  }
+  await pg.setViewportSize({width: W, height: H});
+  await pg.waitForTimeout(300);
+  await pg.click('#plnPlace');
+  const placed3 = await stageClick(pg);
+  await pg.waitForTimeout(100);
+  const c3 = await s2check();
+  chk('S2a) stage click placed the factory', placed3, '');
+  chk('S2a) 7 machines, 1 sink, 1 infinite source placed', c3.nM === 7 && c3.sinks === 1 && c3.sources === 1, JSON.stringify(c3));
+  chk('S2a) 2 blocks of one type (fewest blocks, smallest type)', c3.blocks.length === 2 && c3.blocks.every(n => n === c3.blocks[0]), JSON.stringify(c3.blocks));
+  chk('S2a) no overlapping cells', c3.ov === 0, String(c3.ov));
+  chk('S2a) noBuild(items) === false with STRICT on', c3.noBuildBad === false, String(c3.noBuildBad));
+  chk('S2a) crossings: underground pairs valid (span <= Mk1 max 8) and > 0', c3.ugOk && c3.pairs > 0, JSON.stringify({ugOk: c3.ugOk, pairs: c3.pairs}));
+  chk('S2a) every machine output reaches the sink (belts + underground jumps)', c3.flowOk === true, String(c3.flowOk));
+  const sim3 = await s2sim(S2);
+  chk('S2a) sim output within 5% of min(140, 7*20) = 140', Math.abs(sim3.got - 140) <= 7, JSON.stringify(sim3));
+  chk('S2a) every machine cycles >= 0.8 of full speed, none blocked', sim3.n === 7 && sim3.low === 0 && sim3.blocked === 0, JSON.stringify(sim3));
+  await pg.keyboard.press('Control+z');
+  const u3 = await pg.evaluate(() => S.blocks.length);
+  chk('S2a) one Control+z removes the whole factory', u3 === 0, String(u3));
+
+  // S2b) T=2 (N = m+1 = 4 at 80/min) with the default 2-port Container
+  await s2setup(80, 'DAT_Container');
+  const b2 = await openBuild(pg, ALL);
+  const L2 = await pg.evaluate(() => ({open: $('plnPrev').open, trunks: plcL && plcL.trunks, lanes: plcL && plcL.lanes, nS: plcL && plcL.nS, note: $('plnPrevNote').textContent, err: $('plnPrevErr').textContent}));
+  chk('S2b) T=2: trunks = ceil(4/3) = 2, lanes = 2, nS = 1', b2.open && L2.trunks === 2 && L2.lanes === 2 && L2.nS === 1, JSON.stringify({b2, L2}));
+  chk('S2b) note "2 trunks (2+2 machines)"', /2 trunks \(2\+2 machines\)/.test(L2.note), L2.note);
+  await pg.click('#plnPlace');
+  const placed2 = await stageClick(pg);
+  await pg.waitForTimeout(100);
+  const c2 = await s2check();
+  const sim2 = await s2sim(S2);
+  chk('S2b) placed; 4 machines, 1 sink, 1 source, no overlap, noBuild false, flow ok', placed2 && c2.nM === 4 && c2.sinks === 1 && c2.sources === 1 && c2.ov === 0 && c2.noBuildBad === false && c2.flowOk === true, JSON.stringify(c2));
+  chk('S2b) sim output within 5% of min(80, 4*20) = 80, machines cycle, none blocked', Math.abs(sim2.got - 80) <= 4 && sim2.low === 0 && sim2.blocked === 0, JSON.stringify(sim2));
+  await pg.keyboard.press('Control+z');
+
+  // S2c) ports run out: T=3 with the default Container (2 ports): live refusal in the open modal, nothing placed
+  await s2setup(140, 'DAT_Container_2');
+  await openBuild(pg, ALL);
+  await pg.evaluate(() => { $('plnBuf').value = 'DAT_Container'; $('plnBuf').dispatchEvent(new Event('change')); });   // live: modal open
+  await pg.waitForTimeout(150);
+  const c2b = await pg.evaluate(() => ({err: $('plnPrevErr').textContent, disabled: $('plnPlace').disabled, n: S.blocks.length}));
+  chk('S2c) T=3 with Container (2 ports): #plnPrevErr "Output needs 3 lanes but a ... has 2 ports", Place disabled, nothing placed', /Output needs 3 lanes but a .* has 2 ports/.test(c2b.err) && c2b.disabled && c2b.n === 0, JSON.stringify(c2b));
+
+  // S2d) spread: one block type ticked at a time (same 140/min, Large sink): only that type is placed, undergrounds cross the walls
+  for (const [id, nm] of [['plnBk11', 'BPO_Station_01'], ['plnBk21', 'BPO_Station_2x1'], ['plnBk22', 'BPO_Station_02']]) {
+    await s2setup(140, 'DAT_Container_2');
+    const o = await openBuild(pg, [id]);
+    await pg.click('#plnPlace');
+    const pl = await stageClick(pg);
+    await pg.waitForTimeout(100);
+    const c = await s2check();
+    const sm = await s2sim(S2);
+    chk(`S2d) ${nm} only: placed, blocks all ${nm} (${c.blocks.length}), undergrounds cross walls, valid pairs`,
+      o.open && pl && c.blocks.length >= 2 && c.blocks.every(n => n === nm) && c.pairs > 0 && c.ugOk && c.nM === 7 && c.noBuildBad === false && c.ov === 0,
+      JSON.stringify({o: o.bl, blocks: c.blocks, pairs: c.pairs, ugOk: c.ugOk, nM: c.nM, noBuildBad: c.noBuildBad, ov: c.ov}));
+    chk(`S2d) ${nm} only: flow reaches sink, sim within 5% of 140`, c.flowOk === true && Math.abs(sm.got - 140) <= 7 && sm.blocked === 0, JSON.stringify({flow: c.flowOk, got: sm.got, blocked: sm.blocked}));
+    await pg.keyboard.press('Control+z');
+    const uz = await pg.evaluate(() => S.blocks.length);
+    chk(`S2d) ${nm} only: one Control+z removes it`, uz === 0, String(uz));
+  }
   await closeIfOpen(pg);
   await pg.evaluate(() => { PLC_BANK = false; });
 } catch (e) {

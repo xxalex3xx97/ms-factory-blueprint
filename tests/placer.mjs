@@ -73,11 +73,13 @@ try {
     const hasWE = b => { const ps = portsOf({...b, rot: 0, off: []}); return ps.some(p => p.f === 'W') && ps.some(p => p.f === 'E') };
     const machines = its.filter(b => b.rec);
     return {N, overlap, lanes: L.lanes, machines: machines.length, splitters: cnt[PLC_SPL[0]] || 0, boxes: boxes.length, inf: inf.length, bufs: bufs.length,
-      we: boxes.every(hasWE), belts: (cnt[PLC_BELT[0]] || 0), w: L.w, h: L.h, cls: Object.keys(cnt)};
+      we: boxes.every(hasWE), belts: (cnt[PLC_BELT[0]] || 0), w: L.w, h: L.h, cls: Object.keys(cnt), bank: !!L.bank, nS: L.nS || 0, per: L.per};
   }, [ITEM]);
   chk('(2) N machines', shape.machines === shape.N, JSON.stringify(shape));
-  chk('(2) N splitters', shape.splitters === shape.N, JSON.stringify(shape));
-  chk('(2) per lane: 4 containers (1 infinite source, 2 buffers, 1 sink)', shape.boxes === 4 * shape.lanes && shape.inf === shape.lanes && shape.bufs === 3 * shape.lanes, JSON.stringify(shape));
+  // bank (N > belt capacity): one splitter per 2 machines of each trunk; legacy lane: one per machine
+  chk('(2) splitters: N (lane) or sum ceil(trunk/2) (bank)', shape.splitters === (shape.bank ? shape.per.reduce((a, c) => a + Math.ceil(c / 2), 0) : shape.N), JSON.stringify(shape));
+  chk('(2) containers: lane = 4 per lane (1 infinite source, 2 buffers, 1 sink); bank = nS+1 (nS infinite sources, 1 sink)',
+    shape.bank ? (shape.boxes === shape.nS + 1 && shape.inf === shape.nS && shape.bufs === 1) : (shape.boxes === 4 * shape.lanes && shape.inf === shape.lanes && shape.bufs === 3 * shape.lanes), JSON.stringify(shape));
   chk('(2) containers have W and E ports', shape.we, JSON.stringify(shape));
   chk('(2) no overlapping cells', shape.overlap === 0, `overlaps ${shape.overlap}`);
 
@@ -113,11 +115,11 @@ try {
   await pg.evaluate(() => { hover = {x: 5, y: 5}; pasteAt(); });
   const after = await pg.evaluate(() => {
     const blocks = S.blocks.filter(b => !isM(b)), ms = S.blocks.filter(isM);
-    const fr = blocks.length ? floorRect(blocks[0]) : null;
-    const inside = fr && ms.every(m => { const e = dim(m); return m.x >= fr.x && m.y >= fr.y && m.x + e.w <= fr.x + fr.w && m.y + e.h <= fr.y + fr.h });
+    const frs = blocks.map(b => floorRect(b));   // bank factory may spread over several blocks: each item must sit on one of their floors
+    const inside = blocks.length > 0 && ms.every(m => { const e = dim(m); return frs.some(fr => fr && m.x >= fr.x && m.y >= fr.y && m.x + e.w <= fr.x + fr.w && m.y + e.h <= fr.y + fr.h) });
     return {blocks: blocks.length, machines: ms.length, inside, bad: noBuild(ms.map(mItem)), pl: !!(pasting && pasting.pl), n: S.blocks.length};
   });
-  chk('(5) click places +1 block and factory machines inside its floor', after.blocks === 1 && after.machines > 0 && after.inside === true && after.bad === false && after.pl === false, JSON.stringify(after));
+  chk('(5) click places blocks (>=1, 2 at this rate) and factory items inside their floors', after.blocks >= 1 && after.machines > 0 && after.inside === true && after.bad === false && after.pl === false, JSON.stringify(after));
   await pg.evaluate(() => undo());
   const und = await pg.evaluate(() => S.blocks.length);
   chk('(5) one undo removes block and factory', und === 0, `len ${und}`);
@@ -139,14 +141,17 @@ try {
   // ---- (7) 500/min on Mk1: not refused, parallel lanes, sim matches machine capacity
   const big = await pg.evaluate(([item]) => {
     STRICT = false; S.blocks = [];
-    const P = plan(item, 500, 0, {}, {}, {}), L = placerLayout(P, item, 0, 0);
+    const P = plan(item, 120, 0, {}, {}, {}), L = placerLayout(P, item, 0, 0, {box: 'DAT_Container_2'});
     if (!L.ok) return {why: L.why};
     S.blocks = L.items.map(b => ({...b, id: uid++, x: b.x + 10, y: b.y + 10, h: 0}));
     simInit({}); simRun(300);
     const cap = P.nodes[item].machines * P.nodes[item].pmach;
-    return {lanes: L.lanes, sum: L.per.reduce((a, b) => a + b, 0), N: P.nodes[item].machines, got: simProd().byItem[item] || 0, cap, rate: 500, note: L.note.join('|')};
+    return {lanes: L.lanes, sum: L.per.reduce((a, b) => a + b, 0), N: P.nodes[item].machines, got: simProd().byItem[item] || 0, cap, rate: 120, note: L.note.join('|')};
   }, [ITEM]);
-  chk('(7) 500/min Mk1: not refused, >=2 lanes, machines sum to N, sim within 5% of min(rate,cap)', big.lanes >= 2 && big.sum === big.N && big.got >= 0.95 * Math.min(500, big.cap) && big.got <= 1.05 * big.cap && /Makes/.test(big.note), JSON.stringify(big));
+  chk('(7) 120/min Mk1, Large sink (4 ports): not refused, >=2 lanes, machines sum to N, sim within 5% of min(rate,cap)', big.lanes >= 2 && big.sum === big.N && big.got >= 0.95 * Math.min(120, big.cap) && big.got <= 1.05 * big.cap && /Makes/.test(big.note), JSON.stringify(big));
+  // 500/min Mk1 needs 17 trunks: more than a sink's ports (Container 2, Large 4) -> refused with the port message
+  const over = await pg.evaluate(([item]) => { const L = placerLayout(plan(item, 500, 0, {}, {}, {}), item, 0, 0, {box: 'DAT_Container_2'}); return {ok: L.ok, why: L.why || ''} }, [ITEM]);
+  chk('(7) 500/min Mk1 with Large sink: refused, "Output needs N lanes ... ports per side"', over.ok === false && /Output needs \d+ lanes/.test(over.why) && /ports per side/.test(over.why), JSON.stringify(over));
 
   // ---- (8) unchecked: factory only into existing floor
   await pg.evaluate(([item]) => {
@@ -157,7 +162,8 @@ try {
   const nof = await pg.evaluate(() => ({err: $('plnPrevErr').textContent, open: document.getElementById('plnPrev').open, pl: !!(pasting && pasting.pl), clip: clip.length}));
   chk('(8) unchecked, no floor: "Does not fit" in #plnPrevErr, modal stays open', /^Does not fit/.test(nof.err) && nof.open && nof.clip === 0 && !nof.pl, JSON.stringify(nof));
   // 14x14 Station_01 floor is too small for this factory (checked above); use the 30x30 Station_02 floor
-  await pg.evaluate(() => { S.blocks = [{id: uid++, cls: Object.keys(BASE).find(k => BASE[k].kind === 'b' && BASE[k].name === 'BPO_Station_02'), x: 5, y: 5, h: 0, rot: 0, pid: 0}]; setView('F'); });
+  // 60/min is a 2-trunk bank now (wider than one 30x30 floor): use 30/min (one machine, single lane) so it fits
+  await pg.evaluate(() => { S.blocks = [{id: uid++, cls: Object.keys(BASE).find(k => BASE[k].kind === 'b' && BASE[k].name === 'BPO_Station_02'), x: 5, y: 5, h: 0, rot: 0, pid: 0}]; setView('F'); $('plnRate').value = '30'; });
   await pg.evaluate(() => GO());
   const fit = await pg.evaluate(() => ({pl: !!(pasting && pasting.pl), paste: !!pasting, clip: clip.length, view}));
   chk('(8) unchecked with floor: clip set, paste mode, no ghost block', fit.paste && !fit.pl && fit.clip > 0 && fit.view === 'F', JSON.stringify(fit));
@@ -169,8 +175,8 @@ try {
     return 'none';
   });
   chk('(9) 2-raw item: why contains "single-input"', /single-input/.test(negTwo), negTwo);
-  const negBig = await pg.evaluate(([item]) => { const L = placerLayout(plan(item, 500, 0, {}, {}, {}), item, 0, 0); return {ok: L.ok, why: L.why || '', lanes: L.lanes} }, [ITEM]);
-  chk('500/min at Mk1: ok with parallel lanes', negBig.ok === true && negBig.lanes >= 2, JSON.stringify(negBig));
+  const negBig = await pg.evaluate(([item]) => { const L = placerLayout(plan(item, 120, 0, {}, {}, {}), item, 0, 0, {box: 'DAT_Container_2'}); return {ok: L.ok, why: L.why || '', lanes: L.lanes} }, [ITEM]);
+  chk('120/min at Mk1, Large sink: ok with parallel lanes', negBig.ok === true && negBig.lanes >= 2, JSON.stringify(negBig));
 
   // ---- (10) Esc clears the ghost, nothing placed
   await pg.evaluate(([item]) => {
@@ -286,22 +292,24 @@ try {
     simInit({}); simRun(300);
     const cap = P.nodes[item].machines * P.nodes[item].pmach, got = simProd().byItem[item] || 0;
     S.blocks = [];
-    return {ok: true, lanes: L.lanes, boxes: cs.length, allLarge: cs.every(b => b.cls === 'DAT_Container_2'), overlap, got, cap,
+    return {ok: true, lanes: L.lanes, boxes: cs.length, allLarge: cs.every(b => b.cls === 'DAT_Container_2'), overlap, got, cap, nS: L.nS, bank: !!L.bank,
       opts: [...document.getElementById('plnBuf').options].map(o => o.value)};
   }, [ITEM]);
-  chk('(16) large buffer: every container DAT_Container_2, count 4*lanes, no overlap', lb.ok && lb.allLarge && lb.boxes === 4 * lb.lanes && lb.overlap === 0, JSON.stringify(lb));
+  chk('(16) large buffer: every container DAT_Container_2, count nS+1 (bank), no overlap', lb.ok && lb.allLarge && lb.bank && lb.boxes === lb.nS + 1 && lb.overlap === 0, JSON.stringify(lb));
   chk('(16) large buffer sim: >=95% of min(60,cap), <=105% of cap', lb.ok && lb.got >= 0.95 * Math.min(60, lb.cap) && lb.got <= 1.05 * lb.cap, JSON.stringify(lb));
   chk('(16) #plnBuf offers DAT_Container and DAT_Container_2', !!lb.opts && lb.opts.length === 2 && lb.opts.includes('DAT_Container') && lb.opts.includes('DAT_Container_2'), JSON.stringify(lb.opts));
 
   // ---- (17) 1000/min on Mk2: parallel lanes, no overlap
   const m2 = await pg.evaluate(([item]) => {
-    const L = placerLayout(plan(item, 1000, 1, {}, {}, {}), item, 1, 1);
+    const L = placerLayout(plan(item, 240, 1, {}, {}, {}), item, 1, 1, {box: 'DAT_Container_2'});   // 240/min Mk2 = 2-4 trunks (Large has 4 ports); 1000/min is refused, see negative below
     if (!L.ok) return {ok: false, why: L.why};
     const cells = new Map(); let overlap = 0;
     L.items.forEach(b => { const e = dim(b); for (let i = 0; i < e.w; i++) for (let j = 0; j < e.h; j++) { const k = (b.x + i) + ',' + (b.y + j); if (cells.has(k)) overlap++; cells.set(k, b.cls); } });
-    return {ok: true, lanes: L.lanes, overlap, boxes: L.items.filter(b => b.ct).length};
+    return {ok: true, lanes: L.lanes, overlap, boxes: L.items.filter(b => b.ct).length, nS: L.nS, bank: !!L.bank};
   }, [ITEM]);
-  chk('(17) 1000/min Mk2: ok, lanes>=2, no overlap, boxes === 4*lanes', m2.ok && m2.lanes >= 2 && m2.overlap === 0 && m2.boxes === 4 * m2.lanes, JSON.stringify(m2));
+  chk('(17) 240/min Mk2: ok, lanes>=2, no overlap, boxes === nS+1 (bank)', m2.ok && m2.lanes >= 2 && m2.overlap === 0 && m2.bank && m2.boxes === m2.nS + 1, JSON.stringify(m2));
+  const m3 = await pg.evaluate(([item]) => { const L = placerLayout(plan(item, 1000, 1, {}, {}, {}), item, 1, 1); return {ok: L.ok, why: L.why || ''} }, [ITEM]);
+  chk('(17) 1000/min Mk2 with Container (2 ports): refused, "Output needs N lanes"', m3.ok === false && /Output needs \d+ lanes/.test(m3.why), JSON.stringify(m3));
 
   // ---- (18) modular: open ends (IN west, OUT east), no source/sink; copies chain; sim with external source/sink
   const md = await pg.evaluate(([item]) => {
