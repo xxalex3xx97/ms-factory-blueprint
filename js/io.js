@@ -249,8 +249,9 @@ let SAVL=null,SAVB=null,SAVN="";
 // Import save: plain file input (showOpenFilePicker refuses the game's AppData folder as a "system folder"). Hint: paste the game's save folder in the dialog's address bar.
 const SAVDIR="%LOCALAPPDATA%\\MainSequence\\Saved\\SaveGames";
 $("impSav").onclick=()=>{
-  let first=false;try{first=!localStorage.getItem("msfb.savdir");localStorage.setItem("msfb.savdir","1")}catch(e){}
-  if(first){try{navigator.clipboard.writeText(SAVDIR)}catch(e){}toast("First time: paste "+SAVDIR+" in the address bar (copied).")}
+  // the plain chooser does not remember the folder: copy + hint on every click ("copied" only when the copy worked)
+  let ok=false;try{ok=!!navigator.clipboard&&navigator.clipboard.writeText(SAVDIR).then(()=>toast("Paste "+SAVDIR+" in the address bar (copied)"),()=>toast("Save folder: "+SAVDIR))}catch(e){}
+  if(!ok)toast("Save folder: "+SAVDIR);
   $("savFile").value="";$("savFile").click()};
 $("savFile").onchange=e=>savOpen(e.target.files[0]);
 const savOpen=async f=>{if(!f)return;try{const ab=await f.arrayBuffer(),l=parseSav(ab);if(!l.length){toast("No player stations found in this save");return}
