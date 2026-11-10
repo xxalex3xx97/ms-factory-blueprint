@@ -86,6 +86,8 @@
       <div id="plnForm">
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
       <label>Rate (items/min) <input id="plnRate" type="number" min="0" value="0" aria-label="Target rate in items per minute"></label>
+      <button id="plnBuild" type="button" title="Place machines, belts and source containers for this plan as a ghost">Build factory</button>
+      <label class="chk" title="Also place a new station block for the factory"><input type="checkbox" id="plnInc" checked> Include block</label>
       </div>
       <div id="plnMain">
       <div id="plnOut" tabindex="0" role="region" aria-label="Planner flow diagram"></div>
@@ -247,6 +249,7 @@
 <script defer src="js/palette.js"></script>
 <script defer src="js/inspector.js"></script>
 <script defer src="js/planner.js"></script>
+<script defer src="js/placer.js"></script>
 <script defer src="js/panel.js"></script>
 <script defer src="js/io.js"></script>
 <script defer src="js/simui.js"></script>

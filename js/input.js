@@ -185,6 +185,7 @@ function paste(){
   active=null;mode=null;sel=new Set();pasting={rot:0,fl:false};toast("Stamp: click to place copies, R rotates, V flips, Esc or right click stops");all();
 }
 function pasteAt(){
+  if(pasting&&pasting.pl)return placerPaste();
   const nb=clipT(pasting.rot,pasting.fl).map(b=>({...b,id:uid++,mid:0,x:b.x+hover.x,y:b.y+hover.y,h:b.h+layer}));
   if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}
   const ug=ms=>new Map(ugPairs(ms).flatMap(({u,t})=>[[u.id,t.id],[t.id,u.id]])),old=S.blocks.filter(isM),was=ug(old),now=ug(old.concat(nb.filter(isM)));   // pasted undergrounds must not re-pair existing ones
