@@ -1470,6 +1470,18 @@ async function s16(br) {
     const lin = loadAt(s, 39, 40), lN = loadAt(s, 40, 39), lE = loadAt(s, 41, 40), lS = loadAt(s, 40, 41);
     chk('16s per-belt load: input belt ~60, each output belt ~20 (animation data)', lin && lN && lE && lS && near(lin.tot, 60, 2) && [lN, lE, lS].every(l => near(l.tot, 20, 1.5)), JSON.stringify([lin, lN, lE, lS]));
   }
+  {
+    // unstocked container fed 60/min with 3 output belts acts like a big splitter: 20/min each
+    BC = 'DAT_ConveyorBelt'; mid = 1; const P = {x: 40, y: 40}, rp = await relPort('DAT_Container_2', [-1, 0]);
+    const org = {x: P.x - rp.x, y: P.y - rp.y}, ps = (await portsAt('DAT_Container_2', rp.rot)).filter(q => q.en);
+    const ms = [mac('DAT_Container_2', org.x, org.y, {rot: rp.rot, mid: nm()})];
+    ms.push(...await leg(P, [[[-1, 0], 3]], 'in', INF(TP)));
+    for (const n of [[0, -1], [1, 0], [0, 1]]) { const q = ps.find(r => r.nx === n[0] && r.ny === n[1]); ms.push(...await leg({x: org.x + q.x, y: org.y + q.y}, [[n, 3]], 'out', null)); }
+    await imp(pg, bp([], ms));
+    await run(300);
+    const k = sinksOf(await snap()).filter(c => c.in > 0 && c.in < 50), n = k.map(c => c.in);   // the 60/min middle container is not a sink
+    chk('16s container with 3 output belts splits evenly (3 x 20/min)', k.length === 3 && n.every(v => near(v, 20, 2)), JSON.stringify(n));
+  }
   for (const [bc, cap] of [['DAT_ConveyorBelt', 60], ['DAT_ConveyorBelt2', 120], ['DAT_ConveyorBelt3', 180]]) {
     // belt tier limits a container pull (Mk1 60 / Mk2 120 / Mk3 180 per min)
     BC = bc; mid = 1; const P = {x: 40, y: 40};
