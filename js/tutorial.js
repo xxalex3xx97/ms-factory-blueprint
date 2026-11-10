@@ -28,6 +28,7 @@ function build(){
     if(e.key==="Tab"){const b=[...card.querySelectorAll("button:not(:disabled),a[href]")],k=b.indexOf(document.activeElement);e.preventDefault();b[(k+(e.shiftKey?-1:1)+b.length)%b.length].focus();return}
     e.stopPropagation();   // no canvas shortcuts (F, R, Del...) while the tour is open
   },true);
+  setInterval(()=>i>=0&&place(),250);   // ponytail: the header reflows after boot (file/Fit buttons appear), keep the cut-out on its target
   addEventListener("resize",()=>i>=0&&place());addEventListener("scroll",()=>i>=0&&place(),true);
 }
 function ensure(s){
