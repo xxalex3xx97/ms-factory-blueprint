@@ -331,6 +331,26 @@ try {
   });
   chk('(19) Mk1 with pmach>60: ok false, why matches /higher belt/ (detail "none" if no such item)', hi === null || (hi.ok === false && /higher belt/.test(hi.why)), hi === null ? 'none' : JSON.stringify(hi));
 
+  // ---- (21) ITEM_Exosuit (55 nodes, 11 raw inputs, cyclic): refused cleanly and fast, nothing placed
+  await pg.evaluate(() => {
+    S = {name: 't', blocks: [], dm: [], closed: []}; if (view !== 'L') setView('L');
+    pasting = null; plcL = null; $('plnPrev').hidden = true; $('toast').textContent = '';
+    $('plnItem').value = 'ITEM_Exosuit'; $('plnRate').value = '1'; $('plnMk').value = '0'; BK(true); plnDraw();
+  });
+  const exo = await pg.evaluate(() => {
+    const blk0 = JSON.stringify(S.blocks);
+    let err = '', ms = -1;
+    try { const t0 = performance.now(); placerGo(); ms = performance.now() - t0; } catch (e) { err = e.message; }
+    const pv = document.getElementById('plnPrev').hidden, same = JSON.stringify(S.blocks) === blk0, toast = $('toast').textContent, pl = !!(pasting && pasting.pl);
+    let Lok = null, Lwhy = '', Lerr = '';
+    try { const x = placerPlan(), L = placerLayout(x.P, 'ITEM_Exosuit', 0, 0); Lok = L.ok; Lwhy = L.why || ''; } catch (e) { Lerr = e.message; }
+    return {err, ms, pv, same, toast, pl, Lok, Lwhy, Lerr};
+  });
+  chk('(21) Exosuit: placerGo no exception, < 2000 ms', exo.err === '' && exo.ms >= 0 && exo.ms < 2000, JSON.stringify(exo));
+  chk('(21) Exosuit: #plnPrev hidden, S.blocks unchanged, no ghost', exo.pv === true && exo.same && !exo.pl, JSON.stringify(exo));
+  chk('(21) Exosuit: toast non-empty and says single-input single-recipe', /single-input single-recipe/.test(exo.toast), JSON.stringify(exo));
+  chk('(21) Exosuit: placerLayout ok:false with why', exo.Lerr === '' && exo.Lok === false && /single-input single-recipe/.test(exo.Lwhy), JSON.stringify(exo));
+
   chk('(h) no pageerror / console.error during the run', errs.length === 0, errs.join('\n     '));
   await ctx.close();
 } finally {
