@@ -246,15 +246,11 @@ $("impX").onclick=()=>$("dImp").close();
 $("impFile").onchange=async e=>{const f=e.target.files[0];if(f)$("impTa").value=await f.text()};
 $("impGo").onclick=()=>{if(importJson($("impTa").value))$("dImp").close()};
 let SAVL=null,SAVB=null,SAVN="";
-// Import save: the browser cannot open a fixed path, but the picker remembers the last folder per id (Chromium/Edge). First time: paste the game's save folder in the dialog's address bar.
+// Import save: plain file input (showOpenFilePicker refuses the game's AppData folder as a "system folder"). Hint: paste the game's save folder in the dialog's address bar.
 const SAVDIR="%LOCALAPPDATA%\\MainSequence\\Saved\\SaveGames";
-$("impSav").onclick=async()=>{
-  if(window.showOpenFilePicker){
-    let first=false;try{first=!localStorage.getItem("msfb.savdir");localStorage.setItem("msfb.savdir","1")}catch(e){}
-    if(first){try{navigator.clipboard.writeText(SAVDIR)}catch(e){}toast("First time: paste "+SAVDIR+" in the address bar (copied). The folder is remembered next time.")}
-    try{const[h]=await showOpenFilePicker({id:"msfb-sav",types:[{description:"Main Sequence save",accept:{"application/octet-stream":[".sav"]}}]});await savOpen(await h.getFile());return}
-    catch(err){if(err&&err.name==="AbortError")return}   // other errors (blocked context): fall back to the plain file input
-  }
+$("impSav").onclick=()=>{
+  let first=false;try{first=!localStorage.getItem("msfb.savdir");localStorage.setItem("msfb.savdir","1")}catch(e){}
+  if(first){try{navigator.clipboard.writeText(SAVDIR)}catch(e){}toast("First time: paste "+SAVDIR+" in the address bar (copied).")}
   $("savFile").value="";$("savFile").click()};
 $("savFile").onchange=e=>savOpen(e.target.files[0]);
 const savOpen=async f=>{if(!f)return;try{const ab=await f.arrayBuffer(),l=parseSav(ab);if(!l.length){toast("No player stations found in this save");return}
