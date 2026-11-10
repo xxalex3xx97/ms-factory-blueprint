@@ -1917,7 +1917,7 @@ async function s16ui(br) {
   const ink0 = await ink(pg);
   chk('16ui sim controls hidden while Simulation window closed (#simB aria-pressed false)', !(await pg.isVisible('#smPlay')) && await pg.getAttribute('#simB', 'aria-pressed') === 'false');
   await pg.click('#simB');
-  chk('16ui Simulate on: controls visible, aria-pressed, SIM created', await pg.isVisible('#smPlay') && await pg.isVisible('#smRst') && await pg.isVisible('#smClk') && (await pg.locator('#dHelp #smLeg').count()) === 1 && await pg.getAttribute('#simB', 'aria-pressed') === 'true' && (await T(pg)) === 0);
+  chk('16ui Simulate on: controls visible, aria-pressed, SIM created', await pg.isVisible('#smPlay') && await pg.isVisible('#smRst') && await pg.isVisible('#smClk') && (await pg.locator('#fwW #smLeg').count()) === 1 && await pg.getAttribute('#simB', 'aria-pressed') === 'true' && (await T(pg)) === 0);
   await pg.click('#sm60');
   chk('16ui speed buttons: 60x pressed, 1x/10x not', await pg.getAttribute('#sm60', 'aria-pressed') === 'true' && await pg.getAttribute('#sm1', 'aria-pressed') === 'false' && await pg.getAttribute('#sm10', 'aria-pressed') === 'false' && await pg.evaluate(() => __fb.SPD) === 60);
   await pg.click('#smPlay');
@@ -2360,7 +2360,7 @@ async function s21(br) {
   chk('21 Help button present, dialog closed', (await pg.locator('#help').count()) === 1 && (await pg.locator('#dHelp[open]').count()) === 0);
   await pg.click('#help');
   const ht = await pg.evaluate(() => document.getElementById('dHelp').textContent);
-  chk('21 #help opens #dHelp with Simulation + Legend + Controls + How to + !?', (await pg.locator('#dHelp[open]').count()) === 1 && ['Simulation', 'Legend', 'Controls', 'How to', '!?', 'Blockage'].every(w => ht.includes(w)), ht.slice(0, 80));
+  chk('21 #help opens #dHelp with Simulation + Legend + Controls + Getting started + !?', (await pg.locator('#dHelp[open]').count()) === 1 && ['Simulation', 'Legend', 'Controls', 'Getting started', '!?', 'Blockage'].every(w => ht.includes(w)), ht.slice(0, 80));
   chk('21 Help lists the simulation rules as bullets', (await pg.locator('#helpSim li').count()) >= 4);
   await pg.screenshot({path: path.join(SHOTS, 'u1-help-1400.png')});
   await pg.click('#helpX');
@@ -3963,6 +3963,203 @@ async function s40(br) {
   await ctx.close();
 }
 
+// ================= 41 first-visit spotlight tour, ? dialog search, Flow legend card
+const TOUR_TITLES = ['Import save', 'Level', 'Theoretical', 'Simulation', 'Planner', 'Flow', 'Place blocks and machines', 'Export / build in game'];
+// reads the tour and the windows it touches; geometry measured in the page (spotlight, card, target)
+const TOUR_REC = () => {
+  const o = document.getElementById('tourOv'), wn = !document.getElementById('wnW').hidden, fw = !document.getElementById('fwW').hidden;
+  if (!o || o.hidden) return {on: false, wn, fw};
+  const c = document.getElementById('tourCard').getBoundingClientRect(), h = document.getElementById('tourHole').getBoundingClientRect();
+  const s = window.tour.steps[window.tour.i], e = document.querySelector(s.x), r = e ? e.getBoundingClientRect() : null;
+  return {on: true, n: document.getElementById('tourN').textContent, t: document.getElementById('tourT').textContent,
+    back: document.getElementById('tourBack').disabled, next: document.getElementById('tourNext').textContent, wn, fw,
+    card: [c.left, c.top, c.right, c.bottom], hole: [h.left, h.top, h.right, h.bottom], nohole: o.classList.contains('nohole'),
+    tgt: r && r.width > 0 && r.height > 0 ? [r.left, r.top, r.right, r.bottom] : null,
+    vw: innerWidth, vh: innerHeight, scrollY: document.scrollingElement.scrollTop, hdr: document.querySelector('header').getBoundingClientRect().top};
+};
+async function s41(br) {
+  const DESK = {width: 1400, height: 900}, PHONE = {width: 390, height: 844};
+  const settle = pg => pg.waitForTimeout(350);   // spotlight moves with a .18s transition
+  const tourOn = pg => pg.evaluate(() => { const o = document.getElementById('tourOv'); return !!o && !o.hidden; });
+  // real first visit: navigator.webdriver overridden (auto-show is skipped under automation), fresh localStorage
+  const firstVisit = async (vp, tag) => {
+    const ctx = await br.newContext({viewport: vp});
+    await ctx.addInitScript(() => Object.defineProperty(navigator, 'webdriver', {get: () => false}));
+    const pg = await ctx.newPage(); wire(pg, tag);
+    await pg.goto(PAGE);
+    await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+    await pg.waitForTimeout(800);
+    return {ctx, pg};
+  };
+  // walk all steps with Next: record state; optional screenshots of steps 1, 4, 8
+  const walk = async (pg, vp, shot) => {
+    const recs = [];
+    for (let k = 0; k < TOUR_TITLES.length; k++) {
+      await settle(pg);
+      recs.push(await pg.evaluate(TOUR_REC));
+      if (shot && [0, 3, 7].includes(k)) await pg.screenshot({path: path.join(SHOTS, `tour-${vp.width}-${k + 1}.png`)});
+      await pg.click('#tourNext');
+    }
+    return recs;
+  };
+  const cardBad = (recs, vp) => recs.flatMap((r, k) => (r.card[0] < 0 || r.card[1] < 0 || r.card[2] > vp.width + 0.5 || r.card[3] > vp.height + 0.5) ? [`step ${k + 1} card [${r.card.map(Math.round)}]`] : []);
+  const targetBad = (recs, vp) => recs.flatMap((r, k) => {
+    if (!r.tgt) return [`step ${k + 1} target missing or hidden`];
+    const out = [];
+    if (r.tgt[0] < 0 || r.tgt[1] < 0 || r.tgt[2] > vp.width || r.tgt[3] > vp.height) out.push(`step ${k + 1} target off-screen [${r.tgt.map(Math.round)}]`);
+    // spotlight is kept 2px inside the viewport edge (tour.js clamp): compare against the clamped target
+    const L = Math.max(r.tgt[0], 2), T = Math.max(r.tgt[1], 2), R = Math.min(r.tgt[2], vp.width - 2), B = Math.min(r.tgt[3], vp.height - 2);
+    if (r.hole[0] > L + 1 || r.hole[1] > T + 1 || r.hole[2] < R - 1 || r.hole[3] < B - 1) out.push(`step ${k + 1} spotlight [${r.hole.map(Math.round)}] does not cover target`);
+    if (r.scrollY !== 0 || r.hdr < 0) out.push(`step ${k + 1} page scrolled (scrollY ${Math.round(r.scrollY)}, header top ${Math.round(r.hdr)})`);
+    return out;
+  });
+
+  // A. desktop first visit: auto-show, Back, 8 steps in order, counters, Done, windows restored
+  {
+    const {ctx, pg} = await firstVisit(DESK, 's41a');
+    const r0 = await pg.evaluate(TOUR_REC);
+    chk('41 tour auto-shows once on first visit at "1 / 8" Import save; localStorage msfb.ui.tour = 1', r0.on && r0.n === '1 / 8' && r0.t === 'Import save' && r0.back && await pg.evaluate(() => localStorage.getItem('msfb.ui.tour')) === '1', JSON.stringify(r0));
+    await pg.click('#tourNext'); await settle(pg);
+    await pg.click('#tourBack'); await settle(pg);
+    const rb = await pg.evaluate(TOUR_REC);
+    chk('41 tour Back returns to the previous step (Back disabled on step 1)', rb.n === '1 / 8' && rb.t === 'Import save' && rb.back, JSON.stringify(rb));
+    const recs = await walk(pg, DESK, true);
+    chk('41 tour steps in order: ' + TOUR_TITLES.join(' > '), JSON.stringify(recs.map(r => r.t)) === JSON.stringify(TOUR_TITLES), JSON.stringify(recs.map(r => r.t)));
+    chk('41 tour counter reads "k / 8" on each step', recs.every((r, k) => r.n === `${k + 1} / 8`), recs.map(r => r.n).join(' '));
+    chk('41 tour buttons: Back disabled on step 1 only; Next on steps 1-7; Done on step 8', recs[0].back && recs.slice(1).every(r => !r.back) && recs.slice(0, 7).every(r => r.next === 'Next') && recs[7].next === 'Done', recs.map(r => r.next).join(' '));
+    chk('41 tour windows: Level step opens the Windows panel; Flow step has Flow open', recs[1].wn && recs[5].fw, `wn@2 ${recs[1].wn} fw@6 ${recs[5].fw}`);
+    const end = await pg.evaluate(TOUR_REC);
+    chk('41 tour Done closes the overlay and restores the windows (Windows panel closed, Flow open as before)', !end.on && !end.wn && end.fw, JSON.stringify(end));
+    chk('41 tour 1400px: card inside the viewport on all 8 steps', cardBad(recs, DESK).length === 0, cardBad(recs, DESK).join('; '));
+    chk('41 tour 1400px: target visible, covered by the spotlight, page not scrolled on all 8 steps', targetBad(recs, DESK).length === 0, targetBad(recs, DESK).join('; '));
+    await ctx.close();
+  }
+  // B. Skip, then no auto-show on the next load
+  {
+    const {ctx, pg} = await firstVisit(DESK, 's41b');
+    await pg.click('#tourSkip'); await settle(pg);
+    chk('41 tour Skip closes the overlay', !(await tourOn(pg)));
+    await pg.reload(); await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined'); await pg.waitForTimeout(800);
+    chk('41 tour does not auto-show on a second load', !(await tourOn(pg)));
+    await ctx.close();
+  }
+  // C. Esc skips from step 3
+  {
+    const {ctx, pg} = await firstVisit(DESK, 's41c');
+    await pg.click('#tourNext'); await settle(pg); await pg.click('#tourNext'); await settle(pg);
+    const before = await pg.evaluate(TOUR_REC);
+    await pg.keyboard.press('Escape'); await settle(pg);
+    chk('41 tour Esc skips from step 3', before.n === '3 / 8' && !(await tourOn(pg)), `before ${before.n}`);
+    await ctx.close();
+  }
+  // D. phone first visit: whole tour at 390px
+  {
+    const {ctx, pg} = await firstVisit(PHONE, 's41p');
+    const recs = await walk(pg, PHONE, true);
+    chk('41 tour 390px: all 8 steps reached in order', JSON.stringify(recs.map(r => r.t)) === JSON.stringify(TOUR_TITLES), JSON.stringify(recs.map(r => r.t)));
+    chk('41 tour 390px: card inside the viewport on all 8 steps', cardBad(recs, PHONE).length === 0, cardBad(recs, PHONE).join('; '));
+    chk('41 tour 390px: target visible, covered by the spotlight, page not scrolled on all 8 steps', targetBad(recs, PHONE).length === 0, targetBad(recs, PHONE).join('; '));
+    await ctx.close();
+  }
+  // E. 1024px walk (geometry)
+  {
+    const W = {width: 1024, height: 768};
+    const {ctx, pg} = await firstVisit(W, 's41w');
+    const recs = await walk(pg, W, false);
+    chk('41 tour 1024px: card inside the viewport, target covered, page not scrolled on all 8 steps', cardBad(recs, W).length === 0 && targetBad(recs, W).length === 0, [...cardBad(recs, W), ...targetBad(recs, W)].join('; '));
+    await ctx.close();
+  }
+  // F. replay from the ? dialog; no auto-show under automation
+  {
+    const {ctx, pg} = await open(br, DESK, 's41f');
+    chk('41 tour not auto-shown under automation (navigator.webdriver true)', !(await tourOn(pg)));
+    await pg.click('#help');
+    await pg.click('#helpTour'); await settle(pg);
+    const r = await pg.evaluate(TOUR_REC);
+    chk('41 ? dialog "Replay tutorial" closes the dialog and starts the tour at step 1', r.on && r.n === '1 / 8' && r.t === 'Import save' && (await pg.locator('#dHelp[open]').count()) === 0, JSON.stringify({on: r.on, n: r.n, t: r.t}));
+    await pg.keyboard.press('Escape'); await settle(pg);
+    chk('41 tour replay: Esc closes it', !(await tourOn(pg)));
+    await ctx.close();
+  }
+  // G. Flow window legend card
+  {
+    const {ctx, pg} = await open(br, DESK, 's41g');
+    await pg.click('#flwB');
+    const st0 = await pg.evaluate(() => ({fw: !document.getElementById('fwW').hidden, exp: document.getElementById('flLegBtn').getAttribute('aria-expanded'), card: document.getElementById('flLegCard').hidden, inFw: document.querySelectorAll('#fwW #flLegBtn').length}));
+    chk('41 Flow window: Legend button inside #fwW, collapsed by default (aria-expanded false, card hidden)', st0.fw && st0.exp === 'false' && st0.card && st0.inFw === 1, JSON.stringify(st0));
+    await pg.click('#flLegBtn'); await settle(pg);
+    const st1 = await pg.evaluate(() => ({exp: document.getElementById('flLegBtn').getAttribute('aria-expanded'), card: document.getElementById('flLegCard').hidden, txt: document.getElementById('flLegCard').textContent, sw: [...document.querySelectorAll('#smLeg b')].map(b => b.style.background), belts: document.querySelectorAll('#flLegCard .leg i').length, dHelpLeg: document.querySelectorAll('#dHelp #smLeg, #dHelp .leg').length}));
+    chk('41 Flow legend click expands the card (aria-expanded true, card visible)', st1.exp === 'true' && !st1.card, JSON.stringify({exp: st1.exp, card: st1.card}));
+    const want = ['Machine states', 'Belts', 'Markers', 'Layout arrows', 'idle', 'working', 'starved', 'blocked', 'Flow', 'Blockage', 'Full belt', '!?', 'Size not confirmed', 'station door'];
+    chk('41 Flow legend card lists machine states, belt colours, full belt, !? and layout arrows', want.every(w => st1.txt.includes(w)), want.filter(w => !st1.txt.includes(w)).join(', '));
+    chk('41 Flow legend swatches: 4 machine-state chips with a colour, 3+ belt swatches', st1.sw.length === 4 && st1.sw.every(s => s !== '') && st1.belts >= 3, JSON.stringify(st1.sw) + ' belts ' + st1.belts);
+    chk('41 legend moved out of the ? dialog (no #smLeg or .leg inside #dHelp)', st1.dHelpLeg === 0);
+    await pg.screenshot({path: path.join(SHOTS, 'flow-legend-1400.png')});
+    await pg.click('#flLegBtn'); await settle(pg);
+    const st2 = await pg.evaluate(() => ({exp: document.getElementById('flLegBtn').getAttribute('aria-expanded'), card: document.getElementById('flLegCard').hidden}));
+    chk('41 Flow legend click again collapses the card (aria-expanded false)', st2.exp === 'false' && st2.card, JSON.stringify(st2));
+    await ctx.close();
+  }
+  // H. ? dialog: sections, nav, search, no-results, highlight, keyboard
+  {
+    const {ctx, pg} = await open(br, DESK, 's41h');
+    await pg.click('#help');
+    const vis = () => pg.evaluate(() => [...document.querySelectorAll('#helpBody section')].filter(s => !s.hidden).map(s => s.dataset.hs).join(','));
+    const navs = await pg.evaluate(() => [...document.querySelectorAll('#helpNav button')].map(b => b.textContent.trim()));
+    chk('41 ? dialog nav lists the 5 sections', JSON.stringify(navs) === JSON.stringify(['Getting started', 'Controls', 'Simulation rules', 'Flow & legend', 'Build in game']), JSON.stringify(navs));
+    const v0 = await vis(), cur0 = await pg.evaluate(() => document.querySelector('#helpNav button[aria-current=true]')?.dataset.hs);
+    chk('41 ? dialog opens on "Getting started" only (aria-current on that nav button, no "no results")', v0 === 'start' && cur0 === 'start' && (await pg.locator('#helpNone').isHidden()), v0);
+    chk('41 ? dialog focus inside the dialog; search input labelled "Search help"', await pg.evaluate(() => document.getElementById('dHelp').contains(document.activeElement)) && (await pg.getAttribute('#helpSearch', 'aria-label')) === 'Search help');
+    await pg.click('#helpNav button[data-hs=ctl]');
+    const v1 = await vis();
+    chk('41 ? nav "Controls" shows the Layout and Factory floor key lists', v1 === 'ctl' && (await pg.locator('#helpCtlL li').count()) > 0 && (await pg.locator('#helpCtlF li').count()) > 0, v1);
+    await pg.click('#helpNav button[data-hs=game]');
+    const v2 = await vis(), lnk = await pg.evaluate(() => { const a = document.querySelector('#helpBody a[href*="MSBlueprintUnit"]'); return a ? a.target : null; });
+    chk('41 ? nav "Build in game" shows the Blueprint Unit link (target _blank)', v2 === 'game' && lnk === '_blank', v2 + ' ' + lnk);
+    await pg.click('#helpNav button[data-hs=start]');
+    await pg.fill('#helpSearch', 'blockage'); await settle(pg);
+    const vb = await vis(), mk = await pg.evaluate(() => [...document.querySelectorAll('#helpBody mark')].map(m => m.textContent.toLowerCase()));
+    chk('41 ? search "blockage": live filter keeps matching sections, hides "Build in game", highlights <mark>', vb.includes('leg') && !vb.includes('game') && mk.length > 0 && mk.every(t => t === 'blockage') && (await pg.locator('#helpNav button[data-hs=game]').isHidden()), `visible ${vb} marks ${mk.length}`);
+    await pg.fill('#helpSearch', 'zzqxw'); await settle(pg);
+    const none = await pg.evaluate(() => ({vis: [...document.querySelectorAll('#helpBody section')].filter(s => !s.hidden).length, txt: document.getElementById('helpNone').textContent, shown: !document.getElementById('helpNone').hidden}));
+    chk('41 ? search with no match: "No results" shown, every section hidden', none.shown && none.vis === 0 && none.txt.includes('zzqxw'), JSON.stringify(none));
+    await pg.fill('#helpSearch', '('); await settle(pg);
+    const par = await pg.evaluate(() => ({none: document.getElementById('helpNone').hidden, marks: [...document.querySelectorAll('#helpBody mark')].map(m => m.textContent)}));
+    chk('41 ? search "(" is a literal (no regex error): marks only "(" in the text', par.none && par.marks.length > 0 && par.marks.every(m => m === '('), JSON.stringify(par.marks.length));
+    await pg.fill('#helpSearch', 'MSCore'); await settle(pg);
+    const vm = await vis();
+    chk('41 ? search "MSCore" finds the Build in game section only', vm === 'game', vm);
+    await pg.fill('#helpSearch', 'door'); await settle(pg);
+    await pg.screenshot({path: path.join(SHOTS, 'help-1400-search.png')});
+    await pg.fill('#helpSearch', ''); await settle(pg);
+    const vc = await vis(), mc = await pg.evaluate(() => document.querySelectorAll('#helpBody mark').length);
+    chk('41 ? clearing the search returns to the section view with no marks', vc === 'start' && mc === 0, vc + ' marks ' + mc);
+    await pg.screenshot({path: path.join(SHOTS, 'help-1400.png')});
+    const hd = await pg.evaluate(() => ({smLeg: document.querySelectorAll('#dHelp #smLeg').length, pointer: document.getElementById('dHelp').textContent.includes('Flow window')}));
+    chk('41 ? dialog Flow & legend section points to the Flow window (legend not duplicated)', hd.smLeg === 0 && hd.pointer, JSON.stringify(hd));
+    await pg.keyboard.press('Escape'); await settle(pg);
+    chk('41 ? dialog closes on Esc', (await pg.locator('#dHelp[open]').count()) === 0);
+    await ctx.close();
+  }
+  // I. phone: ? dialog fits 390px; Flow legend card on screen inside the Flow window
+  {
+    const {ctx, pg} = await open(br, PHONE, 's41i');
+    await pg.click('#help'); await settle(pg);
+    const fit = await pg.evaluate(() => { const r = document.getElementById('dHelp').getBoundingClientRect(); return {l: r.left, r: r.right, b: r.bottom, sw: document.documentElement.scrollWidth}; });
+    chk('41 390px: ? dialog fits the viewport (no horizontal overflow)', fit.l >= 0 && fit.r <= 390.5 && fit.b <= 844.5 && fit.sw <= 390, JSON.stringify(fit));
+    await pg.screenshot({path: path.join(SHOTS, 'help-390.png')});
+    await pg.fill('#helpSearch', 'door'); await settle(pg);
+    await pg.screenshot({path: path.join(SHOTS, 'help-390-search.png')});
+    await pg.keyboard.press('Escape'); await settle(pg);
+    await pg.click('#flwB'); await settle(pg);
+    await pg.click('#flLegBtn'); await settle(pg);
+    const lg = await pg.evaluate(() => { const c = document.getElementById('flLegCard').getBoundingClientRect(), w = document.getElementById('fwW').getBoundingClientRect(); return {card: [c.left, c.top, c.right, c.bottom].map(Math.round), fw: [w.left, w.top, w.right, w.bottom].map(Math.round), sw: document.documentElement.scrollWidth}; });
+    chk('41 390px: Flow legend card inside the Flow window and on screen (no horizontal overflow)', lg.card[0] >= lg.fw[0] - 0.5 && lg.card[2] <= lg.fw[2] + 0.5 && lg.card[2] <= 390.5 && lg.card[3] <= 844.5 && lg.sw <= 390, JSON.stringify(lg));
+    await pg.screenshot({path: path.join(SHOTS, 'flow-legend-390.png')});
+    await ctx.close();
+  }
+}
+
 // ================= main
 const br =await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 try {
@@ -3998,6 +4195,7 @@ try {
   try { console.log('--- 38 delete mode, config copy/paste, context menu'); await s38(br); } catch (e) { chk('38 section ran', false, e.stack || String(e)); }
   try { console.log('--- 39 dock shape'); await s39(br); } catch (e) { chk('39 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 40 rename docks'); await s40(br); } catch (e) { chk('40 rename docks: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 41 tour, ? search, Flow legend'); await s41(br); } catch (e) { chk('41 tour/help/legend: section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 30 corner, corridor, TradeConsole, Teleporter'); await s30(br); } catch (e) { chk('30 section ran', false, e.stack || String(e)); }
