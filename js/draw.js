@@ -200,7 +200,7 @@ function drawBlock(b,alpha,isSel){
   cx.fillStyle=kFill(cat,alpha*.8);
   cx.fillRect(x,y,w,h);
   drawIcon(df,x,y,w,h,Math.min(1,alpha));
-  if(df&&df.directional&&s>=ARROW_MIN_S&&!(LK&&cat[0]==="~"))arrow(x,y,w,h,b.rot,Math.min(1,alpha));   // link mode: the link lines show the direction
+  if(df&&df.directional&&s>=ARROW_MIN_S&&!(LK&&cat[0]==="~"&&alpha>.5))arrow(x,y,w,h,b.rot,Math.min(1,alpha));   // link mode: the link lines show the direction
   cx.lineWidth=1;cx.strokeStyle=kStroke(cat,alpha);
   cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
