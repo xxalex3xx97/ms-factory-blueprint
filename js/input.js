@@ -157,7 +157,7 @@ function carryOf(bs){
     S.closed=cl.map(k=>{const a=k.split("|"),m=o.find(p=>p.h===+a[0]&&p.x===+a[1]&&p.y===+a[2]);if(m){a[0]=m.h+dh;a[1]=m.x+dx;a[2]=m.y+dy}return a.join("|")});
   };
 }
-function copy(){if(!sel.size)return;clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null}));if(clip.length){toast(clip.length+" copied");paste()}}
+function copy(){if(!sel.size)return;ugPairs(S.blocks.filter(isM)).forEach(({u,t})=>{if(sel.has(u.id)||sel.has(t.id)){sel.add(u.id);sel.add(t.id)}});clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null}));if(clip.length){toast(clip.length+" copied");paste()}}
 // horizontal mirror of a machine: pick the rotation whose port layout is the mirror image (same face/pos/direction), remap disabled ports; null = cannot mirror
 function mirM(b){
   const d=def(b.cls);if(!d||!d.portsLayout||d.elevator)return null;
@@ -182,13 +182,13 @@ function clipT(n,fl){   // clip mirrored (fl) then rotated n x 90deg clockwise, 
 }
 function paste(){
   if(!clip.length||isM(clip[0])!==(view==="F"))return;
-  if(view==="F"&&clip.every(b=>b.cls===clip[0].cls&&ugTool(def(b.cls)))){   // copied underground(s): same click, click flow as picking one from the palette (entrance, then exit)
-    active=clip[0].cls;mode=null;sel=new Set();pasting=null;placeRot=clip[0].rot||0;toast("Click the entrance, then click the exit");all();return}
   active=null;mode=null;sel=new Set();pasting={rot:0,fl:false};toast("Stamp: click to place copies, R rotates, V flips, Esc or right click stops");all();
 }
 function pasteAt(){
   const nb=clipT(pasting.rot,pasting.fl).map(b=>({...b,id:uid++,mid:0,x:b.x+hover.x,y:b.y+hover.y,h:b.h+layer}));
   if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}
+  const ug=ms=>new Map(ugPairs(ms).flatMap(({u,t})=>[[u.id,t.id],[t.id,u.id]])),old=S.blocks.filter(isM),was=ug(old),now=ug(old.concat(nb.filter(isM)));   // pasted undergrounds must not re-pair existing ones
+  if([...was].some(([a,b])=>now.get(a)!==b)){toast("Underground would change an existing pair: move it so it does not sit inside or next to another underground on that line");return}
   push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set();all();   // stamp: stays in paste mode (rot/flip kept) until Esc / right click
 }
 // ---- modes: del = click or box deletes (X toggles); copy = box then paste like Ctrl+C; cfgcopy = click one machine; cfgpaste = box applies cfgClip to same-class machines
