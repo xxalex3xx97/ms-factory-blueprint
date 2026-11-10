@@ -140,7 +140,7 @@ try {
   const pasted = (await pg.evaluate(() => __fb.build())).Blocks;
   chk('(c) pasted layout identical (min-normalised pos, rot, height)',
     isDeepStrictEqual(normBlocks(pasted), normBlocks(origBlocks)), diff(normBlocks(pasted), normBlocks(origBlocks)));
-  chk('(c) paste ends (pasting null)', (await pg.evaluate(() => __fb.pasting)) === null);
+  chk('(c) paste stays active after a click (stamp, ends on Esc)', !!(await pg.evaluate(() => __fb.pasting)));
 
   await imp(pg, bp());
   await pg.evaluate(() => __fb.setView('L'));
@@ -519,7 +519,7 @@ try {
   chk('(Z) wheel up zooms in', (await gw()) > w1 * 1.1, String(w1) + ' -> ' + await gw());
   // pan: drag empty viewport space moves everything; a node can be dragged past the old top-left limit
   const vp = await pp.evaluate(() => { const r = document.querySelector('.plnVp').getBoundingClientRect(); return {x: r.left, y: r.top, w: r.width, h: r.height}; });
-  const p0 = await bb(), ex = Math.round(vp.x + vp.w - 8), ey = Math.round(vp.y + vp.h - 8);
+  const p0 = await bb(), ex = Math.round(vp.x + 8), ey = Math.round(vp.y + vp.h - 8);   // bottom-left: the bottom-right can sit under other windows when the planner fills the stage
   await pp.mouse.move(ex, ey); await pp.mouse.down(); await pp.mouse.move(ex - 50, ey - 30, {steps: 4}); await pp.mouse.up();
   const p1 = await bb();
   chk('(Z) pan: dragging empty space moves the diagram', Math.abs(p1.x - p0.x + 50) < 1.5 && Math.abs(p1.y - p0.y + 30) < 1.5, `${p0.x},${p0.y} -> ${p1.x},${p1.y}`);
