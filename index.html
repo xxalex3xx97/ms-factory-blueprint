@@ -40,7 +40,7 @@
   </div>
   <div class="tg" role="group" aria-label="View"><span class="gl">View</span>
   <div class="grp seg" id="vw" role="group" aria-label="View level"><button id="vwL" class="on" aria-pressed="true" title="Block layout">Layout</button><button id="vwF" aria-pressed="false" title="Factory floor (F)"><span class="lg">Factory </span><span class="fl">floor</span> <kbd>F</kbd></button></div>
-  <button id="help" aria-label="Help" title="Help: how to, controls, simulation rules, legend">?</button>
+  <button id="help" aria-label="Help" title="Help: getting started, controls, simulation rules, legend">?</button>
   </div>
 </header>
 <main>
@@ -150,6 +150,16 @@
       <div class="fmh"><h3 id="fwWT">Flow</h3><button id="fwWX" aria-label="Close flow" title="Close">&times;</button></div>
       <div class="fmb">
         <div class="chips" id="lkg" role="group" aria-label="Flow overlays"><button id="lk" aria-pressed="false" title="Informational link overlay (no rules, nothing blocked). Machine&lt;-&gt;belt marker = an ENABLED port faces a belt cell (disabled port = no link, faint red tick); input/output direction is unknown, so it is undirected. Ports: layout inferred from screenshots, not verified vs game data. Arrows = belt flow; green thick = T-join merge; dashed = underground pair.">Links</button><button id="bn" aria-pressed="false" title="Bottlenecks: belt load = items/min passing / belt capacity. Links on: gradient on the flow arrows; links off: belt cells are coloured. While a simulation has run, colours use the simulated values, otherwise the planning estimate. Informational only.">Bottlenecks</button><button id="bnF" aria-pressed="false" disabled title="Flow: grey (no flow) to green (full capacity). Uses simulated load once the simulation has run.">Flow</button><button id="bnB" class="on" aria-pressed="true" disabled title="Blockage: green up to capacity, red when over capacity (simulation: or when the belt chain is full/blocked)">Blockage</button></div>
+        <button id="flLegBtn" type="button" class="legb" aria-expanded="false" aria-controls="flLegCard" title="Show or hide the legend: machine states, belt colours, markers"><span>Legend</span><span class="ar" aria-hidden="true"></span></button>
+        <div id="flLegCard" hidden>
+          <h4>Machine states</h4>
+          <div id="smLeg" aria-label="Machine states"><span><b style="background:hsl(220,10%,58%)">I</b>idle</span><span><b style="background:hsl(140,60%,48%)">W</b>working</span><span><b style="background:hsl(48,95%,55%)">S</b>starved</span><span><b style="background:hsl(0,75%,58%)">B</b>blocked</span></div>
+          <h4>Belts</h4>
+          <div class="leg" aria-label="Belt colours"><span><i style="background:linear-gradient(90deg,hsl(220,10%,50%),hsl(140,65%,46%))"></i>Flow: grey (none) to green (full)</span><span><i style="background:linear-gradient(90deg,hsl(140,65%,46%),hsl(0,65%,46%))"></i>Blockage: green to red (over capacity)</span><span><i style="background:none;border:2px solid hsl(0,75%,58%)"></i>Full belt (blocked): red ring</span></div>
+          <h4>Markers</h4>
+          <div class="leg"><span><span class="bq">!?</span>Size not confirmed in game</span></div>
+          <div class="leg" aria-label="Layout arrows"><span>Layout arrows: entrances</span><span><i class="sw" style="background:#fff"></i>White = station door (points into the block)</span><span><i class="sw" style="background:hsl(140,85%,75%)"></i>Green = output ports side (blocks without doors)</span></div>
+        </div>
       </div>
     </div>
     </div>
@@ -165,28 +175,43 @@
 </main>
 
 <dialog id="dHelp" aria-labelledby="dHelpT">
-  <h3 id="dHelpT">Help</h3>
-  <h4>Build it in the game</h4>
-  <p>The <a href="https://github.com/xxalex3xx97/MSBlueprintUnit" target="_blank" rel="noopener">Blueprint Unit</a> mod adds a station block that builds this factory for you. Export the JSON here, paste it into the unit's window in the game, check the modification cost, and it builds the factory on your station. Needs MSCore (install with MSCoreManager).</p>
-  <h4>How to</h4>
-  <ul>
-    <li>Blocks sit on a grid; open the factory floor (<kbd>F</kbd> or double-click a block) to place machines and belts inside.</li>
-    <li>Adjacent blocks always connect. Doors are open by default; click a door to close or open it.</li>
-    <li>Pick an item in the palette, then click to place. Shift+click an item to put it on the hotbar.</li>
-    <li>Simulate, then Production: items per minute per item and machine type, plus totals.</li>
-    <li>Theoretical: items per minute at full speed, limited by belts, no simulation needed.</li>
-    <li>Layout, port positions, rotation and machine scale not marked as verified are not confirmed and may differ in the game.</li>
-  </ul>
-  <h4>Controls</h4>
-  <div id="helpCtl"></div>
-  <h4>Simulation rules</h4>
-  <ul id="helpSim"></ul>
-  <h4>Legend</h4>
-  <div id="smLeg" aria-label="Machine states"><span><b style="background:hsl(220,10%,58%)">I</b>idle</span><span><b style="background:hsl(140,60%,48%)">W</b>working</span><span><b style="background:hsl(48,95%,55%)">S</b>starved</span><span><b style="background:hsl(0,75%,58%)">B</b>blocked</span></div>
-  <div class="leg" aria-label="Belt colours"><span><i style="background:linear-gradient(90deg,hsl(220,10%,50%),hsl(140,65%,46%))"></i>Flow: grey (none) to green (full)</span><span><i style="background:linear-gradient(90deg,hsl(140,65%,46%),hsl(0,65%,46%))"></i>Blockage: green to red (over capacity)</span><span><i style="background:none;border:2px solid hsl(0,75%,58%)"></i>Full belt (blocked): red ring</span></div>
-  <div class="leg"><span><span class="bq">!?</span>Size not confirmed in game</span></div>
-  <div class="leg"><span>Layout arrows: entrances. White = station door (points into the block), green = output ports side (blocks without doors)</span></div>
-  <div class="btns"><button id="helpX" class="pri">Close</button></div>
+  <div class="hhd"><h3 id="dHelpT">Help</h3><input id="helpSearch" type="text" placeholder="Search help..." aria-label="Search help" autocomplete="off" spellcheck="false"></div>
+  <div class="hmain">
+    <nav id="helpNav" aria-label="Help sections">
+      <button type="button" data-hs="start">Getting started</button>
+      <button type="button" data-hs="ctl">Controls</button>
+      <button type="button" data-hs="sim">Simulation rules</button>
+      <button type="button" data-hs="leg">Flow &amp; legend</button>
+      <button type="button" data-hs="game">Build in game</button>
+    </nav>
+    <div id="helpBody" tabindex="0" role="region" aria-label="Help text" aria-live="polite">
+      <section data-hs="start" aria-labelledby="hsT-start"><h4 id="hsT-start">Getting started</h4>
+        <ul>
+          <li>Blocks sit on a grid; open the factory floor (<kbd>F</kbd> or double-click a block) to place machines and belts inside.</li>
+          <li>Adjacent blocks always connect. Doors are open by default.</li>
+          <li>Pick an item in the palette, then click to place. Shift+click an item to put it on the hotbar.</li>
+          <li>Simulate, then Production: items per minute per item and machine type, plus totals.</li>
+          <li>Theoretical: items per minute at full speed, limited by belts, no simulation needed.</li>
+          <li>Layout, port positions, rotation and machine scale not marked as verified are not confirmed and may differ in the game.</li>
+        </ul>
+      </section>
+      <section data-hs="ctl" aria-labelledby="hsT-ctl"><h4 id="hsT-ctl">Controls</h4>
+        <div class="hg"><h5>Layout</h5><ul id="helpCtlL"></ul></div>
+        <div class="hg"><h5>Factory floor</h5><ul id="helpCtlF"></ul></div>
+      </section>
+      <section data-hs="sim" aria-labelledby="hsT-sim"><h4 id="hsT-sim">Simulation rules</h4>
+        <ul id="helpSim"></ul>
+      </section>
+      <section data-hs="leg" aria-labelledby="hsT-leg"><h4 id="hsT-leg">Flow &amp; legend</h4>
+        <p>The legend lives in the Flow window: open Windows, then Flow, and press Legend. It shows the machine states (idle, working, starved, blocked), the belt colours (Flow, Blockage, full belt), the !? mark for sizes not confirmed in the game, and the Layout arrows.</p>
+      </section>
+      <section data-hs="game" aria-labelledby="hsT-game"><h4 id="hsT-game">Build in game</h4>
+        <p>The <a href="https://github.com/xxalex3xx97/MSBlueprintUnit" target="_blank" rel="noopener">Blueprint Unit</a> mod adds a station block that builds this factory for you. Export the JSON here, paste it into the unit's window in the game, check the modification cost, and it builds the factory on your station. Needs MSCore (install with MSCoreManager).</p>
+      </section>
+      <p id="helpNone" class="sub" hidden>No results.</p>
+    </div>
+  </div>
+  <div class="btns"><button id="helpTour" type="button">Replay tutorial</button><button id="helpX" class="pri">Close</button></div>
 </dialog>
 <dialog id="dExp" aria-labelledby="dExpT">
   <h3 id="dExpT">Export JSON</h3>
@@ -227,6 +252,8 @@
 <script defer src="js/simui.js"></script>
 <script defer src="js/panels.js"></script>
 <script defer src="js/autosave.js"></script>
+<script defer src="js/help.js"></script>
+<script defer src="js/tutorial.js"></script>
 <script defer src="js/boot.js"></script>
 </body>
 </html>
