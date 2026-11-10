@@ -146,7 +146,7 @@ function rotate(){
 }
 $("undo").onclick=undo;$("redo").onclick=redo;
 // deleting a block also deletes the machines/belts on its factory floor (same floor box as carryOf; one undo step restores both)
-function del(){if(!sel.size)return;push();const fl=new Set();S.blocks.filter(b=>sel.has(b.id)&&!isM(b)).forEach(b=>{const d=fcell(b);S.blocks.forEach(q=>{if(isM(q)&&q.h===b.h&&q.x>=d.cx*FC&&q.x<(d.cx+d.cw)*FC&&q.y>=d.cy*FC&&q.y<(d.cy+d.ch)*FC)fl.add(q)})});S.blocks=S.blocks.filter(b=>!sel.has(b.id)&&!fl.has(b));sel=new Set();all()}
+function del(){if(!sel.size)return;push();ugPairs(S.blocks.filter(isM)).forEach(({u,t})=>{if(sel.has(u.id)||sel.has(t.id)){sel.add(u.id);sel.add(t.id)}});const fl=new Set();S.blocks.filter(b=>sel.has(b.id)&&!isM(b)).forEach(b=>{const d=fcell(b);S.blocks.forEach(q=>{if(isM(q)&&q.h===b.h&&q.x>=d.cx*FC&&q.x<(d.cx+d.cw)*FC&&q.y>=d.cy*FC&&q.y<(d.cy+d.ch)*FC)fl.add(q)})});S.blocks=S.blocks.filter(b=>!sel.has(b.id)&&!fl.has(b));sel=new Set();all()}
 // Layout move carries the floor machines inside each block's footprint, plus closed doorways of that block. Call BEFORE mutating blocks; returns (dx,dy,dh) applied relative to the originals (idempotent).
 function carryOf(bs){
   const o=bs.map(b=>{const c=fcell(b);return{h:b.h,x:c.cx,y:c.cy}}),cl=S.closed.slice(),s=new Set();   // closed keys use the floor cell anchor (fcell), same as model.js areas()
@@ -182,12 +182,14 @@ function clipT(n,fl){   // clip mirrored (fl) then rotated n x 90deg clockwise, 
 }
 function paste(){
   if(!clip.length||isM(clip[0])!==(view==="F"))return;
-  active=null;mode=null;sel=new Set();pasting={rot:0,fl:false};toast("Click to place, R rotates, V flips, Esc cancels");all();
+  if(view==="F"&&clip.every(b=>b.cls===clip[0].cls&&ugTool(def(b.cls)))){   // copied underground(s): same click, click flow as picking one from the palette (entrance, then exit)
+    active=clip[0].cls;mode=null;sel=new Set();pasting=null;placeRot=clip[0].rot||0;toast("Click the entrance, then click the exit");all();return}
+  active=null;mode=null;sel=new Set();pasting={rot:0,fl:false};toast("Stamp: click to place copies, R rotates, V flips, Esc or right click stops");all();
 }
 function pasteAt(){
   const nb=clipT(pasting.rot,pasting.fl).map(b=>({...b,id:uid++,mid:0,x:b.x+hover.x,y:b.y+hover.y,h:b.h+layer}));
   if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}
-  push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set();pasting=null;all();
+  push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set();all();   // stamp: stays in paste mode (rot/flip kept) until Esc / right click
 }
 // ---- modes: del = click or box deletes (X toggles); copy = box then paste like Ctrl+C; cfgcopy = click one machine; cfgpaste = box applies cfgClip to same-class machines
 function setMode(m){mode=m||null;if(mode){active=null;pasting=null}all()}
