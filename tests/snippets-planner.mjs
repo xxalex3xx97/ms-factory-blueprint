@@ -527,7 +527,9 @@ try {
   await pp.mouse.move(Math.round(vp.x - 40), Math.round(vp.y - 40), {steps: 6}); await pp.mouse.up();
   const p2 = await bb();
   chk('(Z) node moves freely beyond the old edge', p2.x < vp.x, `${p2.x} < ${vp.x}`);
-  chk('(Z) planner panel fills the stage height', await pp.evaluate(() => { const p = document.getElementById('pln').getBoundingClientRect(), s = document.getElementById('pln').offsetParent.getBoundingClientRect(); return s.height - p.height < 24; }));
+  // user rule (2026-11-10): planner height FOLLOWS CONTENT (not forced to fill the stage): panel <= stage, and no child sticks out of the panel
+  const zc = await pp.evaluate(() => { const el = document.getElementById('pln'), p = el.getBoundingClientRect(), s = el.offsetParent.getBoundingClientRect(); const out = [...el.querySelectorAll('*')].filter(k => !k.closest('.plnVp') && !k.closest('details:not([open])') && k.getBoundingClientRect().bottom > p.bottom + 1).map(k => k.tagName + '#' + k.id + '.' + k.className); return {ph: p.height, sh: s.height, out}; });
+  chk('(Z) planner panel height follows content (<= stage, no child clipped)', zc.ph <= zc.sh + 1 && zc.out.length === 0, JSON.stringify(zc));
   await pp.selectOption('#plnItem', other); await pp.selectOption('#plnItem', 'ITEM_CobaltPlates');
   // (PR) Protomatter toggle in the panel
   chk('(PR5) #plnProto default "0" = Don\'t use, aria-label set', (await pp.inputValue('#plnProto')) === '0' && (await pp.textContent('#plnProto option:checked')) === "Don't use" && (await pp.getAttribute('#plnProto', 'aria-label')) === 'Protomatter use');
