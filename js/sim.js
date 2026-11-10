@@ -148,7 +148,8 @@ function theoLevel(L,inj){
     if(feeds(e)&&p.dir!=="out")r.ins.push(e.b.id);else if(!feeds(e)&&p.dir!=="in")r.outs.push(e.b.id)});
   spR.forEach(r=>r.ins.forEach(i=>sp.set(i,r.outs)));
   const outs=K.ports.filter(e=>R.has(e.m.id)&&!feeds(e)),ins=K.ports.filter(e=>R.has(e.m.id)&&feeds(e));
-  const base=outs.map(e=>({id:e.b.id,item:R.get(e.m.id).o[0],rate:pm(R.get(e.m.id).o[1],R.get(e.m.id).t)||0,m:e.m.id})).concat(K.pull.map(x=>({id:x.belt.id,item:x.item,rate:x.rate,m:null})),(inj||[]).map(x=>({...x,m:null})));
+  const lv=e=>K.chainMachines(e.b).some(m=>m!==e.m),oc=new Map();outs.forEach(e=>{if(lv(e))oc.set(e.m.id,(oc.get(e.m.id)||0)+1)});   // recipe rate shared equally between a machine's output belts that lead to another machine (dead ends take no share)
+  const base=outs.map(e=>({id:e.b.id,item:R.get(e.m.id).o[0],rate:lv(e)?(pm(R.get(e.m.id).o[1],R.get(e.m.id).t)||0)/oc.get(e.m.id):0,m:e.m.id})).concat(K.pull.map(x=>({id:x.belt.id,item:x.item,rate:x.rate,m:null})),(inj||[]).map(x=>({...x,m:null})));
   let th=new Map();const tf=id=>th.get(id)||1;   // belt throttle of this pass: 1/(max utilisation of the chain at full demand), so no chain carries more than its belt speed
   const util=(load,id)=>{let u=0;const seen=new Set();for(let i=id;i!=null&&!seen.has(i);i=K.nx.get(i)){seen.add(i);const e=load.get(i);if(e&&e.util>u)u=e.util}return u};
   let load;

@@ -274,8 +274,10 @@ function links1(L,inj){
   belts.forEach(b=>cp.set(b.id,beltMax(b)));
   o.flow.forEach(({u,t})=>nx.set(u.id,t.id));
   o.ug.forEach(({u,t})=>nx.set(u.id,t.id));
-  o.ports.forEach(e=>{const r=recOf(e.m);if(!r)return;const d=DIR[e.b.rot],p=e.port;if(d[0]===-p.nx&&d[1]===-p.ny)return;   // belt feeding INTO this machine carries no output
-    const v=pm(r.o[1],r.t);if(v)src.push({id:e.b.id,item:r.o[0],rate:v})});
+  const live=e=>[...o.mach.get(root(e.b.id))].some(m=>m!==e.m);   // belt chain reaches another machine; a dead end carries nothing and takes no share
+  const oc=new Map();o.ports.forEach(e=>{if(!recOf(e.m)||!live(e))return;const d=DIR[e.b.rot],p=e.port;if(!(d[0]===-p.nx&&d[1]===-p.ny))oc.set(e.m.id,(oc.get(e.m.id)||0)+1)});   // output belts per machine: the recipe rate is shared equally between them
+  o.ports.forEach(e=>{const r=recOf(e.m);if(!r||!live(e))return;const d=DIR[e.b.rot],p=e.port;if(d[0]===-p.nx&&d[1]===-p.ny)return;   // belt feeding INTO this machine carries no output
+    const v=pm(r.o[1],r.t)/oc.get(e.m.id);if(v)src.push({id:e.b.id,item:r.o[0],rate:v})});
   o.pull=[];o.push=[];
   (inj||[]).forEach(x=>src.push(x));   // elevator transfers from other levels (see links)
   o.ports.forEach(e=>{if(!isStore(e.m))return;const d=DIR[e.b.rot],p=e.port;
