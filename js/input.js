@@ -184,6 +184,7 @@ function paste(){
   active=null;mode=null;sel=new Set();pasting={rot:0,fl:false};toast("Click to place, R rotates, V flips, Esc cancels");all();
 }
 function pasteAt(){
+  if(pasting&&pasting.pl)return placerPaste();
   const nb=clipT(pasting.rot,pasting.fl).map(b=>({...b,id:uid++,mid:0,x:b.x+hover.x,y:b.y+hover.y,h:b.h+layer}));
   if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}
   push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set();pasting=null;all();
