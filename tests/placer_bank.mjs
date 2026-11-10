@@ -147,15 +147,17 @@ try {
     const isB = b => kindOf(b.cls) === 'b';
     const items = S.blocks.filter(b => !isB(b));
     const mach = items.filter(b => b.rec), spl = items.filter(b => PLC_SPL.includes(b.cls));
-    const boxes = items.filter(b => b.cls === PLC_BOX);
+    const boxes = items.filter(b => b.cls === PLC_BOX), sx = Math.max(...boxes.map(b => b.x));
     const inf = boxes.filter(b => (b.ct || []).some(x => x.inf));
-    const sinks = boxes.filter(b => !(b.ct || []).length);
-    return {mach: mach.length, spl: spl.length, boxes: boxes.length, inf: inf.length, infItems: inf.map(b => b.ct.map(x => x.item)), sinks: sinks.length, blocks: S.blocks.length - items.length};
+    const empty = boxes.filter(b => !(b.ct || []).length);   // in-buffer, out-buffer, sink
+    const sinks = empty.filter(b => b.x === sx);
+    return {mach: mach.length, spl: spl.length, boxes: boxes.length, inf: inf.length, infItems: inf.map(b => b.ct.map(x => x.item)), sinks: sinks.length, empty: empty.length, blocks: S.blocks.length - items.length};
   });
   chk(`B2) machines == N (${pick.N})`, B2.mach === pick.N, JSON.stringify(B2));
   chk('B2) splitters == ceil(N/2)', B2.spl === Math.ceil(pick.N / 2), JSON.stringify(B2));
   chk('B2) exactly one infinite container holding the raw item', B2.inf === 1 && B2.infItems[0].length === 1, JSON.stringify(B2));
-  chk('B2) exactly one sink (ct empty)', B2.sinks === 1, JSON.stringify(B2));
+  chk('B2) exactly one sink (ct empty at the rightmost x)', B2.sinks === 1, JSON.stringify(B2));
+  chk('B2) 4 containers: source, in-buffer, out-buffer, sink (3 with ct empty)', B2.boxes === 4 && B2.empty === 3, JSON.stringify(B2));
   chk('B2) exactly one station block placed', B2.blocks === 1, JSON.stringify(B2));
 
   // ---- B3 no overlapping cells
@@ -245,7 +247,7 @@ try {
       for (let k = 0; k + 1 < xs.length; k += 2) { pairs++; const sp = xs[k + 1] - xs[k]; if (sp < 1 || sp > def(PLC_UG[0]).maxApart) ugOk = false }
     }
     // flow: from every machine output, follow belts to the sink (an underground entrance jumps to the exit on its row)
-    const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]], isBox = b => /^DAT_Container/.test(b.cls), isSink = b => isBox(b) && !(b.ct || []).length;
+    const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]], isBox = b => /^DAT_Container/.test(b.cls), sinkX = Math.max(...items.filter(isBox).map(b => b.x)), isSink = b => isBox(b) && !(b.ct || []).length && b.x === sinkX;
     const reach = (sx, sy) => {
       const q = [[sx, sy, 0]], seen = new Set();
       while (q.length) {
@@ -253,6 +255,7 @@ try {
         if (seen.has(key)) continue; seen.add(key);
         const b = occ.get(x + ',' + y); if (!b) continue;
         if (isSink(b)) return true;
+        if (isBox(b) && !(b.ct || []).length) { q.push([b.x + dim(b).w, y, 0]); continue }   // out-buffer: passes items east on the same row
         if (b.rec || isBox(b)) continue;
         if (PLC_BELT.includes(b.cls)) { const d = DIRS[b.rot & 3]; q.push([x + d[0], y + d[1], 0]); continue }
         if (PLC_UG.includes(b.cls)) { if (jp) q.push([x + 1, y, 0]); else { const ex = ugRows[y].filter(v => v > x).sort((a, c) => a - c)[0]; if (ex !== undefined) q.push([ex, y, 1]) } continue }
@@ -271,7 +274,7 @@ try {
     });
     const flowOk = mach.length > 0 && mach.every(m => { const outs = outOf(m); return outs.length === 1 && reach(outs[0].x + outs[0].nx, outs[0].y + outs[0].ny) });
     const blocks = S.blocks.filter(b => kindOf(b.cls) === 'b').map(b => BASE[b.cls].name);
-    return {ov, ugOk, pairs, flowOk, nM: mach.length, sinks: items.filter(isSink).length,
+    return {ov, ugOk, pairs, flowOk, nM: mach.length, sinks: items.filter(isSink).length, boxes: items.filter(isBox).length,
       sources: items.filter(b => isBox(b) && (b.ct || []).some(c => c.inf)).length,
       noBuildBad: noBuild(items.map(mItem)), blocks, nItems: items.length};
   });
@@ -315,7 +318,7 @@ try {
   await pg.waitForTimeout(100);
   const c3 = await s2check();
   chk('S2a) stage click placed the factory', placed3, '');
-  chk('S2a) 7 machines, 1 sink, 1 infinite source placed', c3.nM === 7 && c3.sinks === 1 && c3.sources === 1, JSON.stringify(c3));
+  chk('S2a) 7 machines, 1 sink, 1 infinite source, 4 containers placed', c3.nM === 7 && c3.sinks === 1 && c3.sources === 1 && c3.boxes === 4 * L3.nS, JSON.stringify(c3));
   chk('S2a) 2 blocks of one type (fewest blocks, smallest type)', c3.blocks.length === 2 && c3.blocks.every(n => n === c3.blocks[0]), JSON.stringify(c3.blocks));
   chk('S2a) no overlapping cells', c3.ov === 0, String(c3.ov));
   chk('S2a) noBuild(items) === false with STRICT on', c3.noBuildBad === false, String(c3.noBuildBad));
@@ -339,17 +342,25 @@ try {
   await pg.waitForTimeout(100);
   const c2 = await s2check();
   const sim2 = await s2sim(S2);
-  chk('S2b) placed; 4 machines, 1 sink, 1 source, no overlap, noBuild false, flow ok', placed2 && c2.nM === 4 && c2.sinks === 1 && c2.sources === 1 && c2.ov === 0 && c2.noBuildBad === false && c2.flowOk === true, JSON.stringify(c2));
+  chk('S2b) placed; 4 machines, 1 sink, 1 source, 4 containers, no overlap, noBuild false, flow ok', placed2 && c2.nM === 4 && c2.sinks === 1 && c2.sources === 1 && c2.boxes === 4 * L2.nS && c2.ov === 0 && c2.noBuildBad === false && c2.flowOk === true, JSON.stringify(c2));
   chk('S2b) sim output within 5% of min(80, 4*20) = 80, machines cycle, none blocked', Math.abs(sim2.got - 80) <= 4 && sim2.low === 0 && sim2.blocked === 0, JSON.stringify(sim2));
   await pg.keyboard.press('Control+z');
 
-  // S2c) ports run out: T=3 with the default Container (2 ports): live refusal in the open modal, nothing placed
-  await s2setup(140, 'DAT_Container_2');
-  await openBuild(pg, ALL);
-  await pg.evaluate(() => { $('plnBuf').value = 'DAT_Container'; $('plnBuf').dispatchEvent(new Event('change')); });   // live: modal open
-  await pg.waitForTimeout(150);
-  const c2b = await pg.evaluate(() => ({err: $('plnPrevErr').textContent, disabled: $('plnPlace').disabled, n: S.blocks.length}));
-  chk('S2c) T=3 with Container (2 ports): #plnPrevErr "Output needs 3 lanes but a ... has 2 ports", Place disabled, nothing placed', /Output needs 3 lanes but a .* has 2 ports/.test(c2b.err) && c2b.disabled && c2b.n === 0, JSON.stringify(c2b));
+  // S2c) ports run out: T=3 with the default Container (2 ports): sinks auto-stack (nS = nK = 2), builds, no refusal
+  await s2setup(140, 'DAT_Container');
+  const c2s = await openBuild(pg, ALL);
+  const L2c = await pg.evaluate(() => ({open: $('plnPrev').open, nS: plcL && plcL.nS, nK: plcL && plcL.nK, err: $('plnPrevErr').textContent, disabled: $('plnPlace').disabled, n: S.blocks.length}));
+  chk('S2c) T=3 with Container (2 ports): nS = nK = 2, #plnPrevErr empty, Place enabled, nothing placed yet', c2s.open && L2c.nS === 2 && L2c.nK === 2 && L2c.err === '' && !L2c.disabled && L2c.n === 0, JSON.stringify({c2s, L2c}));
+  await pg.click('#plnPlace');
+  const placed2c = await stageClick(pg);
+  await pg.waitForTimeout(100);
+  const c2c = await s2check();
+  const sim2c = await s2sim(S2);
+  chk('S2c) placed: 7 machines, 2 sinks, 2 sources, 8 containers, flow ok, no overlap, noBuild false', placed2c && c2c.nM === 7 && c2c.sinks === 2 && c2c.sources === 2 && c2c.boxes === 8 && c2c.flowOk === true && c2c.ov === 0 && c2c.noBuildBad === false, JSON.stringify(c2c));
+  chk('S2c) sim within 5% of 140, none blocked', Math.abs(sim2c.got - 140) <= 7 && sim2c.blocked === 0, JSON.stringify(sim2c));
+  await pg.keyboard.press('Control+z');
+  const u2c = await pg.evaluate(() => S.blocks.length);
+  chk('S2c) one Control+z empties the factory', u2c === 0, String(u2c));
 
   // S2d) spread: one block type ticked at a time (same 140/min, Large sink): only that type is placed, undergrounds cross the walls
   for (const [id, nm] of [['plnBk11', 'BPO_Station_01'], ['plnBk21', 'BPO_Station_2x1'], ['plnBk22', 'BPO_Station_02']]) {

@@ -54,27 +54,37 @@ function placerBank(P,item,mk,spMk,o){
   const S=plcStage(T,eIn,eOut,mk,spMk);if(!S.ok)return S;
   const cp=plcPp(BX,0),cE=cp.filter(p=>p.nx===1).sort((a,b)=>a.y-b.y),cW=cp.filter(p=>p.nx===-1).sort((a,b)=>a.y-b.y),seq=a=>a.every((p,i)=>p.y===a[0].y+i);
   if(!cE.length||!cW.length||!seq(cE)||!seq(cW))return no("Bank: container E/W ports not found or not on consecutive rows");
-  const bw=def(BX).w,bh=def(BX).h,{h,Wb,inF}=S;
+  const bw=def(BX).w,bh=def(BX).h,{h,Wb,inF}=S,fh=o.fit&&o.fit.fh;
+  const bt=(x,y)=>({cls:PLC_BELT[mk],x,y,h:0,rot:0,pid:0}),bx=(x,y,ct)=>({cls:BX,x,y,h:0,rot:0,pid:0,ct});
+  const ps=Math.max(1,Math.min(cE.length,cW.length,Math.floor(PLC_SRC/cap(mk))));
   const size=nT=>{const cnt=[];for(let k=0;k<nT;k++)cnt.push(Math.floor(N/nT)+(k<N%nT?1:0));
-    const R=Math.ceil(cnt[0]/2),ps=Math.max(1,Math.min(cE.length,Math.floor(PLC_SRC/cap(mk)))),nS=Math.ceil(nT/ps),rows=[];
+    const R=Math.ceil(cnt[0]/2),nS=Math.ceil(nT/ps),rows=[],sr=[];
     for(let i=0;i<nT;i++)rows.push(Math.floor(i/ps)*bh+cE[i%ps].y);
-    const Y0=rows[nT-1]+1,Yend=Y0+R*h;return{nT,cnt,R,nS,rows,Y0,Yend,H:Math.max(nS*bh,Yend+nT,Yend-cW[0].y+bh)}};
-  const g=size(Math.ceil(N/S.m));
-  if(g.nT>cW.length)return no("Output needs "+g.nT+" lanes but a "+lab(def(BX))+" has "+cW.length+" ports per side: pick the bigger container or a faster belt Mk");
-  if(cap(spMk)<g.cnt[0]*inF-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(g.cnt[0]*inF)+"/min): set the splitter Mk higher");
+    const Y0=rows[nT-1]+1,Yend=Y0+R*h,sy0=Yend-cW[0].y;
+    for(let i=0;i<nT;i++)sr.push(sy0+Math.floor(i/ps)*bh+cW[i%ps].y);
+    return{nT,cnt,R,nS,nK:nS,rows,sr,Y0,Yend,sy0,H:Math.max(nS*bh,sy0+nS*bh,sr[nT-1]+1)}};
+  const t0=Math.ceil(N/S.m),g0=size(t0);
+  if(cap(spMk)<g0.cnt[0]*inF-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(g0.cnt[0]*inF)+"/min): set the splitter Mk higher");
+  let g=g0,mh=g0.H;
+  if(fh&&g0.H>fh){g=null;for(let t=t0+1;t<=N;t++){const q=size(t);mh=Math.min(mh,q.H);if(q.H<=fh){g=q;break}}
+    if(!g)return no("the shortest layout is "+mh+" cells tall, the floor is only "+fh+": tick a bigger block")}
   const it=[];
-  for(let j=0;j<g.nS;j++)it.push({cls:BX,x:0,y:j*bh,h:0,rot:0,pid:0,ct:[{item:P.raw[0].item,n:0,inf:true}]});
-  const sg=plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo),X0=[];let x=bw+1;
-  for(let k=0;k<g.nT;k++){x=sg.put(x,Wb,false);X0.push(x);x+=Wb+1}   // one empty column between banks
-  const xe=sg.put(x,bw,true);if(sg.bad)return no(sg.bad);
-  plcBanks({S,cnt:g.cnt,X0,fRow:g.cnt.map((_,k)=>g.rows[g.nT-1-k]),lRow:g.cnt.map((_,k)=>g.Yend+g.nT-1-k),Y0:g.Y0,R:g.R,up:false,xf:bw,xe,bc:PLC_BELT[mk]},it);
-  it.push({cls:BX,x:xe,y:g.Yend-cW[0].y,h:0,rot:0,pid:0,ct:[]});
-  const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
-  const nt=["Makes "+plnR2(N*T.pmach)+"/min (target "+plnR2(T.rate)+")",
-    g.nT+" trunk"+(g.nT>1?"s":"")+" ("+g.cnt.join("+")+" machines), "+g.R+" rows, double columns, "+g.nT+" output lane"+(g.nT>1?"s":"")+"; "+g.nS+" source container"+(g.nS>1?"s":"")+", 1 sink container"];
-  if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
-  const W=Math.max(...items.map(b=>b.x+dim(b).w)),H=Math.max(...items.map(b=>b.y+dim(b).h));
-  return{ok:true,items,lanes:g.nT,per:g.cnt,makes:N*T.pmach,note:nt,mod:false,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:g.nT,rows:g.R,nS:g.nS,cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o}};
+  for(let j=0;j<g.nS;j++){it.push(bx(0,j*bh,[{item:P.raw[0].item,n:0,inf:true}]));it.push(bx(bw+1,j*bh,[]))}
+  g.rows.forEach(r=>it.push(bt(bw,r)));
+  const sg=plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo),X0=[];let x=2*bw+2;
+  for(let k=0;k<g.nT;k++){x=sg.put(x,Wb,false);X0.push(x);x+=Wb+1}
+  const xe=sg.put(x,2*bw+1,true);if(sg.bad)return no(sg.bad);
+  plcBanks({S,cnt:g.cnt,X0,fRow:g.cnt.map((_,k)=>g.rows[g.nT-1-k]),lRow:g.cnt.map((_,k)=>g.sr[g.nT-1-k]),Y0:g.Y0,R:g.R,up:false,xf:2*bw+1,xe,bc:PLC_BELT[mk]},it);
+for(let j=0;j<g.nK;j++){const y=g.sy0+j*bh;it.push(bx(xe,y,[]));it.push(bx(xe+bw+1,y,[]))}
+g.sr.forEach(r=>it.push(bt(xe+bw,r)));
+const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
+const nt=["Makes "+plnR2(N*T.pmach)+"/min (target "+plnR2(T.rate)+")",
+  g.nT+" trunk"+(g.nT>1?"s":"")+" ("+g.cnt.join("+")+" machines), "+g.R+" rows, double columns, "+g.nT+" output lane"+(g.nT>1?"s":"")+"; containers: "+g.nS+" source, "+g.nS+" in-buffer, "+g.nK+" out-buffer, "+g.nK+" sink"];
+const m3=mk<2?Math.min(N,Math.floor(MKS[2][1]/Math.max(T.pmach,inF)+1e-9)):0;
+if(m3>S.m)nt.push("Mk3 packs "+m3+" machines per trunk (now "+S.m+")");
+if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
+const W=Math.max(...items.map(b=>b.x+dim(b).w)),H=Math.max(...items.map(b=>b.y+dim(b).h));
+return{ok:true,items,lanes:g.nT,per:g.cnt,makes:N*T.pmach,note:nt,mod:false,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:g.nT,rows:g.R,nS:g.nS,nK:g.nK,ps,cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o}};
 }
 function placerPlan(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0,pr=plnProto(),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
@@ -214,22 +224,15 @@ function placerPaste(){
 }
 let plcL=null;
 const placerBk=()=>["plnBk11","plnBk21","plnBk22"].map(i=>$(i).checked);
-function placerGo(){
-  const x=placerPlan();
-  if(!x){toast("Pick an item and a rate first");return}
-  $("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;   // modal Belt/Splitter = planner selects
-  const L=placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:$("plnMod").checked});
-  if(!L.ok){toast(L.why);return}
+function placerRun(open){
+  const dl=$("plnPrev");if(!open&&!dl.open)return;
+  const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:$("plnMod").checked}):{ok:false,why:"Pick an item and a rate first"};
+  if(!L.ok){plcL=null;plcT=null;placerClear();$("plnPrevErr").textContent=L.why;$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
-// live modal: re-run the layout with the current settings (block types, buffer, modular, Mk); on failure keep the dialog open, show why, draw nothing, Place off
-function placerLive(){
-  if(!$("plnPrev").open)return;
-  const x=placerPlan();if(!x)return;
-  const L=placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:$("plnMod").checked});
-  if(!L.ok){plcL=null;plcT=null;placerClear();$("plnPrevErr").textContent=L.why;$("plnPlace").disabled=true;return}
-  plcL=L;placerPreview(L);
-}
+function placerGo(){$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;placerRun(true)}
+// live modal: build settings re-run the preview; errors show inside the modal with Place off
+const placerLive=()=>placerRun(false);
 function placerClear(){
   ["pvMach","pvBelt","pvSpl","pvBox","pvUg","pvBlk","pvCell","pvIO"].forEach(i=>{if($(i))$(i).textContent="-"});
   $("plnPrevNote").textContent="";
@@ -278,7 +281,7 @@ function placerPreview(L){
   $("pvBlk").textContent=!plcT?"0 (existing floor)":plcT.ok?Object.entries(bc).map(([n,c])=>c+" x "+n).join(", "):"none fits";
   if($("pvUg"))$("pvUg").textContent=k.ug?k.ug+" ("+k.ug/2+" pairs, span "+(plcT?plcT.max:0)+" max)":"0";
   $("pvCell").textContent=L.w+" x "+L.h;
-  $("pvIO").textContent=L.mod?"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w:L.bank?"closed: "+L.nS+" source container(s) west, 1 sink container east":"closed: source container in, sink container out";
+  $("pvIO").textContent=L.mod?"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w:L.bank?"closed: "+L.nS+" source + "+L.nS+" in-buffer west, "+L.nK+" out-buffer + "+L.nK+" sink east":"closed: source container in, sink container out";
   $("plnPrevNote").textContent=L.note.concat(plcT&&plcT.ok&&plcT.blocks.length>1?["Spread over "+plcT.blocks.length+" blocks ("+plcT.cols+" x "+plcT.rows+"); "+k.ug/2+" underground pairs cross the walls"]:[]).join(". ");
   $("plnPrevErr").textContent=plcT&&!plcT.ok?plcT.why:"";const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}$("plnPlace").disabled=false;placerFitView();
 }

@@ -101,19 +101,17 @@ try {
   chk('[none] no block ticked + empty layout: nothing placed, no ghost', none.blocks === 0 && !none.ghost, JSON.stringify(none));
   await closeIfOpen(); await reset();
 
-  // Exosuit refusal: the toast must be visible (not covered by the open planner window)
+  // Exosuit refusal: the error is shown inside the modal (not covered by anything)
   await openPlanner();
   await pg.selectOption('#plnItem', 'ITEM_Exosuit'); await pg.fill('#plnRate', '1');
-  await pg.evaluate(() => { $('toast').textContent = ''; });
   await pg.click('#plnBuild');
-  await pg.waitForFunction(() => /\S/.test($('toast').textContent), null, {timeout: 20000}).catch(() => {});
   await pg.waitForTimeout(100);
-  const toast = await pg.evaluate(() => {
-    const t = $('toast'); t.style.pointerEvents = 'auto'; /* elementFromPoint skips pointer-events:none */ const r = t.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
-    return {text: t.textContent, shown: t.classList.contains('show'), covered: !(hit === t || t.contains(hit)), hit: hit ? (hit.id || hit.tagName) : 'null', _r: t.style.pointerEvents = ''};
+  const errBox = await pg.evaluate(() => {
+    const e = $('plnPrevErr'), r = e.getBoundingClientRect(), hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2), dl = $('plnPrev');
+    return {text: e.textContent, w: r.width, h: r.height, inside: !!hit && (hit === e || dl.contains(hit)), hit: hit ? (hit.id || hit.tagName) : 'null'};
   });
-  chk('Exosuit: refusal toast has text and is shown', /\S/.test(toast.text) && toast.shown, JSON.stringify(toast));
-  chk('Exosuit: refusal toast is not covered by another element', !toast.covered, `top element at toast centre: ${toast.hit}`);
+  chk('Exosuit: #plnPrevErr has text and a non-zero rect', /\S/.test(errBox.text) && errBox.w > 0 && errBox.h > 0, JSON.stringify(errBox));
+  chk('Exosuit: #plnPrevErr centre is not covered (elementFromPoint inside #plnPrev)', errBox.inside === true, `top element at error centre: ${errBox.hit}`);
   await reset();
 } finally {
   await br.close();

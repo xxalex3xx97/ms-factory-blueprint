@@ -150,12 +150,13 @@ async function run(br, W, H) {
   R.notFitErr = nf.err;
   await pg.evaluate(() => { def(PLC_UG[0]).maxApart = window.__mxa; document.getElementById('plnCancel').click(); document.getElementById('plnBk11').checked = true; document.getElementById('plnBk21').checked = true; document.getElementById('plnBk22').checked = true; plnDraw(); pasting = null; });
 
-  // ---- (6) Exosuit: refused cleanly
-  const ex0 = await pg.evaluate(() => { $('plnItem').value = 'ITEM_Exosuit'; $('plnRate').value = '1'; $('plnMk').value = '0'; $('toast').textContent = ''; plnDraw(); return JSON.stringify(S.blocks); });
+  // ---- (6) Exosuit: modal opens with the error inside, Place disabled, nothing placed; Cancel closes
+  const ex0 = await pg.evaluate(() => { $('plnItem').value = 'ITEM_Exosuit'; $('plnRate').value = '1'; $('plnMk').value = '0'; plnDraw(); return JSON.stringify(S.blocks); });
   await pg.evaluate(() => document.getElementById('plnBuild').click());
-  const ex = await pg.evaluate(() => ({open: $('plnPrev').open, toast: $('toast').textContent, json: JSON.stringify(S.blocks), pl: !!(pasting && pasting.pl)}));
-  chk(`(6 ${W}) Exosuit: dialog not open, toast says "single-input single-recipe", S.blocks unchanged, no ghost`,
-    ex.open === false && /single-input single-recipe/.test(ex.toast) && ex.json === ex0 && !ex.pl, JSON.stringify({open: ex.open, toast: ex.toast, same: ex.json === ex0, pl: ex.pl}));
+  const ex = await pg.evaluate(() => ({open: $('plnPrev').open, err: $('plnPrevErr').textContent, placeOff: $('plnPlace').disabled, json: JSON.stringify(S.blocks), pl: !!(pasting && pasting.pl)}));
+  chk(`(6 ${W}) Exosuit: #plnPrev open, #plnPrevErr matches "single-input single-recipe", #plnPlace disabled, S.blocks unchanged, no ghost`,
+    ex.open === true && /single-input single-recipe/.test(ex.err) && ex.placeOff === true && ex.json === ex0 && !ex.pl, JSON.stringify({open: ex.open, err: ex.err, placeOff: ex.placeOff, same: ex.json === ex0, pl: ex.pl}));
+  await pg.evaluate(() => document.getElementById('plnCancel').click());
 
   await pg.waitForTimeout(100);
   report.push(R);
