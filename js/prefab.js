@@ -205,6 +205,7 @@ function hubOut(H,j){
   for(let i=0;i<d;i++)pre.push([px,bot+i,1]);
   return{sx:hr+4+d,sy:bot+d,hr:px,pre};
 }
+let PF_DEBUG=false;   // step 7i: pfChain console.table of per-item groups/heads/demand
 const PF_GAP=3;   // cells between stage columns
 const PF_CORR=8;  // rows kept free above the stages for corridors (stage height limit)
 function pfChain(P,item,mk,spMk,o={}){
@@ -226,29 +227,54 @@ function pfChain(P,item,mk,spMk,o={}){
   const Fh=floorRect({cls:plcCls(PL_STD[PL_STD.length-1]),x:0,y:0,h:0,rot:0}).h,pwb=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W'),SH=pwb?pwb.y+1:0;
   const items=[],ports=[],per=[],sink=new Map(),hubs=new Map(),routes=[];
   let x0=0,makes=0;
-  for(const y of order){
-    const S=st.get(y),T=S.T,cb=plnCb(T.crafter);if(!cb)return no('No machine builds this recipe');
-    const N=T.machines,cls=def(cb.id).key,rec=rk(T.rec),flows=[],k=S.ins.length;
-    for(const i of S.ins){
-      const e=P.edges.find(q=>q.from===i&&q.to===y);if(!e)return no('no edge into '+plnNm(y));
-      flows.push({item:i,flow:e.flow/N});
+  // sizing (step 7i): per stage, machines per column, column sizes, out groups (FFD). Pure per stage, memoised.
+  const sz=new Map();
+  const sizing=y=>{
+    if(sz.has(y))return sz.get(y);
+    const S=st.get(y),T=S.T,cb=plnCb(T.crafter),no2=why=>({why});
+    let R;
+    if(!cb)R=no2('No machine builds this recipe');
+    else if(S.ins.some(i=>!P.edges.some(q=>q.from===i&&q.to===y)))R=no2('no edge into '+plnNm(y));
+    else{
+      const N=T.machines,cls=def(cb.id).key,k=S.ins.length,flows=S.ins.map(i=>({item:i,flow:P.edges.find(q=>q.from===i&&q.to===y).flow/N}));
+      if(flows.some(f=>f.flow>cap))R=no2('one machine input above one belt');
+      else{
+        const mcap=Math.max(1,Math.floor(Math.min(...flows.map(f=>cap/f.flow))));
+        // machines per column: the most that fit the floor (as pfCompose) and the belt cap; several columns share one out row
+        let mh=Math.min(N,mcap);while(mh>1){const C=pfCol(cls,k,flows,mh,mk);if(C.ok===false||C.h+SH<=Fh-PF_CORR)break;mh--}
+        const sizes=[];for(let r=N;r>0;r-=mh)sizes.push(Math.min(mh,r));
+        const outF=P.edges.filter(e=>e.from===y).reduce((a,e)=>a+e.flow,0),fo=outF/N;
+        // out groups (step 7e): consecutive columns whose output fits one belt; each group = one out row + one out container (sink)
+        const mxC=Math.floor(cap/fo+1e-9);
+        if(sizes.some(s=>s>mxC))R=no2('column of '+Math.max(...sizes)+' machines above belt cap (max '+mxC+')');
+        else{
+          const groups=[];for(const s of [...sizes].sort((a,b)=>b-a)){const g=groups.find(g=>(g.reduce((a,b)=>a+b,0)+s)*fo<=cap+1e-9);if(g)g.push(s);else groups.push([s])}
+          R={cls,k,N,flows,sizes,groups,fo,outF};
+        }
+      }
     }
-    if(flows.some(f=>f.flow>cap))return no('one machine input above one belt');
-    const mcap=Math.max(1,Math.floor(Math.min(...flows.map(f=>cap/f.flow))));
-    // machines per column: the most that fit the floor (as pfCompose) and the belt cap; several columns share one out row
-    let mh=Math.min(N,mcap);while(mh>1){const C=pfCol(cls,k,flows,mh,mk);if(C.ok===false||C.h+SH<=Fh-PF_CORR)break;mh--}
-    const sizes=[];for(let r=N;r>0;r-=mh)sizes.push(Math.min(mh,r));
-    const outF=P.edges.filter(e=>e.from===y).reduce((a,e)=>a+e.flow,0),fo=outF/N;
-    // out groups (step 7e): consecutive columns whose output fits one belt; each group = one out row + one out container (sink)
-    const mxC=Math.floor(cap/fo+1e-9);
-    if(sizes.some(s=>s>mxC))return no('column of '+Math.max(...sizes)+' machines above belt cap (max '+mxC+')');
-    const groups=[];for(const s of [...sizes].sort((a,b)=>b-a)){const g=groups.find(g=>(g.reduce((a,b)=>a+b,0)+s)*fo<=cap+1e-9);if(g)g.push(s);else groups.push([s])}
+    sz.set(y,R);return R;
+  };
+  for(const y of order)if(sizing(y).why)return no(sizing(y).why);
+  // needHub (step 7i): an item needs a hub when its stage has several out groups or more than two consumer heads. heads = one per column of each consumer stage.
+  const needHub=new Map(),tab=[];
+  for(const i of order){
+    const gN=sizing(i).groups.length,dems=[];
+    for(const c of order){if(!st.get(c).ins.includes(i))continue;const rc=sizing(c),fl=rc.flows.find(f=>f.item===i).flow;for(const m of rc.sizes)dems.push(m*fl)}
+    const hd=dems.length,nh=i!==item&&(gN>1||hd>2);
+    needHub.set(i,nh);tab.push({item:plnNm(i),groups:gN,heads:hd,demand:dems.join('/'),hub:nh});
+  }
+  if(PF_DEBUG)console.table(tab);
+  for(const q of tab)if(q.hub&&(q.groups>5||q.heads>8))return no('more than one hub needed for '+q.item+' (groups '+q.groups+', heads '+q.heads+'): '+JSON.stringify(tab));
+  for(const y of order){
+    const S=st.get(y),T=S.T,r=sizing(y),N=r.N,cls=r.cls,rec=rk(T.rec),k=r.k,flows=r.flows,fo=r.fo,sizes=r.sizes,needH=needHub.get(y);
+    const groups=r.groups.map(g=>[...g]);
     const fedSet=new Set(S.ins.filter(i=>P.nodes[i]&&P.nodes[i].crafter)),isHead=q=>q.cls===PLC_BOX&&q.ct&&q.ct.length;
     const sinks=[],heads=new Map();   // heads: crafted input -> [{h, C, dx}] over all groups of this stage
     // hub overflow (step 7g): groups above the hub's N ports -> the last multi-column group feeds the hub's W face (no sink), the others use N ports
     const HCc='DAT_Container_2',hubIn=Math.min(4,portsOf({cls:HCc,x:0,y:0,rot:0,off:[]}).filter(p=>p.f==='N').length),szs=groups.map(g=>g.join('+')).join(', ');
     let wG=null;
-    if(groups.length>1&&y!==item&&groups.length>hubIn){
+    if(needH&&groups.length>hubIn){
       if(groups.length-1>hubIn)return no('hub ports exceeded: groups '+groups.length+' ['+szs+'] (second hub not built)');
       const mi=groups.map(g=>g.length>1).lastIndexOf(true);
       if(mi<0)return no('hub ports exceeded: groups '+groups.length+' ['+szs+'], no multi-column group for the W entry');
@@ -282,7 +308,7 @@ function pfChain(P,item,mk,spMk,o={}){
       if(y===item)ports.push({edge:'N',off:sk.x+dx,dir:'out',belts:1,slot:-1,mk});
       x0=dx+Math.max(C.w,...C.items.map(q=>q.x+dim(q).w))+PF_GAP;
     }
-    if(groups.length>1&&y!==item){
+    if(needH){
       // hub (step 7f): one DAT_Container_2 right of the groups; each group sink feeds one N port, consumers leave by E ports. Step 7g: hubW = hub already placed by the W-fed group (its y = hub row offset)
       const hc=HCc,pts=portsOf({cls:hc,x:0,y:0,rot:0,off:[]});
       const inP=pts.filter(p=>p.f==='N').map(p=>p.x).sort((a,b)=>a-b),outP=pts.filter(p=>p.f==='E').map(p=>p.y).sort((a,b)=>a-b);
