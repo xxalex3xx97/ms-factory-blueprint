@@ -199,8 +199,10 @@ function placerBank(P,item,mk,spMk,o){
   const dist=(n,t)=>Array.from({length:t},(_,k)=>Math.floor(n/t)+(k<n%t?1:0));
   const bt=(x,y)=>({cls:PLC_BELT[mk],x,y,h:0,rot:0,pid:0}),bx=(x,y,ct)=>({cls:BX,x,y,h:0,rot:0,pid:0,ct});
   const ps=Math.max(1,Math.min(cE.length,cW.length,Math.floor(PLC_SRC/cap(mk))));
+  if(o.spl)SS.forEach(S=>{const mm=Math.max(1,Math.floor(Math.min(cap(spMk),cap(mk))/S.act+1e-9));if(mm<S.m)S.m=mm});   // retry: a trunk carries at most one splitter's speed of the actual load
   const Ns=SS.map(S=>S.N),t0s=Ns.map((N,q)=>Math.ceil(N/SS[q].m));
-  for(let q=0;q<n;q++){const d0=dist(Ns[q],t0s[q])[0]*SS[q].act;if(cap(spMk)<d0-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(d0)+"/min): set the splitter Mk higher")}
+  for(let q=0;q<n;q++){const d0=dist(Ns[q],t0s[q])[0]*SS[q].act;if(cap(spMk)<d0-1e-9){   // trunk too fast for its splitter: retry with fewer machines per trunk (more trunks) instead of refusing
+    if(!o.spl)return placerBank(P,item,mk,spMk,{...o,spl:1});return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(d0)+"/min): set the splitter Mk higher")}}
   const tbs=t0s.map(t=>Math.ceil(t/G));  for(let q=0;q<n;q++)if(G*tbs[q]>Ns[q])return no("band count "+G+" does not fit "+Ns[q]+" machines");
   const alls=SS.map((S,q)=>dist(Ns[q],G*tbs[q])),nH=[0];   // nH[q]=hub containers per band between stage q-1 and q
   for(let q=1;q<n;q++){const a=tbs[q-1],b=tbs[q],hq=Math.max(Math.ceil(a/ps),Math.ceil(b/ps));if(hq>Math.min(a,b))return no("Hub between stages "+q+" and "+(q+1)+": "+a+" and "+b+" trunks cannot share "+hq+" hub containers ("+ps+" ports a side): pick a higher belt Mk or a bigger container");nH.push(hq)}
