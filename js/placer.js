@@ -41,7 +41,7 @@ function plcStage(n,eI,eU,mk,spMk,eI2,eI3){
     if(ML.w!==MR.w||ML.h!==MR.h||ML.ins.map(p=>p.y).join()!==MR.ins.map(p=>p.y).join())return no("Bank: the two machine columns do not line up (input ports on different rows)");
     if(ML.off.concat(MR.off).some(p=>!p.tg))return no("Bank: machine has an unused port that cannot be disabled");
     const sc=PLC_SPL[spMk];if(!plcSpl(sc,1)||!plcSpl(sc,3))return no("Bank: splitter ports not as expected (Mk id unverified?)");
-    return{ok:true,n,dk:d.key,inF,m,N:n.machines,ML,MR,w:ML.w,h:ML.h,cin:ML.ins[0].y,Wb:2*ML.w+9,pitch:ML.h+2,sc,rec:rk(n.rec),two:{ya:ML.ins[0].y,yb:ML.ins[1].y,inF2},three:{yc:ML.inT.y,inF3}}
+    return{ok:true,n,dk:d.key,inF,m,N:n.machines,ML,MR,w:ML.w,h:ML.h,cin:ML.ins[0].y,Wb:2*ML.w+9,pitch:ML.h+2,sc,rec:rk(n.rec),two:{ya:ML.ins[0].y,yb:ML.ins[1].y,inF2},three:{yc:ML.inT.y,xc:ML.inT.x,xcR:MR.inT.x,inF3}}
   }
   if(eI2){   // two inputs: both on one face of each machine column
     const ML=plcMach2(d.key,1),MR=plcMach2(d.key,-1);
@@ -80,12 +80,12 @@ function plcTree(P,item){
   return{ok:true,ch:[...a.c,T],two:{B:b.c,rawB:b.raw},raw:a.raw,...(c?{three:{C:c.c,rawC:c.raw}}:{})};
 }
 function plcBanks(g,it){
-  const {ML,MR,sc,w,h,cin,dk,rec,two,sp:spc=0}=g.S,{cnt,X0,fRow,lRow,Y0,R,up,xf,xe,bc,mk}=g,s=up?-1:1,vr=up?3:1,Yb=Y0+R*h;
+  const {ML,MR,sc,w,h,cin,dk,rec,two,three,sp:spc=0,pitch:P=h}=g.S,{cnt,X0,fRow,lRow,Y0,R,up,xf,xe,bc,mk}=g,s=up?-1:1,vr=up?3:1,Yb=Y0+(R-1)*P+h+(three?1:0);
   const bt=(x,y,r)=>({cls:bc,x,y,h:0,rot:r,pid:0}),ug=(x,y,r)=>({cls:PLC_UG[mk],x,y,h:0,rot:r,pid:0}),mc=(M,x,y)=>({cls:dk,x,y,h:0,rot:M.rot,pid:0,rec,off:M.off.map(p=>p.key)});
-  const my=r=>up?Y0+(R-1-r)*h:Y0+r*h;
+  const my=r=>up?Y0+(R-1-r)*P:Y0+r*P;
   cnt.forEach((n,k)=>{
     // two inputs: pair = ML | cL | TA | G | TB | cR | MR (TB is the B trunk, built later by plcTwoTB)
-    const x0=X0[k],Tx=x0+w+(two?2:1),xr=Tx+w+(two?4:1)+spc,mrx=Tx+(two?4:1)+spc,nl=Math.ceil(n/2),nr=n-nl,fr=fRow[k],lr=lRow[k],ys=my(nl-1)+cin,sp=new Set(Array.from({length:nl},(_,r)=>my(r)+cin));
+    const x0=X0[k],Tx=x0+w+(two?2:1),mrx=three?x0+w+8:Tx+(two?4:1)+spc,xr=mrx+w,nl=Math.ceil(n/2),nr=n-nl,fr=fRow[k],lr=lRow[k],ys=my(nl-1)+cin,sp=new Set(Array.from({length:nl},(_,r)=>my(r)+cin));
     for(let r=0;r<nl;r++)it.push(mc(ML,x0+1,my(r)));
     for(let r=0;r<nr;r++)it.push(mc(MR,mrx,my(r)));
     // A feed row: an earlier trunk's G and cR cells are an underground pair under its B trunk (TB cell is left to plcTwoTB)
@@ -95,6 +95,7 @@ function plcBanks(g,it){
     if(two)for(let r=0;r<nl;r++){const ya=my(r)+cin,yb=my(r)+two.yb;
       it.push(bt(x0+w+1,ya,2),ug(x0+w+1,yb,2),ug(x0+w+3,yb,2))}   // cL: belt west into ML (ya), UG exit west into ML (yb); G: UG entrance west under TA
     if(two)for(let r=0;r<nr;r++){const ya=my(r)+cin,yb=my(r)+two.yb;
+      if(three){it.push(ug(x0+w+3,ya,0),ug(x0+w+7,ya,0),ug(x0+w+5,yb,0),ug(x0+w+7,yb,0));continue}   // 3 inputs: cR and the TB east feed pass under TB and TC
       it.push(ug(x0+w+3,ya,0),ug(x0+w+5,ya,0),bt(x0+w+5,yb,0));for(let j=0;j<spc;j++)it.push(bt(x0+w+6+j,ya,0),bt(x0+w+6+j,yb,0))}   // G: UG entrance east under TB; cR: UG exit east into MR (ya), belt east into MR (yb); spacer: plain east belts (the wall cut sits between them)
     for(let y=up?Yb-1:Y0;up?y>lr:y<lr;y+=s){it.push(bt(x0,y,vr));if(nr)it.push(bt(xr,y,vr))}
     for(let x=x0;x<xe;x++)it.push(bt(x,lr,0));
@@ -102,12 +103,26 @@ function plcBanks(g,it){
 }
 // 2-input: the B trunk of each consumer trunk (column TB = x0+w+4) from its B feed row frB to the last yb row, splitters on yb rows, and the B feed belt along frB
 function plcTwoTB(g,it){
-  const {S,cnt,X0,Y0,R,up,xf,frB,bc}=g,w=S.w,h=S.h,yb=S.two.yb,sc=S.sc,s=up?-1:1,vr=up?3:1,my=r=>up?Y0+(R-1-r)*h:Y0+r*h;
+  const {S,cnt,X0,Y0,R,up,xf,frB,bc}=g,w=S.w,h=S.h,P=S.pitch||h,yb=S.two.yb,sc=S.sc,s=up?-1:1,vr=up?3:1,my=r=>up?Y0+(R-1-r)*P:Y0+r*P;
   cnt.forEach((n,k)=>{
     const TB=X0[k]+w+4,nl=Math.ceil(n/2),ysb=my(nl-1)+yb,sp=new Set(Array.from({length:nl},(_,r)=>my(r)+yb));
     for(let y=frB[k];up?y>=ysb:y<=ysb;y+=s)it.push(sp.has(y)?{cls:sc,x:TB,y,h:0,rot:vr,pid:0,off:[]}:{cls:bc,x:TB,y,h:0,rot:vr,pid:0});
     for(let x=xf;x<TB;x++)it.push({cls:bc,x,y:frB[k],h:0,rot:0,pid:0});
   });
+}
+// 3-input (single trunk per stage): C trunk column TC = x0+w+6 from its feed row frC toward the stage. Splitter on each gap row S(j)=Y0+j*P+h (j=-1..R-1): west = UG under TB/TA, then belts into the N-face port of ML(j+1); east = belts into the S-face port of MR(j).
+function plcThreeTC(g,it){
+  const {S,cnt,X0,Y0,R,up,xf,frC:frCa,bc,mk}=g,frC=frCa[0],w=S.w,h=S.h,P=S.pitch,sc=S.sc,vr=up?3:1,s=up?-1:1,x0=X0[0],TC=x0+w+6,nr=cnt[0]-R,xc=S.three.xc,xcR=S.three.xcR;
+  const bt=(x,y,r)=>({cls:bc,x,y,h:0,rot:r,pid:0}),ug=(x,y,r)=>({cls:PLC_UG[mk],x,y,h:0,rot:r,pid:0});
+  const Sr=j=>Y0+j*P+h,rowR=j=>up?R-1-j:j,hasML=j=>j+1<R,hasMR=j=>j>=0&&rowR(j)<nr;
+  const js=[];for(let j=-1;j<R;j++)if(hasML(j)||hasMR(j))js.push(j);
+  const spl=new Set(js.map(Sr)),yEnd=up?Sr(js[0]):Sr(js[js.length-1]);  for(let x=xf;x<TC;x++)it.push(bt(x,frC,0));
+  for(let y=frC;up?y>=yEnd:y<=yEnd;y+=s)it.push(spl.has(y)?{cls:sc,x:TC,y,h:0,rot:vr,pid:0,off:[]}:bt(TC,y,vr));
+  for(const j of js){const y=Sr(j);
+    if(hasML(j)){const px=x0+1+xc;   // west: splitter -> UG entrance (TC-2) -> UG exit (cL column) -> belts west -> turn down into ML N face
+      it.push(ug(x0+w+5,y,2),ug(x0+w+1,y,2));for(let x=x0+w;x>px;x--)it.push(bt(x,y,2));it.push(bt(px,y,1),bt(px,y+1,1))}
+    if(hasMR(j)){const px=x0+w+8+xcR;   // east: splitter -> belts east -> turn up into MR S face
+      for(let x=TC+1;x<px;x++)it.push(bt(x,y,0));it.push(bt(px,y,3))}}
 }
 // cut a bank layout into floor-wide segments: put(x,wid,ctr) places a wid-wide part at x; if it overflows the floor, cut at the free column c (entrance c-1, exit c), c >= segment start + lo
 function plcSeg(fw,lo,fc){const q={s:0,i:0,cuts:[],bad:"",put(x,wid,ctr,at){
@@ -126,11 +141,12 @@ const plcFit=(cls,mk)=>{const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,ro
 function placerBank(P,item,mk,spMk,o){
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why}),tr=plcTree(P,item),cap=i=>MKS[i][1],SS=[];
   if(!tr.ok)return tr;
-  if(tr.three)return no("Bank: 3 inputs per machine: layout not built yet");
-  const ch=tr.ch,n=ch.length,G=o.G||PLC_G||1,Bn=tr.two?tr.two.B:[],topB=Bn.length?Bn[Bn.length-1].item:(tr.two&&tr.two.rawB);
-  for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:tr.raw)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null)),eI2=tr.two&&q===n-1?P.edges.find(e=>e.from===topB&&e.to===nd.item):null;
-    const S=plcStage(nd,eI,eU,mk,spMk,eI2);if(!S.ok)return S;SS.push(S)}
-  SS.forEach(S=>{S.sp=0;if(S.two&&o.fit&&o.fit.fw&&S.Wb>o.fit.fw){S.sp=4;S.Wb+=4}});   // spacer = UG entrance+exit pair with 1 plain belt of clearance each side, so nothing but straight east belts touches the wall cut
+  if(tr.three&&o.sep)return no("Bank: 3 inputs: sep layout not built");
+  if(tr.three&&!tr.three.C.length)return no("Bank: 3 inputs per machine: a raw 3rd input straight into the machine is not built yet");
+  const ch=tr.ch,n=ch.length,G=o.G||PLC_G||1,Bn=tr.two?tr.two.B:[],topB=Bn.length?Bn[Bn.length-1].item:(tr.two&&tr.two.rawB),Cn=tr.three?tr.three.C:[],topC=Cn.length?Cn[Cn.length-1].item:(tr.three&&tr.three.rawC);
+  for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:tr.raw)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null)),eI2=tr.two&&q===n-1?P.edges.find(e=>e.from===topB&&e.to===nd.item):null,eI3=tr.three&&q===n-1?P.edges.find(e=>e.from===topC&&e.to===nd.item):null;
+    const S=plcStage(nd,eI,eU,mk,spMk,eI2,eI3);if(!S.ok)return S;SS.push(S)}
+  SS.forEach(S=>{S.sp=0;if(S.two&&!S.three&&o.fit&&o.fit.fw&&S.Wb>o.fit.fw){S.sp=4;S.Wb+=4}});   // spacer = UG entrance+exit pair with 1 plain belt of clearance each side, so nothing but straight east belts touches the wall cut
   if(tr.two&&!Bn.length)return no("Bank: a raw input straight into a 2-input machine is not built yet");
   const cp=plcPp(BX,0),cE=cp.filter(p=>p.nx===1).sort((a,b)=>a.y-b.y),cW=cp.filter(p=>p.nx===-1).sort((a,b)=>a.y-b.y),seq=a=>a.every((p,i)=>p.y===a[0].y+i);
   if(!cE.length||!cW.length||!seq(cE)||!seq(cW))return no("Bank: container E/W ports not found or not on consecutive rows");
@@ -139,8 +155,9 @@ function placerBank(P,item,mk,spMk,o){
   const bt=(x,y)=>({cls:PLC_BELT[mk],x,y,h:0,rot:0,pid:0}),bx=(x,y,ct)=>({cls:BX,x,y,h:0,rot:0,pid:0,ct});
   const ps=Math.max(1,Math.min(cE.length,cW.length,Math.floor(PLC_SRC/cap(mk))));
   const Ns=SS.map(S=>S.N),t0s=Ns.map((N,q)=>Math.ceil(N/SS[q].m));
-  for(let q=0;q<n;q++){const d0=dist(Ns[q],t0s[q])[0]*Math.max(SS[q].inF,SS[q].two?SS[q].two.inF2:0);if(cap(spMk)<d0-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(d0)+"/min): set the splitter Mk higher")}
+  for(let q=0;q<n;q++){const d0=dist(Ns[q],t0s[q])[0]*Math.max(SS[q].inF,SS[q].two?SS[q].two.inF2:0,SS[q].three?SS[q].three.inF3:0);if(cap(spMk)<d0-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(d0)+"/min): set the splitter Mk higher")}
   const tbs=t0s.map(t=>Math.ceil(t/G));
+  if(tr.three&&tbs[n-1]>1)return no("Bank: 3 inputs: one trunk per stage only (for now)");
   for(let q=0;q<n;q++)if(G*tbs[q]>Ns[q])return no("band count "+G+" does not fit "+Ns[q]+" machines");
   const alls=SS.map((S,q)=>dist(Ns[q],G*tbs[q])),nH=[0];   // nH[q]=hub containers per band between stage q-1 and q
   for(let q=1;q<n;q++){const a=tbs[q-1],b=tbs[q],hq=Math.max(Math.ceil(a/ps),Math.ceil(b/ps));if(hq>Math.min(a,b))return no("Hub between stages "+q+" and "+(q+1)+": "+a+" and "+b+" trunks cannot share "+hq+" hub containers ("+ps+" ports a side): pick a higher belt Mk or a bigger container");nH.push(hq)}
@@ -149,7 +166,7 @@ function placerBank(P,item,mk,spMk,o){
     for(let q=0;q<n;q++){const S=SS[q],cnt=alls[q].slice(b*tbs[q],(b+1)*tbs[q]),nT=cnt.length,R=Math.ceil(cnt[0]/2),up=q%2===1;
       const nIn=q?nH[q]:Math.ceil(nT/ps),nOut=q<n-1?nH[q+1]:(o.feedOut?Math.ceil(o.feedOut.nT/ps):Math.ceil(nT/ps));
       const oi=offs(nT,nIn,q>0,cE),oo=offs(nT,nOut,q<n-1||!!o.feedOut,cW);
-      const Y0=up?B+oi[0]-R*S.h:B+oi[nT-1]+1,Yend=Y0+R*S.h,Bo=up?Y0-1-oo[nT-1]:Yend-oo[0],ix=k=>up?k:nT-1-k;
+      const E=S.three?2:0,T1=S.three?1:0,HS=(R-1)*(S.pitch||S.h)+S.h,Y0=up?B+oi[0]-HS-T1:B+oi[nT-1]+1+E,Yend=Y0+HS+(up?0:T1),Bo=up?Y0-1-E-oo[nT-1]:Yend-oo[0],ix=k=>up?k:nT-1-k;
       const ge={S,cnt,nT,R,up,nIn,nOut,oi,oo,Y0,Bi:B,Bo,fRow:cnt.map((_,k)=>B+oi[ix(k)]),lRow:cnt.map((_,k)=>Bo+oo[ix(k)])};
       if(q===n-1&&o.feedOut){const oiF=offs(o.feedOut.nT,nOut,true,cE);ge.feedRows=Array.from({length:o.feedOut.nT},(_,k)=>Bo+oiF[o.feedOut.up?k:o.feedOut.nT-1-k])}   // B chain: its out hub E ports feed the consumer B trunks
       gs.push(ge);B=Bo}
@@ -195,6 +212,16 @@ function placerBank(P,item,mk,spMk,o){
       rB.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y0}));
       plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);
     }
+    if(tr.three&&!o.sep){const cI=n-1,gC=gs[cI],hC=hz[cI],nodesC={};   // 3rd input: its own band beyond the B band, feed row frC, TC trunk via plcThreeTC
+      const bad=Cn.find(nd=>nd.machines<G);if(bad)return no("band count "+G+" does not fit "+bad.machines+" machines of "+plnNm(bad.item));
+      Cn.forEach(nd=>nodesC[nd.item]={...nd,machines:dist(nd.machines,G)[b]});
+      const eC=P.edges.find(e=>e.from===topC&&e.to===ch[cI].item),setC=new Set(Cn.map(nd=>nd.item)),fC=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
+      const PC={raw:P.raw.filter(r=>r.item===tr.three.rawC),nodes:nodesC,cycle:false,edges:P.edges.filter(e=>(setC.has(e.from)||e.from===tr.three.rawC)&&e.to!==ch[cI].item).concat([{from:topC,to:null,flow:eC.flow}]).map(e=>({...e,flow:e.flow*fC}))};
+      const rC=placerBank(PC,topC,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null});
+      if(!rC.ok)return rC;
+      const bi=it.slice(i0),dx=hz[cI-1].xe-rC.feed.x,y1=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rC.h;
+      rC.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y1}));
+      plcThreeTC({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frC:rC.feed.rows.map(r=>r+y1),bc:PLC_BELT[mk],mk},it);}
     if(tr.two&&o.sep){const cI=n-1,gC=gs[cI],hC=hz[cI],rB=rBs[b],bi=it.slice(i0);
       const y0=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rB.h;
       rB.items.forEach(c=>it.push({...c,y:c.y+y0}));
