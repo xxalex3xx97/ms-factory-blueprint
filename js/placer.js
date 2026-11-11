@@ -649,11 +649,11 @@ function placerBox(w,h){const d=$("plnPrevMap").getContext("2d").getImageData(0,
   return r<0?null:{l,t,r:r+1,b:b+1}}
 // pass 1: layout extents + PLC_PAD; pass 2: scale so the measured drawn box (shells, doorways, items) fills the view minus 12px, centred
 function placerFitView(){if(!plcL)return;plcCache=null;const {w,h}=placerSize(),E=plcExt(plcTT()),ew=E.w+2*PLC_PAD,eh=E.h+2*PLC_PAD;
-  const s=Math.min((w-24)/ew,(h-24)/eh);plcV.z=Math.min(60,Math.max(.01,s/CELLS.F));let k=CELLS.F*plcV.z;plcV.ox=(w-ew*k)/2+PLC_PAD*k;plcV.oy=(h-eh*k)/2+PLC_PAD*k;
+  const s=Math.min((w-24)/ew,(h-24)/eh);plcV.z=Math.min(60,Math.max(.0005,s/CELLS.F));/* Fit may go below the wheel floor (.01): a tall factory (3520 cells) needs ~.005 */let k=CELLS.F*plcV.z;plcV.ox=(w-ew*k)/2+PLC_PAD*k;plcV.oy=(h-eh*k)/2+PLC_PAD*k;
   placerShot();
   const bx=placerBox(w,h);if(!bx)return;
   const qx=(bx.l+bx.r)/2-plcV.ox,qy=(bx.t+bx.b)/2-plcV.oy,f=Math.min((w-24)/(bx.r-bx.l),(h-24)/(bx.b-bx.t));
-  plcV.z=Math.min(60,Math.max(.01,plcV.z*f));const r=CELLS.F*plcV.z/k;
+  plcV.z=Math.min(60,Math.max(.0005,plcV.z*f));const r=CELLS.F*plcV.z/k;
   plcV.ox=w/2-qx*r;plcV.oy=h/2-qy*r;placerShot()}
 // last full render (offscreen copy) + its view: while panning at the same zoom the copy is shifted; a full repaint follows when the pan stops
 let plcCache=null,plcIdle=0;
