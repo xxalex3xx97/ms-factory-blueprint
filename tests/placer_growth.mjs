@@ -18,7 +18,7 @@ const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!o
 const r = await pg.evaluate(() => {
   const out = [];
   const it = [...plnBy(false).keys()].find(i => plnNm(i) === 'Xenoeukarya');
-  for (const rate of [10, 120]) {
+  for (const rate of [10, 120, 600]) {
     const P = plan(it, rate, 0, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
     const L = placerLayout(P, it, 0, 0, {box: 'DAT_Container', mod: false});
     const row = {rate, layoutOk: L.ok, why: L.ok ? '' : L.why.slice(0, 120), note: L.ok ? L.note.join(' | ') : ''};
