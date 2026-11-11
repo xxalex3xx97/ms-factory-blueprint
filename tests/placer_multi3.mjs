@@ -180,6 +180,16 @@ try {
     await pg.keyboard.press('Control+z');
   }
 
+  // ---- 3-input variant C (3 inputs on the trunk-facing face of an Enrichment Chamber): forced by the test hook, Superalloy at 10/55/120 in Container and Large, Mk1-3: builds (a build implies ov 0 and span valid), no refusal
+  for (const buf of ['DAT_Container', 'DAT_Container_2']) for (const rate of [10, 55, 120]) for (const mk of [0, 1, 2]) {
+    await pg.evaluate(() => { PLC_VC_FIRST = true; });
+    await setup(pg, ITEM, rate, mk, buf);
+    const VO = await openBuild(pg);
+    await pg.evaluate(() => { PLC_VC_FIRST = false; });
+    chk(`VC) Superalloy ${rate} Mk${mk + 1} ${buf} variant C: builds (Place enabled, no refusal)`, VO.open && VO.err === '' && !VO.off, JSON.stringify({err: VO.err, off: VO.off, G: VO.G}));
+    await closeIfOpen(pg);
+  }
+
   // ---- several trunks / bands per 3-input stage: 75/min and 300/min build (sim >= target), Large Mk1 120 builds; Container Mk1 120 builds or refuses cleanly with a reason and Place disabled; no hang (25 s)
   for (const [rate, mk, buf, label, mustBuild] of [[75, 0, 'DAT_Container', 'Container Mk1 75', true], [300, 1, 'DAT_Container', 'Container Mk2 300', true], [300, 1, 'DAT_Container_2', 'Large Mk2 300', true], [120, 0, 'DAT_Container_2', 'Large Mk1 120', true], [120, 0, 'DAT_Container', 'Container Mk1 120', false]]) {
     await setup(pg, ITEM, rate, mk, buf);
