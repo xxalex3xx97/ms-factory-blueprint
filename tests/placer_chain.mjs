@@ -190,6 +190,10 @@ try {
   chk('A) note: Stage 2 Basic Motor line', /Stage 2 Basic Motor: 2 machines, 2 trunks \(1\+1\)/.test(A1.note), A1.note);
   chk('A) note: hub line 60/min (max 480)', /Hub container between stages: 60\/min \(max 480\)/.test(A1.note), A1.note);
   chk('A) pvIO: 1 hub container(s) between stages', /1 hub container\(s\) between stages/.test(A1.io), A1.io);
+  const Aio = await pg.evaluate(() => ({io: $('pvIO').textContent, drawn: plcT.ms.filter(b => b.cls === 'DAT_Container').length}));
+  const Am = /closed: (\d+) source \+ (\d+) in-buffer west, (\d+) out-buffer \+ (\d+) sink east \+ (\d+) hub container\(s\) between stages; (\d+) containers in all/.exec(Aio.io);
+  const Asum = Am ? [1, 2, 3, 4, 5].reduce((s, i) => s + +Am[i], 0) : -1;
+  chk('A) pvIO: source+in-buffer+out-buffer+sink+hub sum = "containers in all" = drawn DAT_Container count', !!Am && Asum === Aio.drawn && +Am[6] === Aio.drawn, JSON.stringify(Aio));
   await shots(pg, 'chain');
   const Ap = await placeAuditSim(pg, 'ITEM_BasicMotor');
   info(`A) placed: machines=${Ap.ag.nM} pairs=${Ap.ag.pairs} (vertical ${Ap.ag.vert}) sim=${Ap.sim.got.toFixed(2)} low=${Ap.sim.low} blocked=${Ap.sim.blocked}`);
@@ -261,11 +265,11 @@ try {
     });
     info(`E) mod=${mod} ${JSON.stringify(Ee)}`);
     if (mod) {
-      chk('E) modular: Build mod===true, no container with inf ct, DAT_Container count 5 per band', Eo.open && Ee.mod === true && Ee.infBox === 0 && Ee.boxes === 5, JSON.stringify(Ee));
+      chk('E) modular: Build mod===true, no container with inf ct, DAT_Container count 3 per band', Eo.open && Ee.mod === true && Ee.infBox === 0 && Ee.boxes === 3, JSON.stringify(Ee));
       chk('E) modular: belts at x=0 === nIn, belts at x===w-1 === nOut', Ee.belt0 === Ee.nIn && Ee.beltE === Ee.nOut && Ee.nIn >= 1, JSON.stringify(Ee));
       chk('E) modular: pvIO "IN west ... hub container(s) between stages", Place enabled', /IN west.*hub container\(s\) between stages/.test(Ee.io) && Ee.placeOff === false, Ee.io + ' | ' + Ee.err);
     } else {
-      chk('E) closed, same plan: 7 containers per band', Eo.open && Ee.mod === false && Ee.boxes === 7, JSON.stringify(Ee));
+      chk('E) closed, same plan: 5 containers per band', Eo.open && Ee.mod === false && Ee.boxes === 5, JSON.stringify(Ee));
     }
     await closeIfOpen(pg);
   }

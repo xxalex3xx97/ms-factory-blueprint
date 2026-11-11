@@ -80,19 +80,19 @@ function placerBank(P,item,mk,spMk,o){
       const Y0=up?B+oi[0]-R*S.h:B+oi[nT-1]+1,Yend=Y0+R*S.h,Bo=up?Y0-1-oo[nT-1]:Yend-oo[0],ix=k=>up?k:nT-1-k;
       gs.push({S,cnt,nT,R,up,nIn,nOut,oi,oo,Y0,Bi:B,Bo,fRow:cnt.map((_,k)=>B+oi[ix(k)]),lRow:cnt.map((_,k)=>Bo+oo[ix(k)])});B=Bo}
     return gs};
-  const it=[],sg=plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo),hz=[];let x=2*bw+2,Xs=0;
+  const it=[],sg=plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo),hz=[];let x=2*bw+2,xf=2*bw+1;
   for(let q=0;q<n;q++){const X0=[];for(let k=0;k<tbs[q];k++){x=sg.put(x,SS[q].Wb,false);X0.push(x);x+=SS[q].Wb+1}
-    const xe=sg.put(x,q<n-1?3*bw+2:2*bw+1,true);hz.push({Xs,xf:Xs+2*bw+1,X0,xe});
-    if(q<n-1){Xs=xe+bw+1;x=Xs+2*bw+2}}   // Xs = hub x; next stage feeders start Xs+2bw+1
+    const xe=sg.put(x,q<n-1?bw:2*bw+1,true);hz.push({Xs:0,xf,X0,xe});
+    if(q<n-1){xf=xe+bw;x=xe+bw+1}}   // junction q: one hub at xe (out side of stage q = in side of stage q+1); feeders start xe+bw
   if(sg.bad)return no(sg.bad);
   const gb=[];let oy=0;
   for(let b=0;b<G;b++){const gs=geo(b),i0=it.length;gb.push(gs);
     gs.forEach((g,q)=>{const {Xs,xf,X0,xe}=hz[q];
-      for(let j=0;j<g.nIn;j++){const y=g.Bi+j*bh;if(q===0&&!o.mod)it.push(bx(Xs,y,[{item:P.raw[0].item,n:0,inf:true}]));it.push(bx(Xs+bw+1,y,[]))}
-      g.oi.forEach(r=>{it.push(bt(Xs+bw,g.Bi+r));if(q===0&&o.mod)for(let xx=Xs;xx<Xs+bw;xx++)it.push(bt(xx,g.Bi+r))});
+      if(q===0){for(let j=0;j<g.nIn;j++){const y=g.Bi+j*bh;if(!o.mod)it.push(bx(Xs,y,[{item:P.raw[0].item,n:0,inf:true}]));it.push(bx(Xs+bw+1,y,[]))}
+        g.oi.forEach(r=>{it.push(bt(Xs+bw,g.Bi+r));if(o.mod)for(let xx=Xs;xx<Xs+bw;xx++)it.push(bt(xx,g.Bi+r))})}
       plcBanks({S:g.S,cnt:g.cnt,X0,fRow:g.fRow,lRow:g.lRow,Y0:g.Y0,R:g.R,up:g.up,xf,xe,bc:PLC_BELT[mk]},it);
-      for(let j=0;j<g.nOut;j++){const y=g.Bo+j*bh;it.push(bx(xe,y,[]));if(q<n-1||!o.mod)it.push(bx(xe+bw+1,y,[]))}
-      g.oo.forEach(r=>{it.push(bt(xe+bw,g.Bo+r));if(q===n-1&&o.mod)for(let xx=xe+bw+1;xx<xe+2*bw+1;xx++)it.push(bt(xx,g.Bo+r))})});
+      for(let j=0;j<g.nOut;j++){const y=g.Bo+j*bh;it.push(bx(xe,y,[]));if(q===n-1&&!o.mod)it.push(bx(xe+bw+1,y,[]))}
+      if(q===n-1)g.oo.forEach(r=>{it.push(bt(xe+bw,g.Bo+r));if(o.mod)for(let xx=xe+bw+1;xx<xe+2*bw+1;xx++)it.push(bt(xx,g.Bo+r))})});
     const sl=it.slice(i0),mn=Math.min(...sl.map(c=>c.y)),mx=Math.max(...sl.map(c=>c.y+dim(c).h));
     sl.forEach(c=>{c.y+=oy-mn});oy+=mx-mn+1}   // band min y -> oy, spare row between bands
   const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
@@ -353,6 +353,7 @@ function placerPreview(L){
   const LL=plcT&&plcT.ok&&plcT.L||L;
   $("pvIO").textContent=L.mod?(L.bank?"IN west ("+LL.nIn+" belt"+(LL.nIn>1?"s":"")+"), OUT east ("+LL.nOut+" belt"+(LL.nOut>1?"s":"")+"), "+LL.hubs+" hub container(s) between stages; copy width "+L.w:"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w):L.bank?"closed: "+LL.nS+" source + "+LL.nS+" in-buffer west, "+LL.nK+" out-buffer + "+LL.nK+" sink east"+(LL.stages>1?" + "+LL.hubs+" hub container(s) between stages":""):"closed: source container in, sink container out";
   $("plnPrevNote").textContent=L.note.concat(plcT&&plcT.ok&&plcT.blocks.length>1?["Chose "+plcT.cols+" x "+plcT.rows+" blocks: fewest blocks, then squarest"+(plcT.L.bank?"; "+plcT.G+" band(s) of "+(plcT.L.stages>1?plcT.L.tbs.join("+")+" trunks per stage":plcT.L.tb+" trunk(s)"):"")+"; "+k.ug/2+" underground pairs cross the walls"]:[]).join(". ");
+  if(L.bank)$("pvIO").textContent+="; "+k.box+" containers in all";
   $("plnPrevErr").textContent=plcT&&!plcT.ok?plcT.why:"";const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}$("plnPlace").disabled=false;placerFitView();
 }
 function placerPlace(){
