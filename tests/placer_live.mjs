@@ -62,6 +62,7 @@ async function page(W, H) {
   pg.on('console', m => { if (m.type() === 'error') errs.push(`[${W}] console.error: ${m.text()}`); });
   pg.on('dialog', d => d.dismiss().catch(() => {}));
   await pg.goto(PAGE);
+  await pg.evaluate(() => { const m = document.getElementById('plnMk'), b = document.getElementById('plnBuf'); if (m) m.value = '0'; if (b) b.value = 'DAT_Container'; });   // these checks pin the old defaults (Mk1, Container); the planner now starts at Mk2, Large Container
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined' && typeof placerLayout === 'function');
   return {ctx, pg};
 }

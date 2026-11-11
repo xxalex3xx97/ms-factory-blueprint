@@ -91,7 +91,7 @@
       <div id="plnMain">
       <div id="plnOut" tabindex="0" role="region" aria-label="Planner flow diagram"></div>
       <div id="plnOpt"><button id="plnOptT" class="edge" type="button" aria-expanded="true" aria-controls="plnOptB" aria-label="Hide options" title="Hide options"><span class="ar" aria-hidden="true">&raquo;</span><span class="lb">Options</span></button><div id="plnOptB">
-      <label>Belt <select id="plnMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+      <label>Belt <select id="plnMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1" selected>Mk2</option><option value="2">Mk3</option></select></label>
       <label>Splitter <select id="plnSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
       <label>Balancer <select id="plnBal" aria-label="Balancer tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
       <div class="plnGxW"><span>View</span><button id="plnGx" type="button" aria-pressed="false" title="Grouped: one box per node. Expanded: one box per machine">Grouped</button></div>
@@ -265,7 +265,7 @@
       <label class="chk"><input type="checkbox" id="plnBk21" value="BPO_Station_2x1" checked> 2x1</label>
       <label class="chk"><input type="checkbox" id="plnBk22" value="BPO_Station_02" checked> 2x2</label>
     </fieldset>
-    <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2">Large Container</option></select></label>
+    <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2" selected>Large Container</option></select></label>
     <label>Belt <select id="pvMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
     <label>Splitter <select id="pvSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
     <label>Rate (items/min) <input id="pvRate" type="number" min="1" step="any" aria-label="Target rate in items per minute"></label>
