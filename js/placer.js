@@ -359,17 +359,17 @@ function plcGrowthLane1(P,item,mk,spMk,o={}){
   if(!nP.length||sP.length<2)return no("Growth: container needs a north port and two south ports");
   const bw=def(BX).w,bh=def(BX).h,w=d.w,X0=2*bw+1,rec=rk(T.rec);
   const a=wIn[0],b=wIn[1];
-  if(b.y-a.y<bh)return no("Growth: the two input ports are closer than one container (WIP for this container size)");
   const seed=gi[1]*1;   // one machine: N = 1
   const bt=(x,y,r=0)=>({cls:bc,x,y,h:0,rot:r,pid:0});
   const box=(x,y,ct)=>({cls:BX,x,y,h:0,rot:0,pid:0,ct});
   const it=[];
   it.push({cls:d.key,x:X0,y:0,h:0,rot:0,pid:0,rec,off:mOff.map(p=>p.key)});
-  const C={x:0,y:a.y-pe.y},B={x:0,y:b.y-pe.y};
+  const C={x:0,y:a.y-pe.y},stag=b.y-a.y<bh,rB=a.y+bh,B={x:0,y:(stag?rB:b.y)-pe.y};   // stag: input ports closer than one container: B goes below C with bends
   it.push(box(C.x,C.y,[{item:gi[0],n:0,inf:true}]));                  // seed container C (Xenoeukarya)
   it.push(box(B.x,B.y,[{item:bio[0],n:0,inf:true}]));                     // Biomass container B
   for(let x=C.x+bw;x<X0+a.x;x++)it.push(bt(x,a.y,0));                     // straight belt C -> machine W port A
-  for(let x=B.x+bw;x<X0+b.x;x++)it.push(bt(x,b.y,0));                     // straight belt B -> machine W port B
+  if(!stag)for(let x=B.x+bw;x<X0+b.x;x++)it.push(bt(x,b.y,0));          // straight belt B -> machine W port B
+  else{for(let x=B.x+bw;x<X0+b.x-1;x++)it.push(bt(x,rB,0));for(let y=rB;y>b.y;y--)it.push(bt(X0+b.x-1,y,3));it.push(bt(X0+b.x-1,b.y,0))}   // staggered: belt east below C, bend north, bend east into W port B
   // output: machine E port -> straight belt -> out container O
   const OX=X0+w+1,OY=(X0+0)*0+eOut.y-pw.y;
   it.push(bt(X0+eOut.x+1,eOut.y,0));
