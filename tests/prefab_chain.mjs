@@ -21,10 +21,11 @@ const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!o
 const cases = [
   {name: 'Magnetic Coils', rate: 20},   // 2 stages, 1 + 1 machines
   {name: 'Magnetic Coils', rate: 30},   // 2 stages, 2 + 1 machines
+  {name: 'Advanced Circuits', rate: 5},   // multi-input + fan-out tree (Basic Circuits feeds Detector Array and AC)
 ];
 const known = [
-  {name: 'Advanced Circuits', rate: 40, why: 'single-input stages only'},
-  {name: 'Enzyme', rate: 60, why: 'single-input stages only'},
+  {name: 'Advanced Circuits', rate: 40, why: 'above one belt'},
+  {name: 'Enzyme', rate: 60, why: 'growth not built'},
 ];
 for (const c of cases) {
   const r = await pg.evaluate(c => {
@@ -48,10 +49,11 @@ for (const c of cases) {
     const item = [...plnBy(false).keys()].find(i => plnNm(i) === c.name);
     if (!sink) return {refused: 'no sink box', name: plnNm(it)};
     const stock = () => { const cn = SIM.C.get(sink.id); const x = cn && cn.st.get(item); return x ? x.n : 0 };
-    let n30 = 0;
-    for (let s = 0; s < 60; s++) { simAdvance(1, 1); if (s === 29) n30 = stock() }
+    // 600 s run, rate over 120..600 s (after the 13-stage pipeline fills; a 60 s window is one item of noise at 5/min)
+    let n120 = 0;
+    for (let s = 0; s < 600; s++) { simAdvance(1, 1); if (s === 119) n120 = stock() }
     const n60 = stock();
-    const measured = (n60 - n30) * 2;   // items per minute over 30..60 s
+    const measured = (n60 - n120) * 60 / 480;   // items per minute over 120..600 s
     return {name: plnNm(it), prefab: !!L.prefab, note: L.note && L.note[0], per: L.per, tileOk: T.ok, tileWhy: T.ok ? '' : String(T.why).slice(0, 120), w: L.w, h: L.h, ov: chk.ov, collectors, hubs, sinkStock: n60, measured, target: c.rate, working: [...SIM.M.values()].filter(m => m.st === 'working').length, machines: [...SIM.M.values()].length};
   }, c);
   console.log(c.name, c.rate, JSON.stringify(r));

@@ -187,43 +187,99 @@ function pfSeams(A,mk){
   }
   return{items,w,ports};
 }
-// CHAIN (step 7, behind PLC_PREFAB): single-input chain only (every stage k=1, one column per stage). Leaf stage (raw source box) on the left, top stage (collector) on the right. Stage k's sink box is stage k+1's input: stage k+1's own source box is dropped and its only W trunk starts one cell east of that sink's west column, its machines east of the trunk. Refuses multi-input stages, growth, multi-column stages (old path).
+// CHAIN (steps 7+, behind PLC_PREFAB): DAG of stages, one pfCol per stage (every input its own trunk, one item per belt). Raw inputs keep their source container. A crafted input comes from its upstream stage's sink box, which outputs north through its N ports (port 0/1 = up to two consumers: fan-out) into a corridor: riser -> row R -> riser down into the consumer trunk. Corridors share a row when their x-ranges do not overlap; a corridor crossing another riser goes under it with a UG pair. Stages left to right in post-order (upstream first). Refuses: one input above one belt (multi-belt not built), growth, more than two consumers of one stage, stage taller than the floor.
+const PF_GAP=3;   // cells between stage columns
+const PF_CORR=8;  // rows kept free above the stages for corridors (stage height limit)
 function pfChain(P,item,mk,spMk,o={}){
-  const no=why=>({ok:false,why}),BX=o.box||PLC_BOX,cap=MKS[mk][1];
-  const st=[];let x=item;
-  for(;;){
-    const T=P.nodes[x];if(!T||!T.rec)return no('no recipe');
-    if(T.rec.i.some(([y])=>y===x))return no('growth not built in prefab');
-    if(T.rec.i.length!==1)return no('chain: single-input stages only (multi-input stage not built)');
-    if(st.some(s=>s.item===x))return no('cycle in plan');
-    const y=T.rec.i[0][0];st.push({item:x,T,y});
-    if(!(P.nodes[y]&&P.nodes[y].crafter))break;
-    x=y;
-  }
-  st.reverse();
+  const no=why=>({ok:false,why}),BX=o.box||PLC_BOX,cap=MKS[mk][1],bc=PLC_BELT[mk],ug=PLC_UG[mk];
+  const st=new Map(),order=[];let err=null;
+  const walk=(x,stack)=>{
+    if(err)return;
+    if(stack.includes(x)){err='cycle in plan';return}
+    if(st.has(x))return;
+    const T=P.nodes[x];
+    if(!T||!T.rec){err='no recipe';return}
+    if(T.rec.i.some(([y])=>y===x)){err='growth not built in prefab';return}
+    const ins=T.rec.i.map(([y])=>y);st.set(x,{T,ins});
+    for(const y of ins)if(P.nodes[y]&&P.nodes[y].crafter)walk(y,[...stack,x]);
+    order.push(x);
+  };
+  walk(item,[]);
+  if(err)return no(err);
   const Fh=floorRect({cls:plcCls(PL_STD[PL_STD.length-1]),x:0,y:0,h:0,rot:0}).h,pwb=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W'),SH=pwb?pwb.y+1:0;
-  const items=[],ports=[],per=[];let prevX=0,W=0,H=0,makes=0;
-  for(let i=0;i<st.length;i++){
-    const S=st[i],T=S.T,cb=plnCb(T.crafter);if(!cb)return no('No machine builds this recipe');
-    const N=T.machines,cls=def(cb.id).key,rec=rk(T.rec),e=P.edges.find(q=>q.from===S.y&&q.to===S.item);
-    if(!e)return no('no edge into '+plnNm(S.item));
-    if(e.flow>cap)return no('chain stage needs more than one column (not built)');   // one trunk carries the whole input of the stage
-    const C=pfCol(cls,1,[{item:S.y,flow:e.flow/N}],N,mk);
+  const items=[],ports=[],per=[],sink=new Map(),nUse=new Map(),routes=[];
+  let x0=0,makes=0;
+  for(const y of order){
+    const S=st.get(y),T=S.T,cb=plnCb(T.crafter);if(!cb)return no('No machine builds this recipe');
+    const N=T.machines,cls=def(cb.id).key,rec=rk(T.rec),flows=[],k=S.ins.length;
+    for(const i of S.ins){
+      const e=P.edges.find(q=>q.from===i&&q.to===y);if(!e)return no('no edge into '+plnNm(y));
+      if(e.flow>cap)return no('chain input above one belt (multi-belt not built)');
+      flows.push({item:i,flow:e.flow/N});
+    }
+    // machines per column: the most that fit the floor (as pfCompose); several columns share one out row
+    let mh=N;while(mh>1){const C=pfCol(cls,k,flows,mh,mk);if(C.ok===false||C.h+SH<=Fh-PF_CORR)break;mh--}
+    const sizes=[];for(let r=N;r>0;r-=mh)sizes.push(Math.min(mh,r));
+    const outF=P.edges.filter(e=>e.from===y).reduce((a,e)=>a+e.flow,0);
+    const C=sizes.length===1?pfCol(cls,k,flows,N,mk):pfColumns(cls,k,flows,sizes,mk,outF);
     if(C.ok===false)return no(C.why);
-    if(C.h+SH>Fh)return no('chain stage taller than the floor (not built)');
-    const inP=C.ports.find(q=>q.dir==='in'),outP=C.ports.find(q=>q.dir==='out'),w0=inP.off;
-    const dx=i?prevX+1-w0:0;
+    if(C.h+SH>Fh-PF_CORR)return no('chain stage taller than the floor minus corridor rows (not built)');
+    const dx=x0,fedSet=new Set(S.ins.filter(i=>P.nodes[i]&&P.nodes[i].crafter)),isHead=q=>q.cls===PLC_BOX&&q.ct&&q.ct.length;
+    // every trunk head of a crafted input becomes a corridor from its upstream sink; raw heads stay as source containers
     C.items.forEach(q=>{
-      if(i&&q.cls===PLC_BOX&&q.x===w0&&q.y===0&&q.ct&&q.ct.length)return;   // source box dropped: previous stage's sink feeds this trunk
+      if(isHead(q)&&fedSet.has(q.ct[0].item))return;
       const o2={...q,x:q.x+dx};if(q.cls===cls)o2.rec=rec;items.push(o2);
     });
-    if(!i)ports.push(...C.ports.filter(q=>q.dir==='in'));
-    prevX=outP.off+dx;
-    if(i===st.length-1){ports.push({...outP,off:prevX});makes=N*T.pmach}
-    per.push(N);W=dx+C.w;H=Math.max(H,C.h);
+    if(y===order[0])C.items.filter(q=>isHead(q)&&!fedSet.has(q.ct[0].item)).forEach((h,j)=>ports.push({edge:'N',off:h.x+dx,dir:'in',belts:1,slot:j,mk}));
+    const sk=C.items.find(q=>q.cls===PLC_BOX&&q.y===0&&q.ct&&!q.ct.length);
+    sink.set(y,{x:sk.x+dx});
+    for(const i of fedSet){
+      const hs=C.items.filter(q=>isHead(q)&&q.ct[0].item===i),k0=nUse.get(i)||0;
+      if(k0+hs.length>2)return no('more than two consumers of one stage (not built)');
+      nUse.set(i,k0+hs.length);
+      hs.forEach((h,t)=>routes.push({sx:sink.get(i).x+k0+t,tx:h.x+dx,item:i}));
+    }
+    if(y===item){ports.push({edge:'N',off:sk.x+dx,dir:'out',belts:1,slot:-1,mk});makes=N*T.pmach}
+    per.push(N);x0=dx+C.w+PF_GAP;
   }
-  const SM=pfSeams({items,w:W,h:H,ports},mk);if(!SM)return no('no free wall column for the block tile (seam search failed)');
-  return{ok:true,items:SM.items.map(q=>({h:0,pid:0,...q})),lanes:1,per,makes,pitch:H+1,w:SM.w,h:H,mod:false,box:BX,mk,ports:SM.ports,note:['Prefab chain: '+st.length+' stages, one column each; each stage\'s sink feeds the next stage'],src:{P,item,mk,spMk,o},prefab:true};
+  // corridor rows (row r -> R = -2-r; larger r = further north). Rows are shared when x-spans do not overlap. A corridor whose riser or descent sits right next to another corridor's corner must lie north of it (a UG cannot start or end on a corner); every other crossing goes under with a UG pair.
+  const n=routes.length,rowsIv=[],rowOf=[],busy=[],key=(x,y)=>x+','+y,occ=new Set(),cells=[];
+  const cons=routes.map((A,a)=>routes.flatMap((C,c)=>c!==a&&(C.sx===A.sx+1||C.tx===A.tx-1)?[c]:[]));
+  let bad=null;
+  const place=a=>{
+    if(rowOf[a]!==undefined)return rowOf[a];
+    if(busy[a]){bad='corridor order cycle';return 0}
+    busy[a]=true;
+    const A=routes[a],lo=Math.min(A.sx,A.tx),hi=Math.max(A.sx,A.tx);
+    let r=0;for(const c of cons[a])r=Math.max(r,place(c)+1);
+    while(rowsIv[r]&&rowsIv[r].some(v=>!(hi<v[0]||lo>v[1])))r++;
+    (rowsIv[r]=rowsIv[r]||[]).push([lo,hi]);rowOf[a]=r;A.R=-2-r;return r;
+  };
+  for(let a=0;a<n;a++)place(a);
+  if(bad)return no(bad);
+  // verticals first: riser up from the sink N port, corner east, corner south at the trunk, descent into the trunk top
+  for(const rt of routes){
+    const R=rt.R,vs=[];
+    for(let y=R+1;y<=-1;y++)vs.push([rt.sx,y,3]);
+    vs.push([rt.sx,R,0],[rt.tx,R,1]);
+    for(let y=R+1;y<=1;y++)vs.push([rt.tx,y,1]);
+    for(const [x,y,r] of vs){if(occ.has(key(x,y)))return no('corridor cells clash');occ.add(key(x,y));cells.push({cls:bc,x,y,rot:r})}
+  }
+  // horizontals: a cell under another corridor's vertical is skipped, the belts either side become a UG pair
+  for(const rt of routes){
+    const R=rt.R,seg=[];
+    for(let x=rt.sx+1;x<rt.tx;x++)seg.push({x,t:occ.has(key(x,R))?'skip':'b'});
+    for(let i=0;i<seg.length;i++)if(seg[i].t==='skip'){
+      if(i===0||i===seg.length-1||seg[i-1].t!=='b'||seg[i+1].t!=='b')return no('corridor crossing not routable');
+      seg[i-1].t='in';seg[i+1].t='out';
+    }
+    for(const s of seg)if(s.t!=='skip')cells.push({cls:s.t==='b'?bc:ug,x:s.x,y:R,rot:0});
+  }
+  const all=[...items,...cells],minY=Math.min(...all.map(q=>q.y)),sh=minY<0?-minY:0;
+  const out=all.map(q=>({...q,y:q.y+sh}));
+  const H=Math.max(...out.map(q=>q.y+dim(q).h)),W=Math.max(...out.map(q=>q.x+dim(q).w));
+  const SM=pfSeams({items:out,w:W,h:H,ports},mk);if(!SM)return no('no free wall column for the block tile (seam search failed) h'+H+' w'+W+' floor'+Fh);
+  return{ok:true,items:SM.items.map(q=>({h:0,pid:0,...q})),lanes:1,per,makes,pitch:H+1,w:SM.w,h:H,mod:false,box:BX,mk,ports:SM.ports,note:['Prefab chain: '+order.length+' stages, corridors above; crafted inputs fed from upstream sink boxes'],src:{P,item,mk,spMk,o},prefab:true};
 }
 function pfCompose(P,item,mk,spMk,o={}){
   const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
