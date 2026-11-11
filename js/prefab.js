@@ -403,12 +403,61 @@ function pfChain(P,item,mk,spMk,o={}){
   const SM=pfSeams({items:out,w:W,h:H,ports},mk);if(!SM)return no('no free wall column for the block tile (seam search failed) h'+H+' w'+W+' floor'+Fh);
   return{ok:true,items:SM.items.map(q=>({h:0,pid:0,...q})),lanes:1,per,makes,pitch:H+1,w:SM.w,h:H,mod:false,box:BX,mk,ports:SM.ports,note:['Prefab chain: '+order.length+' stages, corridors above; crafted inputs fed from upstream sink boxes'],src:{P,item,mk,spMk,o},prefab:true};
 }
+// STEP 2 (2D bands), behind PF_DOWN2 (test hook, default off): two-row chain, top to bottom. Stage A = raw-fed stage, outDown (sink box at its bottom, S out). Gutter of PF_GUT rows. Stage B = the item, fed by A's sink, outDown too (S out). B's own head box is removed; one belt column (rot 1) from A's sink S port runs down through the gutter into B's trunk top. Refuses: not a 2-stage chain, several columns per stage, several inputs for B, a block taller than the floor.
+let PF_DOWN2=false;
+const PF_GUT=3;   // rows between stage A's sink and stage B's band
+function pfChainDown(P,item,mk,spMk,o={}){
+  const no=why=>({ok:false,why}),BX=o.box||PLC_BOX,cap=MKS[mk][1],bc=PLC_BELT[mk],T=P.nodes[item];
+  if(!T||!T.rec)return no('no recipe');
+  if(T.rec.i.some(([y])=>y===item))return no('growth not built in prefab');
+  if(T.rec.i.length!==1)return no('two-row chain: one input only');
+  const a=T.rec.i[0][0],TA=P.nodes[a];
+  if(!(TA&&TA.rec&&TA.crafter))return no('two-row chain: input is not a crafted stage');
+  if(!TA.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter)))return no('two-row chain: more than two stages not built');
+  const Fh=floorRect({cls:plcCls(PL_STD[PL_STD.length-1]),x:0,y:0,h:0,rot:0}).h;
+  // one stage = one column of all its machines, outDown
+  const stage=y=>{
+    const S=P.nodes[y],cb=S.rec&&plnCb(S.crafter);
+    if(!cb)return{why:'No machine builds this recipe'};
+    const N=S.machines,cls=def(cb.id).key,ins=S.rec.i.map(([x])=>x),flows=[];
+    for(const x of ins){const e=P.edges.find(q=>q.from===x&&q.to===y);if(!e)return{why:'no edge into '+plnNm(y)};flows.push({item:x,flow:e.flow/N})}
+    if(flows.some(f=>f.flow>cap))return{why:'one machine input above one belt'};
+    const outF=P.edges.filter(e=>e.from===y).reduce((s,e)=>s+e.flow,0);
+    if(outF>cap)return{why:'output above belt cap: out stack not built'};
+    const C=pfCol(cls,ins.length,flows,N,mk,true);
+    if(C.ok===false)return{why:C.why};
+    if(C.h>Fh)return{why:'stage taller than the floor (not built)'};
+    return{N,cls,rec:rk(S.rec),C};
+  };
+  const A=stage(a),B=stage(item);
+  if(A.why)return no(A.why);
+  if(B.why)return no(B.why);
+  const sk=A.C.items.find(q=>q.cls===PLC_BOX&&q.ct&&!q.ct.length),skB=B.C.items.find(q=>q.cls===PLC_BOX&&q.ct&&!q.ct.length),hd=B.C.items.find(q=>q.cls===PLC_BOX&&q.ct&&q.ct.length);
+  if(!sk||!skB||!hd)return no('two-row chain: sink or head box missing');
+  const sp=portsOf({cls:PLC_BOX,x:sk.x,y:sk.y,rot:0,off:[]}).find(p=>p.f==='S');
+  if(!sp)return no('sink box has no S port');
+  const X=sp.x,yS=sk.y+dim(sk).h,dxB=X-hd.x,yB=A.C.h+PF_GUT;   // belt column = A's sink S port x; B's trunk lands on it
+  if(yS>yB+1)return no('gutter too short for the sink belt');
+  const spB=portsOf({cls:PLC_BOX,x:skB.x+dxB,y:skB.y+yB,rot:0,off:[]}).find(p=>p.f==='S');
+  if(!spB)return no('sink box has no S port');
+  const items=[],put=(R,dx,dy,keep)=>R.C.items.forEach(q=>{if(!keep(q))return;const o2={...q,x:q.x+dx,y:q.y+dy};if(q.cls===R.cls)o2.rec=R.rec;items.push(o2)});
+  put(A,0,0,()=>true);
+  put(B,dxB,yB,q=>!(q.cls===PLC_BOX&&q.ct&&q.ct.length));   // B's head removed: fed by the belt column below
+  for(let y=yS;y<=yB+1;y++)items.push({cls:bc,x:X,y,rot:1});
+  const ports=[...A.C.ports.filter(p=>p.dir==='in'),{edge:'S',off:spB.x,dir:'out',belts:1,slot:-1,mk}];
+  const H=Math.max(...items.map(q=>q.y+dim(q).h)),W=Math.max(...items.map(q=>q.x+dim(q).w));
+  if(Math.min(...items.map(q=>q.x))<0||Math.min(...items.map(q=>q.y))<0)return no('two-row chain: negative coordinates');
+  if(H>Fh)return no('two-row chain taller than the floor ('+H+' > '+Fh+')');
+  const SM=pfSeams({items,w:W,h:H,ports},mk);if(!SM)return no('no free wall column for the block tile (seam search failed)');
+  return{ok:true,items:SM.items.map(q=>({h:0,pid:0,...q})),lanes:1,per:[A.N,B.N],makes:B.N*T.pmach,pitch:H+1,w:SM.w,h:H,mod:false,box:BX,mk,ports:SM.ports,
+    note:['Prefab two-row chain: stage A row 0, stage B row '+(yB)+' (gutter '+PF_GUT+'), S out'],src:{P,item,mk,spMk,o},prefab:true};
+}
 let PF_DOWN=false;   // step 1: single-stage pfCompose builds outDown (test hook, default off)
 function pfCompose(P,item,mk,spMk,o={}){
   const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
   if(!T||!T.rec)return no('no recipe');
   if(T.rec.i.some(([x])=>x===item))return no('growth not built in prefab');
-  if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter)))return pfChain(P,item,mk,spMk,o);   // a machine upstream: chain (step 7)
+  if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter)))return(PF_DOWN2?pfChainDown:pfChain)(P,item,mk,spMk,o);   // a machine upstream: chain (step 7)
   const cb=plnCb(T.crafter);if(!cb)return no('No machine builds this recipe');
   const N=T.machines,cls=def(cb.id).key,k=T.rec.i.length,cap=MKS[mk][1];
   const edge=x=>P.edges.find(e=>e.from===x&&e.to===item);
