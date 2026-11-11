@@ -438,11 +438,12 @@ function cached(name,fn){
   cx.setTransform(1,0,0,1,0,0);cx.drawImage(o.c,0,0);cx.setTransform(dpr,0,0,dpr,0,0);
 }
 function paint(pk){
-  if(ZW&&ZS&&ZS.k===zsKey()){   // wheel frame: scaled copy of the last full paint (blocks unchanged: any other draw cleared ZS)
+  if(ZW&&ZS&&!USEB&&!smOn()&&ZS.k===zsKey()){   // no blit while the simulation draws (its overlays would be scaled with the base)   // wheel frame: scaled copy of the last full paint (blocks unchanged: any other draw cleared ZS)
     const f=V.z/ZS.z;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.drawImage(ZS.c,dpr*(V.ox-f*ZS.ox),dpr*(V.oy-f*ZS.oy),cv.width*f,cv.height*f);return}
   if(!USEB)DIRTY=true;LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}
   if(view==="F"&&typeof HAR==="function")setTimeout(()=>{try{HAR(layer);HLK(layer);hit({x:-1e9,y:-1e9})}catch(e){}},50);   // hover tables are built right after a paint, not on the first mouse move
-  if(!ZS||ZS.k!==zsKey()){if(!ZC||ZC.width!==cv.width||ZC.height!==cv.height){ZC=document.createElement("canvas");ZC.width=cv.width;ZC.height=cv.height}
+  if(!USEB&&!smOn()&&(!ZS||ZS.k!==zsKey())){   // the base is a clean paint: never a simulation frame (moving flow dots would be baked in and smear on zoom)
+    if(!ZC||ZC.width!==cv.width||ZC.height!==cv.height){ZC=document.createElement("canvas");ZC.width=cv.width;ZC.height=cv.height}
     ZC.getContext("2d").drawImage(cv,0,0);ZS={c:ZC,z:V.z,ox:V.ox,oy:V.oy,k:zsKey()}}
 }
 let FLAT_S=5;   // let: tests set FLAT_S=0 for exact block pixels. below this zoom (px per cell) blocks are batched as flat rects (no icon/arrow/label/door marks are drawn there anyway)
