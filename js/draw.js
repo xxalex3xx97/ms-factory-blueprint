@@ -171,11 +171,18 @@ function drawIcon(d,x,y,w,h,alpha){
   cx.save();cx.globalAlpha=alpha;cx.imageSmoothingQuality="high";cx.drawImage(i,x+(w-z)/2,y+(h-z)/2,z,z);cx.restore();
 }
 const ARROW_MIN_S=10;   // zoom (px per unit, sc()) below which belt direction arrows and underground links are hidden
+// arrow sprites: one canvas per (size, rotation, alpha), drawn with drawImage (no save/rotate/path per arrow; the lag came from per-arrow state changes)
+const ARS=new Map();
 function arrow(x,y,w,h,rot,alpha){
   const r=Math.min(w,h)*.3;if(r<3)return;
-  cx.save();cx.translate(x+w/2,y+h/2);cx.rotate(rot*Math.PI/2);
-  cx.fillStyle=`rgba(255,255,255,${alpha})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.7})`;cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.7,-r*.75);cx.lineTo(-r*.3,0);cx.lineTo(-r*.7,r*.75);cx.closePath();cx.fill();cx.stroke();cx.restore();
+  const q=Math.round(r),S=2*q+4,key=q+"|"+(rot&3)+"|"+Math.round(alpha*100);
+  let sp=ARS.get(key);
+  if(!sp){sp=document.createElement("canvas");sp.width=sp.height=S;const g=sp.getContext("2d");
+    g.translate(S/2,S/2);g.rotate((rot&3)*Math.PI/2);
+    g.fillStyle=`rgba(255,255,255,${alpha})`;g.strokeStyle=`rgba(0,0,0,${alpha*.7})`;g.lineWidth=1;
+    g.beginPath();g.moveTo(q,0);g.lineTo(-q*.7,-q*.75);g.lineTo(-q*.3,0);g.lineTo(-q*.7,q*.75);g.closePath();g.fill();g.stroke();
+    if(ARS.size>400)ARS.clear();ARS.set(key,sp)}
+  cx.drawImage(sp,Math.round(x+w/2-S/2),Math.round(y+h/2-S/2));
 }
 // entrance marks (Layout, model.js entrances()): door slot = light bar on the edge + white chevron pointing INTO the block; ports side (no doors) = mint bar + chevron pointing out to the ports. Rotates with the block
 const ENT_DOOR_S=44;
