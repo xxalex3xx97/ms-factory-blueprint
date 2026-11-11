@@ -172,6 +172,7 @@ try {
     await closeIfOpen(pg);
   }
 
+
   // ---- refusals in the modal: Place disabled, reason names the port / 3-input limit
   // no 3-input Refinery recipe exists in the data (checked: the 3-input recipes are Assembler, Enrichment Chamber, Growth Chamber); the non-chain 3-input refusal is checked instead
   await setup(pg, 'ITEM_ContainmentCoil', 10, 0, 'DAT_Container');

@@ -184,7 +184,8 @@ try {
   await pg.fill('#plnRate', String(rate));
   const F0 = await pg.evaluate(() => S.blocks.length);
   const fo = await openBuild(pg, ['plnBk11']);
-  await pg.click('#plnPlace');
+  chk('F) Place disabled while the error shows (fix: preview Place disabled on error)', await pg.evaluate(() => $('plnPlace').disabled) === true);
+  if (!(await pg.evaluate(() => $('plnPlace').disabled))) await pg.click('#plnPlace');
   const fp = await pg.evaluate(() => ({open: $('plnPrev').open, err: $('plnPrevErr').textContent, n: S.blocks.length, pl: !!(pasting && pasting.pl)}));
   await pg.evaluate(() => { def(PLC_UG[0]).maxApart = window.__mxa; });
   chk('F) maxApart 3: modal open, #plnPrevErr non-empty after Place, nothing added, no ghost',
