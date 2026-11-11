@@ -106,9 +106,9 @@ function placerBank(P,item,mk,spMk,o){
   if(!tr.ok)return tr;
   const ch=tr.ch,n=ch.length,G=PLC_G||o.G||1,Bn=tr.two?tr.two.B:[],topB=Bn.length?Bn[Bn.length-1].item:(tr.two&&tr.two.rawB);
   if(tr.two&&G>1)return no("Bank: a 2-input stage uses one band only");
-  if(tr.two&&!Bn.length)return no("Bank: a raw input straight into a 2-input machine is not built yet");
   for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:tr.raw)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null)),eI2=tr.two&&q===n-1?P.edges.find(e=>e.from===topB&&e.to===nd.item):null;
     const S=plcStage(nd,eI,eU,mk,spMk,eI2);if(!S.ok)return S;SS.push(S)}
+  if(tr.two&&!Bn.length)return no("Bank: a raw input straight into a 2-input machine is not built yet");
   const cp=plcPp(BX,0),cE=cp.filter(p=>p.nx===1).sort((a,b)=>a.y-b.y),cW=cp.filter(p=>p.nx===-1).sort((a,b)=>a.y-b.y),seq=a=>a.every((p,i)=>p.y===a[0].y+i);
   if(!cE.length||!cW.length||!seq(cE)||!seq(cW))return no("Bank: container E/W ports not found or not on consecutive rows");
   const bw=def(BX).w,bh=def(BX).h;
@@ -169,6 +169,7 @@ function placerBank(P,item,mk,spMk,o){
   }else{
     for(let q=0;q<n;q++)nt.push("Stage "+(q+1)+" "+plnNm(ch[q].item)+": "+Ns[q]+" machines, "+G*tbs[q]+" trunk"+(G*tbs[q]>1?"s":"")+" ("+alls[q].join("+")+"), "+Math.max(...gb.map(g=>g[q].R))+" rows");
     for(let q=1;q<n;q++)nt.push("Hub container between stages: "+plnR2(P.edges.find(e=>e.from===ch[q-1].item&&e.to===ch[q].item).flow/(G*nH[q]))+"/min (max "+PLC_SRC+")"+(G*nH[q]>1?"; "+G*nH[q]+" hub containers stacked":""));
+    if(tr.two)nt.push("Two inputs into "+plnNm(ch[n-1].item)+": A "+plnNm(ch[n-2].item)+" (main chain) + B "+plnNm(topB)+" ("+Bn.length+" stage"+(Bn.length>1?"s":"")+", own band)");
     if(G>1)nt.push(G+" band(s), each a full copy of the chain, spare belt row between bands");
   }
   if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
