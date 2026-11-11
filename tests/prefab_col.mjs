@@ -15,7 +15,7 @@ await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof pfCol === 'function' && typeof pfCheck === 'function');
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
-const cases = [['AdvancedAssembler', 4, 2, 1], ['Assembler', 3, 2, 1], ['Refinery', 1, 2, 1], ['Refinery', 2, 2, 1]];
+const cases = [['AdvancedAssembler', 4, 2, 1], ['Assembler', 3, 2, 1], ['Refinery', 1, 2, 1], ['Refinery', 2, 2, 1], ['GrowthChamber', 4, 2, 1]];
 const r = await pg.evaluate(cases => {
   const clsOf = n => Object.keys(BASE).find(x => BASE[x].name === n);
   const flows = k => Array.from({length: k}, (_, i) => ({item: 'I' + (i + 1), flow: 20}));
@@ -29,10 +29,11 @@ const r = await pg.evaluate(cases => {
     const ov = pfCheck(P), twoItems = {w: 2 * PF_GRID.cw, h: P.h, items: [...pfPlace({proto: 'pfCol', args: [c, k, flows(k), m, mk], at: {gx: 0, gy: 0}}), ...pfPlace({proto: 'pfCol', args: [c, k, flows(k), m, mk], at: {gx: 1, gy: 0}})], ports: P.ports};
     const two = pfCheck(twoItems);
     const mach = P.items.filter(b => b.cls === c), x0 = mach[0].x, Wd = dim({cls: c, rot: 0}).w;
-    let inOk = 0, inN = 0;
+    let inOk = 0, inN = 0, nOk = 0;
     for (const mc of mach) {
       for (const p of A.W) { inN++; const b = at.get((mc.x - 1) + ',' + (mc.y + p.row)); if (b && b.rot === 0) inOk++ }
       for (const p of A.E) { inN++; const b = at.get((mc.x + Wd) + ',' + (mc.y + p.row)); if (b && b.rot === 2) inOk++ }
+      for (const p of A.N) { inN++; const b = at.get((mc.x + p.row) + ',' + (mc.y - 1)); const s = at.get(P.nIn.tx + ',' + (mc.y - 2)); if (b && b.rot === 1 && s && PLC_SPL.includes(s.cls)) { inOk++; nOk++ } }
     }
     const heads = P.items.filter(b => b.cls === 'DAT_Container' && b.ct && b.ct.length && b.ct[0].inf);
     const heapItems = heads.map(h => h.ct[0].item).sort();

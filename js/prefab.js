@@ -73,16 +73,17 @@ const PF_TP=4;   // trunk pitch in cells
 PF_BUILD.pfCol=(cls,k,flows,m,mk)=>{
   const a=pfAssign(cls,k,flows);
   if(!a.ok)return{ok:false,why:a.why};
-  if(a.N.length||a.S.length)return{ok:false,why:'overflow (N/S) inputs not built yet'};
-  const d=dim({cls,rot:0}),Wd=d.w,P=a.pitch,Y0=2,OX=1,bc=PLC_BELT[mk],ug=PLC_UG[mk],sc=PLC_SPL[mk],nW=a.W.length,nE=a.E.length;
-  const x0=OX+(nW?3+PF_TP*(nW-1):0),wx=j=>x0-3-PF_TP*j,ex=j=>x0+Wd+2+PF_TP*j,xC=x0+Wd+2+PF_TP*nE;
-  const ym=i=>Y0+i*P,tcols=new Set([...a.W.map((_,j)=>wx(j)),...a.E.map((_,j)=>ex(j))]),it=[];
+  if(a.S.length)return{ok:false,why:'S overflow inputs not built yet'};
+  if(a.N.length>1)return{ok:false,why:'more than one N overflow input per machine not built yet'};
+  const nN=a.N.length,d=dim({cls,rot:0}),Wd=d.w,P=a.pitch,Y0=2,Ym=nN?4:2,OX=1,bc=PLC_BELT[mk],ug=PLC_UG[mk],sc=PLC_SPL[mk],nW=a.W.length,nE=a.E.length;
+  const x0=OX+(nW?3+PF_TP*(nW-1):0),wx=j=>x0-3-PF_TP*j,ex=j=>x0+Wd+2+PF_TP*j,xC=x0+Wd+2+PF_TP*nE,tx=xC+4;   // tx: the N overflow trunk, east of the collector
+  const ym=i=>Ym+i*P,gap=i=>ym(i)-2,tcols=new Set([...a.W.map((_,j)=>wx(j)),...a.E.map((_,j)=>ex(j))]),gcols=new Set([...tcols,xC,...(nN?[tx]:[])]),it=[];
   // belts/UG from start to end (inclusive) along dir (+1 east, -1 west), skipping trunk columns; a cell before a trunk is a UG entrance, a cell after one (not the origin trunk) the exit
-  const feed=(start,end,y,dir,origin)=>{const rot=dir>0?0:2;
+  const feed=(start,end,y,dir,origin,set=tcols)=>{const rot=dir>0?0:2;
     for(let x=start;dir>0?x<=end:x>=end;x+=dir){
-      if(tcols.has(x))continue;
-      if(tcols.has(x+dir))it.push({cls:ug,x,y,rot});
-      else if(tcols.has(x-dir)&&x-dir!==origin)it.push({cls:ug,x,y,rot});
+      if(set.has(x))continue;
+      if(set.has(x+dir))it.push({cls:ug,x,y,rot});
+      else if(set.has(x-dir)&&x-dir!==origin)it.push({cls:ug,x,y,rot});
       else it.push({cls:bc,x,y,rot});
     }};
   const trunk=(x,r)=>{   // one trunk column from the head down to its last feed row
@@ -92,16 +93,22 @@ PF_BUILD.pfCol=(cls,k,flows,m,mk)=>{
   const head=(x,item)=>it.push({cls:PLC_BOX,x,y:0,rot:0,ct:[{item,n:0,inf:true}]});   // infinite source container at the N edge
   a.W.forEach((p,j)=>{trunk(wx(j),p.row);head(wx(j),p.item)});
   a.E.forEach((p,j)=>{trunk(ex(j),p.row);head(ex(j),p.item)});
+  if(nN){   // N overflow trunk: splitter on each gap row (gap(i) = the row above machine i's N port belt), belt along the gap row (under nearer trunks) then down into the port
+    const rows=[];for(let i=0;i<m;i++)rows.push(gap(i));const spl=new Set(rows),last=rows[m-1];
+    for(let y=Y0;y<=last;y++)it.push(spl.has(y)?{cls:sc,x:tx,y,rot:1}:{cls:bc,x:tx,y,rot:1});
+    head(tx,a.N[0].item);
+  }
   for(let i=0;i<m;i++){
     it.push({cls,x:x0,y:ym(i),rot:0,off:[...a.off]});
     a.W.forEach((p,j)=>feed(wx(j)+1,x0-1,ym(i)+p.row,1,wx(j)));
     a.E.forEach((p,j)=>feed(ex(j)-1,x0+Wd,ym(i)+p.row,-1,ex(j)));
     feed(x0+Wd,xC-1,ym(i)+a.out.row,1,null);
+    if(nN){const px=x0+a.N[0].row,G=gap(i);feed(tx-1,px+1,G,-1,tx,gcols);it.push({cls:bc,x:px,y:G,rot:1},{cls:bc,x:px,y:G+1,rot:1})}
   }
   const lowOut=ym(m-1)+a.out.row;
   for(let y=Y0;y<=lowOut;y++)it.push({cls:bc,x:xC,y,rot:3});
   it.push({cls:PLC_BOX,x:xC,y:0,rot:0,ct:[]});
-  const ports=[...a.W.map((p,j)=>({edge:'N',off:wx(j),dir:'in',belts:1,slot:j,mk})),...a.E.map((p,j)=>({edge:'N',off:ex(j),dir:'in',belts:1,slot:nW+j,mk})),{edge:'N',off:xC,dir:'out',belts:1,slot:-1,mk}];
-  return{proto:'pfCol',args:[cls,k,flows,m,mk],w:xC+3,h:ym(m-1)+d.h,items:it,ports,fits:[],out:a.out};
+  const ports=[...a.W.map((p,j)=>({edge:'N',off:wx(j),dir:'in',belts:1,slot:j,mk})),...a.E.map((p,j)=>({edge:'N',off:ex(j),dir:'in',belts:1,slot:nW+j,mk})),...(nN?[{edge:'N',off:tx,dir:'in',belts:1,slot:nW+nE,mk}]:[]),{edge:'N',off:xC,dir:'out',belts:1,slot:-1,mk}];
+  return{proto:'pfCol',args:[cls,k,flows,m,mk],w:(nN?tx:xC)+3,h:ym(m-1)+d.h,items:it,ports,fits:[],out:a.out,nIn:nN?{px:x0+a.N[0].row,tx}:null};
 };
 const pfCol=(cls,k,flows,m,mk)=>pfPrefab('pfCol',[cls,k,flows,m,mk]);
