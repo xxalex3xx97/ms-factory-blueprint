@@ -368,8 +368,9 @@ function plcGrowthLane(P,item,mk,spMk,o={}){
   it.push(bt(-2,-1,0),bt(-1,-1,0));                              // into the seed container C (west face)
   it.push(bt(bw,-1),box(bw+1,-1-pe.y,[]));                       // C -> buffer -> trunk start
   it.push(box(0,-1-pe.y,[{item:gi[0],n:seedN,inf:false}]));       // C: seed container (in-buffer + return target)
-  it.push(box(X0-bw-1,-4-pe.y,[{item:bio[0],n:0,inf:true}]));    // Biomass source B (above the trunk start)
-  it.push(bt(X0-1,-4,0),bt(X0,-4,3),bt(X0,-3,3),bt(X0,-2,3));   // side-load Biomass onto the trunk start from the north
+  const bh=def(BX).h,yB=-1-bh-pe.y,yE=yB+pe.y;   // B box sits above the trunk, its E port row yE
+  it.push(box(X0-bw-1,yB,[{item:bio[0],n:0,inf:true}]));         // Biomass source B (above the trunk start)
+  it.push(bt(X0-1,yE,0));for(let y=yE;y<=-2;y++)it.push(bt(X0,y,3));   // side-load Biomass onto the trunk start from the north
   let x0=Infinity,y0=Infinity;it.forEach(b=>{if(b.x<x0)x0=b.x;if(b.y<y0)y0=b.y});
   const items=it.map(b=>({...b,x:b.x-x0,y:b.y-y0}));
   let W=0,H=0;items.forEach(b=>{const e=dim(b);if(b.x+e.w>W)W=b.x+e.w;if(b.y+e.h>H)H=b.y+e.h});
