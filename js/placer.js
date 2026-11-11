@@ -104,8 +104,7 @@ const plcFit=(cls,mk)=>{const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,ro
 function placerBank(P,item,mk,spMk,o){
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why}),tr=plcTree(P,item),cap=i=>MKS[i][1],SS=[];
   if(!tr.ok)return tr;
-  const ch=tr.ch,n=ch.length,G=PLC_G||o.G||1,Bn=tr.two?tr.two.B:[],topB=Bn.length?Bn[Bn.length-1].item:(tr.two&&tr.two.rawB);
-  if(tr.two&&G>1)return no("Bank: a 2-input stage uses one band only");
+  const ch=tr.ch,n=ch.length,G=o.G||PLC_G||1,Bn=tr.two?tr.two.B:[],topB=Bn.length?Bn[Bn.length-1].item:(tr.two&&tr.two.rawB);
   for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:tr.raw)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null)),eI2=tr.two&&q===n-1?P.edges.find(e=>e.from===topB&&e.to===nd.item):null;
     const S=plcStage(nd,eI,eU,mk,spMk,eI2);if(!S.ok)return S;SS.push(S)}
   if(tr.two&&!Bn.length)return no("Bank: a raw input straight into a 2-input machine is not built yet");
@@ -119,7 +118,6 @@ function placerBank(P,item,mk,spMk,o){
   for(let q=0;q<n;q++){const d0=dist(Ns[q],t0s[q])[0]*Math.max(SS[q].inF,SS[q].two?SS[q].two.inF2:0);if(cap(spMk)<d0-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(d0)+"/min): set the splitter Mk higher")}
   const tbs=t0s.map(t=>Math.ceil(t/G));
   for(let q=0;q<n;q++)if(G*tbs[q]>Ns[q])return no("band count "+G+" does not fit "+Ns[q]+" machines");
-  if(n>1&&Ns.some(N=>N%G))return no("band count "+G+" does not split "+Ns.join("+")+" machines evenly: each band is a full copy of the chain");   // ponytail: bands must be equal copies or the stages starve
   const alls=SS.map((S,q)=>dist(Ns[q],G*tbs[q])),nH=[0];   // nH[q]=hub containers per band between stage q-1 and q
   for(let q=1;q<n;q++){const a=tbs[q-1],b=tbs[q],hq=Math.max(Math.ceil(a/ps),Math.ceil(b/ps));if(hq>Math.min(a,b))return no("Hub between stages "+q+" and "+(q+1)+": "+a+" and "+b+" trunks cannot share "+hq+" hub containers ("+ps+" ports a side): pick a higher belt Mk or a bigger container");nH.push(hq)}
   const offs=(t,k,bal,pt)=>{const r=[];if(bal)dist(t,k).forEach((c,j)=>{for(let p=0;p<c;p++)r.push(j*bh+pt[p].y)});else for(let i=0;i<t;i++)r.push(Math.floor(i/ps)*bh+pt[i%ps].y);return r};
@@ -145,19 +143,21 @@ function placerBank(P,item,mk,spMk,o){
       plcBanks({S:g.S,cnt:g.cnt,X0,fRow:g.fRow,lRow:g.lRow,Y0:g.Y0,R:g.R,up:g.up,xf,xe,bc:PLC_BELT[mk],mk},it);
       for(let j=0;j<g.nOut;j++){const y=g.Bo+j*bh;it.push(bx(xe,y,[]));if(q===n-1&&!o.mod&&!o.feedOut)it.push(bx(xe+bw+1,y,[]))}
       if(q===n-1&&!o.feedOut)g.oo.forEach(r=>{it.push(bt(xe+bw,g.Bo+r));if(o.mod)for(let xx=xe+bw+1;xx<xe+2*bw+1;xx++)it.push(bt(xx,g.Bo+r))})});
+    // 2-input: this band's share of the B chain (its own copy of the B planner, machines and flows scaled to the band), on the consumer feed side (below an up stage, above a down stage), right-aligned at the consumer input hub
+    if(tr.two){
+      const cI=n-1,gC=gs[cI],hC=hz[cI],nodesB={};
+      const bad=Bn.find(nd=>nd.machines<G);if(bad)return no("band count "+G+" does not fit "+bad.machines+" machines of "+plnNm(bad.item));
+      Bn.forEach(nd=>nodesB[nd.item]={...nd,machines:dist(nd.machines,G)[b]});
+      const eB=P.edges.find(e=>e.from===topB&&e.to===ch[cI].item),bset=new Set(Bn.map(nd=>nd.item)),fB=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
+      const PB={raw:P.raw.filter(r=>r.item===tr.two.rawB),nodes:nodesB,cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||e.from===tr.two.rawB)&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}]).map(e=>({...e,flow:e.flow*fB}))};
+      const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null});
+      if(!rB.ok)return rB;
+      const bi=it.slice(i0),dx=hz[cI-1].xe-rB.feed.x,y0=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rB.h;
+      rB.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y0}));
+      plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);
+    }
     const sl=it.slice(i0),mn=Math.min(...sl.map(c=>c.y)),mx=Math.max(...sl.map(c=>c.y+dim(c).h));
     sl.forEach(c=>{c.y+=oy-mn});oy+=mx-mn+1}   // band min y -> oy, spare row between bands
-  // 2-input: the B chain is laid out by this same planner (its last hub feeds the consumer B trunks), on the consumer feed side (below an up stage, above a down stage), right-aligned at the consumer input hub
-  if(tr.two){
-    const cI=n-1,gC=gb[0][cI],hC=hz[cI],nodesB={};Bn.forEach(nd=>nodesB[nd.item]=nd);
-    const eB=P.edges.find(e=>e.from===topB&&e.to===ch[cI].item),bset=new Set(Bn.map(nd=>nd.item));
-    const PB={raw:P.raw.filter(r=>r.item===tr.two.rawB),nodes:nodesB,cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||e.from===tr.two.rawB)&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}])};
-    const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null});
-    if(!rB.ok)return rB;
-    const dx=hz[cI-1].xe-rB.feed.x,y0=gC.up?Math.max(...it.map(c=>c.y+dim(c).h))+2:Math.min(...it.map(c=>c.y))-2-rB.h;
-    rB.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y0}));
-    plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);
-  }
   const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
   const last=n-1,T=ch[last],N=Ns[last],b0=gb[0],hubs=G*nH.reduce((a,c)=>a+c,0),nS=G*b0[0].nIn,nK=G*b0[last].nOut;
   const nt=["Makes "+plnR2(N*T.pmach)+"/min (target "+plnR2(T.rate)+")"];
@@ -170,12 +170,14 @@ function placerBank(P,item,mk,spMk,o){
     for(let q=0;q<n;q++)nt.push("Stage "+(q+1)+" "+plnNm(ch[q].item)+": "+Ns[q]+" machines, "+G*tbs[q]+" trunk"+(G*tbs[q]>1?"s":"")+" ("+alls[q].join("+")+"), "+Math.max(...gb.map(g=>g[q].R))+" rows");
     for(let q=1;q<n;q++)nt.push("Hub container between stages: "+plnR2(P.edges.find(e=>e.from===ch[q-1].item&&e.to===ch[q].item).flow/(G*nH[q]))+"/min (max "+PLC_SRC+")"+(G*nH[q]>1?"; "+G*nH[q]+" hub containers stacked":""));
     if(tr.two)nt.push("Two inputs into "+plnNm(ch[n-1].item)+": A "+plnNm(ch[n-2].item)+" (main chain) + B "+plnNm(topB)+" ("+Bn.length+" stage"+(Bn.length>1?"s":"")+", own band)");
-    if(G>1)nt.push(G+" band(s), each a full copy of the chain, spare belt row between bands");
+    if(G>1)nt.push(G+" band(s) (machine counts may differ by 1 between bands), spare belt row between bands");
   }
   if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
   const W=Math.max(...items.map(b=>b.x+dim(b).w)),H=Math.max(...items.map(b=>b.y+dim(b).h));
   const feed=o.feedOut?{x:hz[n-1].xe-mnx,rows:gb[0][n-1].feedRows.map(y=>y-mny)}:null;
-  return{ok:true,items,lanes:G*tbs[last],per:alls[last],makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:G*tbs[last],rows:Math.max(...gb.flat().map(g=>g.R)),nS,nK,ps,bands:G,tb:tbs[last],t0:Math.max(...t0s),cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o},tbs,stages:n,hubs,nIn:G*tbs[0],nOut:G*tbs[last],feed};
+  const bandSum=q=>{const s=[];for(let b=0;b<G;b++)s.push(alls[q].slice(b*tbs[q],(b+1)*tbs[q]).reduce((a,c)=>a+c,0));return s.every(v=>v===s[0])};
+  const even=SS.every((_,q)=>bandSum(q))&&Bn.every(nd=>nd.machines%G===0);   // every band holds the same machines per stage (uneven = fallback, see placerTile)
+  return{ok:true,items,lanes:G*tbs[last],per:alls[last],makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:G*tbs[last],rows:Math.max(...gb.flat().map(g=>g.R)),nS,nK,ps,bands:G,tb:tbs[last],t0:Math.max(...t0s),cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o},tbs,stages:n,hubs,nIn:G*tbs[0],nOut:G*tbs[last],feed,even};
 }
 function placerPlan(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0,pr=plnProto(),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
@@ -342,8 +344,8 @@ function placerTile(L,ok){
       if(!L2.ok){why=L2.why;continue}
       const r=placerCut(L2,cls);if(!r.ok){why=r.why;continue}
       r.G=G;r.L=L2;
-      const sq=q=>Math.abs(q.cols-q.rows);
-      if(!best||r.blocks.length<best.blocks.length||(r.blocks.length===best.blocks.length&&(sq(r)<sq(best)||(sq(r)===sq(best)&&G<best.G))))best=r;
+      const sq=q=>Math.abs(q.cols-q.rows),ev=q=>q.L.even!==false;   // even bands first (existing plans unchanged); uneven bands only when no even band count fits
+      if(!best||(ev(r)&&!ev(best))||(ev(r)===ev(best)&&(r.blocks.length<best.blocks.length||(r.blocks.length===best.blocks.length&&(sq(r)<sq(best)||(sq(r)===sq(best)&&G<best.G))))))best=r;
     }});
   return best||{ok:false,why:"Does not fit: "+why};
 }
