@@ -151,7 +151,7 @@ PF_BUILD.pfLine=(n,box,mk,item,len,wall)=>{
 const pfLine=(n,box,mk,item,len,wall)=>pfPrefab('pfLine',[n,box,mk,item,len,wall]);
 // COMPOSE (step 6, single stage only, behind PLC_PREFAB): one COL column of all machines (pfCol, m = machines), one sink container (the collector). Refuses growth, multi-stage (old path). Returns the placerLayoutA shape (items, w, h, pitch, mod, box, mk, lanes, per, makes, note).
 let PLC_PREFAB=false;   // test hook: flip on in the page; off = old path only
-// COLUMNS (step 6A): sizes[] = machines per column (pfCol each), side by side (seam cols make a 2-cell gap). Each column's own sink box is removed; its collector stub goes north into one shared out row at row Rb (= the out box port row) that runs east into ONE out container. Columns sit one row lower (SH = Rb+1). Inputs stay per-column infinite source containers (not aggregated). Out total must fit one belt (out stack not built).
+// COLUMNS (step 6A): sizes[] = machines per column (pfCol each), side by side (seam cols make a 2-cell gap). Each column's own sink box is removed; its collector stub goes north into one shared out row at row Rb (= the out box port row) that runs east into ONE out container. Columns sit one row lower (SH = Rb+1). Inputs stay per-column infinite source containers (not aggregated). Out total must fit one belt (out stack not built). STEP 6B: pfCompose caps machines per column so the column fits the floor height (h+SH<=30); a wider layout is cut by placerTile at the seams.
 function pfColumns(cls,k,flows,sizes,mk,outFlow){
   const no=why=>({ok:false,why}),bc=PLC_BELT[mk],bw=def(PLC_BOX).w;
   if(outFlow>MKS[mk][1])return no('output above belt cap: out stack not built');
@@ -164,7 +164,7 @@ function pfColumns(cls,k,flows,sizes,mk,outFlow){
     xs.push(xC+x);x+=C.w;
   }
   const xo=x;
-  for(let c=Math.min(...xs);c<=xo+pw.x;c++)it.push({cls:bc,x:c,y:Rb,rot:0});   // shared out row, east into the out container's W port
+  for(let c=Math.min(...xs);c<=xo+pw.x+pw.nx;c++)it.push({cls:bc,x:c,y:Rb,rot:0});   // shared out row, east into the out container's W port
   it.push({cls:PLC_BOX,x:xo,y:0,rot:0,ct:[]});
   const minY=Math.min(...it.map(q=>q.y));
   const items=it.map(q=>({...q,y:q.y-Math.min(0,minY)}));
@@ -181,7 +181,10 @@ function pfCompose(P,item,mk,spMk,o={}){
   const flows=T.rec.i.map(([x])=>({item:x,flow:edge(x).flow/N}));
   const m=Math.min(...flows.map(f=>Math.floor(cap/f.flow+1e-9)));   // machines one trunk per input can feed
   if(!(m>=1))return no('one machine input above belt cap (old path raises the Mk)');
-  const sizes=[];for(let r=N;r>0;r-=m)sizes.push(Math.min(m,r));
+  const Fh=floorRect({cls:plcCls(PL_STD[PL_STD.length-1]),x:0,y:0,h:0,rot:0}).h,pwb=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W'),SH=pwb?pwb.y+1:0;   // same SH as pfColumns
+  let mh=Math.min(m,N);
+  while(mh>1){const C=pfCol(cls,k,flows,mh,mk);if(C.ok===false||C.h+SH<=Fh)break;mh--}   // ponytail: linear scan, m is small
+  const sizes=[];for(let r=N;r>0;r-=mh)sizes.push(Math.min(mh,r));
   const A=sizes.length===1?pfCol(cls,k,flows,N,mk):pfColumns(cls,k,flows,sizes,mk,P.edges.find(e=>e.to==null).flow);
   if(A.ok===false)return no(A.why);
   const rec=rk(T.rec),items=A.items.map(q=>({h:0,pid:0,...q,rec:q.cls===cls?rec:q.rec}));
