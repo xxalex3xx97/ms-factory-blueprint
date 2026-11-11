@@ -237,7 +237,7 @@ function pfChain(P,item,mk,spMk,o={}){
       const hs=C.items.filter(q=>isHead(q)&&q.ct[0].item===i),k0=nUse.get(i)||0;
       if(k0+hs.length>2)return no('more than two consumers of one stage (not built)');
       nUse.set(i,k0+hs.length);
-      hs.forEach((h,t)=>routes.push({sx:sink.get(i).x+k0+t,tx:h.x+dx,item:i,tTop:Math.min(...C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.x===h.x).map(q=>q.y))}));
+      hs.forEach((h,t)=>routes.push({sx:sink.get(i).x+k0+t,tx:h.x+dx,item:i,tTop:Math.min(...C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.y>0&&q.x===h.x).map(q=>q.y))}));
     }
     if(y===item){ports.push({edge:'N',off:sk.x+dx,dir:'out',belts:1,slot:-1,mk});makes=N*T.pmach}
     per.push(N);x0=dx+Math.max(C.w,...C.items.map(q=>q.x+dim(q).w))+PF_GAP;

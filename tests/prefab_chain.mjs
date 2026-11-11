@@ -22,6 +22,7 @@ const cases = [
   {name: 'Magnetic Coils', rate: 20},   // 2 stages, 1 + 1 machines
   {name: 'Magnetic Coils', rate: 30},   // 2 stages, 2 + 1 machines
   {name: 'Advanced Circuits', rate: 5},   // multi-input + fan-out tree (Basic Circuits feeds Detector Array and AC)
+  {name: 'Advanced Circuits', rate: 10},   // multi-column Basic Circuits stage, corridors crossing out rows (vertical UG)
 ];
 const known = [
   {name: 'Advanced Circuits', rate: 40, why: 'above one belt'},
