@@ -104,6 +104,10 @@ function plcBanks(g,it){
 // 2-input: the B trunk of each consumer trunk (column TB = x0+w+4) from its B feed row frB to the last yb row, splitters on yb rows, and the B feed belt along frB
 function plcTwoTB(g,it){
   const {S,cnt,X0,Y0,R,up,xf,frB,bc}=g,w=S.w,h=S.h,P=S.pitch||h,yb=S.two.yb,sc=S.sc,s=up?-1:1,vr=up?3:1,my=r=>up?Y0+(R-1-r)*P:Y0+r*P;
+  // extra feed rows (the sub-band has more trunks than the consumer): side-load each into a consumer feed row through a short belt at column xf+1+j
+  frB.slice(cnt.length).forEach((e,j)=>{const t=frB[j%cnt.length],xc=xf+1+j,sg=t>e?1:-1,rv=sg>0?1:3;
+    for(let x=xf;x<xc;x++)it.push({cls:bc,x,y:e,h:0,rot:0,pid:0});
+    for(let y=e;y!==t;y+=sg)it.push({cls:bc,x:xc,y,h:0,rot:rv,pid:0})});
   cnt.forEach((n,k)=>{
     const TB=X0[k]+w+4,nl=Math.ceil(n/2),ysb=my(nl-1)+yb,sp=new Set(Array.from({length:nl},(_,r)=>my(r)+yb));
     for(let y=frB[k];up?y>=ysb:y<=ysb;y+=s)it.push(sp.has(y)?{cls:sc,x:TB,y,h:0,rot:vr,pid:0,off:[]}:{cls:bc,x:TB,y,h:0,rot:vr,pid:0});
@@ -163,13 +167,14 @@ function placerBank(P,item,mk,spMk,o){
   const alls=SS.map((S,q)=>dist(Ns[q],G*tbs[q])),nH=[0];   // nH[q]=hub containers per band between stage q-1 and q
   for(let q=1;q<n;q++){const a=tbs[q-1],b=tbs[q],hq=Math.max(Math.ceil(a/ps),Math.ceil(b/ps));if(hq>Math.min(a,b))return no("Hub between stages "+q+" and "+(q+1)+": "+a+" and "+b+" trunks cannot share "+hq+" hub containers ("+ps+" ports a side): pick a higher belt Mk or a bigger container");nH.push(hq)}
   const offs=(t,k,bal,pt)=>{const r=[];if(bal)dist(t,k).forEach((c,j)=>{for(let p=0;p<c;p++)r.push(j*bh+pt[p].y)});else for(let i=0;i<t;i++)r.push(Math.floor(i/ps)*bh+pt[i%ps].y);return r};
+  const FT=o.feedOut?(o.wide?Math.max(o.feedOut.nT,tbs[n-1]):o.feedOut.nT):0;   // wide retry: feed rows = the sub-band's own trunks (extra rows are merged into the consumer rows by plcTwoTB)
   const geo=b=>{const gs=[];let B=0;
     for(let q=0;q<n;q++){const S=SS[q],cnt=alls[q].slice(b*tbs[q],(b+1)*tbs[q]),nT=cnt.length,R=Math.ceil(cnt[0]/2),up=q%2===1;
-      const nIn=q?nH[q]:Math.ceil(nT/ps),nOut=q<n-1?nH[q+1]:(o.feedOut?Math.ceil(o.feedOut.nT/ps):Math.ceil(nT/ps));
+      const nIn=q?nH[q]:Math.ceil(nT/ps),nOut=q<n-1?nH[q+1]:(o.feedOut?Math.ceil(FT/ps):Math.ceil(nT/ps));
       const oi=offs(nT,nIn,q>0,cE),oo=offs(nT,nOut,q<n-1||!!o.feedOut,cW);
       const E=S.three?2:0,T1=S.three?1:0,HS=(R-1)*(S.pitch||S.h)+S.h,Y0=up?B+oi[0]-HS-T1:B+oi[nT-1]+1+E,Yend=Y0+HS+(up?0:T1),Bo=up?Y0-1-E-oo[nT-1]:Yend-oo[0],ix=k=>up?k:nT-1-k;
       const ge={S,cnt,nT,R,up,nIn,nOut,oi,oo,Y0,Bi:B,Bo,fRow:cnt.map((_,k)=>B+oi[ix(k)]),lRow:cnt.map((_,k)=>Bo+oo[ix(k)])};
-      if(q===n-1&&o.feedOut){const oiF=offs(o.feedOut.nT,nOut,true,cE);ge.feedRows=Array.from({length:o.feedOut.nT},(_,k)=>Bo+oiF[o.feedOut.up?k:o.feedOut.nT-1-k])}   // B chain: its out hub E ports feed the consumer B trunks
+      if(q===n-1&&o.feedOut){const oiF=offs(FT,nOut,true,cE);ge.feedRows=Array.from({length:FT},(_,k)=>Bo+oiF[o.feedOut.up?k:FT-1-k])}   // B chain: its out hub E ports feed the consumer B trunks
       gs.push(ge);B=Bo}
     return gs};
   const it=[],sg=o.seg||plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo,undefined,o.pad),hz=[];let xs=0;
@@ -193,7 +198,8 @@ function placerBank(P,item,mk,spMk,o){
     if(q<n-1){xf=xe+bw;x=xe+bw+1}}   // junction q: one hub at xe (out side of stage q = in side of stage q+1); feeders start xe+bw
   if(sg.bad)return no(sg.bad);
   const gb=[];let oy=0,sh0=0;
-  for(let b=0;b<G;b++){let gs;try{gs=geo(b)}catch(e){return no("Bank: a hub needs more ports than a box side has: pick a higher belt Mk or a bigger buffer")}   // more trunks per hub than box ports
+  for(let b=0;b<G;b++){let gs;try{gs=geo(b)}catch(e){if(o.feedOut&&!o.wide)return placerBank(P,item,mk,spMk,{...o,wide:1});   // B/C sub-band hub needs more ports than a side: retry with one feed row per own trunk (extra rows merged)
+    return no("Bank: a hub needs more ports than a box side has: pick a higher belt Mk or a bigger buffer")}   // more trunks per hub than box ports
     const i0=it.length;gb.push(gs);
     gs.forEach((g,q)=>{const {Xs,xf,X0,xe}=hz[q];
       if(q===0){for(let j=0;j<g.nIn;j++){const y=g.Bi+j*bh;if(!o.mod)it.push(bx(Xs,y,[{item:tr.raw,n:0,inf:true}]));it.push(bx(Xs+bw+1,y,[]))}
