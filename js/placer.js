@@ -148,6 +148,7 @@ function placerBank(P,item,mk,spMk,o){
   for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:tr.raw)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null)),eI2=tr.two&&q===n-1?P.edges.find(e=>e.from===topB&&e.to===nd.item):null,eI3=tr.three&&q===n-1?P.edges.find(e=>e.from===topC&&e.to===nd.item):null;
     const S=plcStage(nd,eI,eU,mk,spMk,eI2,eI3);if(!S.ok)return S;SS.push(S)}
   if(G>1&&tr.three)SS.forEach(S=>{S.N=Math.ceil(S.N/G)*G});   // 3 inputs: every band gets the same machine count (round up, never less)
+  if(o.wantT&&o.feedOut){const L=SS[n-1];if(L.N<=o.wantT*L.m)L.N=o.wantT*L.m}   // B/C sub-band: exactly wantT trunks in its last stage (machines rounded up), so its feed rows match the consumer's trunks
   SS.forEach(S=>{S.sp=0;if(S.two&&!S.three&&o.fit&&o.fit.fw&&S.Wb>o.fit.fw){S.sp=4;S.Wb+=4}});   // spacer = UG entrance+exit pair with 1 plain belt of clearance each side, so nothing but straight east belts touches the wall cut
   if(tr.two&&!Bn.length)return no("Bank: a raw input straight into a 2-input machine is not built yet");
   const cp=plcPp(BX,0),cE=cp.filter(p=>p.nx===1).sort((a,b)=>a.y-b.y),cW=cp.filter(p=>p.nx===-1).sort((a,b)=>a.y-b.y),seq=a=>a.every((p,i)=>p.y===a[0].y+i);
@@ -158,8 +159,7 @@ function placerBank(P,item,mk,spMk,o){
   const ps=Math.max(1,Math.min(cE.length,cW.length,Math.floor(PLC_SRC/cap(mk))));
   const Ns=SS.map(S=>S.N),t0s=Ns.map((N,q)=>Math.ceil(N/SS[q].m));
   for(let q=0;q<n;q++){const d0=dist(Ns[q],t0s[q])[0]*Math.max(SS[q].inF,SS[q].two?SS[q].two.inF2:0,SS[q].three?SS[q].three.inF3:0);if(cap(spMk)<d0-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(d0)+"/min): set the splitter Mk higher")}
-  const tbs=t0s.map(t=>Math.ceil(t/G));
-  for(let q=0;q<n;q++)if(G*tbs[q]>Ns[q])return no("band count "+G+" does not fit "+Ns[q]+" machines");
+  const tbs=t0s.map(t=>Math.ceil(t/G));  for(let q=0;q<n;q++)if(G*tbs[q]>Ns[q])return no("band count "+G+" does not fit "+Ns[q]+" machines");
   const alls=SS.map((S,q)=>dist(Ns[q],G*tbs[q])),nH=[0];   // nH[q]=hub containers per band between stage q-1 and q
   for(let q=1;q<n;q++){const a=tbs[q-1],b=tbs[q],hq=Math.max(Math.ceil(a/ps),Math.ceil(b/ps));if(hq>Math.min(a,b))return no("Hub between stages "+q+" and "+(q+1)+": "+a+" and "+b+" trunks cannot share "+hq+" hub containers ("+ps+" ports a side): pick a higher belt Mk or a bigger container");nH.push(hq)}
   const offs=(t,k,bal,pt)=>{const r=[];if(bal)dist(t,k).forEach((c,j)=>{for(let p=0;p<c;p++)r.push(j*bh+pt[p].y)});else for(let i=0;i<t;i++)r.push(Math.floor(i/ps)*bh+pt[i%ps].y);return r};
@@ -208,9 +208,8 @@ function placerBank(P,item,mk,spMk,o){
       Bn.forEach(nd=>nodesB[nd.item]={...nd,machines:tr.three?Math.ceil(nd.machines/G):dist(nd.machines,G)[b]});
       const eB=P.edges.find(e=>e.from===topB&&e.to===ch[cI].item),bset=new Set(Bn.map(nd=>nd.item)),fB=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
       const PB={raw:P.raw.filter(r=>r.item===tr.two.rawB),nodes:nodesB,cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||e.from===tr.two.rawB)&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}]).map(e=>({...e,flow:e.flow*fB}))};
-      const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null});
-      if(!rB.ok)return rB;
-      const bi=it.slice(i0),dx=hz[cI-1].xe-rB.feed.x,y0=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rB.h;
+      const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null,wantT:tbs[cI]});
+      if(!rB.ok)return rB;      const bi=it.slice(i0),dx=hz[cI-1].xe-rB.feed.x,y0=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rB.h;
       rB.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y0}));
       plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);
     }
@@ -220,7 +219,7 @@ function placerBank(P,item,mk,spMk,o){
       const frCk=[];
       for(let k=0;k<T3;k++){const nodesC={};Cn.forEach(nd=>nodesC[nd.item]={...nd,machines:Math.ceil(nd.machines/(G*T3))});
         const PC={raw:P.raw.filter(r=>r.item===tr.three.rawC),nodes:nodesC,cycle:false,edges:P.edges.filter(e=>(setC.has(e.from)||e.from===tr.three.rawC)&&e.to!==ch[cI].item).concat([{from:topC,to:null,flow:eC.flow}]).map(e=>({...e,flow:e.flow*fC/T3}))};
-        const rC=placerBank(PC,topC,mk,spMk,{...o,G:1,feedOut:{nT:1,up:gC.up},fit:null});
+        const rC=placerBank(PC,topC,mk,spMk,{...o,G:1,feedOut:{nT:1,up:gC.up},fit:null,wantT:1});
         if(!rC.ok)return rC;
         const bi=it.slice(i0),dx=hz[cI-1].xe-rC.feed.x,y1=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rC.h;
         rC.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y1}));
