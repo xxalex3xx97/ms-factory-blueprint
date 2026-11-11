@@ -88,6 +88,7 @@ function plcChain(P,item){
 // shape of a plan for the layout: single-input chain (plcChain, unchanged) or a 2-input final stage fed by two single-input chains
 function plcTree(P,item){
   const no=why=>({ok:false,why}),T=P.nodes[item];
+  const G=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(G)return no("Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(G.item)+": the feedback layout (output back into the input) is not built yet; the planned machines and seed are in the plan");
   if(P.cycle)return no("Step 1: only single-input single-recipe plans. Recipe loop: "+(P.loop||[]).map(plnNm).join(" -> ")+": no recipe choice breaks it");
   if(!T||!T.rec)return no("Step 1: only single-input single-recipe plans");
   if(T.rec.i.length===1){const ch=plcChain(P,item);return ch?{ok:true,ch,two:null,raw:P.raw[0].item}:no("Step 1: only single-input single-recipe plans")}
@@ -339,7 +340,7 @@ function placerLayoutX(P,item,mk,spMk,o={}){
   if(L3.ok){L3.note=[...L3.note,"More machines than planned: one "+MKS[mk][0]+" belt cannot carry the planned input of one machine, so the machine count is rounded up (each machine gets less)"];return L3}
   return L;
 }
-function placerLayoutA(P,item,mk,spMk,o={}){P=plcUnshare(P,item);
+function placerLayoutA(P,item,mk,spMk,o={}){const GR=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GR.item)+": the feedback layout (output back into the input) is not built yet; the planned machines and seed are in the plan"};P=plcUnshare(P,item);
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why});
   const tr=plcTree(P,item);if(!tr.ok)return no(tr.why);
   if(tr.two||tr.ch.length>1)return placerBank(P,item,mk,spMk,o);

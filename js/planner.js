@@ -21,9 +21,11 @@ function planOnce(item,rate,mk,ovr,pick,opts,avoid){
     n.rate+=rt;
     const pref=[find(it),...(by.get(it)||[])].filter(Boolean),c=(avoid&&stack.size?pref.find(x=>!x.r.i.some(([y])=>stack.has(y))):null)||find(it);if(!c)return;
     n.rec=c.r;n.crafter=c.c;stack.add(it);
-    c.r.i.forEach(([x,q])=>{const f=q*rt/c.r.o[1];edges.push({from:x,to:it,flow:f});ex(x,f,stack)});
+    // growth recipe (the item is one of its own inputs and the output is bigger): net output per cycle = out - in; the growth input is fed back from the output (no edge); other inputs scale with the cycles
+    const gr=c.r.i.find(([x])=>x===it),net=gr?c.r.o[1]-gr[1]:0,G=net>0;
+    c.r.i.forEach(([x,q])=>{if(G&&x===it)return;const f=G?q*rt/net:q*rt/c.r.o[1];edges.push({from:x,to:it,flow:f});ex(x,f,stack)});
     stack.delete(it);
-    n.pmach=c.r.o[1]*1800/c.r.t;   // items/min per machine (raw, rounded only in display)
+    n.pmach=(G?net:c.r.o[1])*1800/c.r.t;   // items/min per machine (raw, rounded only in display)
     n.machines=n.rate>0?Math.ceil(n.rate/n.pmach-1e-9):0;
     n.util=n.machines?n.rate/(n.machines*n.pmach):0;
   };

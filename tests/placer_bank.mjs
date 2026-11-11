@@ -109,6 +109,7 @@ try {
     for (const mk of [0, 1, 2]) for (const item of plnBy(false).keys()) {
       const P0 = plan(item, 1, mk, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
       if (!P0 || P0.raw.length !== 1 || Object.values(P0.nodes).filter(n => n.rec).length !== 1) continue;
+      if (Object.values(P0.nodes).some(n => n.rec && n.rec.i.some(([x]) => x === n.item))) continue;   // growth recipes (self-fed) have no bank layout yet
       const T = P0.nodes[item], eI = P0.edges.find(e => e.from === P0.raw[0].item && e.to === item), eO = P0.edges.find(e => e.to == null);
       if (!T || !eI || !eO) continue;
       const m = Math.floor(MKS[mk][1] / Math.max(T.pmach, T.pmach * eI.flow / eO.flow) + 1e-9);
