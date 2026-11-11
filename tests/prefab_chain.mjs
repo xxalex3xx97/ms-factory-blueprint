@@ -41,7 +41,8 @@ for (const c of cases) {
     const boxes = L.items.map((b, i) => ({b, id: i + 1})).filter(q => q.b.cls === PLC_BOX);
     const empty = boxes.filter(q => q.b.ct && !q.b.ct.length);
     const hubs = Math.max(0, L.per.length - 1);   // one hub between each pair of stages
-    const collectors = empty.length - hubs;
+    const outs = (L.ports || []).filter(p => p.dir === 'out');
+    const collectors = outs.length ? L.items.filter(q => q.cls === PLC_BOX && q.ct && !q.ct.length && q.x === outs[0].off).length : 0;   // exactly one empty box at the out port x
     const sink = empty.reduce((a, q) => (a === null || q.b.x > a.b.x ? q : a), null);   // final collector = rightmost empty box
     const chk = pfCheck({items: L.items, w: L.w, h: L.h, ports: L.ports || []});
     S.blocks = L.items.map((b, i) => ({id: i + 1, cls: b.cls, x: b.x, y: b.y, h: 0, rot: b.rot, pid: 0, off: b.off, ct: b.ct ? b.ct.map(q => ({...q})) : undefined, rec: b.rec}));
