@@ -122,3 +122,30 @@ PF_BUILD.pfGrowth=(item,rate,mk,box)=>{
   return{proto:'pfGrowth',args:[item,rate,mk,box],w:L.w,h:L.h,items:L.items,ports:sinks.map((s,i)=>({edge:'S',off:s.x,dir:'out',belts:2,slot:i,mk})),fits:[],lanes:L.lanes,note:L.note};
 };
 const pfGrowth=(item,rate,mk,box)=>pfPrefab('pfGrowth',[item,rate,mk,box]);
+// HUB (step 5): n containers stacked (pitch h+1) at x 0, one port row each. face 'E' = source hub (item: infinite container, ports out east); face 'W' = sink hub (item null: empty container, ports in from west). Port rows = portsOf of the box (pe.y).
+PF_BUILD.pfHub=(n,box,mk,item,face)=>{
+  const d=def(box),pt=portsOf({cls:box,x:0,y:0,rot:0,off:[]}),pe=pt.find(p=>p.f==='E'),pw=pt.find(p=>p.f==='W');
+  if(!pe||!pw||pe.y!==pw.y)return{ok:false,why:'container W/E ports not aligned'};
+  const P=d.h+1,items=[],ports=[];
+  for(let i=0;i<n;i++){const y=i*P;items.push({cls:box,x:0,y,rot:0,ct:item?[{item,n:0,inf:true}]:[]});
+    ports.push({edge:face,off:y+pe.y,dir:item?'out':'in',belts:1,slot:i,mk})}
+  return{proto:'pfHub',args:[n,box,mk,item,face],w:d.w,h:(n-1)*P+d.h,items,ports,fits:[]};
+};
+const pfHub=(n,box,mk,item,face)=>pfPrefab('pfHub',[n,box,mk,item,face]);
+// WALL_X: one UG pair per row, entrance x 0 and exit x 3 (L=4 inclusive), cells 1..2 empty (the wall). Rows given by caller.
+PF_BUILD.pfWallX=(rows,mk)=>{const ug=PLC_UG[mk],items=[];rows.forEach(y=>items.push({cls:ug,x:0,y,rot:0},{cls:ug,x:3,y,rot:0}));return{proto:'pfWallX',args:[rows,mk],w:4,h:rows.length?Math.max(...rows)+1:0,items,ports:[],fits:[]}};
+const pfWallX=(rows,mk)=>pfPrefab('pfWallX',[rows,mk]);
+// LINE (step 5 test shape): source hub (n rows) -> n belts of len cells east -> optional WALL_X (4 cells, UG pair, centred) -> sink hub. Built from pfHub/pfWallX; belts are the only extra items.
+PF_BUILD.pfLine=(n,box,mk,item,len,wall)=>{
+  const d=def(box),bw=d.w,bc=PLC_BELT[mk],H=pfHub(n,box,mk,item,'E');
+  if(H.ok===false)return H;
+  const rows=H.ports.map(p=>p.off),X=bw+len;
+  const a=wall?Math.floor((len-4)/2):-1,wx=bw+a;   // wall cells wx..wx+3
+  const O=pfHub(n,box,mk,null,'W'),items=[...H.items];
+  const W=wall?pfWallX(rows,mk):null;
+  if(W)W.items.forEach(q=>items.push({...q,x:q.x+wx}));
+  for(const y of rows)for(let x=bw;x<X;x++){if(wall&&x>=wx&&x<=wx+3)continue;items.push({cls:bc,x,y,rot:0})}
+  O.items.forEach(q=>items.push({...q,x:q.x+X}));
+  return{proto:'pfLine',args:[n,box,mk,item,len,wall],w:X+bw,h:H.h,items,ports:[],fits:[],wall:wall?{x:wx,span:4}:null};
+};
+const pfLine=(n,box,mk,item,len,wall)=>pfPrefab('pfLine',[n,box,mk,item,len,wall]);
