@@ -38,7 +38,9 @@ function plcSpl(cls,rot){
   const ps=plcPp(cls,rot),e=dim({cls,rot}),f=rot===1?[0,1]:[0,-1],i=ps.find(p=>p.dir==="in"),o=ps.filter(p=>p.dir==="out");
   return i&&e.w===1&&e.h===1&&i.nx===-f[0]&&i.ny===-f[1]&&o.some(p=>p.nx===f[0]&&p.ny===f[1])&&o.some(p=>p.nx===1&&p.ny===0)&&o.some(p=>p.nx===-1&&p.ny===0)?{i,o}:null;
 }
-function plcStage(n,eI,eU,mk,spMk,eI2,eI3){
+// wrapper: adds act = the actual input per machine at the planned rate (what a trunk really carries)
+function plcStage(n,eI,eU,mk,spMk,eI2,eI3){const r=plcStageA(n,eI,eU,mk,spMk,eI2,eI3);if(r.ok){const NM=Math.max(1,n.machines);r.act=Math.max(eI.flow/NM,eI2?eI2.flow/NM:0,eI3?eI3.flow/NM:0)}return r}
+function plcStageA(n,eI,eU,mk,spMk,eI2,eI3){
   const no=why=>({ok:false,why}),cb=plnCb(n.crafter);if(!cb)return no("No machine builds "+plnNm(n.item));
   const d=def(cb.id),inF=n.pmach*eI.flow/eU.flow,inF2=eI2?n.pmach*eI2.flow/eU.flow:0,inF3=eI3?n.pmach*eI3.flow/eU.flow:0,m0=Math.floor(MKS[mk][1]/Math.max(n.pmach,inF,inF2,inF3)+1e-9);
   // a machine at full speed may need more than one belt carries; at the planned load it may not: one machine per trunk, running below full speed, when the actual input per machine fits the belt
@@ -125,8 +127,9 @@ function plcBanks(g,it){
 // 2-input: the B trunk of each consumer trunk (column TB = x0+w+4) from its B feed row frB to the last yb row, splitters on yb rows, and the B feed belt along frB
 function plcTwoTB(g,it){
   const {S,cnt,X0,Y0,R,up,xf,frB,bc}=g,w=S.w,h=S.h,P=S.pitch||h,yb=S.two.yb,sc=S.sc,s=up?-1:1,vr=up?3:1,my=r=>up?Y0+(R-1-r)*P:Y0+r*P;
-  // extra feed rows (the sub-band has more trunks than the consumer): side-load each into a consumer feed row through a short belt at column xf+1+j
-  frB.slice(cnt.length).forEach((e,j)=>{const t=frB[j%cnt.length],xc=xf+1+j,sg=t>e?1:-1,rv=sg>0?1:3;
+  // extra feed rows (the sub-band has more trunks than the consumer): the row runs east to the last consumer trunk's G column (TB-1-j, clear of the hub stack) and side-loads into the last consumer feed row
+  const TBl=X0[cnt.length-1]+w+4;
+  frB.slice(cnt.length).forEach((e,j)=>{const t=frB[cnt.length-1],xc=TBl-1-j,sg=t>e?1:-1,rv=sg>0?1:3;
     for(let x=xf;x<xc;x++)it.push({cls:bc,x,y:e,h:0,rot:0,pid:0});
     for(let y=e;y!==t;y+=sg)it.push({cls:bc,x:xc,y,h:0,rot:rv,pid:0})});
   cnt.forEach((n,k)=>{
@@ -197,7 +200,7 @@ function placerBank(P,item,mk,spMk,o){
   const bt=(x,y)=>({cls:PLC_BELT[mk],x,y,h:0,rot:0,pid:0}),bx=(x,y,ct)=>({cls:BX,x,y,h:0,rot:0,pid:0,ct});
   const ps=Math.max(1,Math.min(cE.length,cW.length,Math.floor(PLC_SRC/cap(mk))));
   const Ns=SS.map(S=>S.N),t0s=Ns.map((N,q)=>Math.ceil(N/SS[q].m));
-  for(let q=0;q<n;q++){const d0=dist(Ns[q],t0s[q])[0]*Math.max(SS[q].inF,SS[q].two?SS[q].two.inF2:0,SS[q].three?SS[q].three.inF3:0);if(cap(spMk)<d0-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(d0)+"/min): set the splitter Mk higher")}
+  for(let q=0;q<n;q++){const d0=dist(Ns[q],t0s[q])[0]*SS[q].act;if(cap(spMk)<d0-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(d0)+"/min): set the splitter Mk higher")}
   const tbs=t0s.map(t=>Math.ceil(t/G));  for(let q=0;q<n;q++)if(G*tbs[q]>Ns[q])return no("band count "+G+" does not fit "+Ns[q]+" machines");
   const alls=SS.map((S,q)=>dist(Ns[q],G*tbs[q])),nH=[0];   // nH[q]=hub containers per band between stage q-1 and q
   for(let q=1;q<n;q++){const a=tbs[q-1],b=tbs[q],hq=Math.max(Math.ceil(a/ps),Math.ceil(b/ps));if(hq>Math.min(a,b))return no("Hub between stages "+q+" and "+(q+1)+": "+a+" and "+b+" trunks cannot share "+hq+" hub containers ("+ps+" ports a side): pick a higher belt Mk or a bigger container");nH.push(hq)}
