@@ -48,6 +48,7 @@ try {
       const P = plan(item, 60, 0, {}, {}, {});
       const rec = Object.values(P.nodes).filter(n => n.rec);
       if (rec.length !== 1 || P.raw.length !== 1) continue;
+      if (Object.values(P.nodes).some(n => n.rec && n.rec.i.some(([x]) => x === n.item))) continue;   // growth items (self-fed) are tested in multi3
       const L = placerLayout(P, item, 0, 0);
       if (L.ok) out.push({item, N: P.nodes[item].machines});
     }
@@ -266,9 +267,9 @@ try {
   // ---- (14) multi-input recipe must be refused. ITEM_Xenoeukarya recipe takes Xenoeukarya + Biomass (2 ingredients) and passes the single-raw check.
   const xe = await pg.evaluate(() => {
     const P = plan('ITEM_Xenoeukarya', 60, 0, {}, {}, {}), L = placerLayout(P, 'ITEM_Xenoeukarya', 0, 0);
-    return {ok: L.ok, why: L.why || '', ingredients: P.nodes.ITEM_Xenoeukarya.rec.i.length};
+    return {ok: L.ok, why: L.why || '', note: (L.note || []).join(' '), ingredients: P.nodes.ITEM_Xenoeukarya.rec.i.length};
   });
-  chk('(14) two-ingredient recipe (ITEM_Xenoeukarya) refused, not laid out', xe.ok === false && /single-input/.test(xe.why), JSON.stringify(xe));
+  chk('(14) growth recipe (ITEM_Xenoeukarya, self-fed + Biomass) laid out by the growth lane with a Seed note', xe.ok === true && /Seed:/.test(xe.note), JSON.stringify(xe));
 
   // ---- (15) preview: Build shows preview only; Cancel hides; Build + Place starts the ghost
   await pg.evaluate(([item]) => {
