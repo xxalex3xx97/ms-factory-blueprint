@@ -34,6 +34,20 @@ function plcChain(P,item){
     if(!n||!n.rec||seen.has(it)||n.rec.i.length!==1)return null;
     seen.add(it);ch.unshift(n);it=n.rec.i[0][0]}
   return ch.length&&ch.length===Object.values(P.nodes).filter(n=>n.rec).length?ch:null;}
+// shape of a plan for the layout: single-input chain (plcChain, unchanged) or a 2-input final stage fed by two single-input chains
+function plcTree(P,item){
+  const no=why=>({ok:false,why}),T=P.nodes[item];
+  if(P.cycle||!T||!T.rec)return no("Step 1: only single-input single-recipe plans");
+  if(T.rec.i.length===1){const ch=plcChain(P,item);return ch?{ok:true,ch,two:null,raw:P.raw[0].item}:no("Step 1: only single-input single-recipe plans")}
+  if(T.rec.i.length!==2)return no("Bank: "+T.rec.i.length+" inputs per machine: only 1 or 2 are supported");
+  const side=top=>{const c=[],seen=new Set();let x=top;
+    for(;;){const n=P.nodes[x];if(!n)return null;if(!n.rec)return{c,raw:x};
+      if(seen.has(x)||n.rec.i.length!==1||P.edges.filter(e=>e.from===x).length!==1)return null;
+      seen.add(x);c.unshift(n);x=n.rec.i[0][0]}};
+  const [a,b]=T.rec.i.map(([x])=>side(x));
+  if(!a||!b)return no("Bank: an input chain is not a single-input chain (a shared intermediate or a deeper input)");
+  return{ok:true,ch:[...a.c,T],two:{B:b.c,rawB:b.raw},raw:a.raw};
+}
 function plcBanks(g,it){
   const {ML,MR,sc,w,h,cin,dk,rec}=g.S,{cnt,X0,fRow,lRow,Y0,R,up,xf,xe,bc}=g,s=up?-1:1,vr=up?3:1,Yb=Y0+R*h;
   const bt=(x,y,r)=>({cls:bc,x,y,h:0,rot:r,pid:0}),mc=(M,x,y)=>({cls:dk,x,y,h:0,rot:M.rot,pid:0,rec,off:M.off.map(p=>p.key)});
@@ -57,7 +71,9 @@ function plcSeg(fw,lo){const q={s:0,cuts:[],bad:"",put(x,wid,ctr){
 // floor size of a station block class + the shortest underground span (cells) the belt Mk can reach across a wall
 const plcFit=(cls,mk)=>{const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0});return{fw:f.w,fh:f.h,lo:Math.max(2,d.w*FC+2-def(PLC_UG[mk]).maxApart),lh:Math.max(2,d.h*FC+2-def(PLC_UG[mk]).maxApart)}};
 function placerBank(P,item,mk,spMk,o){
-  const BX=o.box||PLC_BOX,no=why=>({ok:false,why}),ch=plcChain(P,item),n=ch.length,cap=i=>MKS[i][1],SS=[];
+  const BX=o.box||PLC_BOX,no=why=>({ok:false,why}),tr=plcTree(P,item);if(!tr.ok)return tr;
+  if(tr.two)return no("Bank: 2-input stage not built yet");
+  const ch=tr.ch,n=ch.length,cap=i=>MKS[i][1],SS=[];
   for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:P.raw[0].item)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null));const S=plcStage(nd,eI,eU,mk,spMk);if(!S.ok)return S;SS.push(S)}
   const cp=plcPp(BX,0),cE=cp.filter(p=>p.nx===1).sort((a,b)=>a.y-b.y),cW=cp.filter(p=>p.nx===-1).sort((a,b)=>a.y-b.y),seq=a=>a.every((p,i)=>p.y===a[0].y+i);
   if(!cE.length||!cW.length||!seq(cE)||!seq(cW))return no("Bank: container E/W ports not found or not on consecutive rows");
@@ -120,8 +136,8 @@ function placerPlan(){
 // mk / spMk: 0-based MKS index (Mk1 = 0). o={box:container class, mod:bool}. Lanes: nL stacked copies of one row (machines rot 0, trunk y=-1 above, collector y=h below).
 function placerLayout(P,item,mk,spMk,o={}){
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why});
-  const ch=plcChain(P,item);if(!ch)return no("Step 1: only single-input single-recipe plans");
-  if(ch.length>1)return placerBank(P,item,mk,spMk,o);
+  const tr=plcTree(P,item);if(!tr.ok)return no(tr.why);
+  if(tr.two||tr.ch.length>1)return placerBank(P,item,mk,spMk,o);
   const T=P.nodes[item],N=T.machines,eIn=P.edges.find(e=>e.from===P.raw[0].item&&e.to===item),eOut=P.edges.find(e=>e.to==null);
   const m0=Math.floor(MKS[mk][1]/Math.max(T.pmach,T.pmach*eIn.flow/eOut.flow)+1e-9);   // machines one belt feeds
   if(!o.mod&&(PLC_BANK||o.bank||N>m0))return placerBank(P,item,mk,spMk,o);
