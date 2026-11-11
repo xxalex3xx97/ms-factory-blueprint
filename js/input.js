@@ -103,7 +103,9 @@ const end=e=>{
   if(rc){if(pasting){pasting=null;all();return}const b=hit(toCell(rc.x,rc.y));if(b){sel=new Set([b.id]);del();return}if(active){active=null;all();return}ctxOpen(e.clientX,e.clientY);return}
   if(k!=="pan")all();else draw();
 };
-cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end);
+cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end);cv.addEventListener("lostpointercapture",()=>{if(drag)end({type:"pointercancel"})});
+// release outside the canvas (or over the modal/chrome) ends the gesture too; end() is a no-op when no drag is active
+addEventListener("pointerup",e=>{if(drag)end(e)});addEventListener("pointercancel",e=>{if(drag)end(e)});addEventListener("blur",()=>{if(drag)end({type:"pointercancel"})});
 cv.addEventListener("wheel",e=>{
   // wide zoom range: the Layout<->Factory floor sync maps a Layout zoom to a 10x smaller floor zoom
   e.preventDefault();const p=pt(e),z0=V.z,z=Math.min(60,Math.max(.01,z0*(e.deltaY<0?1.12:1/1.12)));

@@ -31,6 +31,20 @@ check(r.ok && r.blocks > 0, 'search completes with a block layout (' + r.blocks 
 check(r.progHidden, 'progress bar hidden when the search is done');
 check(r.full < 200, 'full preview draw < 200 ms (' + r.full + ' ms)');
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
+// drag release: real mouse. Release over the canvas; then release outside the canvas (over the modal header); the view must stop following the mouse
+const box = await pg.locator('#plnPrevMap').boundingBox();
+const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+const ox = () => pg.evaluate(() => plcV.ox);
+await pg.mouse.move(cx, cy); await pg.mouse.down(); await pg.mouse.move(cx + 40, cy, {steps: 5}); await pg.mouse.up();
+const a1 = await ox();
+await pg.mouse.move(cx + 120, cy, {steps: 3});
+check(Math.abs((await ox()) - a1) < 0.5, 'release over the canvas ends the pan (view stays put on the next move)');
+await pg.mouse.move(cx, cy); await pg.mouse.down(); await pg.mouse.move(cx + 30, cy, {steps: 4});
+await pg.mouse.move(60, 40, {steps: 4}); await pg.mouse.up();
+const b1 = await ox();
+await pg.mouse.move(cx + 200, cy + 50, {steps: 3});
+check(Math.abs((await ox()) - b1) < 0.5, 'release outside the canvas ends the pan (view stays put on the next move)');
+check(Math.abs(b1 - a1) > 1, 'the drag did move the view before release');
 await br.close();
 console.log(fails ? 'FAILED ' + fails : 'PASS all');
 process.exit(fails || errs.length ? 1 : 0);

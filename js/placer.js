@@ -738,8 +738,12 @@ $("plnPrevMap").addEventListener("wheel",e=>{e.preventDefault();plcZ(plcP(e),e.d
 let plcSt=null;
 const plcM=$("plnPrevMap");
 plcM.addEventListener("pointerdown",e=>{plcM.setPointerCapture(e.pointerId);plcSt={x:e.clientX,y:e.clientY,ox:plcV.ox,oy:plcV.oy}});
-plcM.addEventListener("pointermove",e=>{if(!plcSt)return;plcV.ox=plcSt.ox+(e.clientX-plcSt.x);plcV.oy=plcSt.oy+(e.clientY-plcSt.y);plcDo()});
-const plcEnd=()=>{plcSt=null;plcCache=null;plcDo()};   // pan stopped: full repaintplcM.addEventListener("pointerup",plcEnd);plcM.addEventListener("pointercancel",plcEnd);
+plcM.addEventListener("pointermove",e=>{if(!plcSt)return;if(e.buttons===0){plcEnd();return}   // button already released (missed up outside): stop panning
+  plcV.ox=plcSt.ox+(e.clientX-plcSt.x);plcV.oy=plcSt.oy+(e.clientY-plcSt.y);plcDo()});
+const plcEnd=()=>{plcSt=null;plcCache=null;plcDo()};   // pan stopped: full repaint
+plcM.addEventListener("pointerup",plcEnd);plcM.addEventListener("pointercancel",plcEnd);plcM.addEventListener("lostpointercapture",plcEnd);
+// release outside the canvas (or over the modal chrome) must end the pan too
+window.addEventListener("pointerup",()=>{if(plcSt)plcEnd()});window.addEventListener("pointercancel",()=>{if(plcSt)plcEnd()});window.addEventListener("blur",()=>{if(plcSt)plcEnd()});
 $("plnZi").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1.25)};
 $("plnZo").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1/1.25)};
 $("plnZf").onclick=()=>placerFitView();
