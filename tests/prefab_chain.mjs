@@ -1,7 +1,7 @@
 // Prefab CHAIN (step 7): PLC_PREFAB on, single-input chains (Nickel Ore -> Nickel Plates (Refinery) -> Magnetic Coils (Assembler)).
 // Checks: prefab path used (L.prefab), placerTile ok, no overlap (ov 0), one collector (empty boxes minus the hub between stages),
 // sim: final sink rate over 30..60 s within 5% of the target rate.
-// KNOWN LIMITS (refused, old path): Advanced Circuits 40/min and Enzyme 60/min (multi-input stages; Enzyme also has a growth stage).
+// KNOWN LIMITS (refused, old path): Enzyme 60/min (growth stage not built in prefab).
 // Run:  node tests/prefab_chain.mjs     Exit code 1 on FAIL or page error.
 import {createRequire} from 'module';
 import path from 'path';
@@ -23,9 +23,9 @@ const cases = [
   {name: 'Magnetic Coils', rate: 30},   // 2 stages, 2 + 1 machines
   {name: 'Advanced Circuits', rate: 5},   // multi-input + fan-out tree (Basic Circuits feeds Detector Array and AC)
   {name: 'Advanced Circuits', rate: 10},   // multi-column Basic Circuits stage, corridors crossing out rows (vertical UG)
+  {name: 'Advanced Circuits', rate: 40},   // 5 out groups of one stage -> hub container (step 7f)
 ];
 const known = [
-  {name: 'Advanced Circuits', rate: 40, why: 'above one belt'},
   {name: 'Enzyme', rate: 60, why: 'growth not built'},
 ];
 for (const c of cases) {
