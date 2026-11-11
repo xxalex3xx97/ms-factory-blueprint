@@ -18,7 +18,7 @@ let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 const cases = [
   {name: "Advanced Circuits 10/min Mk2", rate: 10},
-  {name: "Assembler 3-input 20/min Mk2", rate: 20, asm: true},
+  {name: "Containment Coil 20/min Mk2", rate: 20, asm: true},
 ];
 for (const c of cases) {
   const r = await pg.evaluate(c => {
