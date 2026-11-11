@@ -407,17 +407,18 @@ function placerBlock(L,ok=[true,true,true]){
 }
 // spread a layout over several blocks of one type: cut it at free columns (a belt crossing = underground pair, entrance+exit = the two cells beside the cut, span <= maxApart), then cut lanes into rows of blocks
 // occupancy map cell -> item for a list of placed items (items in layout coordinates)
-function plcOcc(IT){const occ=new Map();IT.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set((b.x+i)+","+(b.y+j),b)});return occ}
+const K=(x,y)=>(x+2)*1048576+(y+2);   // occupancy key: numeric (string keys were the placerCut hot spot)
+function plcOcc(IT){const occ=new Map();IT.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set(K(b.x+i,b.y+j),b)});return occ}
 // can a wall be cut at column c (entrance c-1, exit c) through the items? returns the underground pairs' cells, or null
 function plcTryCut(IT,occ,h,bank,c){
     const isB=b=>!!b&&PLC_BELT.includes(b.cls);
     const mk=[];
-    for(let y=0;y<h;y++){const a=occ.get((c-1)+","+y),b=occ.get(c+","+y);
+    for(let y=0;y<h;y++){const a=occ.get(K(c-1,y)),b=occ.get(K(c,y));
       if(a&&a===b)return null;
       if(bank){   // bank: only east-flowing belt pairs cross the wall; empty cells and vertical belts are fine
         if(a&&b){
           if(!(isB(a)&&isB(b)&&a.rot===0&&b.rot===0))return null;
-          const sd=(q,dy)=>{const n=occ.get(q.x+","+(q.y+dy));return !!n&&isB(n)&&n.rot===(dy<0?1:3)};
+          const sd=(q,dy)=>{const n=occ.get(K(q.x,q.y+dy));return !!n&&isB(n)&&n.rot===(dy<0?1:3)};
           if(sd(a,-1)||sd(a,1)||sd(b,-1)||sd(b,1))return null;
           mk.push(a,b);
         }else if(a&&isB(a)&&a.rot===0)return null;   // belt flowing into nothing across the wall (a machine/box beside the wall is fine)
@@ -428,7 +429,7 @@ function plcTryCut(IT,occ,h,bank,c){
     }
     const ms=new Set(mk);
     for(const it of IT){if(isB(it))continue;
-      for(const p of portsOf(it)){if(!p.en)continue;const t=occ.get((p.x+p.nx)+","+(p.y+p.ny));if(!t||!ms.has(t))continue;
+      for(const p of portsOf(it)){if(!p.en)continue;const t=occ.get(K(p.x+p.nx,p.y+p.ny));if(!t||!ms.has(t))continue;
         if(p.ny!==0||p.nx!==(t.x===c-1?1:-1))return null}}
     return mk;
 }
@@ -437,7 +438,7 @@ function plcBlank(IT,p,k,h,mx){
   const occ=plcOcc(IT),out=IT.map(b=>({...b})),fill=[],isB=b=>!!b&&PLC_BELT.includes(b.cls);
   const uy={};IT.forEach(b=>{if(PLC_UG.includes(b.cls)&&(b.rot&1)===0)(uy[b.y]=uy[b.y]||[]).push(b)});   // a horizontal underground pair that straddles p grows by k: must stay within the Mk span
   for(const y in uy){const l=uy[y].sort((a,b)=>a.x-b.x);for(let i=0;i+1<l.length;i+=2){const a=l[i],b=l[i+1];if(a.x<p&&p<=b.x&&b.x-a.x+k+1>mx)return null}}
-  for(let y=0;y<h;y++){const A=occ.get((p-1)+","+y),B=occ.get(p+","+y);
+  for(let y=0;y<h;y++){const A=occ.get(K(p-1,y)),B=occ.get(K(p,y));
     if(A&&A===B)return null;
     if(B&&(PLC_UG.includes(B.cls)||(isB(B)&&B.rot===2)))return null;
     if(A&&B&&(A.rec||PLC_SPL.includes(A.cls)||PLC_UG.includes(A.cls)))return null;
@@ -455,7 +456,7 @@ function placerCut(L,cls){
   const mx=def(PLC_UG[L.mk]).maxApart,per=Math.floor((Fh+1)/L.pitch);
   if(!L.bank&&per<1)return{ok:false,why:(L.bank?"the factory is ":"one lane is ")+(L.pitch-1)+" cells tall, the "+nm+" floor is only "+Fh};
   const IT=L.items.map(b=>({...b}));let occ,Hh=L.h;   // working copies: a row gap shifts them in place
-  const mkOcc=()=>{occ=new Map();IT.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set((b.x+i)+","+(b.y+j),b)})};mkOcc();
+  const mkOcc=()=>{occ=new Map();IT.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set(K(b.x+i,b.y+j),b)})};mkOcc();
   const isB=b=>!!b&&PLC_BELT.includes(b.cls);
   const tryCut=c=>plcTryCut(IT,occ,L.h,L.bank,c);
   const cuts=[],ugs=[];let s=0;
@@ -480,9 +481,9 @@ function placerCut(L,cls){
   if(L.bank){   // bank: also cut rows (2D tiling); a vertical belt crossing a row wall = underground pair
     const spl=q=>!!q&&PLC_SPL.includes(q.cls),hz=q=>isB(q)&&(q.rot===0||q.rot===2);
     const tryRow=c=>{
-      const mk=[],side=(x,yy)=>{const l=occ.get((x-1)+","+yy),r=occ.get((x+1)+","+yy);return !!(l&&isB(l)&&l.rot===0)||!!(r&&isB(r)&&r.rot===2)};
+      const mk=[],side=(x,yy)=>{const l=occ.get(K(x-1,yy)),r=occ.get(K(x+1,yy));return !!(l&&isB(l)&&l.rot===0)||!!(r&&isB(r)&&r.rot===2)};
       for(let x=0;x<L.w;x++){
-        const A=occ.get(x+","+(c-1)),B=occ.get(x+","+c);
+        const A=occ.get(K(x,c-1)),B=occ.get(K(x,c));
         if(A&&A===B)return null;
         if(spl(A)||spl(B))return null;
         if(A&&B){
@@ -497,7 +498,7 @@ function placerCut(L,cls){
       }
       const ms=new Set(mk);
       for(const it of IT){if(isB(it))continue;
-        for(const p of portsOf(it)){if(!p.en)continue;const t=occ.get((p.x+p.nx)+","+(p.y+p.ny));if(!t||!ms.has(t))continue;
+        for(const p of portsOf(it)){if(!p.en)continue;const t=occ.get(K(p.x+p.nx,p.y+p.ny));if(!t||!ms.has(t))continue;
           if(p.nx!==0||p.ny!==(t.rot===1?1:-1))return null}}
       return mk;
     };
@@ -505,7 +506,7 @@ function placerCut(L,cls){
     const gapRow=r0=>{
      const ix=new Map(IT.map((b,i)=>[b,i])),pa=IT.map((_,i)=>i),fd=i=>{while(pa[i]!==i)i=pa[i]=pa[pa[i]];return i},edges=[];
      IT.forEach((b,i)=>{const e=dim(b);for(let u=0;u<e.w;u++)for(let v=0;v<e.h;v++)for(const [dx,dy] of [[1,0],[0,1]]){
-      const m=occ.get((b.x+u+dx)+","+(b.y+v+dy));if(!m||m===b)continue;
+      const m=occ.get(K(b.x+u+dx,b.y+v+dy));if(!m||m===b)continue;
       if(dy&&ch(b,m)){edges.push([b,m,b.rot]);continue}
       if(dy&&!bl(b)&&!bl(m))continue;
       pa[fd(i)]=fd(ix.get(m))}});
@@ -518,7 +519,7 @@ function placerCut(L,cls){
       if(edges.some(([a,b])=>sh[ix.get(b)]<sh[ix.get(a)]))continue;
       const fill=[];edges.forEach(([a,b,r])=>{for(let y=a.y+sh[ix.get(a)]+1;y<b.y+sh[ix.get(b)];y++)fill.push({cls:y===W-1||y===W?PLC_UG[L.mk]:PLC_BELT[L.mk],x:a.x,y,h:0,rot:r,pid:0})});
       const seen=new Set();let bad=false;
-      IT.map((b,i)=>({...b,y:b.y+sh[i]})).concat(fill).forEach(m=>{const q=dim(m);for(let i=0;i<q.w;i++)for(let j=0;j<q.h;j++){const k=(m.x+i)+","+(m.y+j);if(seen.has(k))bad=true;else seen.add(k)}});
+      IT.map((b,i)=>({...b,y:b.y+sh[i]})).concat(fill).forEach(m=>{const q=dim(m);for(let i=0;i<q.w;i++)for(let j=0;j<q.h;j++){const k=K(m.x+i,m.y+j);if(seen.has(k))bad=true;else seen.add(k)}});
       if(!bad)best={D,W,sh,fill}}
      return best};
     let r0=0;
@@ -536,7 +537,7 @@ function placerCut(L,cls){
     else{const g=Math.floor(Math.floor(b.y/L.pitch)/per);y=g*TH+b.y-g*per*L.pitch}
     return{...b,cls:ug.has(b)?PLC_UG[L.mk]:b.cls,x:i*TW+b.x-(i?cuts[i-1]:0),y}});
   const seen=new Set();let ov=0;   // cells claimed by two items: a layout bug, the caller retries or reports it
-  for(const m of ms){const e=dim(m);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++){const k=(m.x+i)+","+(m.y+j);if(seen.has(k))ov++;else seen.add(k)}}
+  for(const m of ms){const e=dim(m);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++){const k=K(m.x+i,m.y+j);if(seen.has(k))ov++;else seen.add(k)}}
   const cols=cuts.length+1,rows=L.bank?rc.length+1:Math.ceil(L.lanes/per),blocks=[];
   for(let g=0;g<rows;g++)for(let i=0;i<cols;i++)
     if(ms.some(m=>m.x>=i*TW&&m.x<(i+1)*TW&&m.y>=g*TH&&m.y<(g+1)*TH))blocks.push({cls,x:i*d.w,y:g*d.h});
@@ -549,25 +550,37 @@ function placerTile(L,ok){
 }
 function placerTileX(L,ok){const g=placerTileGen(L,ok);for(;;){const s=g.next();if(s.done)return s.value}}
 // one (block type, G) run per step: the preview yields between steps so a huge plan does not freeze the page
+// One search step per yield (the preview shows progress and stays responsive). Phase 1: the unlimited layout of every (block type, G) and a tile estimate from it (no cutting).
+// Phase 2: cut the candidates in estimate order and stop once the best found is no worse than the next estimate.
+// Choice rule unchanged: even bands first, then fewest blocks, then squarest, then smaller G, then earlier block type.
 function* placerTileGen(L,ok){
-  let best=null,why="";
-  const Gs=PLC_G?[PLC_G]:Array.from({length:L.bank?L.t0:1},(_,i)=>i+1);
-  for(let i=0;i<PL_STD.length;i++){if(!ok[i])continue;const cls=plcCls(PL_STD[i]);
-    for(const G of Gs){yield 1;
-      const run1=(sep,novc)=>{PLC_NOVC=novc;let L2;try{L2=L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk),G,sep}):L}finally{PLC_NOVC=false}
-        return L2.ok?{...placerCut(L2,cls),L2}:{ok:false,why:L2.why}};
-      // 3 inputs: variant C is preferred; when its wall rows cannot be cut, the same stage is laid out with variant A
-      const run=sep=>{const r1=run1(sep,false);return !r1.ok&&L.bank&&L.three?run1(sep,true):r1};
-      let r=run(false);   // legacy layout first; sep layout (B chain segmented, on the left) only when legacy fails or overlaps
-      if(L.bank&&L.two&&(!r.ok||r.ov||r.span)){const r2=run(true);if(r2.ok&&!r2.ov&&!r2.span)r=r2}
-      if(r.ov){why="internal: overlap";continue}
-      if(r.span){why="internal: underground pair longer than the belt span";continue}
-      if(!r.ok){why=r.why;continue}
-      r.G=G;r.L=r.L2;
-      const sq=q=>Math.abs(q.cols-q.rows),ev=q=>q.L.even!==false;   // even bands first (existing plans unchanged); uneven bands only when no even band count fits
-      if(!best||(ev(r)&&!ev(best))||(ev(r)===ev(best)&&(r.blocks.length<best.blocks.length||(r.blocks.length===best.blocks.length&&(sq(r)<sq(best)||(sq(r)===sq(best)&&G<best.G))))))best=r;
-    }}
-  return best||{ok:false,why:"Does not fit: "+why};
+  const Gs=PLC_G?[PLC_G]:Array.from({length:L.bank?L.t0:1},(_,i)=>i+1),pre=new Map(),cands=[];
+  const lay=(cls,G,sep)=>L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk),G,sep}):L;
+  for(let i=0;i<PL_STD.length;i++){if(!ok[i])continue;const cls=plcCls(PL_STD[i]),f=floorRect({cls,x:0,y:0,h:0,rot:0});
+    for(const G of Gs){yield {phase:1,n:cands.length+1,total:PL_STD.length*Gs.length,G,cls};
+      const L2=lay(cls,G,false);pre.set(i+"|"+G,L2);
+      cands.push({i,cls,G,ord:cands.length,est:L2.ok?Math.ceil(L2.w/f.w)*Math.ceil(L2.h/f.h):Infinity})}}
+  const sq=q=>Math.abs(q.cols-q.rows),ev=q=>q.L.even!==false;   // even bands first (existing plans unchanged); uneven bands only when no even band count fits
+  const order=cands.slice().sort((a,b)=>a.est-b.est||a.ord-b.ord),fails=[];
+  let best=null;
+  for(let k=0;k<order.length;k++){const c=order[k],G=c.G;
+    yield {phase:2,n:k+1,total:order.length,G,cls:c.cls};
+    const run1=(sep,novc)=>{PLC_NOVC=novc;let L2;try{L2=(!sep&&!novc&&pre.get(c.i+"|"+G))||lay(c.cls,G,sep)}finally{PLC_NOVC=false}
+      return L2.ok?{...placerCut(L2,c.cls),L2}:{ok:false,why:L2.why}};
+    // 3 inputs: variant C is preferred; when its wall rows cannot be cut, the same stage is laid out with variant A
+    const run=sep=>{const r1=run1(sep,false);return !r1.ok&&L.bank&&L.three?run1(sep,true):r1};
+    let r=run(false);   // legacy layout first; sep layout (B chain segmented, on the left) only when legacy fails or overlaps
+    if(L.bank&&L.two&&(!r.ok||r.ov||r.span)){const r2=run(true);if(r2.ok&&!r2.ov&&!r2.span)r=r2}
+    if(r.ov)fails[c.ord]="internal: overlap";
+    else if(r.span)fails[c.ord]="internal: underground pair longer than the belt span";
+    else if(!r.ok)fails[c.ord]=r.why;
+    else{r.G=G;r.L=r.L2;r.ord=c.ord;
+      if(!best||(ev(r)&&!ev(best))||(ev(r)===ev(best)&&(r.blocks.length<best.blocks.length||(r.blocks.length===best.blocks.length&&(sq(r)<sq(best)||(sq(r)===sq(best)&&(G<best.G||(G===best.G&&r.ord<best.ord))))))))best=r;
+      const nx=order[k+1];if(nx&&ev(best)&&best.blocks.length<=nx.est)break}   // proven: no remaining estimate beats the best found
+  }
+  if(best)return best;
+  let why="";fails.forEach(w=>{if(w!==undefined)why=w});   // last failure in search order, as before
+  return {ok:false,why:"Does not fit: "+why};
 }
 function placerPaste(){
   const P=pasting.pl,bs=P.blocks.map(q=>({id:uid++,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:0,pid:0}));
