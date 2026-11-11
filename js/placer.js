@@ -253,7 +253,7 @@ function placerBank(P,item,mk,spMk,o){
       const eB=P.edges.find(e=>e.from===topB&&e.to===ch[cI].item),bset=new Set(Bn.map(nd=>nd.item)),fB=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
       const PB={raw:P.raw.filter(r=>(tr.two.rawsB||[tr.two.rawB]).includes(r.item)),nodes:{...nodesB,...Object.fromEntries((tr.two.rawsB||[]).filter(r=>P.nodes[r]).map(r=>[r,P.nodes[r]]))},cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||(tr.two.rawsB||[tr.two.rawB]).includes(e.from))&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}]).map(e=>({...e,flow:e.flow*fB}))};
       const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null,wantT:tbs[cI]});
-      if(!rB.ok)return rB;      const bi=it.slice(i0),dx=hz[cI-1].xe-rB.feed.x,y0=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rB.h;
+      if(!rB.ok)return rB;      const bi=it.slice(i0),dx=(cI?hz[cI-1].xe:hz[cI].xf-bw)-rB.feed.x,y0=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rB.h;
       rB.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y0}));
       plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);
     }
@@ -265,7 +265,7 @@ function placerBank(P,item,mk,spMk,o){
         const PC={raw:P.raw.filter(r=>(tr.three.rawsC||[tr.three.rawC]).includes(r.item)),nodes:{...nodesC,...Object.fromEntries((tr.three.rawsC||[]).filter(r=>P.nodes[r]).map(r=>[r,P.nodes[r]]))},cycle:false,edges:P.edges.filter(e=>(setC.has(e.from)||(tr.three.rawsC||[tr.three.rawC]).includes(e.from))&&e.to!==ch[cI].item).concat([{from:topC,to:null,flow:eC.flow}]).map(e=>({...e,flow:e.flow*fC/T3}))};
         const rC=placerBank(PC,topC,mk,spMk,{...o,G:1,feedOut:{nT:1,up:gC.up},fit:null,wantT:1});
         if(!rC.ok)return rC;
-        const bi=it.slice(i0),dx=hz[cI-1].xe-rC.feed.x,y1=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rC.h;
+        const bi=it.slice(i0),dx=(cI?hz[cI-1].xe:hz[cI].xf-bw)-rC.feed.x,y1=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rC.h;
         rC.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y1}));
         frCk.push(rC.feed.rows[0]+y1);}
       plcThreeTC({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frC:frCk,bc:PLC_BELT[mk],mk},it);}
@@ -322,6 +322,9 @@ function plcUnshare(P,item){
 }
 // belt / splitter too slow for the planned load: the layout uses the next higher Mk automatically (the note says so) instead of refusing
 function placerLayout(P,item,mk,spMk,o={}){
+  try{return placerLayoutX(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"internal error while laying out this factory ("+e.message+"): tell the developer which item and settings"}}   // a crash shows in the modal with Place disabled, never breaks the page
+}
+function placerLayoutX(P,item,mk,spMk,o={}){
   const L=placerLayoutA(P,item,mk,spMk,o);
   if(L.ok||!/higher belt Mk|splitter Mk higher/.test(L.why))return L;
   for(let up=1;up<=2;up++){const m2=Math.min(2,mk+up),s2=Math.min(2,spMk+up);
@@ -536,6 +539,9 @@ function placerCut(L,cls){
 }
 // best block type among the ticked ones (fewest blocks); no tick fits -> the reason of the last failure
 function placerTile(L,ok){
+  try{return placerTileX(L,ok)}catch(e){return{ok:false,why:"internal error while fitting the blocks ("+e.message+")",blocks:[]}}
+}
+function placerTileX(L,ok){
   let best=null,why="";
   const Gs=PLC_G?[PLC_G]:Array.from({length:L.bank?L.t0:1},(_,i)=>i+1);
   PL_STD.forEach((nm,i)=>{if(!ok[i])return;const cls=plcCls(nm);
