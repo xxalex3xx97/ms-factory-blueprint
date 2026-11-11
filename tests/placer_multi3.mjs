@@ -52,7 +52,7 @@ async function openBuild(pg) {
 // real mouse click on the first free stage tile (stage = any canvas except the preview)
 async function stageClick(pg) {
   const pt = await pg.evaluate(() => {
-    for (const [x, y] of [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 7], [8, 8]]) {
+    for (const [x, y] of [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 7], [8, 8], [10, 10], [12, 12], [15, 15], [20, 20], [25, 25]]) {
       const p = __fb.px(x, y), e = document.elementFromPoint(p[0], p[1]);
       if (e && e.tagName === 'CANVAS' && e.id !== 'plnPrevMap') return {x: p[0], y: p[1]};
     }
@@ -176,6 +176,38 @@ try {
     chk(`B) ${label}: UG pairs valid, inclusive span <= Mk maxApart`, agB.ugOk === true, JSON.stringify(agB.bad));
     chk(`B) ${label}: sim >= 55 (mean of last 12 samples), none blocked`, placedB && simB.got >= 55 && simB.blocked === 0, JSON.stringify(simB));
     await pg.keyboard.press('Control+z');
+  }
+
+  // ---- Large container one-band layout: Superalloy Mk2 120/min builds G=1 (fewer than 17 blocks), placed by click, ov 0, UG span within Mk, sim >= target; Large at other rates/Mk builds or refuses cleanly with Place disabled, no hang (25 s)
+  {
+    await setup(pg, ITEM, 120, 1, 'DAT_Container_2');
+    const t0 = Date.now();
+    const LG = await openBuild(pg);
+    const dtG = Date.now() - t0;
+    info(`LG) Large Mk2 120: ${dtG} ms, G=${LG.G}, hubs=${LG.hubs}, err=${JSON.stringify(LG.err)}`);
+    chk('LG) Large Mk2 120 returns within 25 s', dtG < 25000, dtG + ' ms');
+    chk('LG) Large Mk2 120 builds one band (G=1)', LG.open && LG.err === '' && !LG.off && LG.G === 1, JSON.stringify({err: LG.err, G: LG.G}));
+    if (LG.G === 1) {
+      await pg.click('#plnPlace');
+      if (await pg.evaluate(() => $('plnPrevBig').textContent.length > 0)) await pg.click('#plnPlace');   // more than PLC_BIG blocks: the modal asks to confirm once
+      const placedG = await stageClick(pg);
+      await pg.waitForTimeout(150);
+      const agG = await pg.evaluate(audit3);
+      const simG = await pg.evaluate(simStats, ITEM);
+      info(`LG) placed=${placedG} ov=${agG.ov} pairs=${agG.pairs} maxCount=${agG.maxCount} sim=${simG.got.toFixed(2)} blocked=${simG.blocked}`);
+      chk('LG) Large Mk2 120 placed by real click, no overlap, items inside floor', placedG && agG.ov === 0 && agG.inside === true, JSON.stringify({ov: agG.ov, inside: agG.inside}));
+      chk('LG) Large Mk2 120: UG pairs valid, inclusive span <= Mk maxApart', agG.ugOk === true, JSON.stringify(agG.bad));
+      chk('LG) Large Mk2 120: sim >= 120 (mean of last 12 samples), none blocked', placedG && simG.got >= 120 && simG.blocked === 0, JSON.stringify(simG));
+      await pg.keyboard.press('Control+z');
+    }
+    for (const [mk, rate] of [[0, 25], [1, 25], [1, 55], [2, 55], [0, 120], [2, 300]]) {
+      await setup(pg, ITEM, rate, mk, 'DAT_Container_2');
+      const t1 = Date.now();
+      const LO = await openBuild(pg);
+      const dt = Date.now() - t1;
+      chk(`LG) Large Mk${mk + 1} ${rate}/min: returns within 25 s; builds (Place enabled) or clean refusal (Place disabled)`, dt < 25000 && LO.open && ((LO.err === '' && !LO.off) || (LO.err !== '' && LO.off === true)), JSON.stringify({dt, err: LO.err, off: LO.off}));
+      await closeIfOpen(pg);
+    }
   }
 
   // ---- wall cuts: Superalloy into a plain container at Mk2/Mk3 55/min is width-limited (no free cut column within 6 spare columns of a 30-wide floor): a clean refusal with Place disabled, or a fit; Large buffer Mk2 120 returns within 25 s, consistent with Place
