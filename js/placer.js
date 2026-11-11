@@ -361,7 +361,10 @@ function plcBlank(IT,p,k,h,mx){
     if(A&&A===B)return null;
     if(B&&(PLC_UG.includes(B.cls)||(isB(B)&&B.rot===2)))return null;
     if(A&&B&&(A.rec||PLC_SPL.includes(A.cls)||PLC_UG.includes(A.cls)))return null;
-    if(A&&B&&A.cls.startsWith("DAT_Container")&&portsOf(A).some(q=>q.en&&q.x+q.nx===p&&q.y+q.ny===y))return null;   // a box port facing the cut column would lose its neighbour
+    if(A&&B&&A.cls.startsWith("DAT_Container")&&portsOf(A).some(q=>q.en&&q.x+q.nx===p&&q.y+q.ny===y)){   // a box port facing the cut column: the new cells must carry its flow, so only an east belt can continue it
+      if(!(isB(B)&&B.rot===0))return null;
+      for(let j=0;j<k;j++)fill.push({cls:B.cls,x:p+j,y,h:0,rot:0,pid:0});
+    }
     if(A&&isB(A)&&A.rot===0)for(let j=0;j<k;j++)fill.push({cls:A.cls,x:p+j,y,h:0,rot:0,pid:0});
   }
   out.forEach(b=>{if(b.x>=p)b.x+=k});
