@@ -556,7 +556,9 @@ let plcT=null;   // last tile result (placerTile) for the open preview
 let plcBig=false;   // big-factory confirm asked for the current preview
 const plcTT=()=>plcT&&plcT.ok?plcT:{blocks:[{cls:plcCls("BPO_Station_02"),x:0,y:0}],ms:plcL.items};
 const plcExt=T=>({w:Math.max(...T.blocks.map(q=>(q.x+dim({cls:q.cls,rot:0}).w)*FC),...T.ms.map(m=>m.x+dim(m).w)),h:Math.max(...T.blocks.map(q=>(q.y+dim({cls:q.cls,rot:0}).h)*FC),...T.ms.map(m=>m.y+dim(m).h))});
-function placerSize(){const c=$("plnPrevMap"),v=$("plnPrevView");c.width=Math.max(1,v.clientWidth);c.height=Math.max(1,v.clientHeight);return{w:c.width,h:c.height}}   // content box (border excluded): canvas CSS size = attribute size, no rescale
+// setting a canvas size reallocates it even when unchanged: only assign when the size really differs (per-frame realloc was the zoom lag)
+const plcSetSize=(c,w,h)=>{if(c.width!==w)c.width=w;if(c.height!==h)c.height=h};
+function placerSize(){const c=$("plnPrevMap"),v=$("plnPrevView");plcSetSize(c,Math.max(1,v.clientWidth),Math.max(1,v.clientHeight));return{w:c.width,h:c.height}}   // content box (border excluded): canvas CSS size = attribute size, no rescale
 const PLC_PAD=1;   // floor cells the drawn shell sticks out beyond a block tile (hull wall, doorway strip), all sides
 // pixel box of the last placerShot: alpha >= 140 = block shells, floors, items (grid and axis lines are fainter)
 function placerBox(w,h){const d=$("plnPrevMap").getContext("2d").getImageData(0,0,w,h).data;let l=w,t=h,r=-1,b=-1;
@@ -577,7 +579,7 @@ function placerShot(){
   try{
     S.blocks=[...T.blocks.map((q,i)=>({id:i+1,cls:q.cls,x:q.x,y:q.y,h:0,rot:0,pid:0})),...T.ms.map((it,i)=>({...it,id:T.blocks.length+i+1,h:0}))];
     view="F";layer=0;V={ox:plcV.ox,oy:plcV.oy,z:plcV.z};W=w;H=h;dpr=1;sel=new Set();active=null;pasting=null;drag=null;ugPend=null;mode=null;SM=false;OV={};hoverIn=false;SV++;
-    cv.width=w;cv.height=h;
+    plcSetSize(cv,w,h);
     paint();
     const g=$("plnPrevMap").getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.drawImage(cv,0,0);
   }finally{
