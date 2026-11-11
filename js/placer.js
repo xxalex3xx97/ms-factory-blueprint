@@ -39,12 +39,13 @@ function plcSpl(cls,rot){
   return i&&e.w===1&&e.h===1&&i.nx===-f[0]&&i.ny===-f[1]&&o.some(p=>p.nx===f[0]&&p.ny===f[1])&&o.some(p=>p.nx===1&&p.ny===0)&&o.some(p=>p.nx===-1&&p.ny===0)?{i,o}:null;
 }
 // wrapper: adds act = the actual input per machine at the planned rate (what a trunk really carries)
-function plcStage(n,eI,eU,mk,spMk,eI2,eI3){const r=plcStageA(n,eI,eU,mk,spMk,eI2,eI3);if(r.ok){const NM=Math.max(1,n.machines);r.act=Math.max(eI.flow/NM,eI2?eI2.flow/NM:0,eI3?eI3.flow/NM:0)}return r}
-function plcStageA(n,eI,eU,mk,spMk,eI2,eI3){
+function plcStage(n,eI,eU,mk,spMk,eI2,eI3,more){const r=plcStageA(n,eI,eU,mk,spMk,eI2,eI3,more);if(r.ok){const NM=r.N;r.act=Math.max(eI.flow/NM,eI2?eI2.flow/NM:0,eI3?eI3.flow/NM:0)}return r}
+function plcStageA(n,eI,eU,mk,spMk,eI2,eI3,more){
   const no=why=>({ok:false,why}),cb=plnCb(n.crafter);if(!cb)return no("No machine builds "+plnNm(n.item));
   const d=def(cb.id),inF=n.pmach*eI.flow/eU.flow,inF2=eI2?n.pmach*eI2.flow/eU.flow:0,inF3=eI3?n.pmach*eI3.flow/eU.flow:0,m0=Math.floor(MKS[mk][1]/Math.max(n.pmach,inF,inF2,inF3)+1e-9);
   // a machine at full speed may need more than one belt carries; at the planned load it may not: one machine per trunk, running below full speed, when the actual input per machine fits the belt
-  const NM=Math.max(1,n.machines),act=Math.max(eI.flow/NM,eI2?eI2.flow/NM:0,eI3?eI3.flow/NM:0);
+  // more (retry only, after no Mk fits): round the machine count UP so each machine's share fits the requested belt (more machines than planned is fine)
+  const NM=more?Math.max(1,n.machines,Math.ceil(Math.max(eI.flow,eI2?eI2.flow:0,eI3?eI3.flow:0)/MKS[mk][1]-1e-9)):Math.max(1,n.machines),act=Math.max(eI.flow/NM,eI2?eI2.flow/NM:0,eI3?eI3.flow/NM:0);
   if(m0<1&&act>MKS[mk][1])return no("One machine needs "+plnR2(act)+"/min of input at the planned rate but a "+MKS[mk][0]+" belt carries "+MKS[mk][1]+"/min: pick a higher belt Mk");
   const m=Math.max(1,m0);
   if(eI3){   // three inputs: 2 on one face + 1 on the adjacent face of each machine column; one gap row between stages (pitch h+2)
@@ -53,13 +54,13 @@ function plcStageA(n,eI,eU,mk,spMk,eI2,eI3){
     if(!PLC_NOVC&&VC&&VCR&&VC.w===VCR.w&&VC.h===VCR.h&&VC.ins.map(p=>p.y).join()===VCR.ins.map(p=>p.y).join()){   // variant C: 3 inputs on the trunk-facing face, no gap rows, width 2w+9
       const sc=PLC_SPL[spMk];if(!plcSpl(sc,1)||!plcSpl(sc,3))return no("Bank: splitter ports not as expected (Mk id unverified?)");
       if(VC.off.concat(VCR.off).some(p=>!p.tg))return no("Bank: machine has an unused port that cannot be disabled");
-      return{ok:true,n,dk:d.key,inF,m,N:n.machines,ML:VC,MR:VCR,w:VC.w,h:VC.h,cin:VC.ins[0].y,Wb:2*VC.w+9,pitch:VC.h,sc,rec:rk(n.rec),two:{ya:VC.ins[0].y,yb:VC.ins[1].y,inF2},three:{yc:VC.ins[2].y,xc:0,xcR:0,inF3,vc:true}};
+      return{ok:true,n,dk:d.key,inF,m,N:NM,ML:VC,MR:VCR,w:VC.w,h:VC.h,cin:VC.ins[0].y,Wb:2*VC.w+9,pitch:VC.h,sc,rec:rk(n.rec),two:{ya:VC.ins[0].y,yb:VC.ins[1].y,inF2},three:{yc:VC.ins[2].y,xc:0,xcR:0,inF3,vc:true}};
     }
     if(!ML||!MR)return no("Bank: "+plnNm(n.item)+" machine has no face with 2 input ports plus 1 on the adjacent face (3-input stage needs them)");
     if(ML.w!==MR.w||ML.h!==MR.h||ML.ins.map(p=>p.y).join()!==MR.ins.map(p=>p.y).join())return no("Bank: the two machine columns do not line up (input ports on different rows)");
     if(ML.off.concat(MR.off).some(p=>!p.tg))return no("Bank: machine has an unused port that cannot be disabled");
     const sc=PLC_SPL[spMk];if(!plcSpl(sc,1)||!plcSpl(sc,3))return no("Bank: splitter ports not as expected (Mk id unverified?)");
-    return{ok:true,n,dk:d.key,inF,m,N:n.machines,ML,MR,w:ML.w,h:ML.h,cin:ML.ins[0].y,Wb:2*ML.w+9,pitch:ML.h+2,sc,rec:rk(n.rec),two:{ya:ML.ins[0].y,yb:ML.ins[1].y,inF2},three:{yc:ML.inT.y,xc:ML.inT.x,xcR:MR.inT.x,inF3}}
+    return{ok:true,n,dk:d.key,inF,m,N:NM,ML,MR,w:ML.w,h:ML.h,cin:ML.ins[0].y,Wb:2*ML.w+9,pitch:ML.h+2,sc,rec:rk(n.rec),two:{ya:ML.ins[0].y,yb:ML.ins[1].y,inF2},three:{yc:ML.inT.y,xc:ML.inT.x,xcR:MR.inT.x,inF3}}
   }
   if(eI2){   // two inputs: both on one face of each machine column
     const ML=plcMach2(d.key,1),MR=plcMach2(d.key,-1);
@@ -67,14 +68,14 @@ function plcStageA(n,eI,eU,mk,spMk,eI2,eI3){
     if(ML.w!==MR.w||ML.h!==MR.h||ML.ins.map(p=>p.y).join()!==MR.ins.map(p=>p.y).join())return no("Bank: the two machine columns do not line up (input ports on different rows)");
     if(ML.off.concat(MR.off).some(p=>!p.tg))return no("Bank: machine has an unused port that cannot be disabled");
     const sc=PLC_SPL[spMk];if(!plcSpl(sc,1)||!plcSpl(sc,3))return no("Bank: splitter ports not as expected (Mk id unverified?)");
-    return{ok:true,n,dk:d.key,inF,m,N:n.machines,ML,MR,w:ML.w,h:ML.h,cin:ML.ins[0].y,Wb:2*ML.w+7,sc,rec:rk(n.rec),two:{ya:ML.ins[0].y,yb:ML.ins[1].y,inF2}}
+    return{ok:true,n,dk:d.key,inF,m,N:NM,ML,MR,w:ML.w,h:ML.h,cin:ML.ins[0].y,Wb:2*ML.w+7,sc,rec:rk(n.rec),two:{ya:ML.ins[0].y,yb:ML.ins[1].y,inF2}}
   }
   const ML=plcMach(d.key,[1,0],[-1,0]),MR=plcMach(d.key,[-1,0],[1,0]);
   if(!ML||!MR)return no("Bank: the machine needs an input port and an output port on opposite faces");
   if(ML.w!==MR.w||ML.h!==MR.h||ML.inP.y!==MR.inP.y)return no("Bank: the two machine columns do not line up (input ports on different rows)");
   if(ML.off.concat(MR.off).some(p=>!p.tg))return no("Bank: machine has an unused port that cannot be disabled");
   const sc=PLC_SPL[spMk];if(!plcSpl(sc,1)||!plcSpl(sc,3))return no("Bank: splitter ports not as expected (Mk id unverified?)");
-  return{ok:true,n,dk:d.key,inF,m,N:n.machines,ML,MR,w:ML.w,h:ML.h,cin:ML.inP.y,Wb:2*ML.w+3,sc,rec:rk(n.rec)};
+  return{ok:true,n,dk:d.key,inF,m,N:NM,ML,MR,w:ML.w,h:ML.h,cin:ML.inP.y,Wb:2*ML.w+3,sc,rec:rk(n.rec)};
 }
 function plcChain(P,item){
   if(P.cycle||P.raw.length!==1)return null;
@@ -188,7 +189,7 @@ function placerBank(P,item,mk,spMk,o){
   if(tr.three&&!tr.three.C.length)return no("Bank: 3 inputs per machine: a raw 3rd input straight into the machine is not built yet");
   const ch=tr.ch,n=ch.length,G=o.G||PLC_G||1,Bn=tr.two?tr.two.B:[],topB=Bn.length?Bn[Bn.length-1].item:(tr.two&&tr.two.rawB),Cn=tr.three?tr.three.C:[],topC=Cn.length?Cn[Cn.length-1].item:(tr.three&&tr.three.rawC);
   for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:tr.raw)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null)),eI2=tr.two&&q===n-1?P.edges.find(e=>e.from===topB&&e.to===nd.item):null,eI3=tr.three&&q===n-1?P.edges.find(e=>e.from===topC&&e.to===nd.item):null;
-    const S=plcStage(nd,eI,eU,mk,spMk,eI2,eI3);if(!S.ok)return S;SS.push(S)}
+    const S=plcStage(nd,eI,eU,mk,spMk,eI2,eI3,o.more);if(!S.ok)return S;SS.push(S)}
   if(G>1&&tr.three)SS.forEach(S=>{S.N=Math.ceil(S.N/G)*G});   // 3 inputs: every band gets the same machine count (round up, never less)
   if(o.wantT&&o.feedOut){const L=SS[n-1];if(L.N<=o.wantT*L.m)L.N=o.wantT*L.m}   // B/C sub-band: exactly wantT trunks in its last stage (machines rounded up), so its feed rows match the consumer's trunks
   SS.forEach(S=>{S.sp=0;if(S.two&&!S.three&&o.fit&&o.fit.fw&&S.Wb>o.fit.fw){S.sp=4;S.Wb+=4}});   // spacer = UG entrance+exit pair with 1 plain belt of clearance each side, so nothing but straight east belts touches the wall cut
@@ -332,6 +333,8 @@ function placerLayoutX(P,item,mk,spMk,o={}){
   for(let up=1;up<=2;up++){const m2=Math.min(2,mk+up),s2=Math.min(2,spMk+up);
     const L2=placerLayoutA(P,item,m2,s2,o);
     if(L2.ok){L2.note=[...L2.note,"Belt Mk raised to "+MKS[m2][0]+" and splitter Mk to "+MKS[s2][0]+" automatically (the requested Mk cannot carry the planned load)"];return L2}}
+  const L3=placerLayoutA(P,item,mk,spMk,{...o,more:1});   // no Mk carries one machine's planned input: more machines (rounded up), each trunk carries less
+  if(L3.ok){L3.note=[...L3.note,"More machines than planned: one "+MKS[mk][0]+" belt cannot carry the planned input of one machine, so the machine count is rounded up (each machine gets less)"];return L3}
   return L;
 }
 function placerLayoutA(P,item,mk,spMk,o={}){P=plcUnshare(P,item);
@@ -340,7 +343,7 @@ function placerLayoutA(P,item,mk,spMk,o={}){P=plcUnshare(P,item);
   if(tr.two||tr.ch.length>1)return placerBank(P,item,mk,spMk,o);
   const T=P.nodes[item],N=T.machines,eIn=P.edges.find(e=>e.from===P.raw[0].item&&e.to===item),eOut=P.edges.find(e=>e.to==null);
   const m0=Math.floor(MKS[mk][1]/Math.max(T.pmach,T.pmach*eIn.flow/eOut.flow)+1e-9);   // machines one belt feeds
-  if(!o.mod&&(PLC_BANK||o.bank||N>m0))return placerBank(P,item,mk,spMk,o);
+  if(!o.mod&&(PLC_BANK||o.bank||N>m0||o.more))return placerBank(P,item,mk,spMk,o);
   const cb=plnCb(T.crafter);if(!cb)return no("No machine builds this recipe");
   const d=def(cb.id),pp=cls=>portsOf({cls,x:0,y:0,rot:0,off:[]});
   const mp=pp(d.key),inP=mp.find(p=>p.f==="N"&&p.dir!=="out"),outP=mp.find(p=>p.f==="S"&&p.dir!=="in");
