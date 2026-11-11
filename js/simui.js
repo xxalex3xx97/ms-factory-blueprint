@@ -20,7 +20,7 @@ function prodDraw(){
   const d=$("dProd");if(d.hidden||d.classList.contains("col"))return;
   const P=simProd(),ser=P?P.series:[],tot=P?[...P.totals].filter(([,n])=>n>0):[],keys=[];
   ser.forEach(s=>Object.keys(s.it).forEach(k=>{if(!keys.includes(k))keys.push(k)}));tot.forEach(([k])=>{if(!keys.includes(k))keys.push(k)});
-  const has=keys.length>0;$("prEmpty").style.display=has?"none":"";$("prBody").style.display=has?"":"none";if(!has)return;
+  plcWarn(ser);const has=keys.length>0;$("prEmpty").style.display=has?"none":"";$("prBody").style.display=has?"":"none";if(!has)return;
   const col=k=>PRC(keys.indexOf(k)),c=$("prCv"),w=Math.max(180,c.parentNode.clientWidth-2),h=170,r=window.devicePixelRatio||1;
   c.width=Math.round(w*r);c.height=Math.round(h*r);c.style.height=h+"px";
   const g=c.getContext("2d");g.setTransform(r,0,0,r,0,0);g.clearRect(0,0,w,h);

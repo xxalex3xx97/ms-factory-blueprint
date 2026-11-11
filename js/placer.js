@@ -492,9 +492,17 @@ function placerPaste(){
   const ms=P.ms.map(m=>({...m,id:uid++,mid:0,pid:0,x:hover.x*FC+m.x,y:hover.y*FC+m.y,h:layer}));
   const n0=S.blocks.length;S.blocks.push(...bs);const bad=noBuild(ms.map(mItem));S.blocks.length=n0;
   if(bad){toast(NOBUILD);return}
-  push();S.blocks.push(...bs);cutBelts(ms.filter(isBelt));S.blocks.push(...ms);sel=new Set();pasting=null;all();
+  push();S.blocks.push(...bs);cutBelts(ms.filter(isBelt));S.blocks.push(...ms);plcPlan=P.plan||null;sel=new Set();pasting=null;all();
 }
 let plcL=null;
+let plcPlan=null;   // the last placed planner factory {item, rate}: drives the sim shortfall warning; not saved
+// sim shortfall warning: mean of the last 12 samples of the planned item vs the requested rate (warns only, never blocks; no planned factory = no warning)
+function plcWarn(ser){
+  let e=$("prWarn");if(!e){e=document.createElement("div");e.id="prWarn";e.style.cssText="color:#ffb74d;font-weight:600;padding:4px 6px";const b=$("prBody");if(b)b.prepend(e)}
+  const pl=plcPlan;if(!e||!pl||!ser||ser.length<12){if(e)e.textContent="";return}
+  const got=ser.slice(-12).reduce((a,s)=>a+(s.it[pl.item]||0),0)/12;
+  e.textContent=got<pl.rate*0.95?"Simulation returned "+Math.round(got)+"/min, you asked for "+pl.rate+"/min ("+plnNm(pl.item)+")":"";
+}
 const placerBk=()=>["plnBk11","plnBk21","plnBk22"].map(i=>$(i).checked);
 function placerRun(open){
   const dl=$("plnPrev");if(!open&&!dl.open)return;
@@ -570,7 +578,7 @@ function placerPlace(){
     if(T.blocks.length>PLC_BIG&&!plcBig){plcBig=true;$("plnPrevBig").textContent="This factory needs "+T.cols+" x "+T.rows+" blocks ("+T.blocks.length+" blocks). Build it, or lower the output / change belt, splitter or buffer.";$("plnPlace").textContent="Build it";return}
     plcL=null;$("plnPrev").close();
     setView("L");clip=[];active=null;mode=null;sel=new Set();
-    pasting={rot:0,fl:false,pl:{blocks:T.blocks,ms:T.ms}};
+    pasting={rot:0,fl:false,pl:{blocks:T.blocks,ms:T.ms,plan:{item:L.src.item,rate:+$("plnRate").value}}};
     toast("Click to place the "+T.blocks.length+" block(s), then connect them to your blocks. Esc cancels");all();
   }else{
     if(view!=="F")setView("F");

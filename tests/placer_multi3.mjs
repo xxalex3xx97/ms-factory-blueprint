@@ -203,6 +203,10 @@ try {
     chk(`MT) ${label}: placed by real click, no overlap, items inside floor`, placedM && agM.ov === 0 && agM.inside === true, JSON.stringify({ov: agM.ov, inside: agM.inside}));
     chk(`MT) ${label}: UG pairs valid, inclusive span <= Mk maxApart`, agM.ugOk === true, JSON.stringify(agM.bad));
     chk(`MT) ${label}: sim >= ${rate} (mean of last 12 samples), none blocked`, placedM && simM.got >= rate && simM.blocked === 0, JSON.stringify(simM));
+    // visible warning in the production panel: shown exactly when the sim is more than 5% short of the requested rate
+    const wv = await pg.evaluate(() => { const d = $('dProd'); d.hidden = false; d.classList.remove('col'); prodDraw(); const e = $('prWarn'); return e ? e.textContent : null; });
+    const short = simM.got < rate * 0.95;
+    chk(`MT) ${label}: visible sim-shortfall warning ${short ? 'shown' : 'absent'} in the production panel`, wv !== null && (wv !== '') === short && (!short || wv.includes(`you asked for ${rate}/min`)), JSON.stringify({wv, got: simM.got}));
     await pg.keyboard.press('Control+z');
   }
 
