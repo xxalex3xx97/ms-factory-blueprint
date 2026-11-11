@@ -207,7 +207,7 @@ function pfChain(P,item,mk,spMk,o={}){
   walk(item,[]);
   if(err)return no(err);
   const Fh=floorRect({cls:plcCls(PL_STD[PL_STD.length-1]),x:0,y:0,h:0,rot:0}).h,pwb=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W'),SH=pwb?pwb.y+1:0;
-  const items=[],ports=[],per=[],sink=new Map(),nUse=new Map(),routes=[];
+  const items=[],ports=[],per=[],sink=new Map(),routes=[];
   let x0=0,makes=0;
   for(const y of order){
     const S=st.get(y),T=S.T,cb=plnCb(T.crafter);if(!cb)return no('No machine builds this recipe');
@@ -233,21 +233,34 @@ function pfChain(P,item,mk,spMk,o={}){
       const dx=x0;
       // every trunk head of a crafted input becomes a corridor from its upstream sink; raw heads stay as source containers
       C.items.forEach(q=>{
-        if(isHead(q)&&fedSet.has(q.ct[0].item)){(heads.get(q.ct[0].item)||heads.set(q.ct[0].item,[]).get(q.ct[0].item)).push({h:q,C,dx});return}
+        if(isHead(q)&&fedSet.has(q.ct[0].item))return;
         const o2={...q,x:q.x+dx};if(q.cls===cls)o2.rec=rec;items.push(o2);
       });
+      // demand of a head = its column's machines * per-machine flow; columns are placed in x order = gs order
+      for(const i of fedSet){
+        const all=C.items.filter(q=>isHead(q)&&q.ct[0].item===i),byX=[...all].sort((a,b)=>a.x-b.x),fl=flows.find(f=>f.item===i).flow;
+        if(all.length!==gs.length)return no('internal: head count');
+        const hl=heads.get(i)||heads.set(i,[]).get(i);
+        all.forEach(h=>hl.push({h,C,dx,dem:gs[byX.indexOf(h)]*fl}));
+      }
       if(y===order[0])C.items.filter(q=>isHead(q)&&!fedSet.has(q.ct[0].item)).forEach(h=>ports.push({edge:'N',off:h.x+dx,dir:'in',belts:1,slot:ports.length,mk}));
       const sk=C.items.find(q=>q.cls===PLC_BOX&&q.y===0&&q.ct&&!q.ct.length);
-      sinks.push({x:sk.x+dx,flow:gs.reduce((a,b)=>a+b,0)*fo});
+      const fl=gs.reduce((a,b)=>a+b,0)*fo;
+      sinks.push({x:sk.x+dx,flow:fl,left:fl,n:0});
       if(y===item)ports.push({edge:'N',off:sk.x+dx,dir:'out',belts:1,slot:-1,mk});
       x0=dx+Math.max(C.w,...C.items.map(q=>q.x+dim(q).w))+PF_GAP;
     }
     sink.set(y,sinks);
+    // route assignment: biggest head demand first, to the first sink (N port 0/1) with enough left
     for(const i of fedSet){
-      const hs=heads.get(i)||[],k0=nUse.get(i)||0;
-      if(k0+hs.length>2)return no('more than two consumers of one stage (not built)');
-      nUse.set(i,k0+hs.length);
-      hs.forEach((h,t)=>routes.push({sx:sink.get(i)[0].x+k0+t,tx:h.h.x+h.dx,item:i,tTop:Math.min(...h.C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.y>0&&q.x===h.h.x).map(q=>q.y))}));
+      const sup=sink.get(i),hs=(heads.get(i)||[]).sort((a,b)=>b.dem-a.dem);
+      for(const hd of hs){
+        const s=sup.find(q=>q.left>=hd.dem-1e-6&&q.n<2);
+        if(!s)return no('head demand '+hd.dem+' does not match sink supply '+JSON.stringify(sup)+' (misaligned)');
+        s.left-=hd.dem;
+        routes.push({sx:s.x+s.n,tx:hd.h.x+hd.dx,item:i,tTop:Math.min(...hd.C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.y>0&&q.x===hd.h.x).map(q=>q.y))});
+        s.n++;
+      }
     }
     if(y===item)makes=N*T.pmach;
     per.push(N);
