@@ -160,6 +160,18 @@ try {
     await pg.keyboard.press('Control+z');
   }
 
+  // ---- regression: Large container buffer (gap-row hang), each case returns within 20 s; an error in the modal always disables Place
+  for (const [rate, mk] of [[10, 0], [25, 0], [25, 1], [55, 1]]) {
+    await setup(pg, ITEM, rate, mk, 'DAT_Container_2');
+    const t0 = Date.now();
+    const G = await openBuild(pg);
+    const dt = Date.now() - t0;
+    info(`L) Large Mk${mk + 1} ${rate}/min: ${dt} ms, err=${JSON.stringify(G.err)}, Place disabled=${G.off}`);
+    chk(`L) Large buffer Mk${mk + 1} ${rate}/min returns within 20 s (no hang)`, dt < 20000, dt + ' ms');
+    chk(`L) Large Mk${mk + 1} ${rate}/min: error shown => Place disabled`, G.err === '' || G.off === true, JSON.stringify({err: G.err, off: G.off}));
+    await closeIfOpen(pg);
+  }
+
   // ---- refusals in the modal: Place disabled, reason names the port / 3-input limit
   // no 3-input Refinery recipe exists in the data (checked: the 3-input recipes are Assembler, Enrichment Chamber, Growth Chamber); the non-chain 3-input refusal is checked instead
   await setup(pg, 'ITEM_ContainmentCoil', 10, 0, 'DAT_Container');
