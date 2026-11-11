@@ -94,7 +94,11 @@ function plcTwoTB(g,it){
   });
 }
 // cut a bank layout into floor-wide segments: put(x,wid,ctr) places a wid-wide part at x; if it overflows the floor, cut at the free column c (entrance c-1, exit c), c >= segment start + lo
-function plcSeg(fw,lo){const q={s:0,cuts:[],bad:"",put(x,wid,ctr){
+function plcSeg(fw,lo,fc){const q={s:0,i:0,cuts:[],bad:"",put(x,wid,ctr){
+  if(fc){while(q.i<fc.length&&x>fc[q.i])q.i++;   // forced cuts (band copies of a B chain reuse band 0 cuts)
+    if(q.i<fc.length&&x+wid>=fc[q.i]){const c=fc[q.i++];q.s=c;x=ctr?c+1:c;
+      if(x+wid-q.s>fw)q.bad="a "+wid+" cell wide part does not fit a floor "+fw+" wide: tick a bigger block";return x}
+    if(fw&&x+wid+1-q.s>fw)q.bad="internal: band cut mismatch";return x}
   if(fw&&x+wid+1-q.s>fw){const c=Math.max(x,q.s+lo);if(c-q.s>fw)q.bad="an underground belt cannot reach across the wall (needs "+lo+" free cells, floor is "+fw+" wide)";
     q.cuts.push(c);if(q.cuts.length+1>PLC_MAXBLK)q.bad="needs more than "+PLC_MAXBLK+" blocks";q.s=c;x=ctr?c+1:c;
     if(x+wid-q.s>fw)q.bad="a "+wid+" cell wide part does not fit a floor "+fw+" wide: tick a bigger block";}
@@ -130,9 +134,24 @@ function placerBank(P,item,mk,spMk,o){
       if(q===n-1&&o.feedOut){const oiF=offs(o.feedOut.nT,nOut,true,cE);ge.feedRows=Array.from({length:o.feedOut.nT},(_,k)=>Bo+oiF[o.feedOut.up?k:o.feedOut.nT-1-k])}   // B chain: its out hub E ports feed the consumer B trunks
       gs.push(ge);B=Bo}
     return gs};
-  const it=[],sg=plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo),hz=[];let x=2*bw+2,xf=2*bw+1;
+  const it=[],sg=o.seg||plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo),hz=[];let xs=0;
+  const rBs=[];
+  if(tr.two&&o.sep){   // sep layout: B chain copies on the LEFT (own column range, same segments), main chain to their right
+    const cI=n-1,eB=P.edges.find(e=>e.from===topB&&e.to===ch[cI].item),bset=new Set(Bn.map(nd=>nd.item));
+    const bad=Bn.find(nd=>nd.machines<G);if(bad)return no("band count "+G+" does not fit "+bad.machines+" machines of "+plnNm(bad.item));
+    let cB=null,xB=0;
+    for(let b=0;b<G;b++){
+      const nodesB={};Bn.forEach(nd=>nodesB[nd.item]={...nd,machines:dist(nd.machines,G)[b]});
+      const fB=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
+      const PB={raw:P.raw.filter(r=>r.item===tr.two.rawB),nodes:nodesB,cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||e.from===tr.two.rawB)&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}]).map(e=>({...e,flow:e.flow*fB}))};
+      const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:cI%2===1},fit:null,sep:false,seg:b?plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo,cB):sg});
+      if(!rB.ok)return rB;
+      if(!b)cB=sg.cuts.slice();
+      rBs.push(rB);xB=Math.max(xB,rB.w)}
+    xs=sg.put(xB+1,2*bw+1,false)}
+  let x=xs+2*bw+2,xf=xs+2*bw+1;
   for(let q=0;q<n;q++){const X0=[];for(let k=0;k<tbs[q];k++){x=sg.put(x,SS[q].Wb,false);X0.push(x);x+=SS[q].Wb+1}
-    const xe=sg.put(x,q<n-1||o.feedOut?bw:2*bw+1,true);hz.push({Xs:0,xf,X0,xe});
+    const xe=sg.put(x,q<n-1||o.feedOut?bw:2*bw+1,true);hz.push({Xs:xs,xf,X0,xe});
     if(q<n-1){xf=xe+bw;x=xe+bw+1}}   // junction q: one hub at xe (out side of stage q = in side of stage q+1); feeders start xe+bw
   if(sg.bad)return no(sg.bad);
   const gb=[];let oy=0;
@@ -144,7 +163,7 @@ function placerBank(P,item,mk,spMk,o){
       for(let j=0;j<g.nOut;j++){const y=g.Bo+j*bh;it.push(bx(xe,y,[]));if(q===n-1&&!o.mod&&!o.feedOut)it.push(bx(xe+bw+1,y,[]))}
       if(q===n-1&&!o.feedOut)g.oo.forEach(r=>{it.push(bt(xe+bw,g.Bo+r));if(o.mod)for(let xx=xe+bw+1;xx<xe+2*bw+1;xx++)it.push(bt(xx,g.Bo+r))})});
     // 2-input: this band's share of the B chain (its own copy of the B planner, machines and flows scaled to the band), on the consumer feed side (below an up stage, above a down stage), right-aligned at the consumer input hub
-    if(tr.two){
+    if(tr.two&&!o.sep){
       const cI=n-1,gC=gs[cI],hC=hz[cI],nodesB={};
       const bad=Bn.find(nd=>nd.machines<G);if(bad)return no("band count "+G+" does not fit "+bad.machines+" machines of "+plnNm(bad.item));
       Bn.forEach(nd=>nodesB[nd.item]={...nd,machines:dist(nd.machines,G)[b]});
@@ -156,6 +175,11 @@ function placerBank(P,item,mk,spMk,o){
       rB.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y0}));
       plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);
     }
+    if(tr.two&&o.sep){const cI=n-1,gC=gs[cI],hC=hz[cI],rB=rBs[b],bi=it.slice(i0);
+      const y0=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rB.h;
+      rB.items.forEach(c=>it.push({...c,y:c.y+y0}));
+      rB.feed.rows.forEach(r=>{for(let xx=rB.feed.x+bw;xx<hC.xf;xx++)it.push(bt(xx,r+y0))});
+      plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);}
     const sl=it.slice(i0),mn=Math.min(...sl.map(c=>c.y)),mx=Math.max(...sl.map(c=>c.y+dim(c).h));
     sl.forEach(c=>{c.y+=oy-mn});oy+=mx-mn+1}   // band min y -> oy, spare row between bands
   const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
@@ -177,7 +201,7 @@ function placerBank(P,item,mk,spMk,o){
   const feed=o.feedOut?{x:hz[n-1].xe-mnx,rows:gb[0][n-1].feedRows.map(y=>y-mny)}:null;
   const bandSum=q=>{const s=[];for(let b=0;b<G;b++)s.push(alls[q].slice(b*tbs[q],(b+1)*tbs[q]).reduce((a,c)=>a+c,0));return s.every(v=>v===s[0])};
   const even=SS.every((_,q)=>bandSum(q))&&Bn.every(nd=>nd.machines%G===0);   // every band holds the same machines per stage (uneven = fallback, see placerTile)
-  return{ok:true,items,lanes:G*tbs[last],per:alls[last],makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:G*tbs[last],rows:Math.max(...gb.flat().map(g=>g.R)),nS,nK,ps,bands:G,tb:tbs[last],t0:Math.max(...t0s),cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o},tbs,stages:n,hubs,nIn:G*tbs[0],nOut:G*tbs[last],feed,even};
+  return{ok:true,items,lanes:G*tbs[last],per:alls[last],makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:G*tbs[last],rows:Math.max(...gb.flat().map(g=>g.R)),nS,nK,ps,bands:G,tb:tbs[last],t0:Math.max(...t0s),cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o},tbs,stages:n,hubs,nIn:G*tbs[0],nOut:G*tbs[last],feed,even,two:!!tr.two};
 }
 function placerPlan(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0,pr=plnProto(),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
@@ -328,11 +352,14 @@ function placerCut(L,cls){
     if(L.bank){const q=pr(b.y);y=q*TH+b.y-(rc[q-1]||0)}
     else{const g=Math.floor(Math.floor(b.y/L.pitch)/per);y=g*TH+b.y-g*per*L.pitch}
     return{...b,cls:ug.has(b)?PLC_UG[L.mk]:b.cls,x:i*TW+b.x-(i?cuts[i-1]:0),y}});
+  const seen=new Set();let ov=0;   // cells claimed by two items: a layout bug, the caller retries or reports it
+  for(const m of ms){const e=dim(m);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++){const k=(m.x+i)+","+(m.y+j);if(seen.has(k))ov++;else seen.add(k)}}
   const cols=cuts.length+1,rows=L.bank?rc.length+1:Math.ceil(L.lanes/per),blocks=[];
   for(let g=0;g<rows;g++)for(let i=0;i<cols;i++)
     if(ms.some(m=>m.x>=i*TW&&m.x<(i+1)*TW&&m.y>=g*TH&&m.y<(g+1)*TH))blocks.push({cls,x:i*d.w,y:g*d.h});
   if(blocks.length>PLC_MAXBLK)return{ok:false,why:"needs "+blocks.length+" blocks, the limit is "+PLC_MAXBLK};
-  return{ok:true,blocks,ms,ug:ugs.length,cols,rows,max:mx,rc};
+  const span=ugPairs(ms.filter(isM)).filter(p=>p&&p.n>mx).length;   // a pair longer than the Mk span (ugPairs pairs same-row UGs in order): layout bug, placerTile skips it
+  return{ok:true,blocks,ms,ug:ugs.length,cols,rows,max:mx,rc,ov,span};
 }
 // best block type among the ticked ones (fewest blocks); no tick fits -> the reason of the last failure
 function placerTile(L,ok){
@@ -340,10 +367,14 @@ function placerTile(L,ok){
   const Gs=PLC_G?[PLC_G]:Array.from({length:L.bank?Math.min(12,L.t0):1},(_,i)=>i+1);   // ponytail: band ceiling 12 keeps huge plans fast
   PL_STD.forEach((nm,i)=>{if(!ok[i])return;const cls=plcCls(nm);
     for(const G of Gs){
-      const L2=L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk),G}):L;
-      if(!L2.ok){why=L2.why;continue}
-      const r=placerCut(L2,cls);if(!r.ok){why=r.why;continue}
-      r.G=G;r.L=L2;
+      const run=sep=>{const L2=L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk),G,sep}):L;
+        return L2.ok?{...placerCut(L2,cls),L2}:{ok:false,why:L2.why}};
+      let r=run(false);   // legacy layout first; sep layout (B chain segmented, on the left) only when legacy fails or overlaps
+      if(L.bank&&L.two&&(!r.ok||r.ov||r.span)){const r2=run(true);if(r2.ok&&!r2.ov&&!r2.span)r=r2}
+      if(r.ov){why="internal: overlap";continue}
+      if(r.span){why="internal: underground pair longer than the belt span";continue}
+      if(!r.ok){why=r.why;continue}
+      r.G=G;r.L=r.L2;
       const sq=q=>Math.abs(q.cols-q.rows),ev=q=>q.L.even!==false;   // even bands first (existing plans unchanged); uneven bands only when no even band count fits
       if(!best||(ev(r)&&!ev(best))||(ev(r)===ev(best)&&(r.blocks.length<best.blocks.length||(r.blocks.length===best.blocks.length&&(sq(r)<sq(best)||(sq(r)===sq(best)&&G<best.G))))))best=r;
     }});
