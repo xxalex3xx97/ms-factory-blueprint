@@ -122,8 +122,8 @@ const audit = () => {
   return {ov, inside, pairs, vert, maxSpan, bad, nM: ms.filter(b => b.rec).length, nBlk: S.blocks.filter(isB).length, ugOk: bad.length === 0};
 };
 const simStats = item => {
-  simInit({}); simRun(300);
-  const got = simProd().byItem[item] || 0, ms = [...SIM.M.values()];
+  simInit({}); simRun(600);
+  const got = SIM.ser.slice(-12).reduce((a,s)=>a+(s.it[item]||0),0)/12, ms = [...SIM.M.values()];
   const need = m => 0.8 * 300 / (recOf(m.b).t / 30);
   return {got, n: ms.length, low: ms.filter(m => m.cycles < need(m)).length, blocked: ms.filter(m => m.st === 'blocked').length};
 };
