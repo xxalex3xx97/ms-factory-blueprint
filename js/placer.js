@@ -88,7 +88,8 @@ function plcChain(P,item){
 // shape of a plan for the layout: single-input chain (plcChain, unchanged) or a 2-input final stage fed by two single-input chains
 function plcTree(P,item){
   const no=why=>({ok:false,why}),T=P.nodes[item];
-  if(P.cycle||!T||!T.rec)return no("Step 1: only single-input single-recipe plans");
+  if(P.cycle)return no("Step 1: only single-input single-recipe plans. Recipe loop: "+(P.loop||[]).map(plnNm).join(" -> ")+": no recipe choice breaks it");
+  if(!T||!T.rec)return no("Step 1: only single-input single-recipe plans");
   if(T.rec.i.length===1){const ch=plcChain(P,item);return ch?{ok:true,ch,two:null,raw:P.raw[0].item}:no("Step 1: only single-input single-recipe plans")}
   if(T.rec.i.length<2||T.rec.i.length>3)return no("Bank: "+T.rec.i.length+" inputs per machine: only 1, 2 or 3 are supported");
   const side=top=>{const c=[],seen=new Set();let x=top;
@@ -564,7 +565,10 @@ function* placerTileGen(L,ok){
     for(const G of Gs){yield {phase:1,n:cands.length+1,total:PL_STD.length*Gs.length,G,cls};
       const L2=lay(cls,G,false);pre.set(i+"|"+G,L2);
       cands.push({i,cls,G,ord:cands.length,est:L2.ok?Math.ceil(L2.w/f.w)*Math.ceil(L2.h/f.h):Infinity})}}
-  const sq=q=>Math.abs(q.cols-q.rows),ev=q=>q.L.even!==false;   // even bands first (existing plans unchanged); uneven bands only when no even band count fits
+  const bad=q=>Math.max(q.cols,q.rows)>3*Math.max(1,Math.min(q.cols,q.rows));   // grid worse than 3:1 (long thin factory): a squarer candidate wins
+  const sq=q=>Math.abs(q.cols-q.rows),ev=q=>q.L.even!==false;
+  const rk=q=>[q.L.even!==false?0:1,bad(q)?1:0,q.blocks.length,sq(q),q.G,q.ord];
+  const better=(r,b)=>{const x=rk(r),y=rk(b);for(let i=0;i<x.length;i++){if(x[i]!==y[i])return x[i]<y[i]}return false};   // even bands first (existing plans unchanged); uneven bands only when no even band count fits
   // one candidate cut: {r} on success, {fail} with the reason otherwise
   const runC=c=>{const G=c.G;
     const run1=(sep,novc)=>{PLC_NOVC=novc;let L2;try{L2=(!sep&&!novc&&pre.get(c.i+"|"+G))||lay(c.cls,G,sep)}finally{PLC_NOVC=false}
@@ -582,7 +586,7 @@ function* placerTileGen(L,ok){
   const bigC=cands.filter(c=>c.i===bigI&&c.est<Infinity).sort((a,b)=>a.est-b.est||a.ord-b.ord);
   if(bigC.length&&!(minEst<=0.7*bigC[0].est)){
     for(let k=0;k<bigC.length;k++){yield {phase:2,n:k+1,total:bigC.length,G:bigC[k].G,cls:bigC[k].cls};
-      const x=runC(bigC[k]);if(x.r&&ev(x.r))return x.r}
+      const x=runC(bigC[k]);if(x.r&&ev(x.r)&&!bad(x.r))return x.r}
   }
   // full path: every candidate in estimate order, stop when proven
   const order=cands.slice().sort((a,b)=>a.est-b.est||a.ord-b.ord),fails=[];
@@ -592,8 +596,8 @@ function* placerTileGen(L,ok){
     const x=runC(c);
     if(x.fail)fails[c.ord]=x.fail;
     else{const r=x.r;
-      if(!best||(ev(r)&&!ev(best))||(ev(r)===ev(best)&&(r.blocks.length<best.blocks.length||(r.blocks.length===best.blocks.length&&(sq(r)<sq(best)||(sq(r)===sq(best)&&(G<best.G||(G===best.G&&r.ord<best.ord))))))))best=r;
-      const nx=order[k+1];if(nx&&ev(best)&&best.blocks.length<=nx.est)break}   // proven: no remaining estimate beats the best found
+      if(!best||better(r,best))best=r;
+      const nx=order[k+1];if(nx&&ev(best)&&!bad(best)&&best.blocks.length<=nx.est)break}   // proven: no remaining estimate beats the best found
   }
   if(best)return best;
   let why="";fails.forEach(w=>{if(w!==undefined)why=w});   // last failure in search order, as before
