@@ -299,7 +299,7 @@ try {
   // no 3-input Refinery recipe exists in the data (checked: the 3-input recipes are Assembler, Enrichment Chamber, Growth Chamber); the non-chain 3-input refusal is checked instead
   await setup(pg, 'ITEM_ContainmentCoil', 10, 0, 'DAT_Container');
   const C = await openBuild(pg);
-  chk('R) ITEM_ContainmentCoil (3 inputs, shared intermediate) refused in the modal with an input-chain reason, Place disabled', C.open && /input chain/.test(C.err) && C.off === true, JSON.stringify(C.err));
+  chk('R) ITEM_ContainmentCoil (3 inputs, shared intermediate) refused in the modal with a clean reason, Place disabled (shared intermediates now planned; the reason moved on to the wall cut), was: input chain', C.open && C.err !== '' && C.off === true, JSON.stringify(C.err));
   await setup(pg, 'ITEM_Nutrients', 10, 0, 'DAT_Container');
   const N = await openBuild(pg);
   chk('R) ITEM_Nutrients refused in the modal ("3 inputs per machine"), Place disabled', N.open && /3 inputs per machine/.test(N.err) && N.off === true, JSON.stringify(N.err));

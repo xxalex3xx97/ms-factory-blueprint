@@ -88,9 +88,14 @@ function plcTree(P,item){
     for(;;){const n=P.nodes[x];if(!n)return null;if(!n.rec)return{c,raw:x};
       if(seen.has(x)||n.rec.i.length!==1||P.edges.filter(e=>e.from===x).length!==1)return null;
       seen.add(x);c.unshift(n);x=n.rec.i[0][0]}};
-  const [a,b,c]=T.rec.i.map(([x])=>side(x));
+  // B/C input: a single-input chain, or any sub-tree (nested multi-input) that placerBank lays out recursively; the sub-tree's top is last in c
+  const sub=top=>{const c=[],raws=[],seen=new Set();const walk=x=>{const n=P.nodes[x];if(!n)return;if(!n.rec){if(!raws.includes(x))raws.push(x);return}if(seen.has(x))return;seen.add(x);n.rec.i.forEach(([y])=>walk(y));c.push(n)};walk(top);return{c,raw:raws[0],raws}};
+  // the main chain is the first input that is a single-input chain; the others are B (and C) sub-trees
+  const ins=T.rec.i.map(([x])=>x),sides=ins.map(side),ia=sides.findIndex(Boolean);
+  if(ia<0)return no("Bank: no input is a single-input chain (every input has a shared intermediate or a deeper input)");
+  const rest=ins.map((x,i)=>i).filter(i=>i!==ia),a=sides[ia],b=sides[rest[0]]||sub(ins[rest[0]]),c=rest[1]!==undefined?(sides[rest[1]]||sub(ins[rest[1]])):null;
   if(!a||!b||(T.rec.i.length===3&&!c))return no("Bank: an input chain is not a single-input chain (a shared intermediate or a deeper input)");
-  return{ok:true,ch:[...a.c,T],two:{B:b.c,rawB:b.raw},raw:a.raw,...(c?{three:{C:c.c,rawC:c.raw}}:{})};
+  return{ok:true,ch:[...a.c,T],two:{B:b.c,rawB:b.raw,rawsB:b.raws||[b.raw]},raw:a.raw,...(c?{three:{C:c.c,rawC:c.raw,rawsC:c.raws||[c.raw]}}:{})};
 }
 function plcBanks(g,it){
   const {ML,MR,sc,w,h,cin,dk,rec,two,three,sp:spc=0,pitch:P=h}=g.S,{cnt,X0,fRow,lRow,Y0,R,up,xf,xe,bc,mk}=g,s=up?-1:1,vr=up?3:1,Yb=Y0+(R-1)*P+h+(three&&!three.vc?1:0);
@@ -213,7 +218,7 @@ function placerBank(P,item,mk,spMk,o){
     for(let b=0;b<G;b++){
       const nodesB={};Bn.forEach(nd=>nodesB[nd.item]={...nd,machines:tr.three?Math.ceil(nd.machines/G):dist(nd.machines,G)[b]});
       const fB=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
-      const PB={raw:P.raw.filter(r=>r.item===tr.two.rawB),nodes:nodesB,cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||e.from===tr.two.rawB)&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}]).map(e=>({...e,flow:e.flow*fB}))};
+      const PB={raw:P.raw.filter(r=>(tr.two.rawsB||[tr.two.rawB]).includes(r.item)),nodes:{...nodesB,...Object.fromEntries((tr.two.rawsB||[]).filter(r=>P.nodes[r]).map(r=>[r,P.nodes[r]]))},cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||(tr.two.rawsB||[tr.two.rawB]).includes(e.from))&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}]).map(e=>({...e,flow:e.flow*fB}))};
       const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:cI%2===1},fit:null,sep:false,seg:b?plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo,cB):sg});
       if(!rB.ok)return rB;
       if(!b)cB=sg.cuts.slice();
@@ -240,7 +245,7 @@ function placerBank(P,item,mk,spMk,o){
       const bad=Bn.find(nd=>nd.machines<G);if(bad)return no("band count "+G+" does not fit "+bad.machines+" machines of "+plnNm(bad.item));
       Bn.forEach(nd=>nodesB[nd.item]={...nd,machines:tr.three?Math.ceil(nd.machines/G):dist(nd.machines,G)[b]});
       const eB=P.edges.find(e=>e.from===topB&&e.to===ch[cI].item),bset=new Set(Bn.map(nd=>nd.item)),fB=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
-      const PB={raw:P.raw.filter(r=>r.item===tr.two.rawB),nodes:nodesB,cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||e.from===tr.two.rawB)&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}]).map(e=>({...e,flow:e.flow*fB}))};
+      const PB={raw:P.raw.filter(r=>(tr.two.rawsB||[tr.two.rawB]).includes(r.item)),nodes:{...nodesB,...Object.fromEntries((tr.two.rawsB||[]).filter(r=>P.nodes[r]).map(r=>[r,P.nodes[r]]))},cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||(tr.two.rawsB||[tr.two.rawB]).includes(e.from))&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}]).map(e=>({...e,flow:e.flow*fB}))};
       const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null,wantT:tbs[cI]});
       if(!rB.ok)return rB;      const bi=it.slice(i0),dx=hz[cI-1].xe-rB.feed.x,y0=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rB.h;
       rB.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y0}));
@@ -251,7 +256,7 @@ function placerBank(P,item,mk,spMk,o){
       const eC=P.edges.find(e=>e.from===topC&&e.to===ch[cI].item),setC=new Set(Cn.map(nd=>nd.item)),fC=alls[cI].slice(b*T3,(b+1)*T3).reduce((a,c)=>a+c,0)/Ns[cI];
       const frCk=[];
       for(let k=0;k<T3;k++){const nodesC={};Cn.forEach(nd=>nodesC[nd.item]={...nd,machines:Math.ceil(nd.machines/(G*T3))});
-        const PC={raw:P.raw.filter(r=>r.item===tr.three.rawC),nodes:nodesC,cycle:false,edges:P.edges.filter(e=>(setC.has(e.from)||e.from===tr.three.rawC)&&e.to!==ch[cI].item).concat([{from:topC,to:null,flow:eC.flow}]).map(e=>({...e,flow:e.flow*fC/T3}))};
+        const PC={raw:P.raw.filter(r=>(tr.three.rawsC||[tr.three.rawC]).includes(r.item)),nodes:{...nodesC,...Object.fromEntries((tr.three.rawsC||[]).filter(r=>P.nodes[r]).map(r=>[r,P.nodes[r]]))},cycle:false,edges:P.edges.filter(e=>(setC.has(e.from)||(tr.three.rawsC||[tr.three.rawC]).includes(e.from))&&e.to!==ch[cI].item).concat([{from:topC,to:null,flow:eC.flow}]).map(e=>({...e,flow:e.flow*fC/T3}))};
         const rC=placerBank(PC,topC,mk,spMk,{...o,G:1,feedOut:{nT:1,up:gC.up},fit:null,wantT:1});
         if(!rC.ok)return rC;
         const bi=it.slice(i0),dx=hz[cI-1].xe-rC.feed.x,y1=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rC.h;
@@ -293,7 +298,23 @@ function placerPlan(){
   return{it,rate,mk,sp:sp===""?null:+sp,P:plan(it,rate,mk,{sp:sp===""?null:+sp,bal:bal===""?null:+bal},PLN_PICK,{proto:pr,enr:$("plnEnr").checked})};
 }
 // mk / spMk: 0-based MKS index (Mk1 = 0). o={box:container class, mod:bool}. Lanes: nL stacked copies of one row (machines rot 0, trunk y=-1 above, collector y=h below).
-function placerLayout(P,item,mk,spMk,o={}){
+// shared intermediates: each consumer gets its own copy of a shared sub-chain, scaled to what that consumer takes (more raw sources, one copy per consumer); the layout then sees a tree
+function plcUnshare(P,item){
+  if(P.cycle)return P;   // a recipe loop has no tree to copy (plcTree refuses it)
+  const cons={};Object.values(P.nodes).forEach(n=>{if(n.rec)n.rec.i.forEach(([x])=>cons[x]=(cons[x]||0)+1)});
+  if(!Object.values(cons).some(c=>c>1))return P;
+  const isNode=x=>!!(P.nodes[x]&&P.nodes[x].rec),nodes={},edges=[];let k=0;
+  const build=(item,key,sc)=>{const o=P.nodes[item];
+    const ins=o.rec.i.map(([x])=>{const fl=P.edges.find(e=>e.from===x&&e.to===item).flow*sc;
+      if(!isNode(x)){if(P.nodes[x])nodes[x]=P.nodes[x];edges.push({from:x,to:key,flow:fl});return x}
+      const ck=build(x,cons[x]>1?x+"#"+(++k):x,fl/P.nodes[x].rate);
+      edges.push({from:ck,to:key,flow:fl});return ck});
+    nodes[key]={...o,item:key,rec:{...o.rec,i:o.rec.i.map((p,j)=>[ins[j],...p.slice(1)])},rate:o.rate*sc,machines:sc===1?o.machines:Math.max(1,Math.ceil(o.rate*sc/o.pmach-1e-9))};
+    return key};
+  build(item,item,1);
+  return{...P,nodes,edges:edges.concat([{from:item,to:null,flow:P.edges.find(e=>e.from===item&&e.to==null).flow}]),cycle:false};
+}
+function placerLayout(P,item,mk,spMk,o={}){P=plcUnshare(P,item);
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why});
   const tr=plcTree(P,item);if(!tr.ok)return no(tr.why);
   if(tr.two||tr.ch.length>1)return placerBank(P,item,mk,spMk,o);
