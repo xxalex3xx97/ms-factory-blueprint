@@ -4,6 +4,7 @@ const PL_STD=["BPO_Station_01","BPO_Station_2x1","BPO_Station_02"];   // smalles
 const PLC_UG=["DAT_UndergroundBelt","DAT_UndergroundBelt_2","DAT_UndergroundBelt_3"];const plcCls=nm=>Object.keys(BASE).find(k=>BASE[k].kind==="b"&&BASE[k].name===nm);
 const PLC_SRC=480;
 let PLC_BANK=false;   // test hook only (slice 1): bank layout instead of the lane layout
+let PLC_G=0;   // test hook: force band count
 const PLC_MAXBLK=60;   // most station blocks one factory may spread over
 const plcPp=(cls,rot)=>portsOf({cls,x:0,y:0,rot,off:[]});
 function plcMach(cls,inN,outN){
@@ -47,44 +48,49 @@ function plcSeg(fw,lo){const q={s:0,cuts:[],bad:"",put(x,wid,ctr){
     if(x+wid-q.s>fw)q.bad="a "+wid+" cell wide part does not fit a floor "+fw+" wide: tick a bigger block";}
   return x}};return q}
 // floor size of a station block class + the shortest underground span (cells) the belt Mk can reach across a wall
-const plcFit=(cls,mk)=>{const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0});return{fw:f.w,fh:f.h,lo:Math.max(2,d.w*FC+2-def(PLC_UG[mk]).maxApart)}};
+const plcFit=(cls,mk)=>{const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0});return{fw:f.w,fh:f.h,lo:Math.max(2,d.w*FC+2-def(PLC_UG[mk]).maxApart),lh:Math.max(2,d.h*FC+2-def(PLC_UG[mk]).maxApart)}};
 function placerBank(P,item,mk,spMk,o){
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why}),T=P.nodes[item],N=T.machines,cap=i=>MKS[i][1];
   const eIn=P.edges.find(e=>e.from===P.raw[0].item&&e.to===item),eOut=P.edges.find(e=>e.to==null);
   const S=plcStage(T,eIn,eOut,mk,spMk);if(!S.ok)return S;
   const cp=plcPp(BX,0),cE=cp.filter(p=>p.nx===1).sort((a,b)=>a.y-b.y),cW=cp.filter(p=>p.nx===-1).sort((a,b)=>a.y-b.y),seq=a=>a.every((p,i)=>p.y===a[0].y+i);
   if(!cE.length||!cW.length||!seq(cE)||!seq(cW))return no("Bank: container E/W ports not found or not on consecutive rows");
-  const bw=def(BX).w,bh=def(BX).h,{h,Wb,inF}=S,fh=o.fit&&o.fit.fh;
+  const bw=def(BX).w,bh=def(BX).h,{h,Wb,inF}=S;
+  const dist=(n,t)=>Array.from({length:t},(_,k)=>Math.floor(n/t)+(k<n%t?1:0));
   const bt=(x,y)=>({cls:PLC_BELT[mk],x,y,h:0,rot:0,pid:0}),bx=(x,y,ct)=>({cls:BX,x,y,h:0,rot:0,pid:0,ct});
   const ps=Math.max(1,Math.min(cE.length,cW.length,Math.floor(PLC_SRC/cap(mk))));
-  const size=nT=>{const cnt=[];for(let k=0;k<nT;k++)cnt.push(Math.floor(N/nT)+(k<N%nT?1:0));
-    const R=Math.ceil(cnt[0]/2),nS=Math.ceil(nT/ps),rows=[],sr=[];
+  const size=cnt=>{const nT=cnt.length,R=Math.ceil(cnt[0]/2),nS=Math.ceil(nT/ps),rows=[],sr=[];
     for(let i=0;i<nT;i++)rows.push(Math.floor(i/ps)*bh+cE[i%ps].y);
     const Y0=rows[nT-1]+1,Yend=Y0+R*h,sy0=Yend-cW[0].y;
     for(let i=0;i<nT;i++)sr.push(sy0+Math.floor(i/ps)*bh+cW[i%ps].y);
     return{nT,cnt,R,nS,nK:nS,rows,sr,Y0,Yend,sy0,H:Math.max(nS*bh,sy0+nS*bh,sr[nT-1]+1)}};
-  const t0=Math.ceil(N/S.m),g0=size(t0);
-  if(cap(spMk)<g0.cnt[0]*inF-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(g0.cnt[0]*inF)+"/min): set the splitter Mk higher");
-  let g=g0,mh=g0.H;
-  if(fh&&g0.H>fh){g=null;for(let t=t0+1;t<=N;t++){const q=size(t);mh=Math.min(mh,q.H);if(q.H<=fh){g=q;break}}
-    if(!g)return no("the shortest layout is "+mh+" cells tall, the floor is only "+fh+": tick a bigger block")}
-  const it=[];
-  for(let j=0;j<g.nS;j++){it.push(bx(0,j*bh,[{item:P.raw[0].item,n:0,inf:true}]));it.push(bx(bw+1,j*bh,[]))}
-  g.rows.forEach(r=>it.push(bt(bw,r)));
-  const sg=plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo),X0=[];let x=2*bw+2;
-  for(let k=0;k<g.nT;k++){x=sg.put(x,Wb,false);X0.push(x);x+=Wb+1}
+  const t0=Math.ceil(N/S.m);
+  if(cap(spMk)<dist(N,t0)[0]*inF-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(dist(N,t0)[0]*inF)+"/min): set the splitter Mk higher");
+  const G=PLC_G||o.G||1,tb=Math.ceil(t0/G),TT=G*tb;   // bands = same-width trunk groups stacked vertically
+  if(TT>N)return no("band count "+G+" does not fit "+N+" machines");
+  const all=dist(N,TT),bs=[],oy=[0];
+  for(let b=0;b<G;b++){bs.push(size(all.slice(b*tb,(b+1)*tb)));if(b+1<G)oy.push(oy[b]+bs[b].H+1)}
+  const it=[],sg=plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo),X0=[];let x=2*bw+2;   // one column plan shared by every band
+  for(let k=0;k<tb;k++){x=sg.put(x,Wb,false);X0.push(x);x+=Wb+1}
   const xe=sg.put(x,2*bw+1,true);if(sg.bad)return no(sg.bad);
-  plcBanks({S,cnt:g.cnt,X0,fRow:g.cnt.map((_,k)=>g.rows[g.nT-1-k]),lRow:g.cnt.map((_,k)=>g.sr[g.nT-1-k]),Y0:g.Y0,R:g.R,up:false,xf:2*bw+1,xe,bc:PLC_BELT[mk]},it);
-for(let j=0;j<g.nK;j++){const y=g.sy0+j*bh;it.push(bx(xe,y,[]));it.push(bx(xe+bw+1,y,[]))}
-g.sr.forEach(r=>it.push(bt(xe+bw,r)));
-const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
-const nt=["Makes "+plnR2(N*T.pmach)+"/min (target "+plnR2(T.rate)+")",
-  g.nT+" trunk"+(g.nT>1?"s":"")+" ("+g.cnt.join("+")+" machines), "+g.R+" rows, double columns, "+g.nT+" output lane"+(g.nT>1?"s":"")+"; containers: "+g.nS+" source, "+g.nS+" in-buffer, "+g.nK+" out-buffer, "+g.nK+" sink"];
-const m3=mk<2?Math.min(N,Math.floor(MKS[2][1]/Math.max(T.pmach,inF)+1e-9)):0;
-if(m3>S.m)nt.push("Mk3 packs "+m3+" machines per trunk (now "+S.m+")");
-if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
-const W=Math.max(...items.map(b=>b.x+dim(b).w)),H=Math.max(...items.map(b=>b.y+dim(b).h));
-return{ok:true,items,lanes:g.nT,per:g.cnt,makes:N*T.pmach,note:nt,mod:false,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:g.nT,rows:g.R,nS:g.nS,nK:g.nK,ps,cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o}};
+  const band=(g,y0)=>{
+    for(let j=0;j<g.nS;j++){it.push(bx(0,y0+j*bh,[{item:P.raw[0].item,n:0,inf:true}]));it.push(bx(bw+1,y0+j*bh,[]))}
+    g.rows.forEach(r=>it.push(bt(bw,y0+r)));
+    plcBanks({S,cnt:g.cnt,X0,fRow:g.cnt.map((_,k)=>y0+g.rows[g.nT-1-k]),lRow:g.cnt.map((_,k)=>y0+g.sr[g.nT-1-k]),Y0:y0+g.Y0,R:g.R,up:false,xf:2*bw+1,xe,bc:PLC_BELT[mk]},it);
+    for(let j=0;j<g.nK;j++){const y=y0+g.sy0+j*bh;it.push(bx(xe,y,[]));it.push(bx(xe+bw+1,y,[]))}
+    g.sr.forEach(r=>it.push(bt(xe+bw,y0+r)));
+  };
+  bs.forEach((g,b)=>band(g,oy[b]));
+  const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
+  const b0=bs[0],nS=G*b0.nS,nK=G*b0.nK;
+  const nt=["Makes "+plnR2(N*T.pmach)+"/min (target "+plnR2(T.rate)+")"];
+  nt.push(G>1?G+" band(s) of "+tb+" trunk(s) each ("+all.join("+")+" machines), spare belt row between bands; containers: "+nS+" source, "+nS+" in-buffer, "+nK+" out-buffer, "+nK+" sink"
+    :b0.nT+" trunk"+(b0.nT>1?"s":"")+" ("+b0.cnt.join("+")+" machines), "+b0.R+" rows, double columns, "+b0.nT+" output lane"+(b0.nT>1?"s":"")+"; containers: "+b0.nS+" source, "+b0.nS+" in-buffer, "+b0.nK+" out-buffer, "+b0.nK+" sink");
+  const m3=mk<2?Math.min(N,Math.floor(MKS[2][1]/Math.max(T.pmach,inF)+1e-9)):0;
+  if(m3>S.m)nt.push("Mk3 packs "+m3+" machines per trunk (now "+S.m+")");
+  if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
+  const W=Math.max(...items.map(b=>b.x+dim(b).w)),H=Math.max(...items.map(b=>b.y+dim(b).h));
+  return{ok:true,items,lanes:TT,per:all,makes:N*T.pmach,note:nt,mod:false,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:TT,rows:Math.max(...bs.map(q=>q.R)),nS,nK,ps,bands:G,tb,t0,cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o}};
 }
 function placerPlan(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0,pr=plnProto(),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
@@ -163,7 +169,7 @@ function placerBlock(L,ok=[true,true,true]){
 function placerCut(L,cls){
   const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,Fw=f.w,Fh=f.h,nm=BASE[cls].name;
   const mx=def(PLC_UG[L.mk]).maxApart,per=Math.floor((Fh+1)/L.pitch);
-  if(per<1)return{ok:false,why:(L.bank?"the factory is ":"one lane is ")+(L.pitch-1)+" cells tall, the "+nm+" floor is only "+Fh};
+  if(!L.bank&&per<1)return{ok:false,why:(L.bank?"the factory is ":"one lane is ")+(L.pitch-1)+" cells tall, the "+nm+" floor is only "+Fh};
   const occ=new Map();L.items.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set((b.x+i)+","+(b.y+j),b)});
   const isB=b=>!!b&&PLC_BELT.includes(b.cls);
   const tryCut=c=>{
@@ -197,20 +203,63 @@ function placerCut(L,cls){
     if(!ok)return{ok:false,why:"no free column to cross a wall within "+mx+" underground cells (a machine, splitter or container is in the way): pick a higher belt Mk or a bigger block type"};
     cuts.push(c);ugs.push(...ok);s=c;
   }
-  const ug=new Set(ugs),pc=x=>cuts.filter(c=>c<=x).length;
-  const ms=L.items.map(b=>{const i=pc(b.x),g=Math.floor(Math.floor(b.y/L.pitch)/per);
-    return{...b,cls:ug.has(b)?PLC_UG[L.mk]:b.cls,x:i*TW+b.x-(i?cuts[i-1]:0),y:g*TH+b.y-g*per*L.pitch}});
-  const cols=cuts.length+1,rows=Math.ceil((L.bank?1:L.lanes)/per),blocks=[];
+  const rc=[];
+  if(L.bank){   // bank: also cut rows (2D tiling); a vertical belt crossing a row wall = underground pair
+    const spl=q=>!!q&&PLC_SPL.includes(q.cls),hz=q=>isB(q)&&(q.rot===0||q.rot===2);
+    const tryRow=c=>{
+      const mk=[],side=(x,yy)=>{const l=occ.get((x-1)+","+yy),r=occ.get((x+1)+","+yy);return !!(l&&isB(l)&&l.rot===0)||!!(r&&isB(r)&&r.rot===2)};
+      for(let x=0;x<L.w;x++){
+        const A=occ.get(x+","+(c-1)),B=occ.get(x+","+c);
+        if(A&&A===B)return null;
+        if(spl(A)||spl(B))return null;
+        if(A&&B){
+          if(isB(A)&&isB(B)&&A.rot===B.rot&&(A.rot===1||A.rot===3)){
+            if(ugs.includes(A)||ugs.includes(B)||side(x,c-1)||side(x,c))return null;
+            mk.push(A,B);continue}
+          if(hz(A)&&hz(B))continue;
+          if(isB(A)||isB(B))return null;
+          continue}
+        if(A&&isB(A)&&A.rot===1)return null;   // belt flowing into the empty cell across the wall
+        if(B&&isB(B)&&B.rot===3)return null;
+      }
+      const ms=new Set(mk);
+      for(const it of L.items){if(isB(it))continue;
+        for(const p of portsOf(it)){if(!p.en)continue;const t=occ.get((p.x+p.nx)+","+(p.y+p.ny));if(!t||!ms.has(t))continue;
+          if(p.nx!==0||p.ny!==(t.rot===1?1:-1))return null}}
+      return mk;
+    };
+    let r0=0;
+    while(L.h-r0>Fh){
+      let ok=null,c=0;
+      for(let e=Fh;e>=Math.max(2,d.h*FC+2-mx);e--){const r=tryRow(r0+e);if(r){ok=r;c=r0+e;break}}
+      if(!ok)return{ok:false,why:"no free row to cross a wall within "+mx+" underground cells: pick a higher belt Mk or a bigger block type"};
+      rc.push(c);ugs.push(...ok);r0=c;
+    }
+  }
+  const ug=new Set(ugs),pc=x=>cuts.filter(c=>c<=x).length,pr=y=>rc.filter(c=>c<=y).length;
+  const ms=L.items.map(b=>{const i=pc(b.x);let y;
+    if(L.bank){const q=pr(b.y);y=q*TH+b.y-(rc[q-1]||0)}
+    else{const g=Math.floor(Math.floor(b.y/L.pitch)/per);y=g*TH+b.y-g*per*L.pitch}
+    return{...b,cls:ug.has(b)?PLC_UG[L.mk]:b.cls,x:i*TW+b.x-(i?cuts[i-1]:0),y}});
+  const cols=cuts.length+1,rows=L.bank?rc.length+1:Math.ceil(L.lanes/per),blocks=[];
   for(let g=0;g<rows;g++)for(let i=0;i<cols;i++)
     if(ms.some(m=>m.x>=i*TW&&m.x<(i+1)*TW&&m.y>=g*TH&&m.y<(g+1)*TH))blocks.push({cls,x:i*d.w,y:g*d.h});
-  return{ok:true,blocks,ms,ug:ugs.length,cols,rows,max:mx};
+  if(blocks.length>PLC_MAXBLK)return{ok:false,why:"needs "+blocks.length+" blocks, the limit is "+PLC_MAXBLK};
+  return{ok:true,blocks,ms,ug:ugs.length,cols,rows,max:mx,rc};
 }
 // best block type among the ticked ones (fewest blocks); no tick fits -> the reason of the last failure
 function placerTile(L,ok){
   let best=null,why="";
-  PL_STD.forEach((nm,i)=>{if(!ok[i])return;const cls=plcCls(nm),L2=L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk)}):L;
-    if(!L2.ok){why=L2.why;return}
-    const r=placerCut(L2,cls);if(r.ok){if(!best||r.blocks.length<best.blocks.length)best=r}else why=r.why});
+  const Gs=PLC_G?[PLC_G]:Array.from({length:L.bank?Math.min(12,L.t0):1},(_,i)=>i+1);   // ponytail: band ceiling 12 keeps huge plans fast
+  PL_STD.forEach((nm,i)=>{if(!ok[i])return;const cls=plcCls(nm);
+    for(const G of Gs){
+      const L2=L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk),G}):L;
+      if(!L2.ok){why=L2.why;continue}
+      const r=placerCut(L2,cls);if(!r.ok){why=r.why;continue}
+      r.G=G;r.L=L2;
+      const sq=q=>Math.abs(q.cols-q.rows);
+      if(!best||r.blocks.length<best.blocks.length||(r.blocks.length===best.blocks.length&&(sq(r)<sq(best)||(sq(r)===sq(best)&&G<best.G))))best=r;
+    }});
   return best||{ok:false,why:"Does not fit: "+why};
 }
 function placerPaste(){
@@ -281,8 +330,9 @@ function placerPreview(L){
   $("pvBlk").textContent=!plcT?"0 (existing floor)":plcT.ok?Object.entries(bc).map(([n,c])=>c+" x "+n).join(", "):"none fits";
   if($("pvUg"))$("pvUg").textContent=k.ug?k.ug+" ("+k.ug/2+" pairs, span "+(plcT?plcT.max:0)+" max)":"0";
   $("pvCell").textContent=L.w+" x "+L.h;
-  $("pvIO").textContent=L.mod?"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w:L.bank?"closed: "+L.nS+" source + "+L.nS+" in-buffer west, "+L.nK+" out-buffer + "+L.nK+" sink east":"closed: source container in, sink container out";
-  $("plnPrevNote").textContent=L.note.concat(plcT&&plcT.ok&&plcT.blocks.length>1?["Spread over "+plcT.blocks.length+" blocks ("+plcT.cols+" x "+plcT.rows+"); "+k.ug/2+" underground pairs cross the walls"]:[]).join(". ");
+  const LL=plcT&&plcT.ok&&plcT.L||L;
+  $("pvIO").textContent=L.mod?"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w:L.bank?"closed: "+LL.nS+" source + "+LL.nS+" in-buffer west, "+LL.nK+" out-buffer + "+LL.nK+" sink east":"closed: source container in, sink container out";
+  $("plnPrevNote").textContent=L.note.concat(plcT&&plcT.ok&&plcT.blocks.length>1?["Chose "+plcT.cols+" x "+plcT.rows+" blocks: fewest blocks, then squarest"+(plcT.L.bank?"; "+plcT.G+" band(s) of "+plcT.L.tb+" trunk(s)":"")+"; "+k.ug/2+" underground pairs cross the walls"]:[]).join(". ");
   $("plnPrevErr").textContent=plcT&&!plcT.ok?plcT.why:"";const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}$("plnPlace").disabled=false;placerFitView();
 }
 function placerPlace(){

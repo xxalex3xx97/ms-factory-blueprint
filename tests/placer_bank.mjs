@@ -234,6 +234,7 @@ try {
   // ---- S2) bank layout (N > belt capacity): several trunks, REAL UI, no PLC_BANK hook
   // CobaltPlates: 20/min per machine, Mk1 belt fits 3 machines per trunk (m=3). 140/min = N 7 = T 3; 80/min = N 4 = T 2.
   const S2 = 'ITEM_CobaltPlates';
+  await pg.evaluate(() => { PLC_G = 1; });   // pin one band: S2 tests the trunk/wall engine; the default band search is covered by placer_grid
   const s2check = () => pg.evaluate(() => {
     const items = S.blocks.filter(b => kindOf(b.cls) !== 'b'), occ = new Map();
     let ov = 0;
@@ -380,7 +381,7 @@ try {
     chk(`S2d) ${nm} only: one Control+z removes it`, uz === 0, String(uz));
   }
   await closeIfOpen(pg);
-  await pg.evaluate(() => { PLC_BANK = false; });
+  await pg.evaluate(() => { PLC_BANK = false; PLC_G = 0; });
 } catch (e) {
   fails.push({name: 'exception', detail: e.stack || String(e)});
   console.log('FAIL exception: ' + (e.stack || e));

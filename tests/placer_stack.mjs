@@ -151,7 +151,8 @@ try {
   const A1 = await pg.evaluate(() => {
     const x = placerPlan(), T = x.P.nodes[x.it];
     return {open: $('plnPrev').open, err: $('plnPrevErr').textContent, note: $('plnPrevNote').textContent, N: T.machines, pmach: T.pmach,
-      trunks: plcL.trunks, nS: plcL.nS, nK: plcL.nK, ps: plcL.ps, w: plcL.w, h: plcL.h, bank: !!plcL.bank, blocks: plcT && plcT.ok ? plcT.blocks.length : -1};
+      trunks: plcL.trunks, nS: plcL.nS, nK: plcL.nK, ps: plcL.ps, w: plcL.w, h: plcL.h, bank: !!plcL.bank, blocks: plcT && plcT.ok ? plcT.blocks.length : -1,
+      nSc: plcT && plcT.ok ? plcT.L.nS : -1, nKc: plcT && plcT.ok ? plcT.L.nK : -1, G: plcT && plcT.ok ? plcT.G : -1};   // chosen plan (band count G may be > 1)
   });
   info(`A) N=${A1.N} trunks=${A1.trunks} nS=${A1.nS} nK=${A1.nK} ps=${A1.ps} blocks=${A1.blocks} cell=${A1.w}x${A1.h} note: ${A1.note}`);
   chk('A) modal opens with all blocks ticked, no preview error', A.open === true && A1.open === true && A1.err === '', JSON.stringify({A, A1}));
@@ -166,7 +167,7 @@ try {
   const simA = await pg.evaluate(simStats, ITEM);
   info(`A) placed: machines=${Ac.nM} sources=${Ac.sources} in=${Ac.ins} out=${Ac.outs} sinks=${Ac.sinks} blocks=${Ac.blocks.length} (${[...new Set(Ac.blocks)].join(',')}) sim=${simA.got.toFixed(2)} cycles-low=${simA.low}`);
   chk('A) placed: machines = N from plan', placedA && Ac.nM === A1.N, JSON.stringify({placedA, nM: Ac.nM, N: A1.N}));
-  chk('A) placed: nS sources, nS in-buffers, nK out-buffers, nK sinks', Ac.sources === A1.nS && Ac.ins === A1.nS && Ac.outs === A1.nK && Ac.sinks === A1.nK && Ac.boxes === 2 * A1.nS + 2 * A1.nK, JSON.stringify({Ac, nS: A1.nS, nK: A1.nK}));
+  chk('A) placed: nS sources, nS in-buffers, nK out-buffers, nK sinks (counts of the chosen plan, which may use several bands)', Ac.sources === A1.nSc && Ac.ins === A1.nSc && Ac.outs === A1.nKc && Ac.sinks === A1.nKc && Ac.boxes === 2 * A1.nSc + 2 * A1.nKc, JSON.stringify({Ac, nSc: A1.nSc, nKc: A1.nKc, G: A1.G}));
   chk('A) placed: no overlapping cells, noBuild false, all items inside their floors', Ac.ov === 0 && Ac.noBuildBad === false && Ac.inside === true, JSON.stringify({ov: Ac.ov, nb: Ac.noBuildBad, inside: Ac.inside}));
   chk('A) placed: every machine output reaches a sink through the out-buffer; undergrounds valid', Ac.flowOk === true && Ac.ugOk === true, JSON.stringify({flow: Ac.flowOk, ug: Ac.ugOk}));
   chk('A) sim 300 within 5% of 300, cycles >= 0.8, none blocked', Math.abs(simA.got - 300) <= 15 && simA.low === 0 && simA.blocked === 0 && simA.n === A1.N, JSON.stringify(simA));
@@ -225,7 +226,7 @@ try {
   const C2 = await openBuild(pg, ['plnBk11']);
   const C2s = await pg.evaluate(() => ({open: $('plnPrev').open, err: $('plnPrevErr').textContent, placeOff: $('plnPlace').disabled, bl: $('pvBlk').textContent}));
   if (C2s.err) {
-    chk('C2) 1x1 only: refused in the modal with the shortest layout height', C2s.open && /shortest layout is \d+ cells tall/.test(C2s.err), JSON.stringify({C2, C2s}));
+    chk('C2) 1x1 only: refused in the modal, no "shortest layout" text, reason names the wall crossing', C2s.open && !/shortest layout/.test(C2s.err) && /no free row to cross a wall/.test(C2s.err), JSON.stringify({C2, C2s}));
     info(`C2) refused: ${C2s.err}`);
   } else {
     await pg.click('#plnPlace');

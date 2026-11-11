@@ -94,7 +94,7 @@ try {
   chk('A) modal open after Build', A.open === true, JSON.stringify(A));
   chk('A) #pvBlk matches "<n> x BPO_Station_01", n >= 2', !!m && +m[1] >= 2, String(A.bl));
   chk('A) #pvUg nonzero', A.ug !== null && parseInt(A.ug, 10) > 0, String(A.ug));
-  chk('A) #plnPrevNote contains "Spread over"', /Spread over/.test(A.note), A.note);
+  chk('A) #plnPrevNote contains "Chose C x R blocks" (wording changed from "Spread over")', /Chose \d+ x \d+ blocks/.test(A.note), A.note);
   const right = await pg.evaluate(() => {
     const cv = $('plnPrevMap'), g = cv.getContext('2d'), hw = Math.floor(cv.width / 2), w = cv.width - hw;
     const u = new Uint32Array(g.getImageData(hw, 0, w, cv.height).data.buffer);
