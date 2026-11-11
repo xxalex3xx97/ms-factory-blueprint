@@ -125,13 +125,13 @@ function plcThreeTC(g,it){
       for(let x=TC+1;x<px;x++)it.push(bt(x,y,0));it.push(bt(px,y,3))}}
 }
 // cut a bank layout into floor-wide segments: put(x,wid,ctr) places a wid-wide part at x; if it overflows the floor, cut at the free column c (entrance c-1, exit c), c >= segment start + lo
-function plcSeg(fw,lo,fc){const q={s:0,i:0,cuts:[],bad:"",put(x,wid,ctr,at){
+function plcSeg(fw,lo,fc,pad=[]){const q={s:0,i:0,cuts:[],bad:"",put(x,wid,ctr,at){
   if(at&&!fc){const x1=q.put(x,at,false);q.cuts.push(x1+at);q.s=x1+at;q.put(x1+at,wid-at,false);return x1}
   if(fc){while(q.i<fc.length&&x>fc[q.i])q.i++;   // forced cuts (band copies of a B chain reuse band 0 cuts)
     if(q.i<fc.length&&x+wid>=fc[q.i]){const c=fc[q.i++];q.s=c;x=ctr?c+1:c;
       if(x+wid-q.s>fw)q.bad="a "+wid+" cell wide part does not fit a floor "+fw+" wide: tick a bigger block";return x}
     if(fw&&x+wid+1-q.s>fw)q.bad="internal: band cut mismatch";return x}
-  if(fw&&x+wid+1-q.s>fw){const c=Math.max(x,q.s+lo);
+  if(fw&&x+wid+1-q.s>fw){const c=Math.max(x,q.s+lo)+(pad[q.cuts.length]||0);   // pad: spare columns added to this cut (retry when the cut column is not free)
     if(c-q.s>fw)q.bad="an underground belt cannot reach across the wall (needs "+lo+" free cells, floor is "+fw+" wide)";
     q.cuts.push(c);q.s=c;x=ctr?c+1:c;
     if(x+wid-q.s>fw)q.bad="a "+wid+" cell wide part does not fit a floor "+fw+" wide: tick a bigger block";}
@@ -171,7 +171,7 @@ function placerBank(P,item,mk,spMk,o){
       if(q===n-1&&o.feedOut){const oiF=offs(o.feedOut.nT,nOut,true,cE);ge.feedRows=Array.from({length:o.feedOut.nT},(_,k)=>Bo+oiF[o.feedOut.up?k:o.feedOut.nT-1-k])}   // B chain: its out hub E ports feed the consumer B trunks
       gs.push(ge);B=Bo}
     return gs};
-  const it=[],sg=o.seg||plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo),hz=[];let xs=0;
+  const it=[],sg=o.seg||plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo,undefined,o.pad),hz=[];let xs=0;
   const rBs=[];
   if(tr.two&&o.sep){   // sep layout: B chain copies on the LEFT (own column range, same segments), main chain to their right
     const cI=n-1,eB=P.edges.find(e=>e.from===topB&&e.to===ch[cI].item),bset=new Set(Bn.map(nd=>nd.item));
@@ -249,6 +249,10 @@ function placerBank(P,item,mk,spMk,o){
   const feed=o.feedOut?{x:hz[n-1].xe-mnx,rows:gb[0][n-1].feedRows.map(y=>y+sh0-mny)}:null;
   const bandSum=q=>{const s=[];for(let b=0;b<G;b++)s.push(alls[q].slice(b*tbs[q],(b+1)*tbs[q]).reduce((a,c)=>a+c,0));return s.every(v=>v===s[0])};
   const even=SS.every((_,q)=>bandSum(q))&&Bn.every(nd=>nd.machines%G===0);   // every band holds the same machines per stage (uneven = fallback, see placerTile)
+  // a stage wall cut that is not free (feeder corner, trunk, machine next to it): retry with one more spare column there, up to 6 (top-level layout only)
+  if(o.fit&&o.fit.fw&&!o.seg&&!o.feedOut&&sg.cuts.length){const oc=plcOcc(items),pad=(o.pad||[]).slice(),bad=sg.cuts.map((c,i)=>i).filter(i=>!plcTryCut(items,oc,H,true,sg.cuts[i]-mnx));
+    if(bad.length){if(bad.some(i=>(pad[i]||0)>=6))return no("a wall cut column is not free even with 6 spare columns: tick a bigger block");
+      bad.forEach(i=>{pad[i]=(pad[i]||0)+1});return placerBank(P,item,mk,spMk,{...o,pad})}}
   return{ok:true,items,lanes:G*tbs[last],per:alls[last],makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:G*tbs[last],rows:Math.max(...gb.flat().map(g=>g.R)),nS,nK,ps,bands:G,tb:tbs[last],t0:Math.max(...t0s),cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o},tbs,stages:n,hubs,nIn:G*tbs[0],nOut:G*tbs[last],feed,even,two:!!tr.two};
 }
 function placerPlan(){
@@ -325,18 +329,15 @@ function placerBlock(L,ok=[true,true,true]){
   return null;
 }
 // spread a layout over several blocks of one type: cut it at free columns (a belt crossing = underground pair, entrance+exit = the two cells beside the cut, span <= maxApart), then cut lanes into rows of blocks
-function placerCut(L,cls){
-  const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,Fw=f.w,Fh=f.h,nm=BASE[cls].name;
-  const mx=def(PLC_UG[L.mk]).maxApart,per=Math.floor((Fh+1)/L.pitch);
-  if(!L.bank&&per<1)return{ok:false,why:(L.bank?"the factory is ":"one lane is ")+(L.pitch-1)+" cells tall, the "+nm+" floor is only "+Fh};
-  const IT=L.items.map(b=>({...b}));let occ,Hh=L.h;   // working copies: a row gap shifts them in place
-  const mkOcc=()=>{occ=new Map();IT.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set((b.x+i)+","+(b.y+j),b)})};mkOcc();
-  const isB=b=>!!b&&PLC_BELT.includes(b.cls);
-  const tryCut=c=>{
+// occupancy map cell -> item for a list of placed items (items in layout coordinates)
+function plcOcc(IT){const occ=new Map();IT.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set((b.x+i)+","+(b.y+j),b)});return occ}
+// can a wall be cut at column c (entrance c-1, exit c) through the items? returns the underground pairs' cells, or null
+function plcTryCut(IT,occ,h,bank,c){
+    const isB=b=>!!b&&PLC_BELT.includes(b.cls);
     const mk=[];
-    for(let y=0;y<L.h;y++){const a=occ.get((c-1)+","+y),b=occ.get(c+","+y);
+    for(let y=0;y<h;y++){const a=occ.get((c-1)+","+y),b=occ.get(c+","+y);
       if(a&&a===b)return null;
-      if(L.bank){   // bank: only east-flowing belt pairs cross the wall; empty cells and vertical belts are fine
+      if(bank){   // bank: only east-flowing belt pairs cross the wall; empty cells and vertical belts are fine
         if(a&&b){
           if(!(isB(a)&&isB(b)&&a.rot===0&&b.rot===0))return null;
           const sd=(q,dy)=>{const n=occ.get(q.x+","+(q.y+dy));return !!n&&isB(n)&&n.rot===(dy<0?1:3)};
@@ -353,7 +354,15 @@ function placerCut(L,cls){
       for(const p of portsOf(it)){if(!p.en)continue;const t=occ.get((p.x+p.nx)+","+(p.y+p.ny));if(!t||!ms.has(t))continue;
         if(p.ny!==0||p.nx!==(t.x===c-1?1:-1))return null}}
     return mk;
-  };
+}
+function placerCut(L,cls){
+  const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,Fw=f.w,Fh=f.h,nm=BASE[cls].name;
+  const mx=def(PLC_UG[L.mk]).maxApart,per=Math.floor((Fh+1)/L.pitch);
+  if(!L.bank&&per<1)return{ok:false,why:(L.bank?"the factory is ":"one lane is ")+(L.pitch-1)+" cells tall, the "+nm+" floor is only "+Fh};
+  const IT=L.items.map(b=>({...b}));let occ,Hh=L.h;   // working copies: a row gap shifts them in place
+  const mkOcc=()=>{occ=new Map();IT.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set((b.x+i)+","+(b.y+j),b)})};mkOcc();
+  const isB=b=>!!b&&PLC_BELT.includes(b.cls);
+  const tryCut=c=>plcTryCut(IT,occ,L.h,L.bank,c);
   const cuts=[],ugs=[];let s=0;
   if(L.cuts){for(const c of L.cuts){const r=tryCut(c);if(!r)return{ok:false,why:"internal: bank cut column "+c+" is not free"};cuts.push(c);ugs.push(...r)}}
   else while(L.w-s>Fw){

@@ -160,6 +160,18 @@ try {
     await pg.keyboard.press('Control+z');
   }
 
+  // ---- wall cuts: Superalloy into a plain container at Mk2/Mk3 55/min is width-limited (no free cut column within 6 spare columns of a 30-wide floor): a clean refusal with Place disabled, or a fit; Large buffer Mk2 120 returns within 25 s, consistent with Place
+  for (const [mk, rate, buf, label] of [[1, 55, 'DAT_Container', 'Container Mk2 55'], [2, 55, 'DAT_Container', 'Container Mk3 55'], [1, 120, 'DAT_Container_2', 'Large Mk2 120']]) {
+    await setup(pg, ITEM, rate, mk, buf);
+    const t0 = Date.now();
+    const W = await openBuild(pg);
+    const dt = Date.now() - t0;
+    info(`W) ${label}: ${dt} ms, G=${W.G}, hubs=${W.hubs}, err=${JSON.stringify(W.err)}, Place disabled=${W.off}`);
+    chk(`W) ${label} returns within 25 s`, dt < 25000, dt + ' ms');
+    chk(`W) ${label}: fit (Place enabled) or clean refusal (Place disabled, reason names the wall/width)`, W.open && ((W.err === '' && !W.off) || (/cannot reach|not free|tick a bigger block|underground/.test(W.err) && W.off === true)), JSON.stringify({err: W.err, off: W.off}));
+    await closeIfOpen(pg);
+  }
+
   // ---- regression: Large container buffer (gap-row hang), each case returns within 20 s; an error in the modal always disables Place
   for (const [rate, mk] of [[10, 0], [25, 0], [25, 1], [55, 1]]) {
     await setup(pg, ITEM, rate, mk, 'DAT_Container_2');
