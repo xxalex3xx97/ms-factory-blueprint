@@ -118,6 +118,26 @@ try {
   chk('e) rate change re-runs preview: text cleared, button Place', e3.open && e3.big === '' && e3.btn === 'Place', JSON.stringify(e3));
   await pg.click('#plnCancel').catch(() => {});
 
+  // (h) rate in the modal: 3000 -> 300 by typing in #pvRate, preview re-runs (note says target 300); field fits 390px
+  await setup(pg, 'Lightweight Frames', 3000, 0, 'DAT_Container');
+  await openModal(pg);
+  await pg.fill('#pvRate', '300');
+  await pg.dispatchEvent('#pvRate', 'change');
+  await pg.waitForTimeout(150);
+  const h = await pg.evaluate(() => ({open: $('plnPrev').open, rate: $('plnRate').value, note: $('plnPrevNote').textContent}));
+  chk('h) modal rate 300 re-runs preview, note says target 300', h.open && h.rate === '300' && /target 300\)/.test(h.note), JSON.stringify(h));
+  for (const [w, hgt] of VIEWS) {
+    await pg.setViewportSize({width: w, height: hgt});
+    await pg.waitForTimeout(120);
+    await pg.screenshot({path: path.join(SHOTS, `fixes-rate-${w}x${hgt}.png`)});
+    if (w === 390) {
+      const fit = await pg.evaluate(() => { const r = $('pvRate').getBoundingClientRect(); return {right: r.right, vw: window.innerWidth} });
+      chk('h) rate field fits 390px', fit.right <= fit.vw, JSON.stringify(fit));
+    }
+  }
+  await pg.setViewportSize({width: 1400, height: 800});
+  await pg.click('#plnCancel').catch(() => {});
+
   // (f) Cobalt 300 Mk1 (2 blocks): one click places, no confirm
   await setup(pg, 'Cobalt', 300, 0, 'DAT_Container');
   await openModal(pg);

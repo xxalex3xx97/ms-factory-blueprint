@@ -396,7 +396,7 @@ function placerRun(open){
   if(!L.ok){plcL=null;plcT=null;placerClear();$("plnPrevErr").textContent=L.why;$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
-function placerGo(){$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;placerRun(true)}
+function placerGo(){$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;$("pvRate").value=$("plnRate").value;placerRun(true)}
 // live modal: build settings re-run the preview; errors show inside the modal with Place off
 const placerLive=()=>placerRun(false);
 function placerClear(){
@@ -492,6 +492,8 @@ $("plnZf").onclick=()=>placerFitView();
 $("plnBk").addEventListener("change",placerLive);$("plnBuf").addEventListener("change",placerLive);$("plnMod").addEventListener("change",placerLive);
 $("pvMk").addEventListener("change",()=>{$("plnMk").value=$("pvMk").value;$("plnMk").dispatchEvent(new Event("change"))});
 $("pvSp").addEventListener("change",()=>{$("plnSp").value=$("pvSp").value;$("plnSp").dispatchEvent(new Event("change"))});
-const plcSync=()=>{if(!$("plnPrev").open)return;$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;placerLive()};
-$("plnMk").addEventListener("change",plcSync);$("plnSp").addEventListener("change",plcSync);
+const plcSync=()=>{if(!$("plnPrev").open)return;$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;$("pvRate").value=$("plnRate").value;placerLive()};
+$("plnMk").addEventListener("change",plcSync);$("plnSp").addEventListener("change",plcSync);$("plnRate").addEventListener("change",plcSync);
+// rate in the modal: same field the planner reads (placerPlan), kept in sync both ways
+$("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;placerLive()});
 window.addEventListener("resize",()=>{if($("plnPrev").open)requestAnimationFrame(placerFitView)});
