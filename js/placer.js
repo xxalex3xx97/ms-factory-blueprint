@@ -214,16 +214,18 @@ function placerBank(P,item,mk,spMk,o){
       rB.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y0}));
       plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);
     }
-    if(tr.three&&!o.sep){const cI=n-1,gC=gs[cI],hC=hz[cI],nodesC={};   // 3rd input: its own band beyond the B band, feed row frC, TC trunk via plcThreeTC
-      const bad=Cn.find(nd=>nd.machines<G);if(bad)return no("band count "+G+" does not fit "+bad.machines+" machines of "+plnNm(bad.item));
-      Cn.forEach(nd=>nodesC[nd.item]={...nd,machines:Math.ceil(nd.machines/G)});
-      const eC=P.edges.find(e=>e.from===topC&&e.to===ch[cI].item),setC=new Set(Cn.map(nd=>nd.item)),fC=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
-      const PC={raw:P.raw.filter(r=>r.item===tr.three.rawC),nodes:nodesC,cycle:false,edges:P.edges.filter(e=>(setC.has(e.from)||e.from===tr.three.rawC)&&e.to!==ch[cI].item).concat([{from:topC,to:null,flow:eC.flow}]).map(e=>({...e,flow:e.flow*fC}))};
-      const rC=placerBank(PC,topC,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null});
-      if(!rC.ok)return rC;
-      const bi=it.slice(i0),dx=hz[cI-1].xe-rC.feed.x,y1=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rC.h;
-      rC.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y1}));
-      plcThreeTC({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frC:rC.feed.rows.map(r=>r+y1),bc:PLC_BELT[mk],mk},it);}
+    if(tr.three&&!o.sep){const cI=n-1,gC=gs[cI],hC=hz[cI],T3=tbs[cI];   // 3rd input: one C sub-band per consumer trunk (own machines, own feed row frC[k]), stacked beyond the B band; TC trunks via plcThreeTC
+      const bad=Cn.find(nd=>nd.machines<G*T3);if(bad)return no("band count "+(G*T3)+" does not fit "+bad.machines+" machines of "+plnNm(bad.item));
+      const eC=P.edges.find(e=>e.from===topC&&e.to===ch[cI].item),setC=new Set(Cn.map(nd=>nd.item)),fC=alls[cI].slice(b*T3,(b+1)*T3).reduce((a,c)=>a+c,0)/Ns[cI];
+      const frCk=[];
+      for(let k=0;k<T3;k++){const nodesC={};Cn.forEach(nd=>nodesC[nd.item]={...nd,machines:Math.ceil(nd.machines/(G*T3))});
+        const PC={raw:P.raw.filter(r=>r.item===tr.three.rawC),nodes:nodesC,cycle:false,edges:P.edges.filter(e=>(setC.has(e.from)||e.from===tr.three.rawC)&&e.to!==ch[cI].item).concat([{from:topC,to:null,flow:eC.flow}]).map(e=>({...e,flow:e.flow*fC/T3}))};
+        const rC=placerBank(PC,topC,mk,spMk,{...o,G:1,feedOut:{nT:1,up:gC.up},fit:null});
+        if(!rC.ok)return rC;
+        const bi=it.slice(i0),dx=hz[cI-1].xe-rC.feed.x,y1=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rC.h;
+        rC.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y1}));
+        frCk.push(rC.feed.rows[0]+y1);}
+      plcThreeTC({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frC:frCk,bc:PLC_BELT[mk],mk},it);}
     if(tr.two&&o.sep){const cI=n-1,gC=gs[cI],hC=hz[cI],rB=rBs[b],bi=it.slice(i0);
       const y0=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rB.h;
       rB.items.forEach(c=>it.push({...c,y:c.y+y0}));
@@ -251,7 +253,7 @@ function placerBank(P,item,mk,spMk,o){
   const feed=o.feedOut?{x:hz[n-1].xe-mnx,rows:gb[0][n-1].feedRows.map(y=>y+sh0-mny)}:null;
   const bandSum=q=>{const s=[];for(let b=0;b<G;b++)s.push(alls[q].slice(b*tbs[q],(b+1)*tbs[q]).reduce((a,c)=>a+c,0));return s.every(v=>v===s[0])};
   const even=SS.every((_,q)=>bandSum(q))&&Bn.every(nd=>nd.machines%G===0);   // every band holds the same machines per stage (uneven = fallback, see placerTile)
-  return{ok:true,items,lanes:G*tbs[last],per:alls[last],makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:G*tbs[last],rows:Math.max(...gb.flat().map(g=>g.R)),nS,nK,ps,bands:G,tb:tbs[last],t0:Math.max(...t0s),cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o},tbs,stages:n,hubs,nIn:G*tbs[0],nOut:G*tbs[last],feed,even,two:!!tr.two};
+  return{ok:true,three:!!tr.three,items,lanes:G*tbs[last],per:alls[last],makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:G*tbs[last],rows:Math.max(...gb.flat().map(g=>g.R)),nS,nK,ps,bands:G,tb:tbs[last],t0:Math.max(...t0s),cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o},tbs,stages:n,hubs,nIn:G*tbs[0],nOut:G*tbs[last],feed,even,two:!!tr.two};
 }
 function placerPlan(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0,pr=plnProto(),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
