@@ -367,28 +367,31 @@ function plcGrowthLane(P,item,mk,spMk,o={}){
     const EM=X0+n*w,it=[];
     for(let i=0;i<n;i++)it.push({cls:d.key,x:X0+i*w,y:0,h:0,rot:0,pid:0,rec,off:mOff.map(p=>p.key)});
     for(let x=X0;x<=X0+(n-1)*w+inP.x;x++){if((x-X0)%w===inP.x)it.push({cls:sc,x,y:-1,h:0,rot:0,pid:0,off:[sPort.key]});else it.push(bt(x,-1))}
-    for(let x=X0;x<=EM;x++)it.push(bt(x,h));                       // output row flows east
-    it.push(bt(EM+1,h,3),bt(EM+1,h+1,2));                          // turn down, then west
-    for(let x=EM;x>=-1;x--)it.push(bt(x,h+1,x===-2?1:2));          // return row (corner at x=-2 turns north)
-    for(let y=h;y>=0;y--)it.push(bt(-2,y,1));                      // return column north
-    it.push(bt(-2,-1,0),bt(-1,-1,0));                              // into the seed container C (west face)
+    for(let x=X0;x<=EM;x++)it.push(bt(x,h));                       // output row flows east into the out container O (west face)
+    const O={x:EM+1,y:h-pw.y},oh=def(BX).h,ow=def(BX).w,ry=-2-bh-pe.y,SY=O.y+oh+2;   // O: out container; ry: return row (above B and the trunk)
+    it.push(box(O.x,O.y,[]));                                       // O: out container (net leaves here: top = return, bottom = sink)
+    for(let y=O.y-1;y>=ry;y--)it.push(bt(O.x,y,y===ry?2:1));       // return: up from O top, corner at ry turns west
+    for(let x=O.x-1;x>0;x--)it.push(bt(x,ry,2));                    // return row west, over the machines and the in-buffer
+    for(let y=ry;y<=-2-pe.y;y++)it.push(bt(0,y,3));        // return: corner at (0,ry) turns south into the seed container C top
+    for(let y=O.y+oh;y<SY;y++)for(let dx=0;dx<2;dx++)it.push(bt(O.x+dx,y,3));   // sink: 2 parallel belts down from O bottom into S
+    it.push(box(O.x,SY,[]));                                        // S: sink container (net output)
     it.push(bt(bw,-1),box(bw+1,-1-pe.y,[]));                       // C -> buffer -> trunk start
     it.push(box(0,-1-pe.y,[{item:gi[0],n:seed,inf:false}]));        // C: seed container (in-buffer + return target)
     it.push(box(X0-bw-1,yB,[{item:bio[0],n:0,inf:true}]));         // Biomass source B (above the trunk start)
     it.push(bt(X0-1,yE,0));for(let y=yE;y<=-2;y++)it.push(bt(X0,y,3));   // side-load Biomass onto the trunk start from the north
     return it;
   };
-  const all=[];let yo=0;
+  const all=[];let yo=0,laneH=0;
   cnt.forEach(n=>{
     const li=lane(n,n*gi[1]);let mn=Infinity,mx=-Infinity;li.forEach(b=>{if(b.y<mn)mn=b.y;const e=dim(b);if(b.y+e.h-1>mx)mx=b.y+e.h-1});
     li.forEach(b=>all.push({...b,y:b.y-mn+yo}));
-    yo+=mx-mn+2;
+    yo+=mx-mn+2;laneH=Math.max(laneH,mx-mn+2);
   });
   let x0=Infinity,y0=Infinity;all.forEach(b=>{if(b.x<x0)x0=b.x;if(b.y<y0)y0=b.y});
   const items=all.map(b=>({...b,x:b.x-x0,y:b.y-y0}));
   let W=0,H=0;items.forEach(b=>{const e=dim(b);if(b.x+e.w>W)W=b.x+e.w;if(b.y+e.h>H)H=b.y+e.h});
   const seedAll=N*gi[1];
-  return{ok:true,items,lanes:nL,per:cnt,makes:N*T.pmach,note:["Seed: put "+seedAll+" "+plnNm(gi[0])+" in the in-buffer container"+(nL>1?"s (one per lane, "+cnt.map(n=>n*gi[1]).join(" + ")+")":"")+" before starting (N = machines x input per cycle = "+N+" x "+gi[1]+")","Growth: the growth item returns from the output row into the in-buffer; Biomass is side-loaded at each trunk start; net output sink not built yet (WIP)"],mod:false,box:BX,mk,pitch:Math.max(1,yo),w:W,h:H,growth:true,src:{P,item,mk,spMk,o}};
+  return{ok:true,items,lanes:nL,per:cnt,makes:N*T.pmach,note:["Seed: put "+seedAll+" "+plnNm(gi[0])+" in the in-buffer container"+(nL>1?"s (one per lane, "+cnt.map(n=>n*gi[1]).join(" + ")+")":"")+" before starting (N = machines x input per cycle = "+N+" x "+gi[1]+")","Growth: the growth item returns from the output row into the in-buffer; Biomass is side-loaded at each trunk start; net output sink not built yet (WIP)"],mod:false,box:BX,mk,pitch:Math.max(1,laneH),w:W,h:H,growth:true,src:{P,item,mk,spMk,o}};
 }
 function placerLayoutA(P,item,mk,spMk,o={}){const GR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.some(([x])=>x===item);if(GR&&P.nodes[item].rec.i.length===2){try{return plcGrowthLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": feedback layout not built for this recipe ("+e.message+")"}}}if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": the feedback layout for more than one extra input is not built yet"};const GA=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GA)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GA.item)+": the feedback layout inside a chain is not built yet"};
 P=plcUnshare(P,item);
