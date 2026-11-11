@@ -237,10 +237,10 @@ function pfChain(P,item,mk,spMk,o={}){
       const hs=C.items.filter(q=>isHead(q)&&q.ct[0].item===i),k0=nUse.get(i)||0;
       if(k0+hs.length>2)return no('more than two consumers of one stage (not built)');
       nUse.set(i,k0+hs.length);
-      hs.forEach((h,t)=>routes.push({sx:sink.get(i).x+k0+t,tx:h.x+dx,item:i}));
+      hs.forEach((h,t)=>routes.push({sx:sink.get(i).x+k0+t,tx:h.x+dx,item:i,tTop:Math.min(...C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.x===h.x).map(q=>q.y))}));
     }
     if(y===item){ports.push({edge:'N',off:sk.x+dx,dir:'out',belts:1,slot:-1,mk});makes=N*T.pmach}
-    per.push(N);x0=dx+C.w+PF_GAP;
+    per.push(N);x0=dx+Math.max(C.w,...C.items.map(q=>q.x+dim(q).w))+PF_GAP;
   }
   // corridor rows (row r -> R = -2-r; larger r = further north). Rows are shared when x-spans do not overlap. A corridor whose riser or descent sits right next to another corridor's corner must lie north of it (a UG cannot start or end on a corner); every other crossing goes under with a UG pair.
   const n=routes.length,rowsIv=[],rowOf=[],busy=[],key=(x,y)=>x+','+y,occ=new Set(),cells=[];
@@ -257,13 +257,18 @@ function pfChain(P,item,mk,spMk,o={}){
   };
   for(let a=0;a<n;a++)place(a);
   if(bad)return no(bad);
+  const itemOcc=new Set();items.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)itemOcc.add((b.x+i)+','+(b.y+j))});
   // verticals first: riser up from the sink N port, corner east, corner south at the trunk, descent into the trunk top
   for(const rt of routes){
     const R=rt.R,vs=[];
     for(let y=R+1;y<=-1;y++)vs.push([rt.sx,y,3]);
     vs.push([rt.sx,R,0],[rt.tx,R,1]);
-    for(let y=R+1;y<=1;y++)vs.push([rt.tx,y,1]);
-    for(const [x,y,r] of vs){if(occ.has(key(x,y)))return no('corridor cells clash');occ.add(key(x,y));cells.push({cls:bc,x,y,rot:r})}
+    // descent to the trunk top; a stage's out row (or any stage item) across it goes under with a UG pair
+    const dy=[];for(let y=R+1;y<rt.tTop;y++)dy.push(y);
+    const blk=new Set(dy.filter(y=>itemOcc.has(key(rt.tx,y))));
+    for(const y of blk)if(!dy.includes(y-1)||!dy.includes(y+1)||blk.has(y-1)||blk.has(y+1))return no('descent crossing not routable');
+    for(const y of dy)if(!blk.has(y))vs.push([rt.tx,y,1,blk.has(y+1)?'in':blk.has(y-1)?'out':'b']);
+    for(const [x,y,r,t] of vs){if(occ.has(key(x,y)))return no('corridor cells clash');occ.add(key(x,y));cells.push({cls:t==='in'||t==='out'?ug:bc,x,y,rot:r})}
   }
   // horizontals: a cell under another corridor's vertical is skipped, the belts either side become a UG pair
   for(const rt of routes){
