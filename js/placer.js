@@ -1,3 +1,4 @@
+const plcMmax=(a,f=x=>x)=>{let m=-Infinity;for(const x of a){const v=f(x);if(v>m)m=v}return m},plcMmin=(a,f=x=>x)=>{let m=Infinity;for(const x of a){const v=f(x);if(v<m)m=v}return m};   // spread-free min/max: Math.max(...big) overflows the call stack on huge layouts
 // Build factory (Step 1): single-recipe, single-raw-input plan -> ghost. Layout is pure.
 const PLC_BELT=["DAT_ConveyorBelt","DAT_ConveyorBelt2","DAT_ConveyorBelt3"],PLC_SPL=["DAT_Splitter","DAT_Splitter_2","DAT_Splitter_3"],PLC_BOX="DAT_Container";
 const PL_STD=["BPO_Station_01","BPO_Station_2x1","BPO_Station_02"];   // smallest first; floors 14x14, 30x14, 30x30
@@ -256,7 +257,7 @@ function placerBank(P,item,mk,spMk,o){
       const eB=P.edges.find(e=>e.from===topB&&e.to===ch[cI].item),bset=new Set(Bn.map(nd=>nd.item)),fB=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
       const PB={raw:P.raw.filter(r=>(tr.two.rawsB||[tr.two.rawB]).includes(r.item)),nodes:{...nodesB,...Object.fromEntries((tr.two.rawsB||[]).filter(r=>P.nodes[r]).map(r=>[r,P.nodes[r]]))},cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||(tr.two.rawsB||[tr.two.rawB]).includes(e.from))&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}]).map(e=>({...e,flow:e.flow*fB}))};
       const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null,wantT:tbs[cI]});
-      if(!rB.ok)return rB;      const bi=it.slice(i0),dx=(cI?hz[cI-1].xe:hz[cI].xf-bw)-rB.feed.x,y0=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rB.h;
+      if(!rB.ok)return rB;      const bi=it.slice(i0),dx=(cI?hz[cI-1].xe:hz[cI].xf-bw)-rB.feed.x,y0=gC.up?plcMmax(bi,(c=>c.y+dim(c).h))+2:plcMmin(bi,(c=>c.y))-2-rB.h;
       rB.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y0}));
       plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);
     }
@@ -268,18 +269,18 @@ function placerBank(P,item,mk,spMk,o){
         const PC={raw:P.raw.filter(r=>(tr.three.rawsC||[tr.three.rawC]).includes(r.item)),nodes:{...nodesC,...Object.fromEntries((tr.three.rawsC||[]).filter(r=>P.nodes[r]).map(r=>[r,P.nodes[r]]))},cycle:false,edges:P.edges.filter(e=>(setC.has(e.from)||(tr.three.rawsC||[tr.three.rawC]).includes(e.from))&&e.to!==ch[cI].item).concat([{from:topC,to:null,flow:eC.flow}]).map(e=>({...e,flow:e.flow*fC/T3}))};
         const rC=placerBank(PC,topC,mk,spMk,{...o,G:1,feedOut:{nT:1,up:gC.up},fit:null,wantT:1});
         if(!rC.ok)return rC;
-        const bi=it.slice(i0),dx=(cI?hz[cI-1].xe:hz[cI].xf-bw)-rC.feed.x,y1=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rC.h;
+        const bi=it.slice(i0),dx=(cI?hz[cI-1].xe:hz[cI].xf-bw)-rC.feed.x,y1=gC.up?plcMmax(bi,(c=>c.y+dim(c).h))+2:plcMmin(bi,(c=>c.y))-2-rC.h;
         rC.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y1}));
         frCk.push(rC.feed.rows[0]+y1);}
       plcThreeTC({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frC:frCk,bc:PLC_BELT[mk],mk},it);}
     if(tr.two&&o.sep){const cI=n-1,gC=gs[cI],hC=hz[cI],rB=rBs[b],bi=it.slice(i0);
-      const y0=gC.up?Math.max(...bi.map(c=>c.y+dim(c).h))+2:Math.min(...bi.map(c=>c.y))-2-rB.h;
+      const y0=gC.up?plcMmax(bi,(c=>c.y+dim(c).h))+2:plcMmin(bi,(c=>c.y))-2-rB.h;
       rB.items.forEach(c=>it.push({...c,y:c.y+y0}));
       rB.feed.rows.forEach(r=>{for(let xx=rB.feed.x+bw;xx<hC.xf;xx++)it.push(bt(xx,r+y0))});
       plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);}
-    const sl=it.slice(i0),mn=Math.min(...sl.map(c=>c.y)),mx=Math.max(...sl.map(c=>c.y+dim(c).h));
+    const sl=it.slice(i0),mn=plcMmin(sl,(c=>c.y)),mx=plcMmax(sl,(c=>c.y+dim(c).h));
     if(!b)sh0=oy-mn;sl.forEach(c=>{c.y+=oy-mn});oy+=mx-mn+1}   // band min y -> oy, spare row between bands
-  const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
+  const mnx=plcMmin(it,(b=>b.x)),mny=plcMmin(it,(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
   const last=n-1,T=ch[last],N=Ns[last],b0=gb[0],hubs=G*nH.reduce((a,c)=>a+c,0),nS=G*b0[0].nIn,nK=G*b0[last].nOut;
   const nt=["Makes "+plnR2(N*T.pmach)+"/min (target "+plnR2(T.rate)+")"];
   if(n===1){
@@ -288,14 +289,14 @@ function placerBank(P,item,mk,spMk,o){
     const m3=mk<2?Math.min(N,Math.floor(MKS[2][1]/Math.max(T.pmach,SS[0].inF)+1e-9)):0;
     if(m3>SS[0].m)nt.push("Mk3 packs "+m3+" machines per trunk (now "+SS[0].m+")");
   }else{
-    for(let q=0;q<n;q++)nt.push("Stage "+(q+1)+" "+plnNm(ch[q].item)+": "+Ns[q]+" machines, "+G*tbs[q]+" trunk"+(G*tbs[q]>1?"s":"")+" ("+alls[q].join("+")+"), "+Math.max(...gb.map(g=>g[q].R))+" rows");
+    for(let q=0;q<n;q++)nt.push("Stage "+(q+1)+" "+plnNm(ch[q].item)+": "+Ns[q]+" machines, "+G*tbs[q]+" trunk"+(G*tbs[q]>1?"s":"")+" ("+alls[q].join("+")+"), "+plcMmax(gb,(g=>g[q].R))+" rows");
     for(let q=1;q<n;q++)nt.push("Hub container between stages: "+plnR2(P.edges.find(e=>e.from===ch[q-1].item&&e.to===ch[q].item).flow/(G*nH[q]))+"/min (max "+PLC_SRC+")"+(G*nH[q]>1?"; "+G*nH[q]+" hub containers stacked":""));
     if(tr.two&&!tr.three)nt.push("Two inputs into "+plnNm(ch[n-1].item)+": A "+plnNm(ch[n-2].item)+" (main chain) + B "+plnNm(topB)+" ("+Bn.length+" stage"+(Bn.length>1?"s":"")+", own band)");
     if(tr.three)nt.push("Three inputs into "+plnNm(ch[n-1].item)+": A "+plnNm(ch[n-2].item)+" (main chain) + B "+plnNm(topB)+" + C "+plnNm(topC)+" (own bands)");
     if(G>1)nt.push(G+" band(s) (machine counts may differ by 1 between bands), spare belt row between bands");
   }
   if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
-  const W=Math.max(...items.map(b=>b.x+dim(b).w)),H=Math.max(...items.map(b=>b.y+dim(b).h));
+  const W=plcMmax(items,(b=>b.x+dim(b).w)),H=plcMmax(items,(b=>b.y+dim(b).h));
   const feed=o.feedOut?{x:hz[n-1].xe-mnx,rows:gb[0][n-1].feedRows.map(y=>y+sh0-mny)}:null;
   const bandSum=q=>{const s=[];for(let b=0;b<G;b++)s.push(alls[q].slice(b*tbs[q],(b+1)*tbs[q]).reduce((a,c)=>a+c,0));return s.every(v=>v===s[0])};
   const even=SS.every((_,q)=>bandSum(q))&&Bn.every(nd=>nd.machines%G===0);   // every band holds the same machines per stage (uneven = fallback, see placerTile)
@@ -378,13 +379,13 @@ function placerLayoutA(P,item,mk,spMk,o={}){P=plcUnshare(P,item);
     else{it.push(bt(XC,h));it.push(box(XC+1,h-pw.y,[]))}
     return it;
   };
-  const a=lane(nmax),y0=Math.min(...a.map(b=>b.y)),pitch=Math.max(...a.map(b=>b.y+dim(b).h))-y0+1;
+  const a=lane(nmax),y0=plcMmin(a,(b=>b.y)),pitch=plcMmax(a,(b=>b.y+dim(b).h))-y0+1;
   const it=[];cnt.forEach((n,k)=>lane(n).forEach(b=>it.push({...b,y:b.y+k*pitch})));
-  const mx=Math.min(...it.map(b=>b.x)),my=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mx,y:b.y-my}));
+  const mx=plcMmin(it,(b=>b.x)),my=plcMmin(it,(b=>b.y)),items=it.map(b=>({...b,x:b.x-mx,y:b.y-my}));
   const nt=["Makes "+plnR2(N*T.pmach)+"/min (target "+plnR2(T.rate)+")"];
   if(nL>1)nt.push(nL+" parallel lanes ("+cnt.join("+")+" machines), each with its own "+(o.mod?"in/out edge":"source and sink container")+", because one "+MKS[mk][0]+" belt carries "+cap(mk)+"/min");
   if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
-  return{ok:true,items,lanes:nL,per:cnt,makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch,w:Math.max(...items.map(b=>b.x+dim(b).w)),h:Math.max(...items.map(b=>b.y+dim(b).h)),src:{P,item,mk,spMk,o}};
+  return{ok:true,items,lanes:nL,per:cnt,makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch,w:plcMmax(items,(b=>b.x+dim(b).w)),h:plcMmax(items,(b=>b.y+dim(b).h)),src:{P,item,mk,spMk,o}};
 }
 // unchecked mode: first anchor inside an existing floor where the factory fits (noBuild with STRICT rules)
 function placerFit(items,w,h){
@@ -605,7 +606,7 @@ let plcV={z:1,ox:0,oy:0},plcRaf=0;
 let plcT=null;   // last tile result (placerTile) for the open preview
 let plcBig=false;   // big-factory confirm asked for the current preview
 const plcTT=()=>plcT&&plcT.ok?plcT:{blocks:[{cls:plcCls("BPO_Station_02"),x:0,y:0}],ms:plcL.items};
-const plcExt=T=>({w:Math.max(...T.blocks.map(q=>(q.x+dim({cls:q.cls,rot:0}).w)*FC),...T.ms.map(m=>m.x+dim(m).w)),h:Math.max(...T.blocks.map(q=>(q.y+dim({cls:q.cls,rot:0}).h)*FC),...T.ms.map(m=>m.y+dim(m).h))});
+const plcExt=T=>({w:Math.max(plcMmax(T.blocks,q=>(q.x+dim({cls:q.cls,rot:0}).w)*FC),plcMmax(T.ms,m=>m.x+dim(m).w)),h:Math.max(plcMmax(T.blocks,q=>(q.y+dim({cls:q.cls,rot:0}).h)*FC),plcMmax(T.ms,m=>m.y+dim(m).h))});
 // setting a canvas size reallocates it even when unchanged: only assign when the size really differs (per-frame realloc was the zoom lag)
 const plcSetSize=(c,w,h)=>{if(c.width!==w)c.width=w;if(c.height!==h)c.height=h};
 function placerSize(){const c=$("plnPrevMap"),v=$("plnPrevView");plcSetSize(c,Math.max(1,v.clientWidth),Math.max(1,v.clientHeight));return{w:c.width,h:c.height}}   // content box (border excluded): canvas CSS size = attribute size, no rescale
