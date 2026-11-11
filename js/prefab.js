@@ -112,3 +112,13 @@ PF_BUILD.pfCol=(cls,k,flows,m,mk)=>{
   return{proto:'pfCol',args:[cls,k,flows,m,mk],w:(nN?tx:xC)+3,h:ym(m-1)+d.h,items:it,ports,fits:[],out:a.out,nIn:nN?{px:x0+a.N[0].row,tx}:null};
 };
 const pfCol=(cls,k,flows,m,mk)=>pfPrefab('pfCol',[cls,k,flows,m,mk]);
+// GROWTH prefab: the verified growth layout (plcGrowthLane = one lane per machine, stacked) for item at rate/min. Built by calling placer.js, not reimplemented. Lane count = plan machines. Coordinates already start at (0,0). Ports: none in (seed and Biomass are containers inside); net output = sink container S at the bottom (edge 'S', off = its x).
+PF_BUILD.pfGrowth=(item,rate,mk,box)=>{
+  const P=plan(item,rate,0,{sp:null,bal:null},PLN_PICK,{proto:false,enr:false});
+  const L=plcGrowthLane(P,item,mk,0,{box,mod:false});
+  if(!L.ok)return{ok:false,why:L.why};
+  const BX=box||PLC_BOX,bw=def(BX).w,isS=b=>L.items.some(q=>PLC_BELT.includes(q.cls)&&q.rot===1&&q.y===b.y-1&&q.x>=b.x&&q.x<b.x+bw);   // sink S = empty container with the sink belts entering its top (O has belts leaving its bottom)
+  const sinks=L.items.filter(q=>q.cls===BX&&q.ct&&!q.ct.length&&isS(q));
+  return{proto:'pfGrowth',args:[item,rate,mk,box],w:L.w,h:L.h,items:L.items,ports:sinks.map((s,i)=>({edge:'S',off:s.x,dir:'out',belts:2,slot:i,mk})),fits:[],lanes:L.lanes,note:L.note};
+};
+const pfGrowth=(item,rate,mk,box)=>pfPrefab('pfGrowth',[item,rate,mk,box]);
