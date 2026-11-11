@@ -662,14 +662,23 @@ function placerPreview(L){
   plcBig=false;$("plnPrevBig").textContent="";$("plnPlace").textContent="Place";
   const ok=placerBk();plcT=null;
   if(!ok.some(Boolean))return plcFinish(L);
-  const tok=++plcTok,g=placerTileGen(L,ok);$("plnPlace").disabled=true;
+  const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}   // open at once, so the progress bar shows during the search
+  const tok=++plcTok,g=placerTileGen(L,ok),t00=performance.now();$("plnPlace").disabled=true;
   // runs steps synchronously for up to 200 ms (small plans finish in the same call as before), then yields
   const step=()=>{if(tok!==plcTok)return;let s,t0=performance.now();try{do{s=g.next()}while(!s.done&&performance.now()-t0<200)}catch(e){s={done:true,value:{ok:false,why:"internal error while fitting the blocks ("+e.message+")",blocks:[]}}}
-    if(!s.done){$("plnPrevErr").textContent="Searching block sizes...";setTimeout(step,0);return}
+    if(!s.done){plcProg(s.value,performance.now()-t00>150);setTimeout(step,0);return}
     plcT=s.value;plcFinish(L)};
   step();
 }
+// progress bar + text while the block search runs; shown only after 150 ms, hidden when done or cancelled
+function plcProg(v,show){let e=document.getElementById("plcProg");
+  if(!e){e=document.createElement("div");e.id="plcProg";e.innerHTML='<progress max="100" value="0" style="width:100%;height:6px"></progress><div style="font-size:12px"></div>';e.style.display="none";$("plnPrevErr").before(e)}
+  const pct=v.phase===1?v.n/v.total*30:30+70*v.n/v.total,nm=BASE[v.cls].name;
+  e.querySelector("progress").value=pct;e.lastChild.textContent="Trying "+nm+", "+v.G+" band(s) ("+v.n+" of "+v.total+") - "+Math.round(pct)+"%";
+  if(show)e.style.display="block"}
+function plcProgHide(){const e=document.getElementById("plcProg");if(e)e.style.display="none"}
 function plcFinish(L){
+  plcProgHide();
   const src=plcT&&plcT.ok?plcT.ms:L.items,k={mach:0,belt:0,spl:0,box:0,ug:0},
     kd=b=>b.rec?"mach":PLC_UG.includes(b.cls)?"ug":PLC_BELT.includes(b.cls)?"belt":PLC_SPL.includes(b.cls)?"spl":"box";
   src.forEach(b=>k[kd(b)]++);
@@ -707,7 +716,7 @@ const plcDo=()=>{if(!plcRaf)plcRaf=requestAnimationFrame(()=>{plcRaf=0;placerSho
 const plcP=e=>{const r=$("plnPrevMap").getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
 const plcZ=(p,f)=>{const z0=plcV.z,z=Math.min(60,Math.max(.01,z0*f));plcV.ox=p.x-(p.x-plcV.ox)*(z/z0);plcV.oy=p.y-(p.y-plcV.oy)*(z/z0);plcV.z=z;plcDo()};
 $("plnBuild").onclick=placerGo;$("plnPlace").onclick=placerPlace;
-$("plnCancel").onclick=()=>$("plnPrev").close();$("plnPrev").addEventListener("close",()=>{plcL=null;plcT=null;plcTok++});
+$("plnCancel").onclick=()=>$("plnPrev").close();$("plnPrev").addEventListener("close",()=>{plcL=null;plcT=null;plcTok++;plcProgHide()});
 $("plnPrevMap").addEventListener("wheel",e=>{e.preventDefault();plcZ(plcP(e),e.deltaY<0?1.12:1/1.12)},{passive:false});
 let plcSt=null;
 const plcM=$("plnPrevMap");
