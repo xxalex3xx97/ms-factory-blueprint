@@ -40,8 +40,11 @@ function plcSpl(cls,rot){
 }
 function plcStage(n,eI,eU,mk,spMk,eI2,eI3){
   const no=why=>({ok:false,why}),cb=plnCb(n.crafter);if(!cb)return no("No machine builds "+plnNm(n.item));
-  const d=def(cb.id),inF=n.pmach*eI.flow/eU.flow,inF2=eI2?n.pmach*eI2.flow/eU.flow:0,inF3=eI3?n.pmach*eI3.flow/eU.flow:0,m=Math.floor(MKS[mk][1]/Math.max(n.pmach,inF,inF2,inF3)+1e-9);
-  if(m<1)return no("One machine needs "+plnR2(Math.max(n.pmach,inF,inF2,inF3))+"/min but a "+MKS[mk][0]+" belt carries "+MKS[mk][1]+"/min: pick a higher belt Mk");
+  const d=def(cb.id),inF=n.pmach*eI.flow/eU.flow,inF2=eI2?n.pmach*eI2.flow/eU.flow:0,inF3=eI3?n.pmach*eI3.flow/eU.flow:0,m0=Math.floor(MKS[mk][1]/Math.max(n.pmach,inF,inF2,inF3)+1e-9);
+  // a machine at full speed may need more than one belt carries; at the planned load it may not: one machine per trunk, running below full speed, when the actual input per machine fits the belt
+  const NM=Math.max(1,n.machines),act=Math.max(eI.flow/NM,eI2?eI2.flow/NM:0,eI3?eI3.flow/NM:0);
+  if(m0<1&&act>MKS[mk][1])return no("One machine needs "+plnR2(act)+"/min of input at the planned rate but a "+MKS[mk][0]+" belt carries "+MKS[mk][1]+"/min: pick a higher belt Mk");
+  const m=Math.max(1,m0);
   if(eI3){   // three inputs: 2 on one face + 1 on the adjacent face of each machine column; one gap row between stages (pitch h+2)
     const ML=PLC_VC_FIRST?null:plcMach3(d.key,1,'A'),MR=PLC_VC_FIRST?null:plcMach3(d.key,-1,'A');   // PLC_VC_FIRST: test hook, variant C only
     const VC=plcMachC(d.key,1),VCR=plcMachC(d.key,-1);
@@ -314,7 +317,16 @@ function plcUnshare(P,item){
   build(item,item,1);
   return{...P,nodes,edges:edges.concat([{from:item,to:null,flow:P.edges.find(e=>e.from===item&&e.to==null).flow}]),cycle:false};
 }
-function placerLayout(P,item,mk,spMk,o={}){P=plcUnshare(P,item);
+// belt / splitter too slow for the planned load: the layout uses the next higher Mk automatically (the note says so) instead of refusing
+function placerLayout(P,item,mk,spMk,o={}){
+  const L=placerLayoutA(P,item,mk,spMk,o);
+  if(L.ok||!/higher belt Mk|splitter Mk higher/.test(L.why))return L;
+  for(let up=1;up<=2;up++){const m2=Math.min(2,mk+up),s2=Math.min(2,spMk+up);
+    const L2=placerLayoutA(P,item,m2,s2,o);
+    if(L2.ok){L2.note=[...L2.note,"Belt Mk raised to "+MKS[m2][0]+" and splitter Mk to "+MKS[s2][0]+" automatically (the requested Mk cannot carry the planned load)"];return L2}}
+  return L;
+}
+function placerLayoutA(P,item,mk,spMk,o={}){P=plcUnshare(P,item);
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why});
   const tr=plcTree(P,item);if(!tr.ok)return no(tr.why);
   if(tr.two||tr.ch.length>1)return placerBank(P,item,mk,spMk,o);

@@ -139,8 +139,8 @@ try {
     await pg.selectOption('#pvMk', '2');
     await pg.selectOption('#pvSp', '0');
     const e1 = await snap(pg);
-    chk('(e) Mk3 belt + Mk1 splitter: #plnPrevErr non-empty and #plnPlace disabled', /\S/.test(e1.err) && !e1.place, JSON.stringify({err: e1.err, place: e1.place}));
-    chk('(e) refused: nothing drawn (canvas blank)', await pg.evaluate(() => placerBox($('plnPrevMap').width, $('plnPrevMap').height) === null));
+    chk('(e) Mk3 belt + Mk1 splitter: builds with the splitter raised automatically (no error, Place enabled)', !/\S/.test(e1.err) && !!e1.place, JSON.stringify({err: e1.err, place: e1.place}));
+    chk('(e) built: preview drawn (not blank)', await pg.evaluate(() => placerBox($('plnPrevMap').width, $('plnPrevMap').height) !== null));
     chk('(e) refused: dialog stays open', e1.open === true);
     await pg.selectOption('#pvSp', '');
     const e2 = await snap(pg);

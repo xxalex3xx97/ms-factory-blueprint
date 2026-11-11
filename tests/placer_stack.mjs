@@ -194,7 +194,7 @@ try {
   await setup(pg, ITEM, 300, 2, 'DAT_Container', '0');   // Mk3 belt + Mk1 splitter: trunk of 9 machines is too much for one Mk1 splitter
   const B2 = await openBuild(pg, ALL);
   const B2s = await pg.evaluate(() => ({open: $('plnPrev').open, err: $('plnPrevErr').textContent, placeOff: $('plnPlace').disabled}));
-  chk('B2) Mk3 belt + Mk1 splitter: error shown in the modal ("too slow"), Place disabled', B2s.open && /too slow/.test(B2s.err) && B2s.placeOff, JSON.stringify({B2, B2s}));
+  chk('B2) Mk3 belt + Mk1 splitter: builds with the splitter raised automatically (note says so), Place enabled', B2s.open && B2s.err === '' && B2s.placeOff === false && /raised/.test(B2.note), JSON.stringify({B2, B2s}));
   await pg.evaluate(() => { $('pvSp').value = ''; $('pvSp').dispatchEvent(new Event('change')); });   // modal Splitter -> follow belt
   await pg.waitForTimeout(150);
   const B2f = await pg.evaluate(() => ({err: $('plnPrevErr').textContent, placeOff: $('plnPlace').disabled, drawn: placerBox($('plnPrevMap').width, $('plnPrevMap').height) !== null}));
