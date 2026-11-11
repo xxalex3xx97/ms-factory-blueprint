@@ -361,6 +361,7 @@ function pfChain(P,item,mk,spMk,o={}){
   };
   for(let a=0;a<n;a++)place(a);
   if(bad)return no(bad);
+  if(rowsIv.length>PF_CORR)return no('corridor rows '+rowsIv.length+' exceed the '+PF_CORR+' reserved (floor '+Fh+'): too many crossing corridors for one block (not built)');
   const itemOcc=new Set();items.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)itemOcc.add((b.x+i)+','+(b.y+j))});
   // verticals first: riser up from the sink N port, corner east, corner south at the trunk, descent into the trunk top
   for(const rt of routes){
@@ -380,9 +381,11 @@ function pfChain(P,item,mk,spMk,o={}){
   for(const rt of routes){
     const R=rt.R,seg=[];
     for(let x=rt.sx+1;x<rt.tx;x++)seg.push({x,t:occ.has(key(x,R))?'skip':'b'});
+    const mxA=def(ug).maxApart;
     for(let i=0;i<seg.length;i++)if(seg[i].t==='skip'){
-      if(i===0||i===seg.length-1||seg[i-1].t!=='b'||seg[i+1].t!=='b')return no('corridor crossing not routable');
-      seg[i-1].t='in';seg[i+1].t='out';
+      let j=i;while(j+1<seg.length&&seg[j+1].t==='skip')j++;   // run of adjacent risers: one UG pair spans them
+      if(i===0||j===seg.length-1||j-i+2>mxA||seg[i-1].t!=='b'||seg[j+1].t!=='b')return no('corridor crossing not routable');
+      seg[i-1].t='in';seg[j+1].t='out';i=j+1;
     }
     for(const s of seg)if(s.t!=='skip')cells.push({cls:s.t==='b'?bc:ug,x:s.x,y:R,rot:0});
   }

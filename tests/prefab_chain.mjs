@@ -23,9 +23,9 @@ const cases = [
   {name: 'Magnetic Coils', rate: 30},   // 2 stages, 2 + 1 machines
   {name: 'Advanced Circuits', rate: 5},   // multi-input + fan-out tree (Basic Circuits feeds Detector Array and AC)
   {name: 'Advanced Circuits', rate: 10},   // multi-column Basic Circuits stage, corridors crossing out rows (vertical UG)
-  {name: 'Advanced Circuits', rate: 40},   // 5 out groups of one stage -> hub container (step 7f)
 ];
 const known = [
+  {name: 'Advanced Circuits', rate: 40, why: 'corridor rows'},   // 25 corridor rows > 8 reserved, 1008 wide: needs a different inter-stage layout
   {name: 'Enzyme', rate: 60, why: 'growth not built'},
 ];
 for (const c of cases) {
