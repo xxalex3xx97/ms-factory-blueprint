@@ -399,7 +399,7 @@ function placerCut(L,cls){
      let best=null;
      for(let e=Fh;e>=Math.max(2,d.h*FC+2-mx);e--){const W=r0+e;
       let D=2;IT.forEach((b,i)=>{const r=fd(i);if(Bm[r]>=W-1&&T[r]<=W)D=Math.max(D,W+1-T[r])});
-      if(best&&D>=best.D)continue;
+      if(D>=e||best&&D>=best.D)continue;   // a gap must shrink the remaining height (D<e), else the row loop never ends
       const sh=IT.map((b,i)=>Bm[fd(i)]>=W-1?D:0);
       if(edges.some(([a,b])=>sh[ix.get(b)]<sh[ix.get(a)]))continue;
       const fill=[];edges.forEach(([a,b,r])=>{for(let y=a.y+sh[ix.get(a)]+1;y<b.y+sh[ix.get(b)];y++)fill.push({cls:y===W-1||y===W?PLC_UG[L.mk]:PLC_BELT[L.mk],x:a.x,y,h:0,rot:r,pid:0})});
