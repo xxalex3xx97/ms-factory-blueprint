@@ -366,7 +366,7 @@ function plcGrowthLane1(P,item,mk,spMk,o={}){
   const it=[];
   it.push({cls:d.key,x:X0,y:0,h:0,rot:0,pid:0,rec,off:mOff.map(p=>p.key)});
   const C={x:0,y:a.y-pe.y},B={x:0,y:b.y-pe.y};
-  it.push(box(C.x,C.y,[{item:gi[0],n:seed,inf:false}]));                  // seed container C (Xenoeukarya)
+  it.push(box(C.x,C.y,[{item:gi[0],n:0,inf:true}]));                  // seed container C (Xenoeukarya)
   it.push(box(B.x,B.y,[{item:bio[0],n:0,inf:true}]));                     // Biomass container B
   for(let x=C.x+bw;x<X0+a.x;x++)it.push(bt(x,a.y,0));                     // straight belt C -> machine W port A
   for(let x=B.x+bw;x<X0+b.x;x++)it.push(bt(x,b.y,0));                     // straight belt B -> machine W port B
@@ -377,14 +377,15 @@ function plcGrowthLane1(P,item,mk,spMk,o={}){
   it.push(box(OX,OY,[]));                                                 // O: out container (net leaves through its bottom)
   // return: O top port -> up to ry -> west -> down into C north port
   const ry=Math.min(-2,C.y-3);
-  const nO=nP[0],nC=nP[0];
-  const ox=OX+nO.x,cx=C.x+nC.x;
-  for(let y=OY-1;y>=ry;y--)it.push(bt(ox,y,y===ry?2:1));                 // up from O (corner at ry turns west)
-  for(let x=ox-1;x>cx;x--)it.push(bt(x,ry,2));                            // west along the top
-  for(let y=ry;y<=C.y-1;y++)it.push(bt(cx,y,3));                          // down into C's north face (corner at (cx,ry) turns south)
+  // return (user example): the machine N output port -> belt north -> west over the top -> south into the seed container C north port. rot: 3 = north, 1 = south (game convention)
+  const nM=mp.find(p=>p.nx===0&&p.ny===-1&&p.dir!=="in")||mp.find(p=>p.nx===0&&p.ny===-1);if(!nM)return no("Growth: machine has no N output port");
+  const cx=C.x+nP[0].x;
+  for(let y=-1;y>=ry;y--)it.push(bt(X0+nM.x,y,y===ry?2:3));           // north from the N port (corner at ry turns west)
+  for(let x=X0+nM.x-1;x>cx;x--)it.push(bt(x,ry,2));                    // west along the top
+  it.push(bt(cx,ry,1));for(let y=ry+1;y<=C.y-1;y++)it.push(bt(cx,y,1));   // south into the seed container north face                          // down into C's north face (corner at (cx,ry) turns south)
   // sink: O bottom ports -> 2 parallel belts down -> S container
   const SY=OY+bh+2,SX=OX;
-  for(const sp of [sP[0],sP[1]])for(let y=OY+bh;y<SY;y++)it.push(bt(OX+sp.x,y,3));
+  for(const sp of [sP[0],sP[1]])for(let y=OY+bh;y<SY;y++)it.push(bt(OX+sp.x,y,1));   // sink belts south
   it.push(box(SX,SY,[]));                                                 // S: sink container (net output)
   let x0=Infinity,y0=Infinity;it.forEach(q=>{if(q.x<x0)x0=q.x;if(q.y<y0)y0=q.y});
   const items=it.map(q=>({...q,x:q.x-x0,y:q.y-y0}));
