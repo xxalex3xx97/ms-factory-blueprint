@@ -145,6 +145,32 @@ try {
   const f = await modalState(pg);
   chk('f) Cobalt 300 Mk1: one click places, no confirm text', !f.open && f.big === '', JSON.stringify(f));
   await pg.evaluate(() => { pasting = null; });
+
+  // (g)/(h) Basic Circuits Large Mk2 with a single tick: every rate fits (1x1 floor needs spacer + row gaps)
+  for (const [lab, ticks, rates] of [['g', ['plnBk11'], [1, 6, 11, 16, 21]], ['h21', ['plnBk21'], [31, 36, 61, 66, 71, 76]], ['h22', ['plnBk22'], [31, 36, 61, 66, 71, 76]]]) {
+    for (const r of rates) {
+      await setup(pg, 'Basic Circuits', r, 1, 'DAT_Container_2', ticks);
+      const t = await tileInfo(pg);
+      chk(`${lab}) Basic Circuits ${r}/min ${ticks[0]}: fits, no overlap, no long UG pair`, t.ok === true && t.ov === 0 && t.big === 0, JSON.stringify(t));
+    }
+  }
+  for (const r of [40, 41]) {
+    await setup(pg, 'Basic Circuits', r, 1, 'DAT_Container_2');
+    const t = await tileInfo(pg);
+    chk(`g) Basic Circuits ${r}/min all ticks: fits`, t.ok === true && t.ov === 0 && t.big === 0, JSON.stringify(t));
+  }
+  // (i) a doorless 2x2 block floor (data-driven: same floor data path, no door)
+  await setup(pg, 'Basic Circuits', 31, 1, 'DAT_Container_2', ['plnBk22']);
+  const iv = await pg.evaluate(() => {
+    const k = plcCls('BPO_Station_02');
+    BASE.FAKE_DL = {...BASE[k], name: 'FAKE_DL'}; delete BASE.FAKE_DL.door; PL_STD.push('FAKE_DL');
+    try {
+      const x = placerPlan(), L = placerLayout(x.P, x.it, x.mk, x.sp ?? x.mk, {box: $('plnBuf').value, mod: false});
+      const T = placerTile(L, [false, false, false, true]);
+      return T.ok ? {ok: true, ov: T.ov, cls: [...new Set(T.blocks.map(b => BASE[b.cls].name))].join()} : {ok: false, why: T.why};
+    } finally { PL_STD.pop(); delete BASE.FAKE_DL; }
+  });
+  chk('i) doorless 2x2: fits, no overlap, blocks are FAKE_DL', iv.ok === true && iv.ov === 0 && iv.cls === 'FAKE_DL', JSON.stringify(iv));
 } finally {
   await br.close();
 }

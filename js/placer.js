@@ -64,12 +64,12 @@ function plcTree(P,item){
   return{ok:true,ch:[...a.c,T],two:{B:b.c,rawB:b.raw},raw:a.raw};
 }
 function plcBanks(g,it){
-  const {ML,MR,sc,w,h,cin,dk,rec,two}=g.S,{cnt,X0,fRow,lRow,Y0,R,up,xf,xe,bc,mk}=g,s=up?-1:1,vr=up?3:1,Yb=Y0+R*h;
+  const {ML,MR,sc,w,h,cin,dk,rec,two,sp:spc=0}=g.S,{cnt,X0,fRow,lRow,Y0,R,up,xf,xe,bc,mk}=g,s=up?-1:1,vr=up?3:1,Yb=Y0+R*h;
   const bt=(x,y,r)=>({cls:bc,x,y,h:0,rot:r,pid:0}),ug=(x,y,r)=>({cls:PLC_UG[mk],x,y,h:0,rot:r,pid:0}),mc=(M,x,y)=>({cls:dk,x,y,h:0,rot:M.rot,pid:0,rec,off:M.off.map(p=>p.key)});
   const my=r=>up?Y0+(R-1-r)*h:Y0+r*h;
   cnt.forEach((n,k)=>{
     // two inputs: pair = ML | cL | TA | G | TB | cR | MR (TB is the B trunk, built later by plcTwoTB)
-    const x0=X0[k],Tx=x0+w+(two?2:1),xr=Tx+w+(two?4:1),mrx=Tx+(two?4:1),nl=Math.ceil(n/2),nr=n-nl,fr=fRow[k],lr=lRow[k],ys=my(nl-1)+cin,sp=new Set(Array.from({length:nl},(_,r)=>my(r)+cin));
+    const x0=X0[k],Tx=x0+w+(two?2:1),xr=Tx+w+(two?4:1)+spc,mrx=Tx+(two?4:1)+spc,nl=Math.ceil(n/2),nr=n-nl,fr=fRow[k],lr=lRow[k],ys=my(nl-1)+cin,sp=new Set(Array.from({length:nl},(_,r)=>my(r)+cin));
     for(let r=0;r<nl;r++)it.push(mc(ML,x0+1,my(r)));
     for(let r=0;r<nr;r++)it.push(mc(MR,mrx,my(r)));
     // A feed row: an earlier trunk's G and cR cells are an underground pair under its B trunk (TB cell is left to plcTwoTB)
@@ -79,7 +79,7 @@ function plcBanks(g,it){
     if(two)for(let r=0;r<nl;r++){const ya=my(r)+cin,yb=my(r)+two.yb;
       it.push(bt(x0+w+1,ya,2),ug(x0+w+1,yb,2),ug(x0+w+3,yb,2))}   // cL: belt west into ML (ya), UG exit west into ML (yb); G: UG entrance west under TA
     if(two)for(let r=0;r<nr;r++){const ya=my(r)+cin,yb=my(r)+two.yb;
-      it.push(ug(x0+w+3,ya,0),ug(x0+w+5,ya,0),bt(x0+w+5,yb,0))}   // G: UG entrance east under TB; cR: UG exit east into MR (ya), belt east into MR (yb)
+      it.push(ug(x0+w+3,ya,0),ug(x0+w+5,ya,0),bt(x0+w+5,yb,0));for(let j=0;j<spc;j++)it.push(bt(x0+w+6+j,ya,0),bt(x0+w+6+j,yb,0))}   // G: UG entrance east under TB; cR: UG exit east into MR (ya), belt east into MR (yb); spacer: plain east belts (the wall cut sits between them)
     for(let y=up?Yb-1:Y0;up?y>lr:y<lr;y+=s){it.push(bt(x0,y,vr));if(nr)it.push(bt(xr,y,vr))}
     for(let x=x0;x<xe;x++)it.push(bt(x,lr,0));
   });
@@ -94,12 +94,14 @@ function plcTwoTB(g,it){
   });
 }
 // cut a bank layout into floor-wide segments: put(x,wid,ctr) places a wid-wide part at x; if it overflows the floor, cut at the free column c (entrance c-1, exit c), c >= segment start + lo
-function plcSeg(fw,lo,fc){const q={s:0,i:0,cuts:[],bad:"",put(x,wid,ctr){
+function plcSeg(fw,lo,fc){const q={s:0,i:0,cuts:[],bad:"",put(x,wid,ctr,at){
+  if(at&&!fc){const x1=q.put(x,at,false);q.cuts.push(x1+at);q.s=x1+at;q.put(x1+at,wid-at,false);return x1}
   if(fc){while(q.i<fc.length&&x>fc[q.i])q.i++;   // forced cuts (band copies of a B chain reuse band 0 cuts)
     if(q.i<fc.length&&x+wid>=fc[q.i]){const c=fc[q.i++];q.s=c;x=ctr?c+1:c;
       if(x+wid-q.s>fw)q.bad="a "+wid+" cell wide part does not fit a floor "+fw+" wide: tick a bigger block";return x}
     if(fw&&x+wid+1-q.s>fw)q.bad="internal: band cut mismatch";return x}
-  if(fw&&x+wid+1-q.s>fw){const c=Math.max(x,q.s+lo);if(c-q.s>fw)q.bad="an underground belt cannot reach across the wall (needs "+lo+" free cells, floor is "+fw+" wide)";
+  if(fw&&x+wid+1-q.s>fw){const c=Math.max(x,q.s+lo);
+    if(c-q.s>fw)q.bad="an underground belt cannot reach across the wall (needs "+lo+" free cells, floor is "+fw+" wide)";
     q.cuts.push(c);q.s=c;x=ctr?c+1:c;
     if(x+wid-q.s>fw)q.bad="a "+wid+" cell wide part does not fit a floor "+fw+" wide: tick a bigger block";}
   return x}};return q}
@@ -111,6 +113,7 @@ function placerBank(P,item,mk,spMk,o){
   const ch=tr.ch,n=ch.length,G=o.G||PLC_G||1,Bn=tr.two?tr.two.B:[],topB=Bn.length?Bn[Bn.length-1].item:(tr.two&&tr.two.rawB);
   for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:tr.raw)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null)),eI2=tr.two&&q===n-1?P.edges.find(e=>e.from===topB&&e.to===nd.item):null;
     const S=plcStage(nd,eI,eU,mk,spMk,eI2);if(!S.ok)return S;SS.push(S)}
+  SS.forEach(S=>{S.sp=0;if(S.two&&o.fit&&o.fit.fw&&S.Wb>o.fit.fw){S.sp=4;S.Wb+=4}});   // spacer = UG entrance+exit pair with 1 plain belt of clearance each side, so nothing but straight east belts touches the wall cut
   if(tr.two&&!Bn.length)return no("Bank: a raw input straight into a 2-input machine is not built yet");
   const cp=plcPp(BX,0),cE=cp.filter(p=>p.nx===1).sort((a,b)=>a.y-b.y),cW=cp.filter(p=>p.nx===-1).sort((a,b)=>a.y-b.y),seq=a=>a.every((p,i)=>p.y===a[0].y+i);
   if(!cE.length||!cW.length||!seq(cE)||!seq(cW))return no("Bank: container E/W ports not found or not on consecutive rows");
@@ -150,11 +153,11 @@ function placerBank(P,item,mk,spMk,o){
       rBs.push(rB);xB=Math.max(xB,rB.w)}
     xs=sg.put(xB+1,2*bw+1,false)}
   let x=xs+2*bw+2,xf=xs+2*bw+1;
-  for(let q=0;q<n;q++){const X0=[];for(let k=0;k<tbs[q];k++){x=sg.put(x,SS[q].Wb,false);X0.push(x);x+=SS[q].Wb+1}
+  for(let q=0;q<n;q++){const X0=[];for(let k=0;k<tbs[q];k++){x=sg.put(x,SS[q].Wb,false,SS[q].sp?SS[q].w+6+SS[q].sp/2:0);X0.push(x);x+=SS[q].Wb+1}
     const xe=sg.put(x,q<n-1||o.feedOut?bw:2*bw+1,true);hz.push({Xs:xs,xf,X0,xe});
     if(q<n-1){xf=xe+bw;x=xe+bw+1}}   // junction q: one hub at xe (out side of stage q = in side of stage q+1); feeders start xe+bw
   if(sg.bad)return no(sg.bad);
-  const gb=[];let oy=0;
+  const gb=[];let oy=0,sh0=0;
   for(let b=0;b<G;b++){const gs=geo(b),i0=it.length;gb.push(gs);
     gs.forEach((g,q)=>{const {Xs,xf,X0,xe}=hz[q];
       if(q===0){for(let j=0;j<g.nIn;j++){const y=g.Bi+j*bh;if(!o.mod)it.push(bx(Xs,y,[{item:tr.raw,n:0,inf:true}]));it.push(bx(Xs+bw+1,y,[]))}
@@ -181,7 +184,7 @@ function placerBank(P,item,mk,spMk,o){
       rB.feed.rows.forEach(r=>{for(let xx=rB.feed.x+bw;xx<hC.xf;xx++)it.push(bt(xx,r+y0))});
       plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);}
     const sl=it.slice(i0),mn=Math.min(...sl.map(c=>c.y)),mx=Math.max(...sl.map(c=>c.y+dim(c).h));
-    sl.forEach(c=>{c.y+=oy-mn});oy+=mx-mn+1}   // band min y -> oy, spare row between bands
+    if(!b)sh0=oy-mn;sl.forEach(c=>{c.y+=oy-mn});oy+=mx-mn+1}   // band min y -> oy, spare row between bands
   const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
   const last=n-1,T=ch[last],N=Ns[last],b0=gb[0],hubs=G*nH.reduce((a,c)=>a+c,0),nS=G*b0[0].nIn,nK=G*b0[last].nOut;
   const nt=["Makes "+plnR2(N*T.pmach)+"/min (target "+plnR2(T.rate)+")"];
@@ -198,7 +201,7 @@ function placerBank(P,item,mk,spMk,o){
   }
   if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
   const W=Math.max(...items.map(b=>b.x+dim(b).w)),H=Math.max(...items.map(b=>b.y+dim(b).h));
-  const feed=o.feedOut?{x:hz[n-1].xe-mnx,rows:gb[0][n-1].feedRows.map(y=>y-mny)}:null;
+  const feed=o.feedOut?{x:hz[n-1].xe-mnx,rows:gb[0][n-1].feedRows.map(y=>y+sh0-mny)}:null;
   const bandSum=q=>{const s=[];for(let b=0;b<G;b++)s.push(alls[q].slice(b*tbs[q],(b+1)*tbs[q]).reduce((a,c)=>a+c,0));return s.every(v=>v===s[0])};
   const even=SS.every((_,q)=>bandSum(q))&&Bn.every(nd=>nd.machines%G===0);   // every band holds the same machines per stage (uneven = fallback, see placerTile)
   return{ok:true,items,lanes:G*tbs[last],per:alls[last],makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:G*tbs[last],rows:Math.max(...gb.flat().map(g=>g.R)),nS,nK,ps,bands:G,tb:tbs[last],t0:Math.max(...t0s),cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o},tbs,stages:n,hubs,nIn:G*tbs[0],nOut:G*tbs[last],feed,even,two:!!tr.two};
@@ -281,7 +284,8 @@ function placerCut(L,cls){
   const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,Fw=f.w,Fh=f.h,nm=BASE[cls].name;
   const mx=def(PLC_UG[L.mk]).maxApart,per=Math.floor((Fh+1)/L.pitch);
   if(!L.bank&&per<1)return{ok:false,why:(L.bank?"the factory is ":"one lane is ")+(L.pitch-1)+" cells tall, the "+nm+" floor is only "+Fh};
-  const occ=new Map();L.items.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set((b.x+i)+","+(b.y+j),b)});
+  const IT=L.items.map(b=>({...b}));let occ,Hh=L.h;   // working copies: a row gap shifts them in place
+  const mkOcc=()=>{occ=new Map();IT.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set((b.x+i)+","+(b.y+j),b)})};mkOcc();
   const isB=b=>!!b&&PLC_BELT.includes(b.cls);
   const tryCut=c=>{
     const mk=[];
@@ -293,15 +297,14 @@ function placerCut(L,cls){
           const sd=(q,dy)=>{const n=occ.get(q.x+","+(q.y+dy));return !!n&&isB(n)&&n.rot===(dy<0?1:3)};
           if(sd(a,-1)||sd(a,1)||sd(b,-1)||sd(b,1))return null;
           mk.push(a,b);
-        }else if(a&&(!isB(a)||a.rot===0))return null;   // machine/box/belt flowing into nothing across the wall
-        else if(b&&!isB(b))return null;
+        }else if(a&&isB(a)&&a.rot===0)return null;   // belt flowing into nothing across the wall (a machine/box beside the wall is fine)
         continue;
       }
       if(isB(a)&&isB(b)&&a.rot===0&&b.rot===0){mk.push(a,b);continue}
       if(isB(a)||isB(b))return null;
     }
     const ms=new Set(mk);
-    for(const it of L.items){if(isB(it))continue;
+    for(const it of IT){if(isB(it))continue;
       for(const p of portsOf(it)){if(!p.en)continue;const t=occ.get((p.x+p.nx)+","+(p.y+p.ny));if(!t||!ms.has(t))continue;
         if(p.ny!==0||p.nx!==(t.x===c-1?1:-1))return null}}
     return mk;
@@ -334,21 +337,42 @@ function placerCut(L,cls){
         if(B&&isB(B)&&B.rot===3)return null;
       }
       const ms=new Set(mk);
-      for(const it of L.items){if(isB(it))continue;
+      for(const it of IT){if(isB(it))continue;
         for(const p of portsOf(it)){if(!p.en)continue;const t=occ.get((p.x+p.nx)+","+(p.y+p.ny));if(!t||!ms.has(t))continue;
           if(p.nx!==0||p.ny!==(t.rot===1?1:-1))return null}}
       return mk;
     };
+    const bl=q=>isB(q)||spl(q)||PLC_UG.includes(q.cls),vt=q=>bl(q)&&(q.rot===1||q.rot===3),ch=(a,b)=>a.x===b.x&&vt(a)&&vt(b)&&a.rot===b.rot;
+    const gapRow=r0=>{
+     const ix=new Map(IT.map((b,i)=>[b,i])),pa=IT.map((_,i)=>i),fd=i=>{while(pa[i]!==i)i=pa[i]=pa[pa[i]];return i},edges=[];
+     IT.forEach((b,i)=>{const e=dim(b);for(let u=0;u<e.w;u++)for(let v=0;v<e.h;v++)for(const [dx,dy] of [[1,0],[0,1]]){
+      const m=occ.get((b.x+u+dx)+","+(b.y+v+dy));if(!m||m===b)continue;
+      if(dy&&ch(b,m)){edges.push([b,m,b.rot]);continue}
+      if(dy&&!bl(b)&&!bl(m))continue;
+      pa[fd(i)]=fd(ix.get(m))}});
+     const T=[],Bm=[];IT.forEach((b,i)=>{const r=fd(i),e=dim(b);T[r]=Math.min(T[r]??1e9,b.y);Bm[r]=Math.max(Bm[r]??-1e9,b.y+e.h-1)});
+     let best=null;
+     for(let e=Fh;e>=Math.max(2,d.h*FC+2-mx);e--){const W=r0+e;
+      let D=2;IT.forEach((b,i)=>{const r=fd(i);if(Bm[r]>=W-1&&T[r]<=W)D=Math.max(D,W+1-T[r])});
+      if(best&&D>=best.D)continue;
+      const sh=IT.map((b,i)=>Bm[fd(i)]>=W-1?D:0);
+      if(edges.some(([a,b])=>sh[ix.get(b)]<sh[ix.get(a)]))continue;
+      const fill=[];edges.forEach(([a,b,r])=>{for(let y=a.y+sh[ix.get(a)]+1;y<b.y+sh[ix.get(b)];y++)fill.push({cls:y===W-1||y===W?PLC_UG[L.mk]:PLC_BELT[L.mk],x:a.x,y,h:0,rot:r,pid:0})});
+      const seen=new Set();let bad=false;
+      IT.map((b,i)=>({...b,y:b.y+sh[i]})).concat(fill).forEach(m=>{const q=dim(m);for(let i=0;i<q.w;i++)for(let j=0;j<q.h;j++){const k=(m.x+i)+","+(m.y+j);if(seen.has(k))bad=true;else seen.add(k)}});
+      if(!bad)best={D,W,sh,fill}}
+     return best};
     let r0=0;
-    while(L.h-r0>Fh){
+    while(Hh-r0>Fh){
       let ok=null,c=0;
-      for(let e=Fh;e>=Math.max(2,d.h*FC+2-mx);e--){const r=tryRow(r0+e);if(r){ok=r;c=r0+e;break}}
-      if(!ok)return{ok:false,why:"no free row to cross a wall within "+mx+" underground cells: pick a higher belt Mk or a bigger block type"};
+      for(let e=Fh;e>=1;e--){const r=tryRow(r0+e);if(r&&(r.length===0||e>=d.h*FC+2-mx)){ok=r;c=r0+e;break}}   // a wall with nothing crossing it can be any tile height
+      if(!ok){const g=gapRow(r0);if(!g)return{ok:false,why:"no free row to cross a wall within "+mx+" underground cells, even with a row gap: pick a higher belt Mk or a bigger block type"};
+        IT.forEach((b,i)=>{b.y+=g.sh[i]});IT.push(...g.fill);ugs.push(...g.fill.filter(q=>q.cls===PLC_UG[L.mk]));Hh+=g.D;mkOcc();rc.push(g.W);r0=g.W;continue}
       rc.push(c);ugs.push(...ok);r0=c;
     }
   }
   const ug=new Set(ugs),pc=x=>cuts.filter(c=>c<=x).length,pr=y=>rc.filter(c=>c<=y).length;
-  const ms=L.items.map(b=>{const i=pc(b.x);let y;
+  const ms=IT.map(b=>{const i=pc(b.x);let y;
     if(L.bank){const q=pr(b.y);y=q*TH+b.y-(rc[q-1]||0)}
     else{const g=Math.floor(Math.floor(b.y/L.pitch)/per);y=g*TH+b.y-g*per*L.pitch}
     return{...b,cls:ug.has(b)?PLC_UG[L.mk]:b.cls,x:i*TW+b.x-(i?cuts[i-1]:0),y}});
