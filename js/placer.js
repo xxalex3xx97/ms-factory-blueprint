@@ -19,14 +19,30 @@ function plcMach2(cls,side){
       return{rot:r,ins:i2,outP:o,off:ps.filter(p=>!i2.includes(p)&&p!==o),w:e.w,h:e.h}}}
   return null;
 }
+// 3-input machine variant 'A': 2 inputs on face side (sorted by y) + 1 input on the face (0,-side); output on -side. side -1 = ML rotated 180 (3rd from S). Null when the faces lack ports.
+function plcMach3(cls,side,variant){
+  if(variant!=='A')return null;
+  for(let r=0;r<4;r++){const ps=plcPp(cls,r),ins=ps.filter(p=>p.nx===side&&p.dir!=="out").sort((a,b)=>a.y-b.y),ts=ps.filter(p=>p.nx===0&&p.ny===-side&&p.dir!=="out").sort((a,b)=>a.x-b.x),outs=ps.filter(p=>p.nx===-side&&p.dir!=="in");
+    if(ins.length>=2&&ts.length>=1&&outs.length>=1){const i2=ins.slice(0,2),t=ts[0],o=outs[0],e=dim({cls,rot:r});
+      return{rot:r,ins:i2,inT:t,outP:o,off:ps.filter(p=>!i2.includes(p)&&p!==t&&p!==o),w:e.w,h:e.h}}}
+  return null;
+}
 function plcSpl(cls,rot){
   const ps=plcPp(cls,rot),e=dim({cls,rot}),f=rot===1?[0,1]:[0,-1],i=ps.find(p=>p.dir==="in"),o=ps.filter(p=>p.dir==="out");
   return i&&e.w===1&&e.h===1&&i.nx===-f[0]&&i.ny===-f[1]&&o.some(p=>p.nx===f[0]&&p.ny===f[1])&&o.some(p=>p.nx===1&&p.ny===0)&&o.some(p=>p.nx===-1&&p.ny===0)?{i,o}:null;
 }
-function plcStage(n,eI,eU,mk,spMk,eI2){
+function plcStage(n,eI,eU,mk,spMk,eI2,eI3){
   const no=why=>({ok:false,why}),cb=plnCb(n.crafter);if(!cb)return no("No machine builds "+plnNm(n.item));
-  const d=def(cb.id),inF=n.pmach*eI.flow/eU.flow,inF2=eI2?n.pmach*eI2.flow/eU.flow:0,m=Math.floor(MKS[mk][1]/Math.max(n.pmach,inF,inF2)+1e-9);
-  if(m<1)return no("One machine needs "+plnR2(Math.max(n.pmach,inF,inF2))+"/min but a "+MKS[mk][0]+" belt carries "+MKS[mk][1]+"/min: pick a higher belt Mk");
+  const d=def(cb.id),inF=n.pmach*eI.flow/eU.flow,inF2=eI2?n.pmach*eI2.flow/eU.flow:0,inF3=eI3?n.pmach*eI3.flow/eU.flow:0,m=Math.floor(MKS[mk][1]/Math.max(n.pmach,inF,inF2,inF3)+1e-9);
+  if(m<1)return no("One machine needs "+plnR2(Math.max(n.pmach,inF,inF2,inF3))+"/min but a "+MKS[mk][0]+" belt carries "+MKS[mk][1]+"/min: pick a higher belt Mk");
+  if(eI3){   // three inputs: 2 on one face + 1 on the adjacent face of each machine column; one gap row between stages (pitch h+2)
+    const ML=plcMach3(d.key,1,'A'),MR=plcMach3(d.key,-1,'A');
+    if(!ML||!MR)return no("Bank: "+plnNm(n.item)+" machine has no face with 2 input ports plus 1 on the adjacent face (3-input stage needs them)");
+    if(ML.w!==MR.w||ML.h!==MR.h||ML.ins.map(p=>p.y).join()!==MR.ins.map(p=>p.y).join())return no("Bank: the two machine columns do not line up (input ports on different rows)");
+    if(ML.off.concat(MR.off).some(p=>!p.tg))return no("Bank: machine has an unused port that cannot be disabled");
+    const sc=PLC_SPL[spMk];if(!plcSpl(sc,1)||!plcSpl(sc,3))return no("Bank: splitter ports not as expected (Mk id unverified?)");
+    return{ok:true,n,dk:d.key,inF,m,N:n.machines,ML,MR,w:ML.w,h:ML.h,cin:ML.ins[0].y,Wb:2*ML.w+9,pitch:ML.h+2,sc,rec:rk(n.rec),two:{ya:ML.ins[0].y,yb:ML.ins[1].y,inF2},three:{yc:ML.inT.y,inF3}}
+  }
   if(eI2){   // two inputs: both on one face of each machine column
     const ML=plcMach2(d.key,1),MR=plcMach2(d.key,-1);
     if(!ML||!MR)return no("Bank: "+plnNm(n.item)+" machine has no face with 2 input ports (2-input stage needs 2 ports on one face)");
@@ -54,14 +70,14 @@ function plcTree(P,item){
   const no=why=>({ok:false,why}),T=P.nodes[item];
   if(P.cycle||!T||!T.rec)return no("Step 1: only single-input single-recipe plans");
   if(T.rec.i.length===1){const ch=plcChain(P,item);return ch?{ok:true,ch,two:null,raw:P.raw[0].item}:no("Step 1: only single-input single-recipe plans")}
-  if(T.rec.i.length!==2)return no("Bank: "+T.rec.i.length+" inputs per machine: only 1 or 2 are supported");
+  if(T.rec.i.length<2||T.rec.i.length>3)return no("Bank: "+T.rec.i.length+" inputs per machine: only 1, 2 or 3 are supported");
   const side=top=>{const c=[],seen=new Set();let x=top;
     for(;;){const n=P.nodes[x];if(!n)return null;if(!n.rec)return{c,raw:x};
       if(seen.has(x)||n.rec.i.length!==1||P.edges.filter(e=>e.from===x).length!==1)return null;
       seen.add(x);c.unshift(n);x=n.rec.i[0][0]}};
-  const [a,b]=T.rec.i.map(([x])=>side(x));
-  if(!a||!b)return no("Bank: an input chain is not a single-input chain (a shared intermediate or a deeper input)");
-  return{ok:true,ch:[...a.c,T],two:{B:b.c,rawB:b.raw},raw:a.raw};
+  const [a,b,c]=T.rec.i.map(([x])=>side(x));
+  if(!a||!b||(T.rec.i.length===3&&!c))return no("Bank: an input chain is not a single-input chain (a shared intermediate or a deeper input)");
+  return{ok:true,ch:[...a.c,T],two:{B:b.c,rawB:b.raw},raw:a.raw,...(c?{three:{C:c.c,rawC:c.raw}}:{})};
 }
 function plcBanks(g,it){
   const {ML,MR,sc,w,h,cin,dk,rec,two,sp:spc=0}=g.S,{cnt,X0,fRow,lRow,Y0,R,up,xf,xe,bc,mk}=g,s=up?-1:1,vr=up?3:1,Yb=Y0+R*h;
@@ -110,6 +126,7 @@ const plcFit=(cls,mk)=>{const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,ro
 function placerBank(P,item,mk,spMk,o){
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why}),tr=plcTree(P,item),cap=i=>MKS[i][1],SS=[];
   if(!tr.ok)return tr;
+  if(tr.three)return no("Bank: 3 inputs per machine: layout not built yet");
   const ch=tr.ch,n=ch.length,G=o.G||PLC_G||1,Bn=tr.two?tr.two.B:[],topB=Bn.length?Bn[Bn.length-1].item:(tr.two&&tr.two.rawB);
   for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:tr.raw)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null)),eI2=tr.two&&q===n-1?P.edges.find(e=>e.from===topB&&e.to===nd.item):null;
     const S=plcStage(nd,eI,eU,mk,spMk,eI2);if(!S.ok)return S;SS.push(S)}
