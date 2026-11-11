@@ -179,6 +179,32 @@ try {
     await pg.keyboard.press('Control+z');
   }
 
+  // ---- several trunks / bands per 3-input stage: 75/min and 300/min build (sim >= target), Large Mk1 120 builds; Container Mk1 120 builds or refuses cleanly with a reason and Place disabled; no hang (25 s)
+  for (const [rate, mk, buf, label, mustBuild] of [[75, 0, 'DAT_Container', 'Container Mk1 75', true], [300, 1, 'DAT_Container', 'Container Mk2 300', true], [300, 1, 'DAT_Container_2', 'Large Mk2 300', true], [120, 0, 'DAT_Container_2', 'Large Mk1 120', true], [120, 0, 'DAT_Container', 'Container Mk1 120', false]]) {
+    await setup(pg, ITEM, rate, mk, buf);
+    const t0 = Date.now();
+    const MT = await openBuild(pg);
+    const dtM = Date.now() - t0;
+    info(`MT) ${label}: ${dtM} ms, G=${MT.G}, err=${JSON.stringify(MT.err)}, Place disabled=${MT.off}`);
+    chk(`MT) ${label}: returns within 25 s`, dtM < 25000, dtM + ' ms');
+    if (!mustBuild) {
+      chk(`MT) ${label}: builds, or refuses with a reason and Place disabled`, MT.open && ((MT.err === '' && !MT.off) || (MT.err !== '' && MT.off === true)), JSON.stringify({err: MT.err, off: MT.off}));
+      if (MT.err !== '') { await closeIfOpen(pg); continue; }
+    } else chk(`MT) ${label}: builds (no error, Place enabled)`, MT.open && MT.err === '' && !MT.off, JSON.stringify({err: MT.err, off: MT.off}));
+    if (MT.err !== '' || MT.off) { await closeIfOpen(pg); continue; }
+    await pg.click('#plnPlace');
+    if (await pg.evaluate(() => $('plnPrevBig').textContent.length > 0)) await pg.click('#plnPlace');
+    const placedM = await stageClick(pg);
+    await pg.waitForTimeout(150);
+    const agM = await pg.evaluate(audit3);
+    const simM = await pg.evaluate(simStats, ITEM);
+    info(`MT) ${label}: placed=${placedM} ov=${agM.ov} span-ok=${agM.ugOk} sim=${simM.got.toFixed(2)} blocked=${simM.blocked}`);
+    chk(`MT) ${label}: placed by real click, no overlap, items inside floor`, placedM && agM.ov === 0 && agM.inside === true, JSON.stringify({ov: agM.ov, inside: agM.inside}));
+    chk(`MT) ${label}: UG pairs valid, inclusive span <= Mk maxApart`, agM.ugOk === true, JSON.stringify(agM.bad));
+    chk(`MT) ${label}: sim >= ${rate} (mean of last 12 samples), none blocked`, placedM && simM.got >= rate && simM.blocked === 0, JSON.stringify(simM));
+    await pg.keyboard.press('Control+z');
+  }
+
   // ---- wall cuts: blank columns inserted where a planned wall cut is not free; Superalloy into a plain container at Mk2/Mk3 55/min builds, placed by click, ov 0, UG inclusive span <= Mk, sim >= target
   for (const [mk, label] of [[1, 'Container Mk2 55'], [2, 'Container Mk3 55']]) {
     await setup(pg, ITEM, 55, mk, 'DAT_Container');

@@ -111,10 +111,11 @@ function plcTwoTB(g,it){
   });
 }
 // 3-input (single trunk per stage): C trunk column TC = x0+w+6 from its feed row frC toward the stage. Splitter on each gap row S(j)=Y0+j*P+h (j=-1..R-1): west = UG under TB/TA, then belts into the N-face port of ML(j+1); east = belts into the S-face port of MR(j).
-function plcThreeTC(g,it){
-  const {S,cnt,X0,Y0,R,up,xf,frC:frCa,bc,mk}=g,frC=frCa[0],w=S.w,h=S.h,P=S.pitch,sc=S.sc,vr=up?3:1,s=up?-1:1,x0=X0[0],TC=x0+w+6,nr=cnt[0]-R,xc=S.three.xc,xcR=S.three.xcR;
+function plcThreeTC(g,it){g.cnt.forEach((n,k)=>plcThreeTCk(g,it,k))}   // one C trunk per consumer trunk (each with its own C feed row)
+function plcThreeTCk(g,it,k){
+  const {S,cnt,X0,Y0,R,up,xf,frC:frCa,bc,mk}=g,frC=frCa[k],w=S.w,h=S.h,P=S.pitch,sc=S.sc,vr=up?3:1,s=up?-1:1,x0=X0[k],TC=x0+w+6,nl=Math.ceil(cnt[k]/2),nr=cnt[k]-nl,xc=S.three.xc,xcR=S.three.xcR;
   const bt=(x,y,r)=>({cls:bc,x,y,h:0,rot:r,pid:0}),ug=(x,y,r)=>({cls:PLC_UG[mk],x,y,h:0,rot:r,pid:0});
-  const Sr=j=>Y0+j*P+h,rowR=j=>up?R-1-j:j,hasML=j=>j+1<R,hasMR=j=>j>=0&&rowR(j)<nr;
+  const Sr=j=>Y0+j*P+h,rowR=j=>up?R-1-j:j,hasML=j=>j+1<R&&rowR(j+1)<nl,hasMR=j=>j>=0&&rowR(j)<nr;
   const js=[];for(let j=-1;j<R;j++)if(hasML(j)||hasMR(j))js.push(j);
   const spl=new Set(js.map(Sr)),yEnd=up?Sr(js[0]):Sr(js[js.length-1]);  for(let x=xf;x<TC;x++)it.push(bt(x,frC,0));
   for(let y=frC;up?y>=yEnd:y<=yEnd;y+=s)it.push(spl.has(y)?{cls:sc,x:TC,y,h:0,rot:vr,pid:0,off:[]}:bt(TC,y,vr));
@@ -158,7 +159,6 @@ function placerBank(P,item,mk,spMk,o){
   const Ns=SS.map(S=>S.N),t0s=Ns.map((N,q)=>Math.ceil(N/SS[q].m));
   for(let q=0;q<n;q++){const d0=dist(Ns[q],t0s[q])[0]*Math.max(SS[q].inF,SS[q].two?SS[q].two.inF2:0,SS[q].three?SS[q].three.inF3:0);if(cap(spMk)<d0-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(d0)+"/min): set the splitter Mk higher")}
   const tbs=t0s.map(t=>Math.ceil(t/G));
-  if(tr.three&&tbs[n-1]>1)return no("Bank: 3 inputs: one trunk per stage only (for now)");
   for(let q=0;q<n;q++)if(G*tbs[q]>Ns[q])return no("band count "+G+" does not fit "+Ns[q]+" machines");
   const alls=SS.map((S,q)=>dist(Ns[q],G*tbs[q])),nH=[0];   // nH[q]=hub containers per band between stage q-1 and q
   for(let q=1;q<n;q++){const a=tbs[q-1],b=tbs[q],hq=Math.max(Math.ceil(a/ps),Math.ceil(b/ps));if(hq>Math.min(a,b))return no("Hub between stages "+q+" and "+(q+1)+": "+a+" and "+b+" trunks cannot share "+hq+" hub containers ("+ps+" ports a side): pick a higher belt Mk or a bigger container");nH.push(hq)}
@@ -193,7 +193,8 @@ function placerBank(P,item,mk,spMk,o){
     if(q<n-1){xf=xe+bw;x=xe+bw+1}}   // junction q: one hub at xe (out side of stage q = in side of stage q+1); feeders start xe+bw
   if(sg.bad)return no(sg.bad);
   const gb=[];let oy=0,sh0=0;
-  for(let b=0;b<G;b++){const gs=geo(b),i0=it.length;gb.push(gs);
+  for(let b=0;b<G;b++){let gs;try{gs=geo(b)}catch(e){return no("Bank: a hub needs more ports than a box side has: pick a higher belt Mk or a bigger buffer")}   // more trunks per hub than box ports
+    const i0=it.length;gb.push(gs);
     gs.forEach((g,q)=>{const {Xs,xf,X0,xe}=hz[q];
       if(q===0){for(let j=0;j<g.nIn;j++){const y=g.Bi+j*bh;if(!o.mod)it.push(bx(Xs,y,[{item:tr.raw,n:0,inf:true}]));it.push(bx(Xs+bw+1,y,[]))}
         g.oi.forEach(r=>{it.push(bt(Xs+bw,g.Bi+r));if(o.mod)for(let xx=Xs;xx<Xs+bw;xx++)it.push(bt(xx,g.Bi+r))})}
