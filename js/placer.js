@@ -400,7 +400,52 @@ function plcGrowthLane(P,item,mk,spMk,o={}){
   const gi=P.nodes[item].rec.i.find(([x])=>x===item);
   return{...r,items,lanes:N,per:Array(N).fill(1),makes:N*P.nodes[item].pmach,h:N*step-1,pitch:step,note:["Seed: the seed container is infinite (as in your example build): it supplies "+plnNm(gi[0])+" to the loop, no initial amount needed; the machines double it, the net arrives in the sink container",...r.note.slice(1)]};
 }
-function placerLayoutA(P,item,mk,spMk,o={}){const GR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.some(([x])=>x===item);if(GR&&P.nodes[item].rec.i.length===2){try{return plcGrowthLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": feedback layout not built for this recipe ("+e.message+")"}}}if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": the feedback layout for more than one extra input is not built yet"};const GA=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GA)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GA.item)+": the feedback layout inside a chain is not built yet"};
+// 4-input stage, lane-based (phase 1): one machine per lane. Ins: 2 W ports (a, b), 1 N port (n), 1 S port (s); out: first E port. Each input is a source container with its own belt; N and S belts come over the top / under the bottom. Unused machine ports are disabled.
+function plcFourLane(P,item,mk,spMk,o={}){
+  const no=why=>({ok:false,why:"Four: "+why}),BX=o.box||PLC_BOX;
+  const T=P.nodes[item],cb=plnCb(T.crafter);if(!cb)return no("No machine builds this recipe");
+  const d=def(cb.id),pp=cls=>portsOf({cls,x:0,y:0,rot:0,off:[]});
+  const mp=pp(d.key),ins=T.rec.i.map(([x])=>x);
+  const Wp=mp.filter(p=>p.nx===-1&&p.dir!=="out").sort((p,q)=>p.y-q.y),Np=mp.filter(p=>p.nx===0&&p.ny===-1&&p.dir!=="out").sort((p,q)=>p.x-q.x),Sp=mp.filter(p=>p.nx===0&&p.ny===1&&p.dir!=="out").sort((p,q)=>p.x-q.x),Ep=mp.filter(p=>p.nx===1&&p.dir!=="in").sort((p,q)=>p.y-q.y);
+  if(Wp.length<2||!Np.length||!Sp.length||!Ep.length)return no("machine needs 2 W, 1 N, 1 S input port and 1 E output port");
+  const a=Wp[0],b=Wp[1],n=Np[0],s=Sp[0],eOut=Ep[0],used=[a,b,n,s,eOut],mOff=mp.filter(p=>!used.includes(p));
+  if(mOff.some(p=>!p.tg))return no("machine has an unused port that cannot be disabled");
+  const cp=pp(BX),pe=cp.find(p=>p.f==="E"),pw=cp.find(p=>p.f==="W");
+  if(!pe||!pw||pw.y!==pe.y)return no("container W/E ports not aligned");
+  const N=Math.max(1,T.machines),fl=x=>{const e=P.edges.find(e=>e.from===x&&e.to===item);return e?e.flow/N:0};
+  for(const x of ins)if(fl(x)>MKS[mk][1])return no("one machine needs "+plnR2(fl(x))+"/min of "+plnNm(x)+" but a "+MKS[mk][0]+" belt carries "+MKS[mk][1]+"/min: pick a higher belt Mk");
+  const bw=def(BX).w,bh=def(BX).h,w=d.w,h=d.h,X0=2*bw+1,rec=rk(T.rec),bc=PLC_BELT[mk];
+  const bt=(x,y,r=0)=>({cls:bc,x,y,h:0,rot:r,pid:0}),box=(x,y,ct)=>({cls:BX,x,y,h:0,rot:0,pid:0,ct}),src=(x,it)=>[{item:x,n:0,inf:true}];
+  const it=[{cls:d.key,x:X0,y:0,h:0,rot:0,pid:0,rec,off:mOff.map(p=>p.key)}];
+  // W inputs: container C1 -> port a (straight); container C2 -> port b (straight, or staggered below C1 when the ports are closer than one container)
+  const C1={x:0,y:a.y-pe.y},stag=b.y-a.y<bh,rB=a.y+bh,C2={x:0,y:(stag?rB:b.y)-pe.y};
+  it.push(box(C1.x,C1.y,src(ins[0])),box(C2.x,C2.y,src(ins[1])));
+  for(let x=C1.x+bw;x<X0+a.x;x++)it.push(bt(x,a.y,0));
+  if(!stag)for(let x=C2.x+bw;x<X0+b.x;x++)it.push(bt(x,b.y,0));
+  else{for(let x=C2.x+bw;x<X0+b.x-1;x++)it.push(bt(x,rB,0));for(let y=rB;y>b.y;y--)it.push(bt(X0+b.x-1,y,3));it.push(bt(X0+b.x-1,b.y,0))}
+  // N input: container CN above C1, belt east along rN, turn south into the N port
+  const yN=Math.min(-1-pe.y,C1.y-bh),rN=yN+pe.y;
+  it.push(box(0,yN,src(ins[2])));
+  for(let x=bw;x<X0+n.x;x++)it.push(bt(x,rN,0));
+  it.push(bt(X0+n.x,rN,1));for(let y=rN+1;y<=-1;y++)it.push(bt(X0+n.x,y,1));
+  // S input: container CS below C2, belt east along rS, turn north into the S port
+  const yS=Math.max(h-pe.y,C2.y+bh),rS=yS+pe.y;
+  it.push(box(0,yS,src(ins[3])));
+  for(let x=bw;x<X0+s.x;x++)it.push(bt(x,rS,0));
+  it.push(bt(X0+s.x,rS,3));for(let y=rS-1;y>=h;y--)it.push(bt(X0+s.x,y,3));
+  // output: machine E port -> straight belt -> out container O (no return, no sink)
+  const OX=X0+w+1,OY=eOut.y-pw.y;
+  for(let x=X0+eOut.x+1;x<OX;x++)it.push(bt(x,eOut.y,0));
+  it.push(box(OX,OY,[]));
+  let x0=Infinity,y0=Infinity;it.forEach(q=>{if(q.x<x0)x0=q.x;if(q.y<y0)y0=q.y});
+  const lane=it.map(q=>({...q,x:q.x-x0,y:q.y-y0}));
+  let W=0,H=0;lane.forEach(q=>{const e=dim(q);if(q.x+e.w>W)W=q.x+e.w;if(q.y+e.h>H)H=q.y+e.h});
+  const step=H+1,items=[];
+  for(let k=0;k<N;k++)lane.forEach(q=>items.push({...q,y:q.y+k*step}));
+  const note=ins.map((x,i)=>"Input "+(i+1)+" "+plnNm(x)+": "+(P.nodes[x]&&P.nodes[x].rec?"made by another factory: build it separately and feed this container":"source container (infinite)"));
+  return{ok:true,items,lanes:N,per:Array(N).fill(1),makes:N*T.pmach,h:N*step-1,pitch:step,w:W,mod:false,box:BX,mk,four:true,note:["Four inputs: one machine per lane, "+N+" lane(s)",...note],src:{P,item,mk,spMk,o}};
+}
+function placerLayoutA(P,item,mk,spMk,o={}){const FR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.length===4&&!P.nodes[item].rec.i.some(([x])=>x===item);if(FR){try{return plcFourLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Four: layout not built for this recipe ("+e.message+")"}}}const GR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.some(([x])=>x===item);if(GR&&P.nodes[item].rec.i.length===2){try{return plcGrowthLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": feedback layout not built for this recipe ("+e.message+")"}}}if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": the feedback layout for more than one extra input is not built yet"};const GA=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GA)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GA.item)+": the feedback layout inside a chain is not built yet"};
 P=plcUnshare(P,item);
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why});
   const tr=plcTree(P,item);if(!tr.ok)return no(tr.why);
