@@ -170,6 +170,23 @@ function pfColumns(cls,k,flows,sizes,mk,outFlow){
   const items=it.map(q=>({...q,y:q.y-Math.min(0,minY)}));
   return{ok:true,items,w:xo+bw,h:Math.max(...items.map(q=>q.y+dim(q).h)),ports:[]};
 }
+// SEAMS (step 6C): placerCut cuts a layout into floor tiles, each cut column c with c-s in [LO,FW] (LO = the 2x2 block's wall minimum, FW = its floor width). When no free column exists there, insert k blank columns (plcBlank: crossing east belts stretched, UG pair across the seam) and cut at a free column of the new layout. Greedy, same search order as placerCut, so the cut it finds is the one checked here. Only inserts when no free column exists (layouts that already cut are unchanged). Ports on N/S edges shift with the columns.
+function pfSeams(A,mk){
+  const big=plcCls(PL_STD[PL_STD.length-1]),FW=floorRect({cls:big,x:0,y:0,h:0,rot:0}).w,LO=Math.max(2,dim({cls:big,rot:0}).w*FC+2-def(PLC_UG[mk]).maxApart),mx=def(PLC_UG[mk]).maxApart;
+  let items=A.items,w=A.w,s=0,ports=A.ports.map(q=>({...q}));
+  while(w-s>FW){
+    let cut=null;
+    for(let c=s+FW;c>=s+LO&&cut===null;c--)if(plcTryCut(items,plcOcc(items),A.h,false,c))cut=c;
+    if(cut!==null){s=cut;continue}
+    for(let p=s+FW;p>s&&cut===null;p--)for(let k=1;k<=6&&cut===null;k++){
+      const I2=plcBlank(items,p,k,A.h,mx);if(!I2)continue;const o2=plcOcc(I2);
+      for(let c=p;c<=p+k;c++){if(c-s<LO||c-s>FW)continue;if(plcTryCut(I2,o2,A.h,false,c)){items=I2;w+=k;ports.forEach(q=>{if((q.edge==='N'||q.edge==='S')&&q.off>=p)q.off+=k});cut=c;break}}
+    }
+    if(cut===null)return null;
+    s=cut;
+  }
+  return{items,w,ports};
+}
 function pfCompose(P,item,mk,spMk,o={}){
   const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
   if(!T||!T.rec)return no('no recipe');
@@ -187,7 +204,8 @@ function pfCompose(P,item,mk,spMk,o={}){
   const sizes=[];for(let r=N;r>0;r-=mh)sizes.push(Math.min(mh,r));
   const A=sizes.length===1?pfCol(cls,k,flows,N,mk):pfColumns(cls,k,flows,sizes,mk,P.edges.find(e=>e.to==null).flow);
   if(A.ok===false)return no(A.why);
-  const rec=rk(T.rec),items=A.items.map(q=>({h:0,pid:0,...q,rec:q.cls===cls?rec:q.rec}));
-  return{ok:true,items,lanes:1,per:[N],makes:N*T.pmach,pitch:A.h+1,w:A.w,h:A.h,mod:false,box:BX,mk,ports:A.ports,
+  const SM=pfSeams(A,mk);if(!SM)return no('no free wall column for the block tile (seam search failed)');
+  const rec=rk(T.rec),items=SM.items.map(q=>({h:0,pid:0,...q,rec:q.cls===cls?rec:q.rec}));
+  return{ok:true,items,lanes:1,per:[N],makes:N*T.pmach,pitch:A.h+1,w:SM.w,h:A.h,mod:false,box:BX,mk,ports:SM.ports,
     note:['Prefab column: '+N+' machine(s) in one column, one trunk per input, one sink container (the collector)'],src:{P,item,mk,spMk,o},prefab:true};
 }

@@ -20,6 +20,7 @@ const cases = [
   {name: "Advanced Circuits 10/min Mk2", rate: 10},
   {name: "Containment Coil 20/min Mk2", rate: 20, asm: true},
   {name: "Advanced Circuits 100/min Mk2", rate: 100},
+  {name: "Containment Coil 100/min Mk2", rate: 100, asm: true},
 ];
 for (const c of cases) {
   const r = await pg.evaluate(c => {
@@ -60,29 +61,6 @@ for (const c of cases) {
   check(r.collectors === 1, c.name + ': one collector container (' + r.collectors + ')');
   check(r.sinkStock > 0, c.name + ': output reached the sink: ' + r.sinkStock);
   if (r.working < r.machines) console.log('WARN ' + c.name + ': machines working ' + r.working + '/' + r.machines);
-}
-// KNOWN LIMIT (step 6C needed): Containment Coil 100/min Mk2 (3 inputs, 10 machines). pfCompose builds, but placerTile refuses the wide layout
-// (the 30/min trunk has no free column to cross a wall within 10 UG cells). Asserts the refusal stays as-is so the limit is visible; flip when 6C lands.
-{
-  const kl = await pg.evaluate(() => {
-    let it = null;
-    for (const k of plnBy(false).keys()) {
-      const P0 = plan(k, 20, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
-      const n = P0.nodes[k];
-      if (!n || !n.rec || n.rec.i.length !== 3 || !plnCb(n.crafter)) continue;
-      if (def(plnCb(n.crafter).id).key === 'DAT_Assembler') { it = k; break }
-    }
-    if (!it) return {err: 'item not found'};
-    const P0 = plan(it, 100, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
-    const P = {...P0, nodes: {[it]: P0.nodes[it]}};
-    const C = pfCompose(P, it, 1, 0, {box: 'DAT_Container_2'});
-    if (C.ok === false) return {composeOk: false, why: C.why};
-    const T = placerTile(C, placerBk());
-    return {composeOk: true, tileOk: T.ok, tileWhy: String(T.why || '')};
-  });
-  console.log('Containment Coil 100/min known limit', JSON.stringify(kl));
-  check(!kl.err, 'known limit: item found' + (kl.err ? ' (' + kl.err + ')' : ''));
-  check(kl.tileOk === false && /no free column to cross a wall/.test(kl.tileWhy || ''), 'known limit: Coil 100/min still refused by tile ("no free column to cross a wall"); step 6C needed');
 }
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
 await br.close();
