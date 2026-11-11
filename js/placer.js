@@ -5,7 +5,7 @@ const PLC_UG=["DAT_UndergroundBelt","DAT_UndergroundBelt_2","DAT_UndergroundBelt
 const PLC_SRC=480;
 let PLC_BANK=false;   // test hook only (slice 1): bank layout instead of the lane layout
 let PLC_G=0;   // test hook: force band count
-const PLC_MAXBLK=60;   // most station blocks one factory may spread over
+const PLC_BIG=12;   // blocks above which the modal asks to confirm (not a limit)
 const plcPp=(cls,rot)=>portsOf({cls,x:0,y:0,rot,off:[]});
 function plcMach(cls,inN,outN){
   for(let r=0;r<4;r++){const ps=plcPp(cls,r),i=ps.find(p=>p.nx===inN[0]&&p.ny===inN[1]&&p.dir!=="out"),o=ps.find(p=>p.nx===outN[0]&&p.ny===outN[1]&&p.dir!=="in");
@@ -100,7 +100,7 @@ function plcSeg(fw,lo,fc){const q={s:0,i:0,cuts:[],bad:"",put(x,wid,ctr){
       if(x+wid-q.s>fw)q.bad="a "+wid+" cell wide part does not fit a floor "+fw+" wide: tick a bigger block";return x}
     if(fw&&x+wid+1-q.s>fw)q.bad="internal: band cut mismatch";return x}
   if(fw&&x+wid+1-q.s>fw){const c=Math.max(x,q.s+lo);if(c-q.s>fw)q.bad="an underground belt cannot reach across the wall (needs "+lo+" free cells, floor is "+fw+" wide)";
-    q.cuts.push(c);if(q.cuts.length+1>PLC_MAXBLK)q.bad="needs more than "+PLC_MAXBLK+" blocks";q.s=c;x=ctr?c+1:c;
+    q.cuts.push(c);q.s=c;x=ctr?c+1:c;
     if(x+wid-q.s>fw)q.bad="a "+wid+" cell wide part does not fit a floor "+fw+" wide: tick a bigger block";}
   return x}};return q}
 // floor size of a station block class + the shortest underground span (cells) the belt Mk can reach across a wall
@@ -357,14 +357,13 @@ function placerCut(L,cls){
   const cols=cuts.length+1,rows=L.bank?rc.length+1:Math.ceil(L.lanes/per),blocks=[];
   for(let g=0;g<rows;g++)for(let i=0;i<cols;i++)
     if(ms.some(m=>m.x>=i*TW&&m.x<(i+1)*TW&&m.y>=g*TH&&m.y<(g+1)*TH))blocks.push({cls,x:i*d.w,y:g*d.h});
-  if(blocks.length>PLC_MAXBLK)return{ok:false,why:"needs "+blocks.length+" blocks, the limit is "+PLC_MAXBLK};
   const span=ugPairs(ms.filter(isM)).filter(p=>p&&p.n>mx).length;   // a pair longer than the Mk span (ugPairs pairs same-row UGs in order): layout bug, placerTile skips it
   return{ok:true,blocks,ms,ug:ugs.length,cols,rows,max:mx,rc,ov,span};
 }
 // best block type among the ticked ones (fewest blocks); no tick fits -> the reason of the last failure
 function placerTile(L,ok){
   let best=null,why="";
-  const Gs=PLC_G?[PLC_G]:Array.from({length:L.bank?Math.min(12,L.t0):1},(_,i)=>i+1);   // ponytail: band ceiling 12 keeps huge plans fast
+  const Gs=PLC_G?[PLC_G]:Array.from({length:L.bank?L.t0:1},(_,i)=>i+1);
   PL_STD.forEach((nm,i)=>{if(!ok[i])return;const cls=plcCls(nm);
     for(const G of Gs){
       const run=sep=>{const L2=L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk),G,sep}):L;
@@ -402,11 +401,12 @@ function placerGo(){$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").
 const placerLive=()=>placerRun(false);
 function placerClear(){
   ["pvMach","pvBelt","pvSpl","pvBox","pvUg","pvBlk","pvCell","pvIO"].forEach(i=>{if($(i))$(i).textContent="-"});
-  $("plnPrevNote").textContent="";
+  $("plnPrevNote").textContent="";$("plnPrevBig").textContent="";
   const c=$("plnPrevMap"),g=c.getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,c.width,c.height);
 }
 let plcV={z:1,ox:0,oy:0},plcRaf=0;
 let plcT=null;   // last tile result (placerTile) for the open preview
+let plcBig=false;   // big-factory confirm asked for the current preview
 const plcTT=()=>plcT&&plcT.ok?plcT:{blocks:[{cls:plcCls("BPO_Station_02"),x:0,y:0}],ms:plcL.items};
 const plcExt=T=>({w:Math.max(...T.blocks.map(q=>(q.x+dim({cls:q.cls,rot:0}).w)*FC),...T.ms.map(m=>m.x+dim(m).w)),h:Math.max(...T.blocks.map(q=>(q.y+dim({cls:q.cls,rot:0}).h)*FC),...T.ms.map(m=>m.y+dim(m).h))});
 function placerSize(){const c=$("plnPrevMap"),v=$("plnPrevView");c.width=Math.max(1,v.clientWidth);c.height=Math.max(1,v.clientHeight);return{w:c.width,h:c.height}}   // content box (border excluded): canvas CSS size = attribute size, no rescale
@@ -439,6 +439,7 @@ function placerShot(){
   }
 }
 function placerPreview(L){
+  plcBig=false;$("plnPrevBig").textContent="";$("plnPlace").textContent="Place";
   const ok=placerBk();plcT=ok.some(Boolean)?placerTile(L,ok):null;
   const src=plcT&&plcT.ok?plcT.ms:L.items,k={mach:0,belt:0,spl:0,box:0,ug:0},
     kd=b=>b.rec?"mach":PLC_UG.includes(b.cls)?"ug":PLC_BELT.includes(b.cls)?"belt":PLC_SPL.includes(b.cls)?"spl":"box";
@@ -460,6 +461,7 @@ function placerPlace(){
   if(ok.some(Boolean)){
     const T=placerTile(L,ok);
     if(!T.ok){$("plnPrevErr").textContent=T.why;return}
+    if(T.blocks.length>PLC_BIG&&!plcBig){plcBig=true;$("plnPrevBig").textContent="This factory needs "+T.cols+" x "+T.rows+" blocks ("+T.blocks.length+" blocks). Build it, or lower the output / change belt, splitter or buffer.";$("plnPlace").textContent="Build it";return}
     plcL=null;$("plnPrev").close();
     setView("L");clip=[];active=null;mode=null;sel=new Set();
     pasting={rot:0,fl:false,pl:{blocks:T.blocks,ms:T.ms}};

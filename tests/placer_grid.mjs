@@ -204,7 +204,7 @@ try {
   const ms = Date.now() - t0;
   const E1 = await pg.evaluate(planOf);
   info(`E) 1x1 only: ${E1.err || `grid blocks=${E1.blocks} cols=${E1.cols} rows=${E1.rows}`} (${ms} ms)`);
-  chk('E) 1x1 only: no "shortest layout" text; a grid of 1x1 blocks or a clear "needs N blocks, the limit is 60" / wall reason', E.open && !/shortest layout/.test(E1.err + E1.note) && (E1.err === '' ? E1.blocks >= 1 && E1.blocks <= 60 : /needs \d+ blocks, the limit is 60|no free row to cross a wall/.test(E1.err)), JSON.stringify({E1}));
+  chk('E) 1x1 only: no "shortest layout" text; a grid of 1x1 blocks (no block cap) or a wall reason', E.open && !/shortest layout/.test(E1.err + E1.note) && (E1.err === '' ? E1.blocks >= 1 : /no free row to cross a wall/.test(E1.err)), JSON.stringify({E1}));
   chk('E) 1x1 only: each modal call under 5 s', ms < 5000, ms + ' ms');
   await closeIfOpen(pg);
 
