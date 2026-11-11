@@ -214,11 +214,12 @@ function pfChain(P,item,mk,spMk,o={}){
     const N=T.machines,cls=def(cb.id).key,rec=rk(T.rec),flows=[],k=S.ins.length;
     for(const i of S.ins){
       const e=P.edges.find(q=>q.from===i&&q.to===y);if(!e)return no('no edge into '+plnNm(y));
-      if(e.flow>cap)return no('chain input above one belt (multi-belt not built)');
       flows.push({item:i,flow:e.flow/N});
     }
-    // machines per column: the most that fit the floor (as pfCompose); several columns share one out row
-    let mh=N;while(mh>1){const C=pfCol(cls,k,flows,mh,mk);if(C.ok===false||C.h+SH<=Fh-PF_CORR)break;mh--}
+    if(flows.some(f=>f.flow>cap))return no('one machine input above one belt');
+    const mcap=Math.max(1,Math.floor(Math.min(...flows.map(f=>cap/f.flow))));
+    // machines per column: the most that fit the floor (as pfCompose) and the belt cap; several columns share one out row
+    let mh=Math.min(N,mcap);while(mh>1){const C=pfCol(cls,k,flows,mh,mk);if(C.ok===false||C.h+SH<=Fh-PF_CORR)break;mh--}
     const sizes=[];for(let r=N;r>0;r-=mh)sizes.push(Math.min(mh,r));
     const outF=P.edges.filter(e=>e.from===y).reduce((a,e)=>a+e.flow,0);
     const C=sizes.length===1?pfCol(cls,k,flows,N,mk):pfColumns(cls,k,flows,sizes,mk,outF);
