@@ -152,8 +152,9 @@ const pfLine=(n,box,mk,item,len,wall)=>pfPrefab('pfLine',[n,box,mk,item,len,wall
 // COMPOSE (step 6, single stage only, behind PLC_PREFAB): one COL column of all machines (pfCol, m = machines), one sink container (the collector). Refuses growth, multi-stage (old path). Returns the placerLayoutA shape (items, w, h, pitch, mod, box, mk, lanes, per, makes, note).
 let PLC_PREFAB=false;   // test hook: flip on in the page; off = old path only
 // COLUMNS (step 6A): sizes[] = machines per column (pfCol each), side by side (seam cols make a 2-cell gap). Each column's own sink box is removed; its collector stub goes north into one shared out row at row Rb (= the out box port row) that runs east into ONE out container. Columns sit one row lower (SH = Rb+1). Inputs stay per-column infinite source containers (not aggregated). Out total must fit one belt (out stack not built). STEP 6B: pfCompose caps machines per column so the column fits the floor height (h+SH<=30); a wider layout is cut by placerTile at the seams.
-function pfColumns(cls,k,flows,sizes,mk,outFlow){
-  const no=why=>({ok:false,why}),bc=PLC_BELT[mk],bw=def(PLC_BOX).w;
+// HUB W entry (step 7g): hubAt=true -> no sink box; a DAT_Container_2 hub at x=xo with its W port on the out row (hub.y = Rb - that port's y). Returns hub:{x,y} (after the minY shift).
+function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt){
+  const no=why=>({ok:false,why}),bc=PLC_BELT[mk],bw=def(PLC_BOX).w,HC='DAT_Container_2';
   if(outFlow>MKS[mk][1])return no('output above belt cap: out stack not built');
   const pw=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W');if(!pw)return no('box has no W port');
   const Rb=pw.y,SH=Rb+1,it=[],xs=[];let x=0;
@@ -164,11 +165,19 @@ function pfColumns(cls,k,flows,sizes,mk,outFlow){
     xs.push(xC+x);x+=C.w;
   }
   const xo=x;
-  for(let c=Math.min(...xs);c<=xo+pw.x+pw.nx;c++)it.push({cls:bc,x:c,y:Rb,rot:0});   // shared out row, east into the out container's W port
-  it.push({cls:PLC_BOX,x:xo,y:0,rot:0,ct:[]});
+  let hubY=0;
+  if(hubAt){
+    const hp=portsOf({cls:HC,x:0,y:0,rot:0,off:[]}).filter(p=>p.f==='W'&&p.y<=Rb).sort((a,b)=>b.y-a.y)[0];
+    if(!hp)return no('hub has no W port at or above the out row');
+    hubY=Rb-hp.y;
+  }
+  const xEnd=hubAt?xo-1:xo+pw.x+pw.nx;
+  for(let c=Math.min(...xs);c<=xEnd;c++)it.push({cls:bc,x:c,y:Rb,rot:0});   // shared out row, east into the out container's W port (or the hub's W face)
+  if(hubAt)it.push({cls:HC,x:xo,y:hubY,rot:0,ct:[]});
+  else it.push({cls:PLC_BOX,x:xo,y:0,rot:0,ct:[]});
   const minY=Math.min(...it.map(q=>q.y));
   const items=it.map(q=>({...q,y:q.y-Math.min(0,minY)}));
-  return{ok:true,items,w:xo+bw,h:Math.max(...items.map(q=>q.y+dim(q).h)),ports:[]};
+  return{ok:true,items,w:xo+(hubAt?def(HC).w:bw),h:Math.max(...items.map(q=>q.y+dim(q).h)),ports:[],hub:hubAt?{x:xo,y:hubY-Math.min(0,minY)}:null};
 }
 // SEAMS (step 6C): placerCut cuts a layout into floor tiles, each cut column c with c-s in [LO,FW] (LO = the 2x2 block's wall minimum, FW = its floor width). When no free column exists there, insert k blank columns (plcBlank: crossing east belts stretched, UG pair across the seam) and cut at a free column of the new layout. Greedy, same search order as placerCut, so the cut it finds is the one checked here. Only inserts when no free column exists (layouts that already cut are unchanged). Ports on N/S edges shift with the columns.
 function pfSeams(A,mk){
@@ -228,10 +237,22 @@ function pfChain(P,item,mk,spMk,o={}){
     const groups=[];for(const s of [...sizes].sort((a,b)=>b-a)){const g=groups.find(g=>(g.reduce((a,b)=>a+b,0)+s)*fo<=cap+1e-9);if(g)g.push(s);else groups.push([s])}
     const fedSet=new Set(S.ins.filter(i=>P.nodes[i]&&P.nodes[i].crafter)),isHead=q=>q.cls===PLC_BOX&&q.ct&&q.ct.length;
     const sinks=[],heads=new Map();   // heads: crafted input -> [{h, C, dx}] over all groups of this stage
+    // hub overflow (step 7g): groups above the hub's N ports -> the last multi-column group feeds the hub's W face (no sink), the others use N ports
+    const HCc='DAT_Container_2',hubIn=Math.min(4,portsOf({cls:HCc,x:0,y:0,rot:0,off:[]}).filter(p=>p.f==='N').length),szs=groups.map(g=>g.join('+')).join(', ');
+    let wG=null;
+    if(groups.length>1&&y!==item&&groups.length>hubIn){
+      if(groups.length-1>hubIn)return no('hub ports exceeded: groups '+groups.length+' ['+szs+'] (second hub not built)');
+      const mi=groups.map(g=>g.length>1).lastIndexOf(true);
+      if(mi<0)return no('hub ports exceeded: groups '+groups.length+' ['+szs+'], no multi-column group for the W entry');
+      groups.push(...groups.splice(mi,1));wG=groups[groups.length-1];
+    }
+    let hubW=null;
     for(const gs of groups){
-      const C=gs.length===1?pfCol(cls,k,flows,gs[0],mk):pfColumns(cls,k,flows,gs,mk,gs.reduce((a,b)=>a+b,0)*fo);
+      const W=gs===wG;
+      const C=W?pfColumns(cls,k,flows,gs,mk,gs.reduce((a,b)=>a+b,0)*fo,true):gs.length===1?pfCol(cls,k,flows,gs[0],mk):pfColumns(cls,k,flows,gs,mk,gs.reduce((a,b)=>a+b,0)*fo);
       if(C.ok===false)return no(C.why);
       if(C.h+SH>Fh-PF_CORR)return no('chain stage taller than the floor minus corridor rows (not built)');
+      if(W&&C.hub.y+8>Fh-PF_CORR)return no('hub below stage zone');
       const dx=x0;
       // every trunk head of a crafted input becomes a corridor from its upstream sink; raw heads stay as source containers
       C.items.forEach(q=>{
@@ -246,6 +267,7 @@ function pfChain(P,item,mk,spMk,o={}){
         all.forEach(h=>hl.push({h,C,dx,dem:gs[byX.indexOf(h)]*fl}));
       }
       if(y===order[0])C.items.filter(q=>isHead(q)&&!fedSet.has(q.ct[0].item)).forEach(h=>ports.push({edge:'N',off:h.x+dx,dir:'in',belts:1,slot:ports.length,mk}));
+      if(W){hubW={x:dx+C.hub.x,y:C.hub.y};x0=dx+Math.max(C.w,...C.items.map(q=>q.x+dim(q).w))+PF_GAP;continue}   // the hub is in C.items; no sink, no N route
       const sk=C.items.find(q=>q.cls===PLC_BOX&&q.y===0&&q.ct&&!q.ct.length);
       const fl=gs.reduce((a,b)=>a+b,0)*fo;
       sinks.push({x:sk.x+dx,flow:fl,left:fl,n:0});
@@ -253,14 +275,14 @@ function pfChain(P,item,mk,spMk,o={}){
       x0=dx+Math.max(C.w,...C.items.map(q=>q.x+dim(q).w))+PF_GAP;
     }
     if(groups.length>1&&y!==item){
-      // hub (step 7f): one DAT_Container_2 right of the groups; each group sink feeds one N port, consumers leave by E ports
-      const hc='DAT_Container_2',pts=portsOf({cls:hc,x:0,y:0,rot:0,off:[]});
+      // hub (step 7f): one DAT_Container_2 right of the groups; each group sink feeds one N port, consumers leave by E ports. Step 7g: hubW = hub already placed by the W-fed group (its y = hub row offset)
+      const hc=HCc,pts=portsOf({cls:hc,x:0,y:0,rot:0,off:[]});
       const inP=pts.filter(p=>p.f==='N').map(p=>p.x).sort((a,b)=>a-b),outP=pts.filter(p=>p.f==='E').map(p=>p.y).sort((a,b)=>a-b);
-      if(groups.length>4||groups.length>inP.length)return no('hub ports exceeded: groups '+groups.length+' (second hub not built)');
-      const hw=def(hc).w,hx=x0+1;
-      items.push({cls:hc,x:hx,y:0,rot:0,ct:[]});
-      hubs.set(y,{x:hx,w:hw,inP,outP,used:0,groups:groups.length});
-      sinks.forEach((s,g)=>routes.push({sx:s.x,tx:hx+inP[g],item:y,tTop:0,toHub:true}));
+      if(sinks.length>hubIn)return no('hub ports exceeded: groups '+groups.length+' ['+szs+'] (second hub not built)');
+      const hw=def(hc).w,hx=hubW?hubW.x:x0+1,hy=hubW?hubW.y:0;
+      if(!hubW)items.push({cls:hc,x:hx,y:0,rot:0,ct:[]});
+      hubs.set(y,{x:hx,w:hw,inP,outP,used:0,groups:groups.length,y:hy});
+      sinks.forEach((s,g)=>routes.push({sx:s.x,tx:hx+inP[g],item:y,tTop:hy,toHub:true}));
       x0=hx+hw+PF_GAP+4;
     } else sink.set(y,sinks);
     // route assignment: biggest head demand first, to the first sink (N port 0/1) with enough left; hubbed producer: heads take E ports top to bottom
@@ -271,7 +293,7 @@ function pfChain(P,item,mk,spMk,o={}){
         for(const hd of hs){
           if(H.used>=H.outP.length||H.used>=4)return no('hub ports exceeded: groups '+H.groups+' heads '+hs.length+' (second hub not built)');
           const j=H.used++,hr=H.x+H.w;
-          routes.push({sx:hr+j,sy:H.outP[j],hr,tx:hd.h.x+hd.dx,item:i,tTop:Math.min(...hd.C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.y>0&&q.x===hd.h.x).map(q=>q.y))});
+          routes.push({sx:hr+j,sy:H.y+H.outP[j],hr,tx:hd.h.x+hd.dx,item:i,tTop:Math.min(...hd.C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.y>0&&q.x===hd.h.x).map(q=>q.y))});
         }
         continue;
       }
