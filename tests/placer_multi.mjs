@@ -94,7 +94,6 @@ const audit = () => {
   const inside = ms.every(m => { const e = dim(m); return frs.some(fr => fr && m.x >= fr.x && m.y >= fr.y && m.x + e.w <= fr.x + fr.w && m.y + e.h <= fr.y + fr.h) });
   const ugs = ms.filter(b => PLC_UG.includes(b.cls)), grp = {}, bad = [];
   ugs.forEach(u => { const key = (u.rot & 1) === 0 ? 'h' + u.y : 'v' + u.x; (grp[key] = grp[key] || []).push(u) });
-  const maxA = def(PLC_UG[0]).maxApart;
   let pairs = 0, vert = 0, maxSpan = 0;
   for (const key in grp) {
     const hz = key[0] === 'h', list = grp[key].sort((a, b) => hz ? a.x - b.x : a.y - b.y);
@@ -103,7 +102,7 @@ const audit = () => {
       const a = list[k], b = list[k + 1], sp = hz ? b.x - a.x : b.y - a.y;
       pairs++; if (!hz) vert++;
       maxSpan = Math.max(maxSpan, sp);
-      if (sp < 1 || sp > maxA || a.rot !== b.rot) bad.push(key + ' pair span ' + sp);
+      if (sp < 1 || sp + 1 > def(a.cls).maxApart || a.rot !== b.rot) bad.push(key + ' pair span ' + sp);
     }
   }
   const dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]];
@@ -168,12 +167,11 @@ const audit2 = () => {
   }
   const ugs = ms.filter(b => PLC_UG.includes(b.cls)), grp = {}, bad = [];
   ugs.forEach(u => { const key = (u.rot & 1) === 0 ? 'h' + u.y : 'v' + u.x; (grp[key] = grp[key] || []).push(u) });
-  const maxA = def(PLC_UG[0]).maxApart;
   let pairs = 0;
   for (const key in grp) {
     const hz = key[0] === 'h', list = grp[key].sort((a, b) => hz ? a.x - b.x : a.y - b.y);
     if (list.length % 2) bad.push(key + ' odd');
-    for (let k = 0; k + 1 < list.length; k += 2) { const a = list[k], b = list[k + 1], sp = hz ? b.x - a.x : b.y - a.y; pairs++; if (sp < 1 || sp > maxA || a.rot !== b.rot) bad.push(key + ' span ' + sp) }
+    for (let k = 0; k + 1 < list.length; k += 2) { const a = list[k], b = list[k + 1], sp = hz ? b.x - a.x : b.y - a.y; pairs++; if (sp < 1 || sp + 1 > def(a.cls).maxApart || a.rot !== b.rot) bad.push(key + ' span ' + sp) }
   }
   return {ov, inside, machines, fedIn, fedOut, badIn, splLeak, pairs, bad, ugOk: bad.length === 0};
 };

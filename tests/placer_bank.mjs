@@ -245,7 +245,7 @@ try {
     for (const y in ugRows) {
       const xs = ugRows[y].sort((a, b) => a - b);
       if (xs.length % 2) ugOk = false;
-      for (let k = 0; k + 1 < xs.length; k += 2) { pairs++; const sp = xs[k + 1] - xs[k]; if (sp < 1 || sp > def(PLC_UG[0]).maxApart) ugOk = false }
+      for (let k = 0; k + 1 < xs.length; k += 2) { pairs++; const sp = xs[k + 1] - xs[k], cls = items.find(b => PLC_UG.includes(b.cls) && b.y == y && b.x == xs[k]).cls; if (sp < 1 || sp + 1 > def(cls).maxApart) ugOk = false }
     }
     // flow: from every machine output, follow belts to the sink (an underground entrance jumps to the exit on its row)
     const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]], isBox = b => /^DAT_Container/.test(b.cls), sinkX = Math.max(...items.filter(isBox).map(b => b.x)), isSink = b => isBox(b) && !(b.ct || []).length && b.x === sinkX;
