@@ -187,11 +187,49 @@ function pfSeams(A,mk){
   }
   return{items,w,ports};
 }
+// CHAIN (step 7, behind PLC_PREFAB): single-input chain only (every stage k=1, one column per stage). Leaf stage (raw source box) on the left, top stage (collector) on the right. Stage k's sink box is stage k+1's input: stage k+1's own source box is dropped and its only W trunk starts one cell east of that sink's west column, its machines east of the trunk. Refuses multi-input stages, growth, multi-column stages (old path).
+function pfChain(P,item,mk,spMk,o={}){
+  const no=why=>({ok:false,why}),BX=o.box||PLC_BOX,cap=MKS[mk][1];
+  const st=[];let x=item;
+  for(;;){
+    const T=P.nodes[x];if(!T||!T.rec)return no('no recipe');
+    if(T.rec.i.some(([y])=>y===x))return no('growth not built in prefab');
+    if(T.rec.i.length!==1)return no('chain: single-input stages only (multi-input stage not built)');
+    if(st.some(s=>s.item===x))return no('cycle in plan');
+    const y=T.rec.i[0][0];st.push({item:x,T,y});
+    if(!(P.nodes[y]&&P.nodes[y].crafter))break;
+    x=y;
+  }
+  st.reverse();
+  const Fh=floorRect({cls:plcCls(PL_STD[PL_STD.length-1]),x:0,y:0,h:0,rot:0}).h,pwb=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W'),SH=pwb?pwb.y+1:0;
+  const items=[],ports=[],per=[];let prevX=0,W=0,H=0,makes=0;
+  for(let i=0;i<st.length;i++){
+    const S=st[i],T=S.T,cb=plnCb(T.crafter);if(!cb)return no('No machine builds this recipe');
+    const N=T.machines,cls=def(cb.id).key,rec=rk(T.rec),e=P.edges.find(q=>q.from===S.y&&q.to===S.item);
+    if(!e)return no('no edge into '+plnNm(S.item));
+    if(e.flow>cap)return no('chain stage needs more than one column (not built)');   // one trunk carries the whole input of the stage
+    const C=pfCol(cls,1,[{item:S.y,flow:e.flow/N}],N,mk);
+    if(C.ok===false)return no(C.why);
+    if(C.h+SH>Fh)return no('chain stage taller than the floor (not built)');
+    const inP=C.ports.find(q=>q.dir==='in'),outP=C.ports.find(q=>q.dir==='out'),w0=inP.off;
+    const dx=i?prevX+1-w0:0;
+    C.items.forEach(q=>{
+      if(i&&q.cls===PLC_BOX&&q.x===w0&&q.y===0&&q.ct&&q.ct.length)return;   // source box dropped: previous stage's sink feeds this trunk
+      const o2={...q,x:q.x+dx};if(q.cls===cls)o2.rec=rec;items.push(o2);
+    });
+    if(!i)ports.push(...C.ports.filter(q=>q.dir==='in'));
+    prevX=outP.off+dx;
+    if(i===st.length-1){ports.push({...outP,off:prevX});makes=N*T.pmach}
+    per.push(N);W=dx+C.w;H=Math.max(H,C.h);
+  }
+  const SM=pfSeams({items,w:W,h:H,ports},mk);if(!SM)return no('no free wall column for the block tile (seam search failed)');
+  return{ok:true,items:SM.items.map(q=>({h:0,pid:0,...q})),lanes:1,per,makes,pitch:H+1,w:SM.w,h:H,mod:false,box:BX,mk,ports:SM.ports,note:['Prefab chain: '+st.length+' stages, one column each; each stage\'s sink feeds the next stage'],src:{P,item,mk,spMk,o},prefab:true};
+}
 function pfCompose(P,item,mk,spMk,o={}){
   const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
   if(!T||!T.rec)return no('no recipe');
   if(T.rec.i.some(([x])=>x===item))return no('growth not built in prefab');
-  if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter)))return no('multi-stage not built in prefab');   // every input is a source container (as placer_four), no machine upstream
+  if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter)))return pfChain(P,item,mk,spMk,o);   // a machine upstream: chain (step 7)
   const cb=plnCb(T.crafter);if(!cb)return no('No machine builds this recipe');
   const N=T.machines,cls=def(cb.id).key,k=T.rec.i.length,cap=MKS[mk][1];
   const edge=x=>P.edges.find(e=>e.from===x&&e.to===item);
