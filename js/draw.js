@@ -162,9 +162,9 @@ let modeKey="";
 function syncMode(){const m=pasting?"paste":mode||"";if(m===modeKey)return;modeKey=m;document.body.dataset.mode=m;let el=$("modeb");if(!el){el=document.createElement("div");el.id="modeb";document.body.appendChild(el)}el.textContent=MODE_TXT[m]||""}
 let raf=0;
 // zoom with the wheel: the last full paint (a copy) is drawn scaled on each wheel frame; a full paint follows when the wheel pauses. Any other draw drops the copy.
-let ZS=null,ZW=false,ZT=0,ZC=null;
+let ZS=null,ZW=false,ZT=0,ZC=null,OVC=null;
 const zsKey=()=>view+"|"+layer+"|"+W+"|"+H+"|"+dpr;
-const draw=zw=>{if(!zw)ZS=null;ZW=!!zw;syncMode();DIRTY=true;if(!zw)asv();/* wheel frames skip the autosave timer: the save runs once after the wheel stops */if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()});if(zw){clearTimeout(ZT);ZT=setTimeout(()=>draw(),160)}};
+const draw=(zw,quiet)=>{if(!zw)ZS=null;ZW=!!zw;syncMode();DIRTY=true;if(!zw&&!quiet)asv();/* wheel frames and the idle repaint skip the autosave timer (its save of a big factory is slow): the next edit saves the view too */if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()});if(zw){clearTimeout(ZT);ZT=setTimeout(()=>draw(0,1),160)}};
 
 const SPR=new Map();
 function spr(key,w,h,fn){const k=key+"|"+dpr;let c=SPR.get(k);if(!c){if(SPR.size>800)SPR.clear();c=document.createElement("canvas");c.width=Math.ceil(w*dpr);c.height=Math.ceil(h*dpr);const g=c.getContext("2d");g.scale(dpr,dpr);g.imageSmoothingQuality="high";fn(g);SPR.set(k,c)}return c}
@@ -441,6 +441,7 @@ function paint(pk){
   if(ZW&&ZS&&ZS.k===zsKey()){   // wheel frame: scaled copy of the last full paint (blocks unchanged: any other draw cleared ZS)
     const f=V.z/ZS.z;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.drawImage(ZS.c,dpr*(V.ox-f*ZS.ox),dpr*(V.oy-f*ZS.oy),cv.width*f,cv.height*f);return}
   if(!USEB)DIRTY=true;LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}
+  if(view==="F"&&typeof HAR==="function")setTimeout(()=>{try{HAR(layer);HLK(layer);hit({x:-1e9,y:-1e9})}catch(e){}},50);   // hover tables are built right after a paint, not on the first mouse move
   if(!ZS||ZS.k!==zsKey()){if(!ZC||ZC.width!==cv.width||ZC.height!==cv.height){ZC=document.createElement("canvas");ZC.width=cv.width;ZC.height=cv.height}
     ZC.getContext("2d").drawImage(cv,0,0);ZS={c:ZC,z:V.z,ox:V.ox,oy:V.oy,k:zsKey()}}
 }
@@ -473,9 +474,11 @@ function paint0(){
   const cur=lyBlocks().v;CUR=cur;
   drawBlocks(cur,.92,true);   // viewport cull inside drawBlocks
   cx.fillStyle="rgba(255,60,60,.5)";
-  const occ=new Set();   // overlap marks: cell hash instead of all-pairs (was O(n^2) dim() calls)
-  cur.forEach(a=>{const d=dim(a);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const k=(a.x+i+32768)*65536+(a.y+j+32768);
-    if(occ.has(k)){const X=V.ox+(a.x+i)*s,Y=V.oy+(a.y+j)*s;if(X<W&&Y<H&&X+s>0&&Y+s>0)cx.fillRect(X,Y,s,s)}else occ.add(k)}});
+  // overlap marks: the duplicate cells of this layer, found once per paint key (all blocks; only the ones on screen are drawn, same pixels as before)
+  const OVK=PK+"|"+layer+"|"+S.blocks.length;
+  if(!OVC||OVC.k!==OVK){const occ=new Set(),ov=[];S.blocks.forEach(a=>{if(a.h!==layer)return;const d=dim(a);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const k=(a.x+i+32768)*65536+(a.y+j+32768);
+    if(occ.has(k))ov.push(a.x+i,a.y+j);else occ.add(k)}});OVC={k:OVK,ov}}
+  for(let t=0;t<OVC.ov.length;t+=2){const X=V.ox+OVC.ov[t]*s,Y=V.oy+OVC.ov[t+1]*s;if(X<W&&Y<H&&X+s>0&&Y+s>0)cx.fillRect(X,Y,s,s)}
   return{RCT,CUR};
   });
   if(F&&smOn())drawSimMach(s);

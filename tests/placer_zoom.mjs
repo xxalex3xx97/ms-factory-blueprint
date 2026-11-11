@@ -50,6 +50,28 @@ await pg.waitForTimeout(400);
 const lt2 = await pg.evaluate(() => window.__lt.slice());
 const worst2 = lt2.length ? Math.max(...lt2) : 0;
 check(worst2 < 100, 'main canvas mouse sweep: longest main-thread task < 100 ms (' + worst2 + ' ms, ' + lt2.length + ' tasks)');
+// big placed factory (Superalloy 3500 Mk3 Large): mouse sweep over the main canvas, longest task per move
+await pg.evaluate(() => {
+  const item = [...plnBy(false).keys()].find(i => plnNm(i) === 'Superalloy');
+  $("plnItem").value = item; $("plnRate").value = 3500; $("plnMk").value = 2; $("plnBuf").value = 'DAT_Container_2'; $("plnMod").checked = false;
+  placerGo();
+});
+await pg.waitForFunction(() => plcT !== null && plcL, null, {timeout: 300000, polling: 300});
+await pg.evaluate(() => {
+  if (plcT && plcT.ok) {
+    const dl = $("plnPrev"); if (dl.open) dl.close();
+    S.blocks = [...plcT.blocks.map((q, i) => ({id: i + 1, cls: q.cls, x: q.x, y: q.y, h: 0, rot: 0, pid: 0})), ...plcT.ms.map((it, i) => ({...it, id: plcT.blocks.length + i + 1, h: 0}))];
+    view = "F"; draw();
+  }
+});
+await pg.waitForTimeout(1500);
+await pg.mouse.move(cb.x + cb.width / 2, cb.y + cb.height / 2);
+await pg.evaluate(() => { window.__lt = [] });
+for (let i = 0; i < 60; i++) await pg.mouse.move(cb.x + 40 + i * 15, cb.y + 60 + (i % 9) * 22, {steps: 2});
+await pg.waitForTimeout(400);
+const lt3 = await pg.evaluate(() => window.__lt.slice());
+const worst3 = lt3.length ? Math.max(...lt3) : 0;
+check(worst3 < 100, 'big placed factory mouse sweep: longest main-thread task < 100 ms (' + worst3 + ' ms, ' + lt3.length + ' tasks)');
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
 await br.close();
 console.log(fails || errs.length ? 'FAILED ' + (fails + errs.length) : 'PASS all');

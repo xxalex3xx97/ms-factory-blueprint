@@ -97,7 +97,7 @@ cv.addEventListener("pointermove",e=>{
       S.blocks.forEach(b=>{if(b.h!==layer||!inView(b))return;const d=dim(b);if(b.x<=z.x&&b.x+d.w-1>=a.x&&b.y<=z.y&&b.y+d.h-1>=a.y)sel.add(b.id)});
     }
   }
-  draw();
+  if(drag||active||pasting||ugPend)draw();   // a plain hover changes no painted pixel (tooltip only): no full repaint per mouse move
 });
 cv.addEventListener("pointerleave",()=>{hoverIn=false;btip(null);draw()});
 const end=e=>{
