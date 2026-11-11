@@ -1,0 +1,180 @@
+// 3-input stages (placer.js plcTree three, plcStage three, plcThreeTC, placerBank C band). REAL UI: plan, place by click, audit, sim. Run: node tests/placer_multi3.mjs. Exit 1 on any failed check or page error. Shots: tests/shots/three-<w>x<h>.png (Superalloy 55/min modal).
+import {createRequire} from 'module';
+import fs from 'fs';
+import path from 'path';
+import {fileURLToPath, pathToFileURL} from 'url';
+
+const require = createRequire(import.meta.url);
+const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(HERE, '..');
+const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href;
+const SHOTS = path.join(HERE, 'shots');
+const W = 1400, H = 800;
+const ITEM = 'ITEM_Superalloy';
+const RATES = [10, 25, 55];
+
+let total = 0, pass = 0;
+const fails = [], errs = [];
+function chk(name, cond, detail = '') {
+  total++;
+  if (cond) { pass++; console.log(`PASS ${name}`); }
+  else { fails.push({name, detail}); console.log(`FAIL ${name}${detail ? '\n     ' + detail : ''}`); }
+}
+function info(msg) { console.log(`INFO ${msg}`); }
+
+async function reset(pg) {
+  await pg.evaluate(() => { S.blocks = []; undoS = []; redoS = []; pasting = null; clip = []; STRICT = true; setView('L'); });
+}
+async function openPlanner(pg) {
+  if (await pg.evaluate(() => document.getElementById('pln').hidden)) await pg.evaluate(() => document.getElementById('plnB').click());
+  if (await pg.evaluate(() => $('pln').classList.contains('col'))) await pg.click('#plnC');
+}
+async function closeIfOpen(pg) {
+  if (await pg.evaluate(() => $('plnPrev').open)) await pg.click('#plnCancel');
+  await pg.evaluate(() => { pasting = null; });
+}
+async function setup(pg, item, rate, mk, buf) {
+  await closeIfOpen(pg);
+  await reset(pg);
+  await openPlanner(pg);
+  await pg.selectOption('#plnItem', item);
+  await pg.evaluate(mk => { $('plnMk').value = String(mk); $('plnMk').dispatchEvent(new Event('change')); $('plnSp').value = ''; }, mk);
+  await pg.fill('#plnRate', String(rate));
+  await pg.evaluate(b => { $('plnBuf').value = b; $('plnMod').checked = false; }, buf);
+}
+async function openBuild(pg) {
+  await pg.click('#plnBuild');
+  await pg.waitForFunction(() => document.getElementById('plnPrev').open, null, {timeout: 5000}).catch(() => {});
+  await pg.waitForTimeout(150);
+  return pg.evaluate(() => ({open: $('plnPrev').open, note: $('plnPrevNote').textContent, err: $('plnPrevErr').textContent, off: $('plnPlace').disabled, hubs: plcT && plcT.ok ? plcT.L.hubs : -1, G: plcT && plcT.ok ? plcT.G : -1}));
+}
+// real mouse click on the first free stage tile (stage = any canvas except the preview)
+async function stageClick(pg) {
+  const pt = await pg.evaluate(() => {
+    for (const [x, y] of [[1, 1], [2, 2], [3, 3], [4, 4], [5, 5], [6, 6], [7, 7], [8, 8]]) {
+      const p = __fb.px(x, y), e = document.elementFromPoint(p[0], p[1]);
+      if (e && e.tagName === 'CANVAS' && e.id !== 'plnPrevMap') return {x: p[0], y: p[1]};
+    }
+    return null;
+  });
+  if (!pt) return false;
+  await pg.mouse.move(pt.x, pt.y);
+  await pg.mouse.click(pt.x, pt.y);
+  return true;
+}
+async function shots(pg, tag) {
+  fs.mkdirSync(SHOTS, {recursive: true});
+  for (const [w, h] of [[2576, 982], [1400, 800], [1024, 700], [390, 844]]) {
+    await pg.setViewportSize({width: w, height: h});
+    await pg.waitForTimeout(300);
+    await pg.locator('#plnPrevMap').screenshot({path: path.join(SHOTS, `${tag}-${w}x${h}.png`)}).catch(e => info('modal shot failed: ' + e.message));
+  }
+  await pg.setViewportSize({width: W, height: H});
+  await pg.waitForTimeout(300);
+}
+// (1-input chain machines: port feed not audited, the sim check covers them) placed 3-input factory: overlap, items inside floor, UG pairs even and span-valid (inclusive count <= maxApart), machine inputs fed (3 per enrichment machine), output leaves to a belt, no splitter side into a vertical belt, every splitter side output is a belt, UG or nothing
+const audit3 = () => {
+  const isB = b => kindOf(b.cls) === 'b', ms = S.blocks.filter(b => !isB(b)), cells = new Map(); let ov = 0;
+  ms.forEach(b => { const e = dim(b); for (let i = 0; i < e.w; i++) for (let j = 0; j < e.h; j++) { const k = (b.x + i) + ',' + (b.y + j); if (cells.has(k)) ov++; cells.set(k, b) } });
+  const frs = S.blocks.filter(isB).map(q => floorRect(q));
+  const inside = ms.every(m => { const e = dim(m); return frs.some(fr => fr && m.x >= fr.x && m.y >= fr.y && m.x + e.w <= fr.x + fr.w && m.y + e.h <= fr.y + fr.h) });
+  const ugs = ms.filter(b => PLC_UG.includes(b.cls)), grp = {}, bad = [];
+  ugs.forEach(u => { const key = (u.rot & 1) === 0 ? 'h' + u.y : 'v' + u.x; (grp[key] = grp[key] || []).push(u) });
+  let pairs = 0, maxSpan = 0, maxCount = 0;
+  for (const key in grp) {
+    const hz = key[0] === 'h', list = grp[key].sort((a, b) => hz ? a.x - b.x : a.y - b.y);
+    if (list.length % 2) bad.push(key + ' odd count');
+    for (let k = 0; k + 1 < list.length; k += 2) {
+      const a = list[k], b = list[k + 1], sp = hz ? b.x - a.x : b.y - a.y, cnt = sp + 1;   // inclusive cells entrance..exit
+      pairs++; maxSpan = Math.max(maxSpan, sp); maxCount = Math.max(maxCount, cnt);
+      if (sp < 1 || cnt > def(a.cls).maxApart || a.rot !== b.rot) bad.push(key + ' pair count ' + cnt);
+    }
+  }
+  const DV = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+  const flowsTo = (c, dx, dy) => { const d = DV[c.rot & 3]; return d[0] === dx && d[1] === dy };
+  const isFeeder = c => c && (PLC_BELT.includes(c.cls) || PLC_UG.includes(c.cls) || PLC_SPL.includes(c.cls) || c.cls === PLC_BOX);   // a container next to a port feeds it (raw source or buffer)
+  let fedIn = 0, fedOut = 0, badIn = [], machines = 0;
+  for (const m of ms.filter(b => b.rec && /Enrich/.test(b.cls))) {
+    machines++;
+    let ins = 0, outs = 0;
+    for (const p of portsOf(m)) {
+      if (!p.en) continue;
+      const c = cells.get((p.x + p.nx) + ',' + (p.y + p.ny));
+      if (!c || c === m) continue;
+      if ((c.cls === PLC_BOX || flowsTo(c, -p.nx, -p.ny)) && isFeeder(c)) ins++;
+      else if (PLC_BELT.includes(c.cls) && !flowsTo(c, -p.nx, -p.ny)) outs++;
+    }
+    fedIn += ins; fedOut += outs;
+    const need = m.rec.split('>')[0].split('+').length;
+    if (need >= 2 && ins !== need) badIn.push('machine at ' + m.x + ',' + m.y + ' has ' + ins + ' fed inputs, needs ' + need);
+  }
+  let splLeak = 0;
+  for (const s of ms.filter(b => PLC_SPL.includes(b.cls))) {
+    const vert = (s.rot & 1) === 1, sides = vert ? [[1, 0], [-1, 0]] : [[0, 1], [0, -1]];
+    for (const [dx, dy] of sides) { const c = cells.get((s.x + dx) + ',' + (s.y + dy)); if (c && PLC_BELT.includes(c.cls) && (c.rot & 1) === (vert ? 1 : 0)) splLeak++ }
+  }
+  return {ov, inside, machines, fedIn, fedOut, badIn, splLeak, pairs, maxSpan, maxCount, bad, ugOk: bad.length === 0};
+};
+// mean of the last 12 SIM.ser samples of the item (5 simulated minutes)
+const simStats = item => {
+  simInit({}); simRun(600);
+  const got = SIM.ser.slice(-12).reduce((a, s) => a + (s.it[item] || 0), 0) / 12, ms = [...SIM.M.values()];
+  return {got, n: ms.length, blocked: ms.filter(m => m.st === 'blocked').length};
+};
+
+const RUN = (process.env.ONLY || '');
+(async () => {
+const br = await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
+try {
+  const ctx = await br.newContext({viewport: {width: W, height: H}});
+  const pg = await ctx.newPage();
+  pg.on('pageerror', e => errs.push(`pageerror: ${e.message}`));
+  pg.on('console', m => { if (m.type() === 'error') errs.push(`console.error: ${m.text()}`); });
+  pg.on('dialog', d => d.dismiss().catch(() => {}));
+  await pg.goto(PAGE);
+  await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined' && typeof placerLayout === 'function');
+  await reset(pg);
+
+  // ---- placed 3-input stages at 10, 25, 55 per minute (Mk1)
+  for (const rate of RATES) {
+    await setup(pg, ITEM, rate, 0, 'DAT_Container');
+    const O = await openBuild(pg);
+    info(`S${rate}) modal note=${JSON.stringify(O.note)} err=${JSON.stringify(O.err)} hubs=${O.hubs} G=${O.G}`);
+    chk(`S${rate}) Superalloy ${rate}/min Mk1: modal opens, no error, Place enabled`, O.open && O.err === '' && !O.off);
+    chk(`S${rate}) modal note names three inputs`, /Three inputs into Superalloy: A Enriched Titanium Ore \(main chain\) \+ B Enriched Nickel Ore \+ C Enriched Cobalt Ore/.test(O.note), O.note);
+    chk(`S${rate}) one hub per junction (1 stage junction, 1 band)`, O.hubs === 1 && O.G === 1, `hubs=${O.hubs} G=${O.G}`);
+    if (RUN && !RUN.split(',').includes(String(rate))) { await closeIfOpen(pg); continue; }
+    if (rate === 55) await shots(pg, 'three');
+    await pg.click('#plnPlace');
+    const placed = await stageClick(pg);
+    await pg.waitForTimeout(150);
+    const ag = await pg.evaluate(audit3);
+    const sim = await pg.evaluate(simStats, ITEM);
+    info(`S${rate}) placed=${placed} ov=${ag.ov} machines=${ag.machines} fedIn=${ag.fedIn} fedOut=${ag.fedOut} pairs=${ag.pairs} maxCount=${ag.maxCount} splLeak=${ag.splLeak} sim=${sim.got.toFixed(2)} blocked=${sim.blocked}`);
+    chk(`S${rate}) placed by real click, no overlap, items inside floor`, placed && ag.ov === 0 && ag.inside === true, JSON.stringify({ov: ag.ov, inside: ag.inside}));
+    chk(`S${rate}) UG pairs valid, inclusive span <= Mk maxApart`, ag.ugOk === true, JSON.stringify(ag.bad));
+    chk(`S${rate}) every machine has all its inputs fed, output leaves to a belt, no splitter side into a vertical belt`, ag.machines >= 1 && ag.badIn.length === 0 && ag.fedOut >= ag.machines && ag.splLeak === 0, JSON.stringify({badIn: ag.badIn, fedOut: ag.fedOut, splLeak: ag.splLeak}));
+    chk(`S${rate}) sim >= target (mean last 12 samples), none blocked`, placed && sim.got >= rate && sim.blocked === 0, JSON.stringify(sim));
+
+    await pg.keyboard.press('Control+z');
+  }
+
+  // ---- refusals in the modal: Place disabled, reason names the port / 3-input limit
+  // no 3-input Refinery recipe exists in the data (checked: the 3-input recipes are Assembler, Enrichment Chamber, Growth Chamber); the non-chain 3-input refusal is checked instead
+  await setup(pg, 'ITEM_ContainmentCoil', 10, 0, 'DAT_Container');
+  const C = await openBuild(pg);
+  chk('R) ITEM_ContainmentCoil (3 inputs, shared intermediate) refused in the modal with an input-chain reason, Place disabled', C.open && /input chain/.test(C.err) && C.off === true, JSON.stringify(C.err));
+  await setup(pg, 'ITEM_Nutrients', 10, 0, 'DAT_Container');
+  const N = await openBuild(pg);
+  chk('R) ITEM_Nutrients refused in the modal ("3 inputs per machine"), Place disabled', N.open && /3 inputs per machine/.test(N.err) && N.off === true, JSON.stringify(N.err));
+  await closeIfOpen(pg);
+  chk('page: no pageerror / console.error during the run', errs.length === 0, errs.slice(0, 3).join(' | '));
+  process.exitCode = fails.length || errs.length ? 1 : 0;
+} catch (e) {
+  console.log('FAIL exception: ' + e.message); process.exitCode = 1;
+} finally {
+  await br.close();
+  console.log(`\n${pass}/${total} checks passed`);
+}
+})();
