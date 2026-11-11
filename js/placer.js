@@ -45,7 +45,7 @@ function plcStage(n,eI,eU,mk,spMk,eI2,eI3){
   if(eI3){   // three inputs: 2 on one face + 1 on the adjacent face of each machine column; one gap row between stages (pitch h+2)
     const ML=PLC_VC_FIRST?null:plcMach3(d.key,1,'A'),MR=PLC_VC_FIRST?null:plcMach3(d.key,-1,'A');   // PLC_VC_FIRST: test hook, variant C only
     const VC=plcMachC(d.key,1),VCR=plcMachC(d.key,-1);
-    if(!(ML&&MR)&&VC&&VCR&&VC.w===VCR.w&&VC.h===VCR.h&&VC.ins.map(p=>p.y).join()===VCR.ins.map(p=>p.y).join()){   // variant C: 3 inputs on the trunk-facing face, no gap rows, width 2w+9
+    if(!PLC_NOVC&&VC&&VCR&&VC.w===VCR.w&&VC.h===VCR.h&&VC.ins.map(p=>p.y).join()===VCR.ins.map(p=>p.y).join()){   // variant C: 3 inputs on the trunk-facing face, no gap rows, width 2w+9
       const sc=PLC_SPL[spMk];if(!plcSpl(sc,1)||!plcSpl(sc,3))return no("Bank: splitter ports not as expected (Mk id unverified?)");
       if(VC.off.concat(VCR.off).some(p=>!p.tg))return no("Bank: machine has an unused port that cannot be disabled");
       return{ok:true,n,dk:d.key,inF,m,N:n.machines,ML:VC,MR:VCR,w:VC.w,h:VC.h,cin:VC.ins[0].y,Wb:2*VC.w+9,pitch:VC.h,sc,rec:rk(n.rec),two:{ya:VC.ins[0].y,yb:VC.ins[1].y,inF2},three:{yc:VC.ins[2].y,xc:0,xcR:0,inF3,vc:true}};
@@ -504,8 +504,10 @@ function placerTile(L,ok){
   const Gs=PLC_G?[PLC_G]:Array.from({length:L.bank?L.t0:1},(_,i)=>i+1);
   PL_STD.forEach((nm,i)=>{if(!ok[i])return;const cls=plcCls(nm);
     for(const G of Gs){
-      const run=sep=>{const L2=L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk),G,sep}):L;
+      const run1=(sep,novc)=>{PLC_NOVC=novc;let L2;try{L2=L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk),G,sep}):L}finally{PLC_NOVC=false}
         return L2.ok?{...placerCut(L2,cls),L2}:{ok:false,why:L2.why}};
+      // 3 inputs: variant C is preferred; when its wall rows cannot be cut, the same stage is laid out with variant A
+      const run=sep=>{const r1=run1(sep,false);return !r1.ok&&L.bank&&L.three?run1(sep,true):r1};
       let r=run(false);   // legacy layout first; sep layout (B chain segmented, on the left) only when legacy fails or overlaps
       if(L.bank&&L.two&&(!r.ok||r.ov||r.span)){const r2=run(true);if(r2.ok&&!r2.ov&&!r2.span)r=r2}
       if(r.ov){why="internal: overlap";continue}
@@ -528,6 +530,7 @@ function placerPaste(){
 }
 let plcL=null;
 let plcPlan=null;
+let PLC_NOVC=false;   // set while placerTile retries a stage with variant A (variant C wall rows could not be cut)
 let PLC_VC_FIRST=false;   // test hook: force 3-input variant C instead of variant A   // the last placed planner factory {item, rate}: drives the sim shortfall warning; not saved
 // sim shortfall warning: mean of the last 12 samples of the planned item vs the requested rate (warns only, never blocks; no planned factory = no warning)
 function plcWarn(ser){
