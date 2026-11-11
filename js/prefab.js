@@ -149,3 +149,20 @@ PF_BUILD.pfLine=(n,box,mk,item,len,wall)=>{
   return{proto:'pfLine',args:[n,box,mk,item,len,wall],w:X+bw,h:H.h,items,ports:[],fits:[],wall:wall?{x:wx,span:4}:null};
 };
 const pfLine=(n,box,mk,item,len,wall)=>pfPrefab('pfLine',[n,box,mk,item,len,wall]);
+// COMPOSE (step 6, single stage only, behind PLC_PREFAB): one COL column of all machines (pfCol, m = machines), one sink container (the collector). Refuses growth, multi-stage (old path). Returns the placerLayoutA shape (items, w, h, pitch, mod, box, mk, lanes, per, makes, note).
+let PLC_PREFAB=false;   // test hook: flip on in the page; off = old path only
+function pfCompose(P,item,mk,spMk,o={}){
+  const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
+  if(!T||!T.rec)return no('no recipe');
+  if(T.rec.i.some(([x])=>x===item))return no('growth not built in prefab');
+  if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter)))return no('multi-stage not built in prefab');   // every input is a source container (as placer_four), no machine upstream
+  const cb=plnCb(T.crafter);if(!cb)return no('No machine builds this recipe');
+  const N=T.machines,cls=def(cb.id).key,k=T.rec.i.length,cap=MKS[mk][1];
+  const edge=x=>P.edges.find(e=>e.from===x&&e.to===item);
+  const flows=T.rec.i.map(([x])=>({item:x,flow:edge(x).flow/N}));
+  if(T.rec.i.some(([x])=>edge(x).flow>cap))return no('belt too slow for the total input (old path raises the Mk)');
+  const A=pfCol(cls,k,flows,N,mk);if(A.ok===false)return no(A.why);
+  const rec=rk(T.rec),items=A.items.map(q=>({h:0,pid:0,...q,rec:q.cls===cls?rec:q.rec}));
+  return{ok:true,items,lanes:1,per:[N],makes:N*T.pmach,pitch:A.h+1,w:A.w,h:A.h,mod:false,box:BX,mk,ports:A.ports,
+    note:['Prefab column: '+N+' machine(s) in one column, one trunk per input, one sink container (the collector)'],src:{P,item,mk,spMk,o},prefab:true};
+}
