@@ -164,7 +164,7 @@ let raf=0;
 // zoom with the wheel: the last full paint (a copy) is drawn scaled on each wheel frame; a full paint follows when the wheel pauses. Any other draw drops the copy.
 let ZS=null,ZW=false,ZT=0,ZC=null;
 const zsKey=()=>view+"|"+layer+"|"+W+"|"+H+"|"+dpr;
-const draw=zw=>{if(!zw)ZS=null;ZW=!!zw;syncMode();DIRTY=true;asv();if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()});if(zw){clearTimeout(ZT);ZT=setTimeout(()=>draw(),160)}};
+const draw=zw=>{if(!zw)ZS=null;ZW=!!zw;syncMode();DIRTY=true;if(!zw)asv();/* wheel frames skip the autosave timer: the save runs once after the wheel stops */if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()});if(zw){clearTimeout(ZT);ZT=setTimeout(()=>draw(),160)}};
 
 const SPR=new Map();
 function spr(key,w,h,fn){const k=key+"|"+dpr;let c=SPR.get(k);if(!c){if(SPR.size>800)SPR.clear();c=document.createElement("canvas");c.width=Math.ceil(w*dpr);c.height=Math.ceil(h*dpr);const g=c.getContext("2d");g.scale(dpr,dpr);g.imageSmoothingQuality="high";fn(g);SPR.set(k,c)}return c}

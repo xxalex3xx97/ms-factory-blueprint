@@ -14,6 +14,11 @@ const hit=c=>{const k=PK+"|"+layer+"|"+view;
   if(!HIX||HIX.k!==k){HIX={k,m:new Map()};for(const b of S.blocks){if(b.h!==layer)continue;const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const q=HK(b.x+i,b.y+j);let a=HIX.m.get(q);if(!a)HIX.m.set(q,a=[]);a.push(b)}}}
   const a=HIX.m.get(HK(c.x,c.y));if(!a)return null;
   for(let i=a.length-1;i>=0;i--)if(inView(a[i]))return a[i];return null};
+// hover memo: areas and the link graph are built once per paint (PK) instead of on every mouse move (both are full scans of all blocks)
+let HARC={k:null,v:null},HLKC={k:null,v:null};
+const HAR=L=>{const k=PK+"|"+L+"|"+S.blocks.length;if(HARC.k!==k){HARC.k=k;HARC.v=areas(L)}return HARC.v};
+const HLK=L=>{const k=PK+"|"+L+"|"+LK+"|"+S.blocks.length;if(HLKC.k!==k){HLKC.k=k;HLKC.v=links(L)}return HLKC.v};
+let HLC="";   // hovered cell + view/layer/paint: the hover work (tooltip, warnings, port links) runs only when this changes
 cv.addEventListener("contextmenu",e=>e.preventDefault());
 cv.addEventListener("pointerdown",e=>{
   cv.focus();const p=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
@@ -65,15 +70,15 @@ function btip(b,pl,ev,w){
 cv.addEventListener("pointermove",e=>{
   const p=pt(e),c=toCell(p.x,p.y);hover=c;hoverIn=true;if(ugPend){ugPend.cur=c;const en=S.blocks.find(b=>b.id===ugPend.id),g=ugDrag(ugPend);if(en&&g.n>1)en.rot=g.rot}
   $("read").textContent=view==="F"?`floor x ${c.x}  y ${c.y}  block ${Math.floor(c.x/FC)},${Math.floor(c.y/FC)}  h ${layer}  zoom ${Math.round(V.z*100)}%`:`x ${c.x}  y ${c.y}  h ${layer}  zoom ${Math.round(V.z*100)}%`;
-  if(!drag){
+  if(!drag&&HLC!==(HLC=c.x+","+c.y+","+view+","+layer+","+PK)){
     let w=false;
     if(view==="F"){
-      const R=areas(layer).rects;
+      const R=HAR(layer).rects;
       if(active){const d=def(active);if(d.kind==="m"){const dd=dimOf(d,placeRot);w=!onArea(c.x,c.y,dd.w,dd.h,R)}}
       else{const b=hit(c);w=!!(b&&outside(b,R))}
     }
     cv.title=w?WARN:"";
-    {const b=view==="F"&&!active?hit(c):null,belt=b&&isBelt(b),pl=b&&LK&&(links(layer).nb.get(b.id)||[]).some(e=>e.k==="port");
+    {const b=view==="F"&&!active?hit(c):null,belt=b&&isBelt(b),pl=b&&LK&&(HLK(layer).nb.get(b.id)||[]).some(e=>e.k==="port");
       if(belt)btip(b,pl,e,w);else{btip(null);if(pl&&!w)cv.title=PORTLINK}}
     if(view==="F"&&!active){const q=portAt(p);if(q){btip(null);cv.title=`Port ${q.p.key} (faces ${FN[q.p.wf]}): ${q.p.en?"enabled":"disabled"}. Click to toggle.`}}
   }

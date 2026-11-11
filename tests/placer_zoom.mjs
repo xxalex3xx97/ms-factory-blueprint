@@ -33,6 +33,23 @@ const lt = await pg.evaluate(() => window.__lt.slice());
 const worst = lt.length ? Math.max(...lt) : 0;
 check(worst < 100, 'wheel zoom in the preview: longest main-thread task < 100 ms (' + worst + ' ms, ' + lt.length + ' tasks)');
 check(await pg.evaluate(() => plcV.z > 1), 'the wheel really zoomed the preview');
+// main canvas: the same mid plan placed into the layout view, then a real mouse sweep (hover work per cell change)
+await pg.evaluate(() => {
+  if (plcT && plcT.ok) {
+    const dl = $("plnPrev"); if (dl.open) dl.close();
+    S.blocks = [...plcT.blocks.map((q, i) => ({id: i + 1, cls: q.cls, x: q.x, y: q.y, h: 0, rot: 0, pid: 0})), ...plcT.ms.map((it, i) => ({...it, id: plcT.blocks.length + i + 1, h: 0}))];
+    view = "F"; draw();
+  }
+});
+await pg.waitForTimeout(600);
+const cb = await pg.locator('#cv').boundingBox();
+await pg.mouse.move(cb.x + cb.width / 2, cb.y + cb.height / 2);
+await pg.evaluate(() => { window.__lt = [] });
+for (let i = 0; i < 60; i++) await pg.mouse.move(cb.x + 40 + i * 15, cb.y + 60 + (i % 9) * 22, {steps: 2});
+await pg.waitForTimeout(400);
+const lt2 = await pg.evaluate(() => window.__lt.slice());
+const worst2 = lt2.length ? Math.max(...lt2) : 0;
+check(worst2 < 100, 'main canvas mouse sweep: longest main-thread task < 100 ms (' + worst2 + ' ms, ' + lt2.length + ' tasks)');
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
 await br.close();
 console.log(fails || errs.length ? 'FAILED ' + (fails + errs.length) : 'PASS all');
