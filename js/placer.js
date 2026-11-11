@@ -249,10 +249,6 @@ function placerBank(P,item,mk,spMk,o){
   const feed=o.feedOut?{x:hz[n-1].xe-mnx,rows:gb[0][n-1].feedRows.map(y=>y+sh0-mny)}:null;
   const bandSum=q=>{const s=[];for(let b=0;b<G;b++)s.push(alls[q].slice(b*tbs[q],(b+1)*tbs[q]).reduce((a,c)=>a+c,0));return s.every(v=>v===s[0])};
   const even=SS.every((_,q)=>bandSum(q))&&Bn.every(nd=>nd.machines%G===0);   // every band holds the same machines per stage (uneven = fallback, see placerTile)
-  // a stage wall cut that is not free (feeder corner, trunk, machine next to it): retry with one more spare column there, up to 6 (top-level layout only)
-  if(o.fit&&o.fit.fw&&!o.seg&&!o.feedOut&&sg.cuts.length){const oc=plcOcc(items),pad=(o.pad||[]).slice(),bad=sg.cuts.map((c,i)=>i).filter(i=>!plcTryCut(items,oc,H,true,sg.cuts[i]-mnx));
-    if(bad.length){if(bad.some(i=>(pad[i]||0)>=6))return no("a wall cut column is not free even with 6 spare columns: tick a bigger block");
-      bad.forEach(i=>{pad[i]=(pad[i]||0)+1});return placerBank(P,item,mk,spMk,{...o,pad})}}
   return{ok:true,items,lanes:G*tbs[last],per:alls[last],makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:G*tbs[last],rows:Math.max(...gb.flat().map(g=>g.R)),nS,nK,ps,bands:G,tb:tbs[last],t0:Math.max(...t0s),cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o},tbs,stages:n,hubs,nIn:G*tbs[0],nOut:G*tbs[last],feed,even,two:!!tr.two};
 }
 function placerPlan(){
@@ -355,6 +351,20 @@ function plcTryCut(IT,occ,h,bank,c){
         if(p.ny!==0||p.nx!==(t.x===c-1?1:-1))return null}}
     return mk;
 }
+// k blank columns inserted before column p: items with x>=p move k right, an east belt crossing p is stretched across the new cells; null when a machine/splitter/underground would be split or a west belt feeds across p
+function plcBlank(IT,p,k,h,mx){
+  const occ=plcOcc(IT),out=IT.map(b=>({...b})),fill=[],isB=b=>!!b&&PLC_BELT.includes(b.cls);
+  const uy={};IT.forEach(b=>{if(PLC_UG.includes(b.cls)&&(b.rot&1)===0)(uy[b.y]=uy[b.y]||[]).push(b)});   // a horizontal underground pair that straddles p grows by k: must stay within the Mk span
+  for(const y in uy){const l=uy[y].sort((a,b)=>a.x-b.x);for(let i=0;i+1<l.length;i+=2){const a=l[i],b=l[i+1];if(a.x<p&&p<=b.x&&b.x-a.x+k+1>mx)return null}}
+  for(let y=0;y<h;y++){const A=occ.get((p-1)+","+y),B=occ.get(p+","+y);
+    if(A&&A===B)return null;
+    if(B&&(PLC_UG.includes(B.cls)||(isB(B)&&B.rot===2)))return null;
+    if(A&&B&&(A.rec||PLC_SPL.includes(A.cls)||PLC_UG.includes(A.cls)))return null;
+    if(A&&isB(A)&&A.rot===0)for(let j=0;j<k;j++)fill.push({cls:A.cls,x:p+j,y,h:0,rot:0,pid:0});
+  }
+  out.forEach(b=>{if(b.x>=p)b.x+=k});
+  return out.concat(fill);
+}
 function placerCut(L,cls){
   const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,Fw=f.w,Fh=f.h,nm=BASE[cls].name;
   const mx=def(PLC_UG[L.mk]).maxApart,per=Math.floor((Fh+1)/L.pitch);
@@ -364,7 +374,17 @@ function placerCut(L,cls){
   const isB=b=>!!b&&PLC_BELT.includes(b.cls);
   const tryCut=c=>plcTryCut(IT,occ,L.h,L.bank,c);
   const cuts=[],ugs=[];let s=0;
-  if(L.cuts){for(const c of L.cuts){const r=tryCut(c);if(!r)return{ok:false,why:"internal: bank cut column "+c+" is not free"};cuts.push(c);ugs.push(...r)}}
+  if(L.cuts){const cl=L.cuts.slice();
+    for(let i=0;i<cl.length;i++){let c=cl[i],r=tryCut(c);
+      if(!r){   // not free: insert k blank columns at c (the wall then lands on the first k-shifted free column)
+        let done=false;
+        const prev=cuts.length?cuts[cuts.length-1]:0;
+        for(let p=c;p>Math.max(prev,c-6)&&!done;p--)for(let k=1;k<=6&&!done;k++){const IT2=plcBlank(IT,p,k,L.h,mx);if(!IT2)continue;   // p: insertion column (up to 6 left of the planned cut)
+          const c2=p+k,r2=plcTryCut(IT2,plcOcc(IT2),L.h,true,c2);
+          if(r2&&c2-prev<=Fw){IT.splice(0,IT.length,...IT2);mkOcc();for(let j=i+1;j<cl.length;j++)if(cl[j]>=p)cl[j]+=k;c=c2;r=r2;done=true}}
+        if(!done)return{ok:false,why:"internal: bank cut column "+c+" is not free even with 6 blank columns"};
+      }
+      cuts.push(c);ugs.push(...r)}}
   else while(L.w-s>Fw){
     let ok=null,c=0;
     for(let e=Fw;e>=Math.max(2,d.w*FC+2-mx);e--){const r=tryCut(s+e);if(r){ok=r;c=s+e;break}}

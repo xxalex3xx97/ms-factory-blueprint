@@ -160,6 +160,24 @@ try {
     await pg.keyboard.press('Control+z');
   }
 
+  // ---- wall cuts: blank columns inserted where a planned wall cut is not free; Superalloy into a plain container at Mk2/Mk3 55/min builds, placed by click, ov 0, UG inclusive span <= Mk, sim >= target
+  for (const [mk, label] of [[1, 'Container Mk2 55'], [2, 'Container Mk3 55']]) {
+    await setup(pg, ITEM, 55, mk, 'DAT_Container');
+    const B = await openBuild(pg);
+    chk(`B) ${label}: builds (no error, Place enabled)`, B.open && B.err === '' && !B.off, JSON.stringify({err: B.err, off: B.off}));
+    if (B.err !== '' || B.off) { await closeIfOpen(pg); continue; }
+    await pg.click('#plnPlace');
+    const placedB = await stageClick(pg);
+    await pg.waitForTimeout(150);
+    const agB = await pg.evaluate(audit3);
+    const simB = await pg.evaluate(simStats, ITEM);
+    info(`B) ${label}: placed=${placedB} ov=${agB.ov} blocks=${agB.blocks} pairs=${agB.pairs} maxCount=${agB.maxCount} sim=${simB.got.toFixed(2)} blocked=${simB.blocked}`);
+    chk(`B) ${label}: placed by real click, no overlap, items inside floor`, placedB && agB.ov === 0 && agB.inside === true, JSON.stringify({ov: agB.ov, inside: agB.inside}));
+    chk(`B) ${label}: UG pairs valid, inclusive span <= Mk maxApart`, agB.ugOk === true, JSON.stringify(agB.bad));
+    chk(`B) ${label}: sim >= 55 (mean of last 12 samples), none blocked`, placedB && simB.got >= 55 && simB.blocked === 0, JSON.stringify(simB));
+    await pg.keyboard.press('Control+z');
+  }
+
   // ---- wall cuts: Superalloy into a plain container at Mk2/Mk3 55/min is width-limited (no free cut column within 6 spare columns of a 30-wide floor): a clean refusal with Place disabled, or a fit; Large buffer Mk2 120 returns within 25 s, consistent with Place
   for (const [mk, rate, buf, label] of [[1, 55, 'DAT_Container', 'Container Mk2 55'], [2, 55, 'DAT_Container', 'Container Mk3 55'], [1, 120, 'DAT_Container_2', 'Large Mk2 120']]) {
     await setup(pg, ITEM, rate, mk, buf);
