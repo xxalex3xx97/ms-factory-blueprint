@@ -223,7 +223,9 @@ function pfChain(P,item,mk,spMk,o={}){
     const sizes=[];for(let r=N;r>0;r-=mh)sizes.push(Math.min(mh,r));
     const outF=P.edges.filter(e=>e.from===y).reduce((a,e)=>a+e.flow,0),fo=outF/N;
     // out groups (step 7e): consecutive columns whose output fits one belt; each group = one out row + one out container (sink)
-    const groups=[];for(const s of sizes){const g=groups[groups.length-1];if(g&&(g.reduce((a,b)=>a+b,0)+s)*fo<=cap+1e-9)g.push(s);else groups.push([s])}
+    const mxC=Math.floor(cap/fo+1e-9);
+    if(sizes.some(s=>s>mxC))return no('column of '+Math.max(...sizes)+' machines above belt cap (max '+mxC+')');
+    const groups=[];for(const s of [...sizes].sort((a,b)=>b-a)){const g=groups.find(g=>(g.reduce((a,b)=>a+b,0)+s)*fo<=cap+1e-9);if(g)g.push(s);else groups.push([s])}
     const fedSet=new Set(S.ins.filter(i=>P.nodes[i]&&P.nodes[i].crafter)),isHead=q=>q.cls===PLC_BOX&&q.ct&&q.ct.length;
     const sinks=[],heads=new Map();   // heads: crafted input -> [{h, C, dx}] over all groups of this stage
     for(const gs of groups){
