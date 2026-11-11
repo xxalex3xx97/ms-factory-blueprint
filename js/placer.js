@@ -340,58 +340,64 @@ function placerLayoutX(P,item,mk,spMk,o={}){
   if(L3.ok){L3.note=[...L3.note,"More machines than planned: one "+MKS[mk][0]+" belt cannot carry the planned input of one machine, so the machine count is rounded up (each machine gets less)"];return L3}
   return L;
 }
-// Growth lane (single lane, WIP): the growth item loops from the in-buffer C through the machines and back into C; Biomass is side-loaded on the trunk start from box B. Net output sink not built yet.
-// Growth lane (WIP): the growth item loops from its in-buffer container C through the machines and back into C; Biomass is side-loaded on each trunk start from box B. Lanes of m machines (like the standard lane path), stacked vertically. Net output sink not built yet.
-function plcGrowthLane(P,item,mk,spMk,o={}){
+// Growth lane, one machine per lane (WIP): seed container C and Biomass container B each feed one machine W input port by a straight belt; the machine output goes straight east into the out container O; O's top port returns the growth item over the top into C's north face; O's bottom ports feed 2 parallel belts down into the sink container S (net). Stacked vertically, one lane per machine.
+function plcGrowthLane1(P,item,mk,spMk,o={}){
   const no=why=>({ok:false,why}),BX=o.box||PLC_BOX;
   const T=P.nodes[item],cb=plnCb(T.crafter);if(!cb)return no("No machine builds this recipe");
-  const d=def(cb.id),pp=cls=>portsOf({cls,x:0,y:0,rot:0,off:[]});
-  const mp=pp(d.key),inP=mp.find(p=>p.f==="N"&&p.dir!=="out"),outP=mp.find(p=>p.f==="S"&&p.dir!=="in");
-  if(!inP||!outP)return no("Growth: machine has no N input / S output port");
-  const mOff=mp.filter(p=>p!==inP&&p!==outP);
-  if(mOff.some(p=>!p.tg))return no("Growth: machine has an unused port that cannot be disabled");
-  const bc=PLC_BELT[mk],sc=PLC_SPL[spMk],sPort=pp(sc).find(p=>p.f==="N");
-  if(!sPort)return no("Growth: splitter ports not found");
+  const d=def(cb.id),pp=(cls)=>portsOf({cls,x:0,y:0,rot:0,off:[]});
+  const mp=pp(d.key);
   const gi=T.rec.i.find(([x])=>x===item),bio=T.rec.i.find(([x])=>x!==item);
   if(!gi||!bio)return no("Growth: recipe needs the growth item and one more input");
+  const wIn=mp.filter(p=>p.nx===-1&&p.dir!=="out").sort((a,b)=>a.y-b.y),eOut=mp.find(p=>p.nx===1&&p.dir!=="in");
+  if(wIn.length<2||!eOut)return no("Growth: machine needs two W input ports and one E output port");
+  const mOff=mp.filter(p=>p!==wIn[0]&&p!==wIn[1]&&p!==eOut);
+  if(mOff.some(p=>!p.tg))return no("Growth: machine has an unused port that cannot be disabled");
+  const bc=PLC_BELT[mk];
   const cp=pp(BX),pw=cp.find(p=>p.f==="W"),pe=cp.find(p=>p.f==="E");
   if(!pw||!pe||pw.y!==pe.y)return no("Growth: container W/E ports not aligned");
-  const N=T.machines,bw=def(BX).w,w=d.w,h=d.h,X0=2*bw+1,rec=rk(T.rec),bh=def(BX).h,yB=-1-bh-pe.y,yE=yB+pe.y;
-  const net=T.rec.o[1]-gi[1],cap=MKS[mk][1];
-  // machines per lane: one trunk carries the per-machine input of both items (growth and Biomass) and the belt Mk caps it
-  const per=Math.max(T.pmach,T.pmach*bio[1]/net,T.pmach*gi[1]/net),m=Math.max(1,Math.min(2,Math.floor(cap/per+1e-9))),nL=Math.ceil(N/m)/* at most 2 machines per lane: a contiguous machine row leaves no free column for the wall cut */,cnt=[];
-  for(let k=0;k<nL;k++)cnt.push(Math.floor(N/nL)+(k<N%nL?1:0));
+  const nP=cp.filter(p=>p.ny===-1),sP=cp.filter(p=>p.ny===1);
+  if(!nP.length||sP.length<2)return no("Growth: container needs a north port and two south ports");
+  const bw=def(BX).w,bh=def(BX).h,w=d.w,X0=2*bw+1,rec=rk(T.rec);
+  const a=wIn[0],b=wIn[1];
+  if(b.y-a.y<bh)return no("Growth: the two input ports are closer than one container (WIP for this container size)");
+  const seed=gi[1]*1;   // one machine: N = 1
   const bt=(x,y,r=0)=>({cls:bc,x,y,h:0,rot:r,pid:0});
   const box=(x,y,ct)=>({cls:BX,x,y,h:0,rot:0,pid:0,ct});
-  const lane=(n,seed)=>{
-    const EM=X0+n*w,it=[];
-    for(let i=0;i<n;i++)it.push({cls:d.key,x:X0+i*w,y:0,h:0,rot:0,pid:0,rec,off:mOff.map(p=>p.key)});
-    for(let x=X0;x<=X0+(n-1)*w+inP.x;x++){if((x-X0)%w===inP.x)it.push({cls:sc,x,y:-1,h:0,rot:0,pid:0,off:[sPort.key]});else it.push(bt(x,-1))}
-    for(let x=X0;x<=EM;x++)it.push(bt(x,h));                       // output row flows east into the out container O (west face)
-    const O={x:EM+1,y:h-pw.y},oh=def(BX).h,ow=def(BX).w,ry=-2-bh-pe.y,SY=O.y+oh+2;   // O: out container; ry: return row (above B and the trunk)
-    it.push(box(O.x,O.y,[]));                                       // O: out container (net leaves here: top = return, bottom = sink)
-    for(let y=O.y-1;y>=ry;y--)it.push(bt(O.x,y,y===ry?2:1));       // return: up from O top, corner at ry turns west
-    for(let x=O.x-1;x>0;x--)it.push(bt(x,ry,2));                    // return row west, over the machines and the in-buffer
-    for(let y=ry;y<=-2-pe.y;y++)it.push(bt(0,y,3));        // return: corner at (0,ry) turns south into the seed container C top
-    for(let y=O.y+oh;y<SY;y++)for(let dx=0;dx<2;dx++)it.push(bt(O.x+dx,y,3));   // sink: 2 parallel belts down from O bottom into S
-    it.push(box(O.x,SY,[]));                                        // S: sink container (net output)
-    it.push(bt(bw,-1),box(bw+1,-1-pe.y,[]));                       // C -> buffer -> trunk start
-    it.push(box(0,-1-pe.y,[{item:gi[0],n:seed,inf:false}]));        // C: seed container (in-buffer + return target)
-    it.push(box(X0-bw-1,yB,[{item:bio[0],n:0,inf:true}]));         // Biomass source B (above the trunk start)
-    it.push(bt(X0-1,yE,0));for(let y=yE;y<=-2;y++)it.push(bt(X0,y,3));   // side-load Biomass onto the trunk start from the north
-    return it;
-  };
-  const all=[];let yo=0,laneH=0;
-  cnt.forEach(n=>{
-    const li=lane(n,n*gi[1]);let mn=Infinity,mx=-Infinity;li.forEach(b=>{if(b.y<mn)mn=b.y;const e=dim(b);if(b.y+e.h-1>mx)mx=b.y+e.h-1});
-    li.forEach(b=>all.push({...b,y:b.y-mn+yo}));
-    yo+=mx-mn+2;laneH=Math.max(laneH,mx-mn+2);
-  });
-  let x0=Infinity,y0=Infinity;all.forEach(b=>{if(b.x<x0)x0=b.x;if(b.y<y0)y0=b.y});
-  const items=all.map(b=>({...b,x:b.x-x0,y:b.y-y0}));
-  let W=0,H=0;items.forEach(b=>{const e=dim(b);if(b.x+e.w>W)W=b.x+e.w;if(b.y+e.h>H)H=b.y+e.h});
-  const seedAll=N*gi[1];
-  return{ok:true,items,lanes:nL,per:cnt,makes:N*T.pmach,note:["Seed: put "+seedAll+" "+plnNm(gi[0])+" in the in-buffer container"+(nL>1?"s (one per lane, "+cnt.map(n=>n*gi[1]).join(" + ")+")":"")+" before starting (N = machines x input per cycle = "+N+" x "+gi[1]+")","Growth: the growth item returns from the output row into the in-buffer; Biomass is side-loaded at each trunk start; net output sink not built yet (WIP)"],mod:false,box:BX,mk,pitch:Math.max(1,laneH),w:W,h:H,growth:true,src:{P,item,mk,spMk,o}};
+  const it=[];
+  it.push({cls:d.key,x:X0,y:0,h:0,rot:0,pid:0,rec,off:mOff.map(p=>p.key)});
+  const C={x:0,y:a.y-pe.y},B={x:0,y:b.y-pe.y};
+  it.push(box(C.x,C.y,[{item:gi[0],n:seed,inf:false}]));                  // seed container C (Xenoeukarya)
+  it.push(box(B.x,B.y,[{item:bio[0],n:0,inf:true}]));                     // Biomass container B
+  for(let x=C.x+bw;x<X0+a.x;x++)it.push(bt(x,a.y,0));                     // straight belt C -> machine W port A
+  for(let x=B.x+bw;x<X0+b.x;x++)it.push(bt(x,b.y,0));                     // straight belt B -> machine W port B
+  // output: machine E port -> straight belt -> out container O
+  const OX=X0+w+1,OY=(X0+0)*0+eOut.y-pw.y;
+  it.push(bt(X0+eOut.x+1,eOut.y,0));
+  for(let x=X0+eOut.x+2;x<OX;x++)it.push(bt(x,eOut.y,0));
+  it.push(box(OX,OY,[]));                                                 // O: out container (net leaves through its bottom)
+  // return: O top port -> up to ry -> west -> down into C north port
+  const ry=Math.min(-2,C.y-3);
+  const nO=nP[0],nC=nP[0];
+  const ox=OX+nO.x,cx=C.x+nC.x;
+  for(let y=OY-1;y>=ry;y--)it.push(bt(ox,y,y===ry?2:1));                 // up from O (corner at ry turns west)
+  for(let x=ox-1;x>cx;x--)it.push(bt(x,ry,2));                            // west along the top
+  for(let y=ry;y<=C.y-1;y++)it.push(bt(cx,y,3));                          // down into C's north face (corner at (cx,ry) turns south)
+  // sink: O bottom ports -> 2 parallel belts down -> S container
+  const SY=OY+bh+2,SX=OX;
+  for(const sp of [sP[0],sP[1]])for(let y=OY+bh;y<SY;y++)it.push(bt(OX+sp.x,y,3));
+  it.push(box(SX,SY,[]));                                                 // S: sink container (net output)
+  let x0=Infinity,y0=Infinity;it.forEach(q=>{if(q.x<x0)x0=q.x;if(q.y<y0)y0=q.y});
+  const items=it.map(q=>({...q,x:q.x-x0,y:q.y-y0}));
+  let W=0,H=0;items.forEach(q=>{const e=dim(q);if(q.x+e.w>W)W=q.x+e.w;if(q.y+e.h>H)H=q.y+e.h});
+  return{ok:true,items,lanes:1,per:[1],makes:T.pmach,note:["Seed: put "+seed+" "+plnNm(gi[0])+" in the seed container before starting (N = machines x input per cycle = 1 x "+gi[1]+")","Growth: the output goes into the out container; its top port returns the growth item into the seed container; its bottom ports feed the sink container (net)"],mod:false,box:BX,mk,pitch:Math.max(1,H+1),w:W,h:H,growth:true,src:{P,item,mk,spMk,o}};
+}
+// all machines: one lane per machine stacked vertically (each lane is a complete single-machine growth lane)
+function plcGrowthLane(P,item,mk,spMk,o={}){
+  const r=plcGrowthLane1(P,item,mk,spMk,o);if(!r.ok)return r;
+  const N=Math.max(1,P.nodes[item].machines),step=r.h+1,items=[];
+  for(let k=0;k<N;k++)r.items.forEach(q=>items.push({...q,y:q.y+k*step}));
+  const gi=P.nodes[item].rec.i.find(([x])=>x===item);
+  return{...r,items,lanes:N,per:Array(N).fill(1),makes:N*P.nodes[item].pmach,h:N*step-1,pitch:step,note:["Seed: put "+(N*gi[1])+" "+plnNm(gi[0])+" in the seed containers (one per lane, "+N+" lanes, "+gi[1]+" each) before starting (N = machines x input per cycle = "+N+" x "+gi[1]+")",...r.note.slice(1)]};
 }
 function placerLayoutA(P,item,mk,spMk,o={}){const GR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.some(([x])=>x===item);if(GR&&P.nodes[item].rec.i.length===2){try{return plcGrowthLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": feedback layout not built for this recipe ("+e.message+")"}}}if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": the feedback layout for more than one extra input is not built yet"};const GA=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GA)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GA.item)+": the feedback layout inside a chain is not built yet"};
 P=plcUnshare(P,item);
