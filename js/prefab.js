@@ -39,3 +39,32 @@ PF_BUILD.pfBus=(n,len,mk)=>{
   return{proto:'pfBus',args:[n,len,mk],w:len,h:n,items,ports,fits:[]};
 };
 const pfBus=(n,len,mk)=>pfPrefab('pfBus',[n,len,mk]);
+// port assignment for one machine (rot 0) with k input items (flows = [{item,flow}] per-machine flow, desc). Pure, memoised on cls|k|flowsSig. Ports read from portsOf, never hard-coded.
+// Output = last E port. Inputs take W,E,W,E... top to bottom (skipping the output), overflow N then S. Unused ports go to off (must be disableable).
+function pfAssign(cls,k,flows){
+  const key='asg|'+cls+'|'+k+'|'+flows.map(f=>f.item+':'+f.flow).join(',');
+  if(PF_MEMO.has(key))return PF_MEMO.get(key);
+  const r=pfAssignA(cls,k,flows);PF_MEMO.set(key,r);return r;
+}
+function pfAssignA(cls,k,flows){
+  const no=why=>({ok:false,why}),ps=portsOf({cls,x:0,y:0,rot:0,off:[]}),d=dim({cls,rot:0});
+  if(!ps.length)return no('machine has no ports');
+  if(k+1>ps.length)return no('not enough ports');
+  const outs=ps.filter(p=>p.f==='E'&&p.dir!=='in').sort((a,b)=>a.y-b.y);
+  if(!outs.length)return no('not enough ports');
+  const out=outs[outs.length-1],free=p=>p!==out&&p.dir!=='out';
+  const byY=(a,b)=>a.y-b.y,byX=(a,b)=>a.x-b.x;
+  const W=ps.filter(p=>p.f==='W'&&free(p)).sort(byY),E=ps.filter(p=>p.f==='E'&&free(p)).sort(byY);
+  const N=ps.filter(p=>p.f==='N'&&free(p)).sort(byX),S=ps.filter(p=>p.f==='S'&&free(p)).sort(byX);
+  const order=[];for(let i=0;i<Math.max(W.length,E.length);i++){if(W[i])order.push(W[i]);if(E[i])order.push(E[i])}
+  order.push(...N,...S);
+  const ins=[...flows].sort((a,b)=>b.flow-a.flow||(a.item<b.item?-1:a.item>b.item?1:0));
+  if(ins.length>order.length)return no('not enough ports');
+  const use=ins.map((f,i)=>({item:f.item,port:order[i]})),used=new Set([out.key,...use.map(u=>u.port.key)]);
+  const off=ps.filter(p=>!used.has(p.key));
+  if(off.some(p=>!p.tg))return no('port cannot be disabled');
+  const r={ok:true,cls,k,W:[],E:[],N:[],S:[],out:{face:'E',row:out.y,key:out.key},off:off.map(p=>p.key),pitch:0};
+  use.forEach(u=>r[u.port.f].push({item:u.item,row:u.port.f==='N'||u.port.f==='S'?u.port.x:u.port.y,key:u.port.key}));
+  r.pitch=(r.N.length||r.S.length)?d.h+2:d.h;
+  return r;
+}
