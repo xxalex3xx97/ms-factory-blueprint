@@ -516,13 +516,13 @@ function placerPreview(L){
   $("pvMach").textContent=k.mach;$("pvBelt").textContent=k.belt;$("pvSpl").textContent=k.spl;$("pvBox").textContent=k.box;
   const bc={};if(plcT&&plcT.ok)plcT.blocks.forEach(q=>bc[BASE[q.cls].name]=(bc[BASE[q.cls].name]||0)+1);
   $("pvBlk").textContent=!plcT?"0 (existing floor)":plcT.ok?Object.entries(bc).map(([n,c])=>c+" x "+n).join(", "):"none fits";
-  if($("pvUg"))$("pvUg").textContent=k.ug?k.ug+" ("+k.ug/2+" pairs, span "+(plcT?plcT.max:0)+" max)":"0";
+  if($("pvUg"))$("pvUg").textContent=k.ug?k.ug+" ("+k.ug/2+" pairs, span "+(plcT&&plcT.ok&&plcT.max!=null?plcT.max:"-")+" max)":"0";
   $("pvCell").textContent=L.w+" x "+L.h;
   const LL=plcT&&plcT.ok&&plcT.L||L;
   $("pvIO").textContent=L.mod?(L.bank?"IN west ("+LL.nIn+" belt"+(LL.nIn>1?"s":"")+"), OUT east ("+LL.nOut+" belt"+(LL.nOut>1?"s":"")+"), "+LL.hubs+" hub container(s) between stages; copy width "+L.w:"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w):L.bank?"closed: "+LL.nS+" source + "+LL.nS+" in-buffer west, "+LL.nK+" out-buffer + "+LL.nK+" sink east"+(LL.stages>1?" + "+LL.hubs+" hub container(s) between stages":""):"closed: source container in, sink container out";
   $("plnPrevNote").textContent=L.note.concat(plcT&&plcT.ok&&plcT.blocks.length>1?["Chose "+plcT.cols+" x "+plcT.rows+" blocks: fewest blocks, then squarest"+(plcT.L.bank?"; "+plcT.G+" band(s) of "+(plcT.L.stages>1?plcT.L.tbs.join("+")+" trunks per stage":plcT.L.tb+" trunk(s)"):"")+"; "+k.ug/2+" underground pairs cross the walls"]:[]).join(". ");
   if(L.bank)$("pvIO").textContent+="; "+k.box+" containers in all";
-  $("plnPrevErr").textContent=plcT&&!plcT.ok?plcT.why:"";const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}$("plnPlace").disabled=false;placerFitView();
+  $("plnPrevErr").textContent=plcT&&!plcT.ok?plcT.why:"";const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}$("plnPlace").disabled=!!(plcT&&!plcT.ok);placerFitView();
 }
 function placerPlace(){
   const L=plcL;if(!L)return;
