@@ -197,6 +197,14 @@ function pfSeams(A,mk){
   return{items,w,ports};
 }
 // CHAIN (steps 7+, behind PLC_PREFAB): DAG of stages, one pfCol per stage (every input its own trunk, one item per belt). Raw inputs keep their source container. A crafted input comes from its upstream stage's sink box, which outputs north through its N ports (port 0/1 = up to two consumers: fan-out) into a corridor: riser -> row R -> riser down into the consumer trunk. Corridors share a row when their x-ranges do not overlap; a corridor crossing another riser goes under it with a UG pair. Stages left to right in post-order (upstream first). Refuses: one input above one belt (multi-belt not built), growth, more than two consumers of one stage, stage taller than the floor.
+// HUB outputs (step 7h): j=0..3 = E ports (exit row sy, riser at hubRight+j). j=4..7 = S ports k=j-4, depth d=3-k: stub south (rot 1) from the port to row bot+d, east along it, riser at hubRight+4+d. pre = stub belts. hr = where the exit row starts.
+function hubOut(H,j){
+  const hr=H.x+H.w;
+  if(j<4)return{sx:hr+j,sy:H.y+H.outP[j],hr,pre:[]};
+  const k=j-4,d=3-k,bot=H.y+H.hh,px=H.x+H.sP[k],pre=[];
+  for(let i=0;i<d;i++)pre.push([px,bot+i,1]);
+  return{sx:hr+4+d,sy:bot+d,hr:px,pre};
+}
 const PF_GAP=3;   // cells between stage columns
 const PF_CORR=8;  // rows kept free above the stages for corridors (stage height limit)
 function pfChain(P,item,mk,spMk,o={}){
@@ -279,11 +287,14 @@ function pfChain(P,item,mk,spMk,o={}){
       const hc=HCc,pts=portsOf({cls:hc,x:0,y:0,rot:0,off:[]});
       const inP=pts.filter(p=>p.f==='N').map(p=>p.x).sort((a,b)=>a-b),outP=pts.filter(p=>p.f==='E').map(p=>p.y).sort((a,b)=>a-b);
       if(sinks.length>hubIn)return no('hub ports exceeded: groups '+groups.length+' ['+szs+'] (second hub not built)');
-      const hw=def(hc).w,hx=hubW?hubW.x:x0+1,hy=hubW?hubW.y:0;
+      const hw=def(hc).w,hh=dim({cls:hc,rot:0}).h,hx=hubW?hubW.x:x0+1,hy=hubW?hubW.y:0;
+      // step 7h: S ports (sorted by x) are hub outputs too; the S stubs and their rows need 3+1 rows under the hub
+      const sP=pts.filter(p=>p.f==='S').map(p=>p.x).sort((a,b)=>a-b);
+      if(hy+hh+3+1>Fh-PF_CORR)return no('hub S outputs below stage zone');
       if(!hubW)items.push({cls:hc,x:hx,y:0,rot:0,ct:[]});
-      hubs.set(y,{x:hx,w:hw,inP,outP,used:0,groups:groups.length,y:hy});
+      hubs.set(y,{x:hx,w:hw,hh,inP,outP,sP,used:0,groups:groups.length,cols:sizes.length,y:hy});
       sinks.forEach((s,g)=>routes.push({sx:s.x,tx:hx+inP[g],item:y,tTop:hy,toHub:true}));
-      x0=hx+hw+PF_GAP+4;
+      x0=hx+hw+PF_GAP+8;
     } else sink.set(y,sinks);
     // route assignment: biggest head demand first, to the first sink (N port 0/1) with enough left; hubbed producer: heads take E ports top to bottom
     for(const i of fedSet){
@@ -291,9 +302,9 @@ function pfChain(P,item,mk,spMk,o={}){
       if(H){
         const hs=(heads.get(i)||[]).sort((a,b)=>b.dem-a.dem);
         for(const hd of hs){
-          if(H.used>=H.outP.length||H.used>=4)return no('hub ports exceeded: groups '+H.groups+' heads '+hs.length+' (second hub not built)');
-          const j=H.used++,hr=H.x+H.w;
-          routes.push({sx:hr+j,sy:H.y+H.outP[j],hr,tx:hd.h.x+hd.dx,item:i,tTop:Math.min(...hd.C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.y>0&&q.x===hd.h.x).map(q=>q.y))});
+          if(H.used>=8)return no('hub outputs exceeded: stage '+plnNm(i)+' columns '+H.cols+' heads '+hs.length+' demand per head '+hs.map(h=>h.dem).join('/')+' (cap 8, second hub not built)');
+          const j=H.used++;
+          routes.push({...hubOut(H,j),tx:hd.h.x+hd.dx,item:i,tTop:Math.min(...hd.C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.y>0&&q.x===hd.h.x).map(q=>q.y))});
         }
         continue;
       }
@@ -328,6 +339,7 @@ function pfChain(P,item,mk,spMk,o={}){
   // verticals first: riser up from the sink N port, corner east, corner south at the trunk, descent into the trunk top
   for(const rt of routes){
     const R=rt.R,vs=[];
+    if(rt.pre)for(const c of rt.pre)vs.push(c);   // hub S stub belts (south, step 7h)
     if(rt.sy!==undefined)for(let x=rt.hr;x<rt.sx;x++)vs.push([x,rt.sy,0]);   // hub exit belts east to the riser column
     for(let y=R+1;y<=(rt.sy??-1);y++)vs.push([rt.sx,y,3]);
     vs.push([rt.sx,R,0],[rt.tx,R,1]);
