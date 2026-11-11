@@ -398,7 +398,7 @@ function plcGrowthLane(P,item,mk,spMk,o={}){
   const N=Math.max(1,P.nodes[item].machines),step=r.h+1,items=[];
   for(let k=0;k<N;k++)r.items.forEach(q=>items.push({...q,y:q.y+k*step}));
   const gi=P.nodes[item].rec.i.find(([x])=>x===item);
-  return{...r,items,lanes:N,per:Array(N).fill(1),makes:N*P.nodes[item].pmach,h:N*step-1,pitch:step,note:["Seed: put "+(N*gi[1])+" "+plnNm(gi[0])+" in the seed containers (one per lane, "+N+" lanes, "+gi[1]+" each) before starting (N = machines x input per cycle = "+N+" x "+gi[1]+")",...r.note.slice(1)]};
+  return{...r,items,lanes:N,per:Array(N).fill(1),makes:N*P.nodes[item].pmach,h:N*step-1,pitch:step,note:["Seed: the seed container is infinite (as in your example build): it supplies "+plnNm(gi[0])+" to the loop, no initial amount needed; the machines double it, the net arrives in the sink container",...r.note.slice(1)]};
 }
 function placerLayoutA(P,item,mk,spMk,o={}){const GR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.some(([x])=>x===item);if(GR&&P.nodes[item].rec.i.length===2){try{return plcGrowthLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": feedback layout not built for this recipe ("+e.message+")"}}}if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": the feedback layout for more than one extra input is not built yet"};const GA=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GA)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GA.item)+": the feedback layout inside a chain is not built yet"};
 P=plcUnshare(P,item);
