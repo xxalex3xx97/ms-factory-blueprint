@@ -8,7 +8,12 @@ const ugOk=g=>{const d=def(ugPend.cls);if(g.n<2)return false;const q={id:-1,cls:
   return !S.blocks.some(o=>o.h===layer&&isM(o)&&o.x===q.x&&o.y===q.y)&&!noBuild([mItem(q)])};
 function ugCancel(){if(!ugPend)return false;const i=ugPend.id;ugPend=null;if(S.blocks.some(b=>b.id===i)){S.blocks=S.blocks.filter(b=>b.id!==i);sel=new Set();undoS.pop();all()}return true}
 const pt=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
-const hit=c=>{const l=S.blocks.filter(b=>b.h===layer&&inView(b));for(let i=l.length-1;i>=0;i--){const b=l[i],d=dim(b);if(c.x>=b.x&&c.x<b.x+d.w&&c.y>=b.y&&c.y<b.y+d.h)return b}return null};
+// hit-test index: cell -> blocks covering it (in S.blocks order), rebuilt when the blocks or layer/view change; topmost in-view block wins, as before
+let HIX=null;const HK=(x,y)=>(x+524288)*1048576+(y+524288);
+const hit=c=>{const k=PK+"|"+layer+"|"+view;
+  if(!HIX||HIX.k!==k){HIX={k,m:new Map()};for(const b of S.blocks){if(b.h!==layer)continue;const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const q=HK(b.x+i,b.y+j);let a=HIX.m.get(q);if(!a)HIX.m.set(q,a=[]);a.push(b)}}}
+  const a=HIX.m.get(HK(c.x,c.y));if(!a)return null;
+  for(let i=a.length-1;i>=0;i--)if(inView(a[i]))return a[i];return null};
 cv.addEventListener("contextmenu",e=>e.preventDefault());
 cv.addEventListener("pointerdown",e=>{
   cv.focus();const p=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
@@ -109,7 +114,7 @@ addEventListener("pointerup",e=>{if(drag)end(e)});addEventListener("pointercance
 cv.addEventListener("wheel",e=>{
   // wide zoom range: the Layout<->Factory floor sync maps a Layout zoom to a 10x smaller floor zoom
   e.preventDefault();const p=pt(e),z0=V.z,z=Math.min(60,Math.max(.01,z0*(e.deltaY<0?1.12:1/1.12)));
-  V.ox=p.x-(p.x-V.ox)*(z/z0);V.oy=p.y-(p.y-V.oy)*(z/z0);V.z=z;draw();
+  V.ox=p.x-(p.x-V.ox)*(z/z0);V.oy=p.y-(p.y-V.oy)*(z/z0);V.z=z;draw(true);
 },{passive:false});
 cv.addEventListener("dblclick",e=>{
   if(view!=="L"||active)return;

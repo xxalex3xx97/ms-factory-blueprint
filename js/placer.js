@@ -660,7 +660,9 @@ let plcCache=null,plcIdle=0;
 function placerShot(){
   const L=plcL;if(!L||!$("plnPrev").open)return;
   const {w,h}=placerSize(),T=plcTT();
-  if(plcCache&&plcCache.z===plcV.z&&plcCache.w===w&&plcCache.h===h&&plcCache.T===T){const g=$("plnPrevMap").getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.drawImage(plcCache.c,plcV.ox-plcCache.ox,plcV.oy-plcCache.oy);return}
+  if(plcCache&&plcCache.w===w&&plcCache.h===h&&plcCache.T===T){   // zooming/panning: the last full render is shifted and scaled; a full repaint follows when the view stops changing
+    const f=plcV.z/plcCache.z,g=$("plnPrevMap").getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.drawImage(plcCache.c,plcV.ox-f*plcCache.ox,plcV.oy-f*plcCache.oy,w*f,h*f);
+    clearTimeout(plcIdle);plcIdle=setTimeout(()=>{plcCache=null;placerShot()},160);return}
   const sv={S:S.blocks,view,layer,V,W,H,dpr,sel,active,pasting,drag,ugPend,mode,SM,OV,hoverIn,cw:cv.width,ch:cv.height};PLC_PREV=true;
   try{
     S.blocks=[...T.blocks.map((q,i)=>({id:i+1,cls:q.cls,x:q.x,y:q.y,h:0,rot:0,pid:0})),...T.ms.map((it,i)=>({...it,id:T.blocks.length+i+1,h:0}))];

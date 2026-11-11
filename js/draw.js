@@ -160,7 +160,11 @@ let PF=0,DIRTY=true,USEB=false;
 const MODE_TXT={del:"Delete mode: click or drag a box to delete - X or Esc to exit",copy:"Copy: drag a box, then click to place",cfgcopy:"Copy config: click one building",cfgpaste:"Paste config: drag a box over buildings of the same type - Esc to exit",paste:"Paste: click to place - R rotate - V flip - Esc cancel"};
 let modeKey="";
 function syncMode(){const m=pasting?"paste":mode||"";if(m===modeKey)return;modeKey=m;document.body.dataset.mode=m;let el=$("modeb");if(!el){el=document.createElement("div");el.id="modeb";document.body.appendChild(el)}el.textContent=MODE_TXT[m]||""}
-let raf=0;const draw=()=>{syncMode();DIRTY=true;asv();if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()})};
+let raf=0;
+// zoom with the wheel: the last full paint (a copy) is drawn scaled on each wheel frame; a full paint follows when the wheel pauses. Any other draw drops the copy.
+let ZS=null,ZW=false,ZT=0,ZC=null;
+const zsKey=()=>view+"|"+layer+"|"+W+"|"+H+"|"+dpr;
+const draw=zw=>{if(!zw)ZS=null;ZW=!!zw;syncMode();DIRTY=true;asv();if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()});if(zw){clearTimeout(ZT);ZT=setTimeout(()=>draw(),160)}};
 
 const SPR=new Map();
 function spr(key,w,h,fn){const k=key+"|"+dpr;let c=SPR.get(k);if(!c){if(SPR.size>800)SPR.clear();c=document.createElement("canvas");c.width=Math.ceil(w*dpr);c.height=Math.ceil(h*dpr);const g=c.getContext("2d");g.scale(dpr,dpr);g.imageSmoothingQuality="high";fn(g);SPR.set(k,c)}return c}
@@ -433,7 +437,13 @@ function cached(name,fn){
   RCT=o.st.RCT;CUR=o.st.CUR;
   cx.setTransform(1,0,0,1,0,0);cx.drawImage(o.c,0,0);cx.setTransform(dpr,0,0,dpr,0,0);
 }
-function paint(pk){if(!USEB)DIRTY=true;LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}}
+function paint(pk){
+  if(ZW&&ZS&&ZS.k===zsKey()){   // wheel frame: scaled copy of the last full paint (blocks unchanged: any other draw cleared ZS)
+    const f=V.z/ZS.z;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.drawImage(ZS.c,dpr*(V.ox-f*ZS.ox),dpr*(V.oy-f*ZS.oy),cv.width*f,cv.height*f);return}
+  if(!USEB)DIRTY=true;LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}
+  if(!ZS||ZS.k!==zsKey()){if(!ZC||ZC.width!==cv.width||ZC.height!==cv.height){ZC=document.createElement("canvas");ZC.width=cv.width;ZC.height=cv.height}
+    ZC.getContext("2d").drawImage(cv,0,0);ZS={c:ZC,z:V.z,ox:V.ox,oy:V.oy,k:zsKey()}}
+}
 let FLAT_S=5;   // let: tests set FLAT_S=0 for exact block pixels. below this zoom (px per cell) blocks are batched as flat rects (no icon/arrow/label/door marks are drawn there anyway)
 function drawBlocks(list,alpha,useSel){
   const s=sc(),flat=s<FLAT_S,fl=new Map(),st=new Map(),full=[];
