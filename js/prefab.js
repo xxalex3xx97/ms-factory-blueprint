@@ -207,7 +207,7 @@ function pfChain(P,item,mk,spMk,o={}){
   walk(item,[]);
   if(err)return no(err);
   const Fh=floorRect({cls:plcCls(PL_STD[PL_STD.length-1]),x:0,y:0,h:0,rot:0}).h,pwb=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W'),SH=pwb?pwb.y+1:0;
-  const items=[],ports=[],per=[],sink=new Map(),routes=[];
+  const items=[],ports=[],per=[],sink=new Map(),hubs=new Map(),routes=[];
   let x0=0,makes=0;
   for(const y of order){
     const S=st.get(y),T=S.T,cb=plnCb(T.crafter);if(!cb)return no('No machine builds this recipe');
@@ -250,9 +250,29 @@ function pfChain(P,item,mk,spMk,o={}){
       if(y===item)ports.push({edge:'N',off:sk.x+dx,dir:'out',belts:1,slot:-1,mk});
       x0=dx+Math.max(C.w,...C.items.map(q=>q.x+dim(q).w))+PF_GAP;
     }
-    sink.set(y,sinks);
-    // route assignment: biggest head demand first, to the first sink (N port 0/1) with enough left
+    if(groups.length>1&&y!==item){
+      // hub (step 7f): one DAT_Container_2 right of the groups; each group sink feeds one N port, consumers leave by E ports
+      const hc='DAT_Container_2',pts=portsOf({cls:hc,x:0,y:0,rot:0,off:[]});
+      const inP=pts.filter(p=>p.f==='N').map(p=>p.x).sort((a,b)=>a-b),outP=pts.filter(p=>p.f==='E').map(p=>p.y).sort((a,b)=>a-b);
+      if(groups.length>4||groups.length>inP.length)return no('hub ports exceeded: groups '+groups.length+' (second hub not built)');
+      const hw=def(hc).w,hx=x0+1;
+      items.push({cls:hc,x:hx,y:0,rot:0,ct:[]});
+      hubs.set(y,{x:hx,w:hw,inP,outP,used:0,groups:groups.length});
+      sinks.forEach((s,g)=>routes.push({sx:s.x,tx:hx+inP[g],item:y,tTop:0,toHub:true}));
+      x0=hx+hw+PF_GAP+4;
+    } else sink.set(y,sinks);
+    // route assignment: biggest head demand first, to the first sink (N port 0/1) with enough left; hubbed producer: heads take E ports top to bottom
     for(const i of fedSet){
+      const H=hubs.get(i);
+      if(H){
+        const hs=(heads.get(i)||[]).sort((a,b)=>b.dem-a.dem);
+        for(const hd of hs){
+          if(H.used>=H.outP.length||H.used>=4)return no('hub ports exceeded: groups '+H.groups+' heads '+hs.length+' (second hub not built)');
+          const j=H.used++,hr=H.x+H.w;
+          routes.push({sx:hr+j,sy:H.outP[j],hr,tx:hd.h.x+hd.dx,item:i,tTop:Math.min(...hd.C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.y>0&&q.x===hd.h.x).map(q=>q.y))});
+        }
+        continue;
+      }
       const sup=sink.get(i),hs=(heads.get(i)||[]).sort((a,b)=>b.dem-a.dem);
       for(const hd of hs){
         const s=sup.find(q=>q.left>=hd.dem-1e-6&&q.n<2);
@@ -284,7 +304,8 @@ function pfChain(P,item,mk,spMk,o={}){
   // verticals first: riser up from the sink N port, corner east, corner south at the trunk, descent into the trunk top
   for(const rt of routes){
     const R=rt.R,vs=[];
-    for(let y=R+1;y<=-1;y++)vs.push([rt.sx,y,3]);
+    if(rt.sy!==undefined)for(let x=rt.hr;x<rt.sx;x++)vs.push([x,rt.sy,0]);   // hub exit belts east to the riser column
+    for(let y=R+1;y<=(rt.sy??-1);y++)vs.push([rt.sx,y,3]);
     vs.push([rt.sx,R,0],[rt.tx,R,1]);
     // descent to the trunk top; a stage's out row (or any stage item) across it goes under with a UG pair
     const dy=[];for(let y=R+1;y<rt.tTop;y++)dy.push(y);
