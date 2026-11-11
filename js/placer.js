@@ -146,6 +146,7 @@ function placerBank(P,item,mk,spMk,o){
   const ch=tr.ch,n=ch.length,G=o.G||PLC_G||1,Bn=tr.two?tr.two.B:[],topB=Bn.length?Bn[Bn.length-1].item:(tr.two&&tr.two.rawB),Cn=tr.three?tr.three.C:[],topC=Cn.length?Cn[Cn.length-1].item:(tr.three&&tr.three.rawC);
   for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:tr.raw)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null)),eI2=tr.two&&q===n-1?P.edges.find(e=>e.from===topB&&e.to===nd.item):null,eI3=tr.three&&q===n-1?P.edges.find(e=>e.from===topC&&e.to===nd.item):null;
     const S=plcStage(nd,eI,eU,mk,spMk,eI2,eI3);if(!S.ok)return S;SS.push(S)}
+  if(G>1&&tr.three)SS.forEach(S=>{S.N=Math.ceil(S.N/G)*G});   // 3 inputs: every band gets the same machine count (round up, never less)
   SS.forEach(S=>{S.sp=0;if(S.two&&!S.three&&o.fit&&o.fit.fw&&S.Wb>o.fit.fw){S.sp=4;S.Wb+=4}});   // spacer = UG entrance+exit pair with 1 plain belt of clearance each side, so nothing but straight east belts touches the wall cut
   if(tr.two&&!Bn.length)return no("Bank: a raw input straight into a 2-input machine is not built yet");
   const cp=plcPp(BX,0),cE=cp.filter(p=>p.nx===1).sort((a,b)=>a.y-b.y),cW=cp.filter(p=>p.nx===-1).sort((a,b)=>a.y-b.y),seq=a=>a.every((p,i)=>p.y===a[0].y+i);
@@ -178,7 +179,7 @@ function placerBank(P,item,mk,spMk,o){
     const bad=Bn.find(nd=>nd.machines<G);if(bad)return no("band count "+G+" does not fit "+bad.machines+" machines of "+plnNm(bad.item));
     let cB=null,xB=0;
     for(let b=0;b<G;b++){
-      const nodesB={};Bn.forEach(nd=>nodesB[nd.item]={...nd,machines:dist(nd.machines,G)[b]});
+      const nodesB={};Bn.forEach(nd=>nodesB[nd.item]={...nd,machines:tr.three?Math.ceil(nd.machines/G):dist(nd.machines,G)[b]});
       const fB=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
       const PB={raw:P.raw.filter(r=>r.item===tr.two.rawB),nodes:nodesB,cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||e.from===tr.two.rawB)&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}]).map(e=>({...e,flow:e.flow*fB}))};
       const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:cI%2===1},fit:null,sep:false,seg:b?plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo,cB):sg});
@@ -203,7 +204,7 @@ function placerBank(P,item,mk,spMk,o){
     if(tr.two&&!o.sep){
       const cI=n-1,gC=gs[cI],hC=hz[cI],nodesB={};
       const bad=Bn.find(nd=>nd.machines<G);if(bad)return no("band count "+G+" does not fit "+bad.machines+" machines of "+plnNm(bad.item));
-      Bn.forEach(nd=>nodesB[nd.item]={...nd,machines:dist(nd.machines,G)[b]});
+      Bn.forEach(nd=>nodesB[nd.item]={...nd,machines:tr.three?Math.ceil(nd.machines/G):dist(nd.machines,G)[b]});
       const eB=P.edges.find(e=>e.from===topB&&e.to===ch[cI].item),bset=new Set(Bn.map(nd=>nd.item)),fB=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
       const PB={raw:P.raw.filter(r=>r.item===tr.two.rawB),nodes:nodesB,cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||e.from===tr.two.rawB)&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}]).map(e=>({...e,flow:e.flow*fB}))};
       const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null});
@@ -214,7 +215,7 @@ function placerBank(P,item,mk,spMk,o){
     }
     if(tr.three&&!o.sep){const cI=n-1,gC=gs[cI],hC=hz[cI],nodesC={};   // 3rd input: its own band beyond the B band, feed row frC, TC trunk via plcThreeTC
       const bad=Cn.find(nd=>nd.machines<G);if(bad)return no("band count "+G+" does not fit "+bad.machines+" machines of "+plnNm(bad.item));
-      Cn.forEach(nd=>nodesC[nd.item]={...nd,machines:dist(nd.machines,G)[b]});
+      Cn.forEach(nd=>nodesC[nd.item]={...nd,machines:Math.ceil(nd.machines/G)});
       const eC=P.edges.find(e=>e.from===topC&&e.to===ch[cI].item),setC=new Set(Cn.map(nd=>nd.item)),fC=alls[cI].slice(b*tbs[cI],(b+1)*tbs[cI]).reduce((a,c)=>a+c,0)/Ns[cI];
       const PC={raw:P.raw.filter(r=>r.item===tr.three.rawC),nodes:nodesC,cycle:false,edges:P.edges.filter(e=>(setC.has(e.from)||e.from===tr.three.rawC)&&e.to!==ch[cI].item).concat([{from:topC,to:null,flow:eC.flow}]).map(e=>({...e,flow:e.flow*fC}))};
       const rC=placerBank(PC,topC,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null});

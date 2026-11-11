@@ -160,6 +160,25 @@ try {
     await pg.keyboard.press('Control+z');
   }
 
+  // ---- sim at full rate: 3-input bands sized for the full rate (every band the same machine count, B/C chains rounded up): Large Mk2 120 and Container Mk2 120 build, place by click, ov 0, UG span valid, sim >= 120 (mean last 12)
+  for (const [buf, label] of [['DAT_Container_2', 'Large Mk2 120 (sim)'], ['DAT_Container', 'Container Mk2 120 (sim)']]) {
+    await setup(pg, ITEM, 120, 1, buf);
+    const SB = await openBuild(pg);
+    chk(`SB) ${label}: builds (no error, Place enabled)`, SB.open && SB.err === '' && !SB.off, JSON.stringify({err: SB.err, off: SB.off}));
+    if (SB.err !== '' || SB.off) { await closeIfOpen(pg); continue; }
+    await pg.click('#plnPlace');
+    if (await pg.evaluate(() => $('plnPrevBig').textContent.length > 0)) await pg.click('#plnPlace');   // more than PLC_BIG blocks: confirm once
+    const placedS = await stageClick(pg);
+    await pg.waitForTimeout(150);
+    const agS = await pg.evaluate(audit3);
+    const simS = await pg.evaluate(simStats, ITEM);
+    info(`SB) ${label}: placed=${placedS} ov=${agS.ov} maxCount=${agS.maxCount} sim=${simS.got.toFixed(2)} blocked=${simS.blocked}`);
+    chk(`SB) ${label}: placed by real click, no overlap, items inside floor`, placedS && agS.ov === 0 && agS.inside === true, JSON.stringify({ov: agS.ov, inside: agS.inside}));
+    chk(`SB) ${label}: UG pairs valid, inclusive span <= Mk maxApart`, agS.ugOk === true, JSON.stringify(agS.bad));
+    chk(`SB) ${label}: sim >= 120 (mean of last 12 samples), none blocked`, placedS && simS.got >= 120 && simS.blocked === 0, JSON.stringify(simS));
+    await pg.keyboard.press('Control+z');
+  }
+
   // ---- wall cuts: blank columns inserted where a planned wall cut is not free; Superalloy into a plain container at Mk2/Mk3 55/min builds, placed by click, ov 0, UG inclusive span <= Mk, sim >= target
   for (const [mk, label] of [[1, 'Container Mk2 55'], [2, 'Container Mk3 55']]) {
     await setup(pg, ITEM, 55, mk, 'DAT_Container');
