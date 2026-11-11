@@ -70,7 +70,7 @@ function pfAssignA(cls,k,flows){
 }
 // COL prefab: m machines of one stage stacked in a column (pitch from pfAssign). One trunk per input (1 item per belt): container head at N edge, belt trunk south, splitter on each feed row (feeds the port belt, continues south). Trunks PF_TP apart; a feed crossing a nearer trunk goes under it (UG entrance/exit beside it). Output: east along the out row (UG under E trunks) -> collector north -> sink container at N edge. Cols 0 and w-1 stay empty (seams). N/S overflow inputs: not built yet (refused).
 const PF_TP=4;   // trunk pitch in cells
-PF_BUILD.pfCol=(cls,k,flows,m,mk)=>{
+PF_BUILD.pfCol=(cls,k,flows,m,mk,dn)=>{   // dn (step 1 outDown): sink box at the bottom, collector belts south from the top out row, out port on S
   const a=pfAssign(cls,k,flows);
   if(!a.ok)return{ok:false,why:a.why};
   if(a.S.length)return{ok:false,why:'S overflow inputs not built yet'};
@@ -106,12 +106,12 @@ PF_BUILD.pfCol=(cls,k,flows,m,mk)=>{
     if(nN){const px=x0+a.N[0].row,G=gap(i);feed(tx-1,px+1,G,-1,tx,gcols);it.push({cls:bc,x:px,y:G,rot:1},{cls:bc,x:px,y:G+1,rot:1})}
   }
   const lowOut=ym(m-1)+a.out.row;
-  for(let y=Y0;y<=lowOut;y++)it.push({cls:bc,x:xC,y,rot:3});
-  it.push({cls:PLC_BOX,x:xC,y:0,rot:0,ct:[]});
-  const ports=[...a.W.map((p,j)=>({edge:'N',off:wx(j),dir:'in',belts:1,slot:j,mk})),...a.E.map((p,j)=>({edge:'N',off:ex(j),dir:'in',belts:1,slot:nW+j,mk})),...(nN?[{edge:'N',off:tx,dir:'in',belts:1,slot:nW+nE,mk}]:[]),{edge:'N',off:xC,dir:'out',belts:1,slot:-1,mk}];
-  return{proto:'pfCol',args:[cls,k,flows,m,mk],w:(nN?tx:xC)+3,h:ym(m-1)+d.h,items:it,ports,fits:[],out:a.out,nIn:nN?{px:x0+a.N[0].row,tx}:null};
+  if(dn){for(let y=ym(0)+a.out.row;y<=lowOut;y++)it.push({cls:bc,x:xC,y,rot:1});it.push({cls:PLC_BOX,x:xC,y:lowOut+1,rot:0,ct:[]})}
+  else{for(let y=Y0;y<=lowOut;y++)it.push({cls:bc,x:xC,y,rot:3});it.push({cls:PLC_BOX,x:xC,y:0,rot:0,ct:[]})}
+  const ports=[...a.W.map((p,j)=>({edge:'N',off:wx(j),dir:'in',belts:1,slot:j,mk})),...a.E.map((p,j)=>({edge:'N',off:ex(j),dir:'in',belts:1,slot:nW+j,mk})),...(nN?[{edge:'N',off:tx,dir:'in',belts:1,slot:nW+nE,mk}]:[]),{edge:dn?'S':'N',off:xC,dir:'out',belts:1,slot:-1,mk}];
+  return{proto:'pfCol',args:dn?[cls,k,flows,m,mk,true]:[cls,k,flows,m,mk],w:(nN?tx:xC)+3,h:dn?Math.max(ym(m-1)+d.h,lowOut+3):ym(m-1)+d.h,items:it,ports,fits:[],out:a.out,nIn:nN?{px:x0+a.N[0].row,tx}:null};
 };
-const pfCol=(cls,k,flows,m,mk)=>pfPrefab('pfCol',[cls,k,flows,m,mk]);
+const pfCol=(cls,k,flows,m,mk,dn)=>pfPrefab('pfCol',dn?[cls,k,flows,m,mk,true]:[cls,k,flows,m,mk]);   // north args unchanged (memo key)
 // GROWTH prefab: the verified growth layout (plcGrowthLane = one lane per machine, stacked) for item at rate/min. Built by calling placer.js, not reimplemented. Lane count = plan machines. Coordinates already start at (0,0). Ports: none in (seed and Biomass are containers inside); net output = sink container S at the bottom (edge 'S', off = its x).
 PF_BUILD.pfGrowth=(item,rate,mk,box)=>{
   const P=plan(item,rate,0,{sp:null,bal:null},PLN_PICK,{proto:false,enr:false});
@@ -153,17 +153,21 @@ const pfLine=(n,box,mk,item,len,wall)=>pfPrefab('pfLine',[n,box,mk,item,len,wall
 let PLC_PREFAB=false;   // test hook: flip on in the page; off = old path only
 // COLUMNS (step 6A): sizes[] = machines per column (pfCol each), side by side (seam cols make a 2-cell gap). Each column's own sink box is removed; its collector stub goes north into one shared out row at row Rb (= the out box port row) that runs east into ONE out container. Columns sit one row lower (SH = Rb+1). Inputs stay per-column infinite source containers (not aggregated). Out total must fit one belt (out stack not built). STEP 6B: pfCompose caps machines per column so the column fits the floor height (h+SH<=30); a wider layout is cut by placerTile at the seams.
 // HUB W entry (step 7g): hubAt=true -> no sink box; a DAT_Container_2 hub at x=xo with its W port on the out row (hub.y = Rb - that port's y). Returns hub:{x,y} (after the minY shift).
-function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt){
+function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt,dn){
   const no=why=>({ok:false,why}),bc=PLC_BELT[mk],bw=def(PLC_BOX).w,HC='DAT_Container_2';
   if(outFlow>MKS[mk][1])return no('output above belt cap: out stack not built');
   const pw=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W');if(!pw)return no('box has no W port');
-  const Rb=pw.y,SH=Rb+1,it=[],xs=[];let x=0;
-  for(const mc of sizes){const C=pfCol(cls,k,flows,mc,mk);if(C.ok===false)return no(C.why);
-    const xC=C.ports.find(p=>p.dir==='out').off;
-    C.items.forEach(q=>{if(q.cls===PLC_BOX&&q.x===xC&&q.y===0&&!(q.ct&&q.ct.length))return;it.push({...q,x:q.x+x,y:q.y+SH})});
-    it.push({cls:bc,x:xC+x,y:SH,rot:3},{cls:bc,x:xC+x,y:SH+1,rot:3});   // collector stub north into the shared row
+  if(dn&&hubAt)return no('hub W entry with outDown not built');
+  const Rb=pw.y,SH=dn?0:Rb+1,it=[],xs=[],cols=[];let x=0;
+  for(const mc of sizes){const C=pfCol(cls,k,flows,mc,mk,dn);if(C.ok===false)return no(C.why);
+    const xC=C.ports.find(p=>p.dir==='out').off,isB=q=>q.cls===PLC_BOX&&q.x===xC&&!(q.ct&&q.ct.length)&&(dn||q.y===0);
+    C.items.forEach(q=>{if(isB(q))return;it.push({...q,x:q.x+x,y:q.y+SH})});
+    if(dn)cols.push({xc:xC+x,bY:C.items.find(isB).y,h:C.h});   // outDown: stub south from the collector into the shared row below
+    else it.push({cls:bc,x:xC+x,y:SH,rot:3},{cls:bc,x:xC+x,y:SH+1,rot:3});   // collector stub north into the shared row
     xs.push(xC+x);x+=C.w;
   }
+  let Rs=Rb;   // shared out row: north = row Rb; outDown = one row below every column
+  if(dn){Rs=Math.max(...cols.map(c=>c.h));for(const c of cols)for(let y=c.bY;y<Rs;y++)it.push({cls:bc,x:c.xc,y,rot:1})}
   const xo=x;
   let hubY=0;
   if(hubAt){
@@ -172,9 +176,9 @@ function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt){
     hubY=Rb-hp.y;
   }
   const xEnd=hubAt?xo-1:xo+pw.x+pw.nx;
-  for(let c=Math.min(...xs);c<=xEnd;c++)it.push({cls:bc,x:c,y:Rb,rot:0});   // shared out row, east into the out container's W port (or the hub's W face)
+  for(let c=Math.min(...xs);c<=xEnd;c++)it.push({cls:bc,x:c,y:Rs,rot:0});   // shared out row, east into the out container's W port (or the hub's W face)
   if(hubAt)it.push({cls:HC,x:xo,y:hubY,rot:0,ct:[]});
-  else it.push({cls:PLC_BOX,x:xo,y:0,rot:0,ct:[]});
+  else it.push({cls:PLC_BOX,x:xo,y:Rs-pw.y,rot:0,ct:[]});
   const minY=Math.min(...it.map(q=>q.y));
   const items=it.map(q=>({...q,y:q.y-Math.min(0,minY)}));
   return{ok:true,items,w:xo+(hubAt?def(HC).w:bw),h:Math.max(...items.map(q=>q.y+dim(q).h)),ports:[],hub:hubAt?{x:xo,y:hubY-Math.min(0,minY)}:null};
@@ -399,6 +403,7 @@ function pfChain(P,item,mk,spMk,o={}){
   const SM=pfSeams({items:out,w:W,h:H,ports},mk);if(!SM)return no('no free wall column for the block tile (seam search failed) h'+H+' w'+W+' floor'+Fh);
   return{ok:true,items:SM.items.map(q=>({h:0,pid:0,...q})),lanes:1,per,makes,pitch:H+1,w:SM.w,h:H,mod:false,box:BX,mk,ports:SM.ports,note:['Prefab chain: '+order.length+' stages, corridors above; crafted inputs fed from upstream sink boxes'],src:{P,item,mk,spMk,o},prefab:true};
 }
+let PF_DOWN=false;   // step 1: single-stage pfCompose builds outDown (test hook, default off)
 function pfCompose(P,item,mk,spMk,o={}){
   const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
   if(!T||!T.rec)return no('no recipe');
@@ -412,9 +417,9 @@ function pfCompose(P,item,mk,spMk,o={}){
   if(!(m>=1))return no('one machine input above belt cap (old path raises the Mk)');
   const Fh=floorRect({cls:plcCls(PL_STD[PL_STD.length-1]),x:0,y:0,h:0,rot:0}).h,pwb=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W'),SH=pwb?pwb.y+1:0;   // same SH as pfColumns
   let mh=Math.min(m,N);
-  while(mh>1){const C=pfCol(cls,k,flows,mh,mk);if(C.ok===false||C.h+SH<=Fh)break;mh--}   // ponytail: linear scan, m is small
+  while(mh>1){const C=pfCol(cls,k,flows,mh,mk,PF_DOWN);if(C.ok===false||C.h+SH<=Fh)break;mh--}   // ponytail: linear scan, m is small
   const sizes=[];for(let r=N;r>0;r-=mh)sizes.push(Math.min(mh,r));
-  const A=sizes.length===1?pfCol(cls,k,flows,N,mk):pfColumns(cls,k,flows,sizes,mk,P.edges.find(e=>e.to==null).flow);
+  const A=sizes.length===1?pfCol(cls,k,flows,N,mk,PF_DOWN):pfColumns(cls,k,flows,sizes,mk,P.edges.find(e=>e.to==null).flow,false,PF_DOWN);
   if(A.ok===false)return no(A.why);
   const SM=pfSeams(A,mk);if(!SM)return no('no free wall column for the block tile (seam search failed)');
   const rec=rk(T.rec),items=SM.items.map(q=>({h:0,pid:0,...q,rec:q.cls===cls?rec:q.rec}));
