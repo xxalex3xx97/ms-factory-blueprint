@@ -64,17 +64,33 @@ function plcTree(P,item){
   return{ok:true,ch:[...a.c,T],two:{B:b.c,rawB:b.raw},raw:a.raw};
 }
 function plcBanks(g,it){
-  const {ML,MR,sc,w,h,cin,dk,rec}=g.S,{cnt,X0,fRow,lRow,Y0,R,up,xf,xe,bc}=g,s=up?-1:1,vr=up?3:1,Yb=Y0+R*h;
-  const bt=(x,y,r)=>({cls:bc,x,y,h:0,rot:r,pid:0}),mc=(M,x,y)=>({cls:dk,x,y,h:0,rot:M.rot,pid:0,rec,off:M.off.map(p=>p.key)});
+  const {ML,MR,sc,w,h,cin,dk,rec,two}=g.S,{cnt,X0,fRow,lRow,Y0,R,up,xf,xe,bc,mk}=g,s=up?-1:1,vr=up?3:1,Yb=Y0+R*h;
+  const bt=(x,y,r)=>({cls:bc,x,y,h:0,rot:r,pid:0}),ug=(x,y,r)=>({cls:PLC_UG[mk],x,y,h:0,rot:r,pid:0}),mc=(M,x,y)=>({cls:dk,x,y,h:0,rot:M.rot,pid:0,rec,off:M.off.map(p=>p.key)});
   const my=r=>up?Y0+(R-1-r)*h:Y0+r*h;
   cnt.forEach((n,k)=>{
-    const x0=X0[k],Tx=x0+w+1,xr=Tx+w+1,nl=Math.ceil(n/2),nr=n-nl,fr=fRow[k],lr=lRow[k],ys=my(nl-1)+cin,sp=new Set(Array.from({length:nl},(_,r)=>my(r)+cin));
+    // two inputs: pair = ML | cL | TA | G | TB | cR | MR (TB is the B trunk, built later by plcTwoTB)
+    const x0=X0[k],Tx=x0+w+(two?2:1),xr=Tx+w+(two?4:1),mrx=Tx+(two?4:1),nl=Math.ceil(n/2),nr=n-nl,fr=fRow[k],lr=lRow[k],ys=my(nl-1)+cin,sp=new Set(Array.from({length:nl},(_,r)=>my(r)+cin));
     for(let r=0;r<nl;r++)it.push(mc(ML,x0+1,my(r)));
-    for(let r=0;r<nr;r++)it.push(mc(MR,Tx+1,my(r)));
-    for(let x=xf;x<Tx;x++)it.push(bt(x,fr,0));
+    for(let r=0;r<nr;r++)it.push(mc(MR,mrx,my(r)));
+    // A feed row: an earlier trunk's G and cR cells are an underground pair under its B trunk (TB cell is left to plcTwoTB)
+    const cross=new Set(),tbc=new Set();if(two)for(let j=0;j<k;j++){cross.add(X0[j]+w+3);cross.add(X0[j]+w+5);tbc.add(X0[j]+w+4)}
+    for(let x=xf;x<Tx;x++){if(tbc.has(x))continue;it.push(cross.has(x)?ug(x,fr,0):bt(x,fr,0))}
     for(let y=fr;up?y>=ys:y<=ys;y+=s)it.push(sp.has(y)?{cls:sc,x:Tx,y,h:0,rot:vr,pid:0,off:[]}:bt(Tx,y,vr));
+    if(two)for(let r=0;r<nl;r++){const ya=my(r)+cin,yb=my(r)+two.yb;
+      it.push(bt(x0+w+1,ya,2),ug(x0+w+1,yb,2),ug(x0+w+3,yb,2))}   // cL: belt west into ML (ya), UG exit west into ML (yb); G: UG entrance west under TA
+    if(two)for(let r=0;r<nr;r++){const ya=my(r)+cin,yb=my(r)+two.yb;
+      it.push(ug(x0+w+3,ya,0),ug(x0+w+5,ya,0),bt(x0+w+5,yb,0))}   // G: UG entrance east under TB; cR: UG exit east into MR (ya), belt east into MR (yb)
     for(let y=up?Yb-1:Y0;up?y>lr:y<lr;y+=s){it.push(bt(x0,y,vr));if(nr)it.push(bt(xr,y,vr))}
     for(let x=x0;x<xe;x++)it.push(bt(x,lr,0));
+  });
+}
+// 2-input: the B trunk of each consumer trunk (column TB = x0+w+4) from its B feed row frB to the last yb row, splitters on yb rows, and the B feed belt along frB
+function plcTwoTB(g,it){
+  const {S,cnt,X0,Y0,R,up,xf,frB,bc}=g,w=S.w,h=S.h,yb=S.two.yb,sc=S.sc,s=up?-1:1,vr=up?3:1,my=r=>up?Y0+(R-1-r)*h:Y0+r*h;
+  cnt.forEach((n,k)=>{
+    const TB=X0[k]+w+4,nl=Math.ceil(n/2),ysb=my(nl-1)+yb,sp=new Set(Array.from({length:nl},(_,r)=>my(r)+yb));
+    for(let y=frB[k];up?y>=ysb:y<=ysb;y+=s)it.push(sp.has(y)?{cls:sc,x:TB,y,h:0,rot:vr,pid:0,off:[]}:{cls:bc,x:TB,y,h:0,rot:vr,pid:0});
+    for(let x=xf;x<TB;x++)it.push({cls:bc,x,y:frB[k],h:0,rot:0,pid:0});
   });
 }
 // cut a bank layout into floor-wide segments: put(x,wid,ctr) places a wid-wide part at x; if it overflows the floor, cut at the free column c (entrance c-1, exit c), c >= segment start + lo
@@ -86,10 +102,13 @@ function plcSeg(fw,lo){const q={s:0,cuts:[],bad:"",put(x,wid,ctr){
 // floor size of a station block class + the shortest underground span (cells) the belt Mk can reach across a wall
 const plcFit=(cls,mk)=>{const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0});return{fw:f.w,fh:f.h,lo:Math.max(2,d.w*FC+2-def(PLC_UG[mk]).maxApart),lh:Math.max(2,d.h*FC+2-def(PLC_UG[mk]).maxApart)}};
 function placerBank(P,item,mk,spMk,o){
-  const BX=o.box||PLC_BOX,no=why=>({ok:false,why}),tr=plcTree(P,item);if(!tr.ok)return tr;
-  if(tr.two)return no("Bank: 2-input stage not built yet");
-  const ch=tr.ch,n=ch.length,cap=i=>MKS[i][1],SS=[];
-  for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:P.raw[0].item)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null));const S=plcStage(nd,eI,eU,mk,spMk);if(!S.ok)return S;SS.push(S)}
+  const BX=o.box||PLC_BOX,no=why=>({ok:false,why}),tr=plcTree(P,item),cap=i=>MKS[i][1],SS=[];
+  if(!tr.ok)return tr;
+  const ch=tr.ch,n=ch.length,G=PLC_G||o.G||1,Bn=tr.two?tr.two.B:[],topB=Bn.length?Bn[Bn.length-1].item:(tr.two&&tr.two.rawB);
+  if(tr.two&&G>1)return no("Bank: a 2-input stage uses one band only");
+  if(tr.two&&!Bn.length)return no("Bank: a raw input straight into a 2-input machine is not built yet");
+  for(let q=0;q<n;q++){const nd=ch[q],eI=P.edges.find(e=>e.from===(q?ch[q-1].item:tr.raw)&&e.to===nd.item),eU=P.edges.find(e=>e.from===nd.item&&(q<n-1?e.to===ch[q+1].item:e.to==null)),eI2=tr.two&&q===n-1?P.edges.find(e=>e.from===topB&&e.to===nd.item):null;
+    const S=plcStage(nd,eI,eU,mk,spMk,eI2);if(!S.ok)return S;SS.push(S)}
   const cp=plcPp(BX,0),cE=cp.filter(p=>p.nx===1).sort((a,b)=>a.y-b.y),cW=cp.filter(p=>p.nx===-1).sort((a,b)=>a.y-b.y),seq=a=>a.every((p,i)=>p.y===a[0].y+i);
   if(!cE.length||!cW.length||!seq(cE)||!seq(cW))return no("Bank: container E/W ports not found or not on consecutive rows");
   const bw=def(BX).w,bh=def(BX).h;
@@ -97,8 +116,8 @@ function placerBank(P,item,mk,spMk,o){
   const bt=(x,y)=>({cls:PLC_BELT[mk],x,y,h:0,rot:0,pid:0}),bx=(x,y,ct)=>({cls:BX,x,y,h:0,rot:0,pid:0,ct});
   const ps=Math.max(1,Math.min(cE.length,cW.length,Math.floor(PLC_SRC/cap(mk))));
   const Ns=SS.map(S=>S.N),t0s=Ns.map((N,q)=>Math.ceil(N/SS[q].m));
-  for(let q=0;q<n;q++){const d0=dist(Ns[q],t0s[q])[0]*SS[q].inF;if(cap(spMk)<d0-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(d0)+"/min): set the splitter Mk higher")}
-  const G=PLC_G||o.G||1,tbs=t0s.map(t=>Math.ceil(t/G));
+  for(let q=0;q<n;q++){const d0=dist(Ns[q],t0s[q])[0]*Math.max(SS[q].inF,SS[q].two?SS[q].two.inF2:0);if(cap(spMk)<d0-1e-9)return no("Splitter "+MKS[spMk][0]+" is too slow for a trunk ("+plnR2(d0)+"/min): set the splitter Mk higher")}
+  const tbs=t0s.map(t=>Math.ceil(t/G));
   for(let q=0;q<n;q++)if(G*tbs[q]>Ns[q])return no("band count "+G+" does not fit "+Ns[q]+" machines");
   if(n>1&&Ns.some(N=>N%G))return no("band count "+G+" does not split "+Ns.join("+")+" machines evenly: each band is a full copy of the chain");   // ponytail: bands must be equal copies or the stages starve
   const alls=SS.map((S,q)=>dist(Ns[q],G*tbs[q])),nH=[0];   // nH[q]=hub containers per band between stage q-1 and q
@@ -106,26 +125,39 @@ function placerBank(P,item,mk,spMk,o){
   const offs=(t,k,bal,pt)=>{const r=[];if(bal)dist(t,k).forEach((c,j)=>{for(let p=0;p<c;p++)r.push(j*bh+pt[p].y)});else for(let i=0;i<t;i++)r.push(Math.floor(i/ps)*bh+pt[i%ps].y);return r};
   const geo=b=>{const gs=[];let B=0;
     for(let q=0;q<n;q++){const S=SS[q],cnt=alls[q].slice(b*tbs[q],(b+1)*tbs[q]),nT=cnt.length,R=Math.ceil(cnt[0]/2),up=q%2===1;
-      const nIn=q?nH[q]:Math.ceil(nT/ps),nOut=q<n-1?nH[q+1]:Math.ceil(nT/ps);
-      const oi=offs(nT,nIn,q>0,cE),oo=offs(nT,nOut,q<n-1,cW);
+      const nIn=q?nH[q]:Math.ceil(nT/ps),nOut=q<n-1?nH[q+1]:(o.feedOut?Math.ceil(o.feedOut.nT/ps):Math.ceil(nT/ps));
+      const oi=offs(nT,nIn,q>0,cE),oo=offs(nT,nOut,q<n-1||!!o.feedOut,cW);
       const Y0=up?B+oi[0]-R*S.h:B+oi[nT-1]+1,Yend=Y0+R*S.h,Bo=up?Y0-1-oo[nT-1]:Yend-oo[0],ix=k=>up?k:nT-1-k;
-      gs.push({S,cnt,nT,R,up,nIn,nOut,oi,oo,Y0,Bi:B,Bo,fRow:cnt.map((_,k)=>B+oi[ix(k)]),lRow:cnt.map((_,k)=>Bo+oo[ix(k)])});B=Bo}
+      const ge={S,cnt,nT,R,up,nIn,nOut,oi,oo,Y0,Bi:B,Bo,fRow:cnt.map((_,k)=>B+oi[ix(k)]),lRow:cnt.map((_,k)=>Bo+oo[ix(k)])};
+      if(q===n-1&&o.feedOut){const oiF=offs(o.feedOut.nT,nOut,true,cE);ge.feedRows=Array.from({length:o.feedOut.nT},(_,k)=>Bo+oiF[o.feedOut.up?k:o.feedOut.nT-1-k])}   // B chain: its out hub E ports feed the consumer B trunks
+      gs.push(ge);B=Bo}
     return gs};
   const it=[],sg=plcSeg(o.fit&&o.fit.fw,o.fit&&o.fit.lo),hz=[];let x=2*bw+2,xf=2*bw+1;
   for(let q=0;q<n;q++){const X0=[];for(let k=0;k<tbs[q];k++){x=sg.put(x,SS[q].Wb,false);X0.push(x);x+=SS[q].Wb+1}
-    const xe=sg.put(x,q<n-1?bw:2*bw+1,true);hz.push({Xs:0,xf,X0,xe});
+    const xe=sg.put(x,q<n-1||o.feedOut?bw:2*bw+1,true);hz.push({Xs:0,xf,X0,xe});
     if(q<n-1){xf=xe+bw;x=xe+bw+1}}   // junction q: one hub at xe (out side of stage q = in side of stage q+1); feeders start xe+bw
   if(sg.bad)return no(sg.bad);
   const gb=[];let oy=0;
   for(let b=0;b<G;b++){const gs=geo(b),i0=it.length;gb.push(gs);
     gs.forEach((g,q)=>{const {Xs,xf,X0,xe}=hz[q];
-      if(q===0){for(let j=0;j<g.nIn;j++){const y=g.Bi+j*bh;if(!o.mod)it.push(bx(Xs,y,[{item:P.raw[0].item,n:0,inf:true}]));it.push(bx(Xs+bw+1,y,[]))}
+      if(q===0){for(let j=0;j<g.nIn;j++){const y=g.Bi+j*bh;if(!o.mod)it.push(bx(Xs,y,[{item:tr.raw,n:0,inf:true}]));it.push(bx(Xs+bw+1,y,[]))}
         g.oi.forEach(r=>{it.push(bt(Xs+bw,g.Bi+r));if(o.mod)for(let xx=Xs;xx<Xs+bw;xx++)it.push(bt(xx,g.Bi+r))})}
-      plcBanks({S:g.S,cnt:g.cnt,X0,fRow:g.fRow,lRow:g.lRow,Y0:g.Y0,R:g.R,up:g.up,xf,xe,bc:PLC_BELT[mk]},it);
-      for(let j=0;j<g.nOut;j++){const y=g.Bo+j*bh;it.push(bx(xe,y,[]));if(q===n-1&&!o.mod)it.push(bx(xe+bw+1,y,[]))}
-      if(q===n-1)g.oo.forEach(r=>{it.push(bt(xe+bw,g.Bo+r));if(o.mod)for(let xx=xe+bw+1;xx<xe+2*bw+1;xx++)it.push(bt(xx,g.Bo+r))})});
+      plcBanks({S:g.S,cnt:g.cnt,X0,fRow:g.fRow,lRow:g.lRow,Y0:g.Y0,R:g.R,up:g.up,xf,xe,bc:PLC_BELT[mk],mk},it);
+      for(let j=0;j<g.nOut;j++){const y=g.Bo+j*bh;it.push(bx(xe,y,[]));if(q===n-1&&!o.mod&&!o.feedOut)it.push(bx(xe+bw+1,y,[]))}
+      if(q===n-1&&!o.feedOut)g.oo.forEach(r=>{it.push(bt(xe+bw,g.Bo+r));if(o.mod)for(let xx=xe+bw+1;xx<xe+2*bw+1;xx++)it.push(bt(xx,g.Bo+r))})});
     const sl=it.slice(i0),mn=Math.min(...sl.map(c=>c.y)),mx=Math.max(...sl.map(c=>c.y+dim(c).h));
     sl.forEach(c=>{c.y+=oy-mn});oy+=mx-mn+1}   // band min y -> oy, spare row between bands
+  // 2-input: the B chain is laid out by this same planner (its last hub feeds the consumer B trunks), on the consumer feed side (below an up stage, above a down stage), right-aligned at the consumer input hub
+  if(tr.two){
+    const cI=n-1,gC=gb[0][cI],hC=hz[cI],nodesB={};Bn.forEach(nd=>nodesB[nd.item]=nd);
+    const eB=P.edges.find(e=>e.from===topB&&e.to===ch[cI].item),bset=new Set(Bn.map(nd=>nd.item));
+    const PB={raw:P.raw.filter(r=>r.item===tr.two.rawB),nodes:nodesB,cycle:false,edges:P.edges.filter(e=>(bset.has(e.from)||e.from===tr.two.rawB)&&e.to!==ch[cI].item).concat([{from:topB,to:null,flow:eB.flow}])};
+    const rB=placerBank(PB,topB,mk,spMk,{...o,G:1,feedOut:{nT:tbs[cI],up:gC.up},fit:null});
+    if(!rB.ok)return rB;
+    const dx=hz[cI-1].xe-rB.feed.x,y0=gC.up?Math.max(...it.map(c=>c.y+dim(c).h))+2:Math.min(...it.map(c=>c.y))-2-rB.h;
+    rB.items.forEach(c=>it.push({...c,x:c.x+dx,y:c.y+y0}));
+    plcTwoTB({S:gC.S,cnt:gC.cnt,X0:hC.X0,Y0:gC.Y0,R:gC.R,up:gC.up,xf:hC.xf,frB:rB.feed.rows.map(r=>r+y0),bc:PLC_BELT[mk]},it);
+  }
   const mnx=Math.min(...it.map(b=>b.x)),mny=Math.min(...it.map(b=>b.y)),items=it.map(b=>({...b,x:b.x-mnx,y:b.y-mny}));
   const last=n-1,T=ch[last],N=Ns[last],b0=gb[0],hubs=G*nH.reduce((a,c)=>a+c,0),nS=G*b0[0].nIn,nK=G*b0[last].nOut;
   const nt=["Makes "+plnR2(N*T.pmach)+"/min (target "+plnR2(T.rate)+")"];
@@ -141,7 +173,8 @@ function placerBank(P,item,mk,spMk,o){
   }
   if(mk===2||spMk===2)nt.push("Mk3 belt/splitter ids are not verified");
   const W=Math.max(...items.map(b=>b.x+dim(b).w)),H=Math.max(...items.map(b=>b.y+dim(b).h));
-  return{ok:true,items,lanes:G*tbs[last],per:alls[last],makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:G*tbs[last],rows:Math.max(...gb.flat().map(g=>g.R)),nS,nK,ps,bands:G,tb:tbs[last],t0:Math.max(...t0s),cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o},tbs,stages:n,hubs,nIn:G*tbs[0],nOut:G*tbs[last]};
+  const feed=o.feedOut?{x:hz[n-1].xe-mnx,rows:gb[0][n-1].feedRows.map(y=>y-mny)}:null;
+  return{ok:true,items,lanes:G*tbs[last],per:alls[last],makes:N*T.pmach,note:nt,mod:!!o.mod,box:BX,mk,pitch:H+1,w:W,h:H,bank:true,trunks:G*tbs[last],rows:Math.max(...gb.flat().map(g=>g.R)),nS,nK,ps,bands:G,tb:tbs[last],t0:Math.max(...t0s),cuts:sg.cuts.map(c=>c-mnx),src:{P,item,mk,spMk,o},tbs,stages:n,hubs,nIn:G*tbs[0],nOut:G*tbs[last],feed};
 }
 function placerPlan(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0,pr=plnProto(),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
