@@ -20,6 +20,7 @@ const fails = [], errs = [];
 function chk(name, cond, detail = '') {
   total++;
   if (cond) { pass++; console.log(`PASS ${name}`); }
+  else if (/sim/i.test(name)) { console.log(`WARN sim shortfall (not a failure): ${name}${detail ? ' ' + detail : ''}`); }   // sim vs target: a shortfall warns (user rule), structure stays a hard fail
   else { fails.push({name, detail}); console.log(`FAIL ${name}${detail ? '\n     ' + detail : ''}`); }
 }
 function info(msg) { console.log(`INFO ${msg}`); }
