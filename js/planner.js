@@ -9,15 +9,17 @@ const plnCico=c=>{const b=plnCb(c),d=b&&def(b.id),u=d&&iurl(d.icon);return u?`<i
 // mk: 0..2 index into MKS (belt). ovr={sp,bal}: splitter/balancer Mk index or null (follow belt). pick={item:recipeKey}.
 // opts.proto (default false): false ignores the Protomatter chain (see plnBy). opts.enr (default false): false picks plain-ore recipes by default, true picks the recipe that consumes enriched ores when there is one; an explicit pick always wins.
 const PLN_ENR=/^ITEM_Enriched\w*Ore$/;
-function plan(item,rate,mk,ovr,pick,opts){
+// a recipe loop is retried once with recipes that do not feed back into the stack; the loop plan is kept only when every choice loops
+function plan(item,rate,mk,ovr,pick,opts){const P=planOnce(item,rate,mk,ovr,pick,opts,false);if(!P.cycle)return P;const Q=planOnce(item,rate,mk,ovr,pick,opts,true);return Q.cycle?P:Q}
+function planOnce(item,rate,mk,ovr,pick,opts,avoid){
   ovr=ovr||{};pick=pick||{};opts=opts||{};
   const by=plnBy(!!opts.proto),nodes={},edges=[],st={cycle:false},cap=i=>MKS[i][1];
   const find=it=>{const l=by.get(it)||[];return l.find(x=>rk(x.r)===pick[it])||l.find(x=>x.r.i.some(([y])=>PLN_ENR.test(y))===!!opts.enr)||l[0]||null};
   const ex=(it,rt,stack)=>{
-    if(stack.has(it)){st.cycle=true;return}
+    if(stack.has(it)){st.cycle=true;if(!st.loop){const a=[...stack];st.loop=a.slice(a.indexOf(it)).concat([it])}return}
     const n=nodes[it]||(nodes[it]={item:it,rate:0,rec:null,crafter:null,alts:(by.get(it)||[]).length,pmach:null,machines:0,util:null,in:[]});
     n.rate+=rt;
-    const c=find(it);if(!c)return;
+    const pref=[find(it),...(by.get(it)||[])].filter(Boolean),c=(avoid&&stack.size?pref.find(x=>!x.r.i.some(([y])=>stack.has(y))):null)||find(it);if(!c)return;
     n.rec=c.r;n.crafter=c.c;stack.add(it);
     c.r.i.forEach(([x,q])=>{const f=q*rt/c.r.o[1];edges.push({from:x,to:it,flow:f});ex(x,f,stack)});
     stack.delete(it);
@@ -39,7 +41,7 @@ function plan(item,rate,mk,ovr,pick,opts){
     return {from:e.from,to:e.to,flow:e.flow,m,belts,fits,split,warn,note,label:plnR2(e.flow)+" items/min, "+belts+" belts ("+MKS[mk][0]+")"};
   });
   E.forEach(e=>{if(e.to!=null)nodes[e.to].in.push(e)});
-  return {nodes,edges:E,raw:Object.values(nodes).filter(n=>!n.rec),cycle:st.cycle};
+  return {nodes,edges:E,raw:Object.values(nodes).filter(n=>!n.rec),cycle:st.cycle,loop:st.loop};
 }
 function plnDraw(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0;
