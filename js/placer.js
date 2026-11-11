@@ -673,8 +673,8 @@ function placerPreview(L){
 // progress bar + text while the block search runs; shown only after 150 ms, hidden when done or cancelled
 function plcProg(v,show){let e=document.getElementById("plcProg");
   if(!e){e=document.createElement("div");e.id="plcProg";e.innerHTML='<progress max="100" value="0" style="width:100%;height:6px"></progress><div style="font-size:12px"></div>';e.style.display="none";$("plnPrevErr").before(e)}
-  const pct=v.phase===1?v.n/v.total*30:30+70*v.n/v.total,nm=BASE[v.cls].name;
-  e.querySelector("progress").value=pct;e.lastChild.textContent="Trying "+nm+", "+v.G+" band(s) ("+v.n+" of "+v.total+") - "+Math.round(pct)+"%";
+  const pct=v.phase===1?v.n/v.total*30:30+70*v.n/v.total,sz=["1x1","2x1","2x2"][PL_STD.map(plcCls).indexOf(v.cls)]||"";
+  e.querySelector("progress").value=pct;e.lastChild.textContent="Trying "+sz+", "+v.G+" band(s) ("+v.n+" of "+v.total+") - "+Math.round(pct)+"%";
   if(show)e.style.display="block"}
 function plcProgHide(){const e=document.getElementById("plcProg");if(e)e.style.display="none"}
 function plcFinish(L){
