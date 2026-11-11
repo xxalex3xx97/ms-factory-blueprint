@@ -547,11 +547,13 @@ function placerCut(L,cls){
 function placerTile(L,ok){
   try{return placerTileX(L,ok)}catch(e){return{ok:false,why:"internal error while fitting the blocks ("+e.message+")",blocks:[]}}
 }
-function placerTileX(L,ok){
+function placerTileX(L,ok){const g=placerTileGen(L,ok);for(;;){const s=g.next();if(s.done)return s.value}}
+// one (block type, G) run per step: the preview yields between steps so a huge plan does not freeze the page
+function* placerTileGen(L,ok){
   let best=null,why="";
   const Gs=PLC_G?[PLC_G]:Array.from({length:L.bank?L.t0:1},(_,i)=>i+1);
-  PL_STD.forEach((nm,i)=>{if(!ok[i])return;const cls=plcCls(nm);
-    for(const G of Gs){
+  for(let i=0;i<PL_STD.length;i++){if(!ok[i])continue;const cls=plcCls(PL_STD[i]);
+    for(const G of Gs){yield 1;
       const run1=(sep,novc)=>{PLC_NOVC=novc;let L2;try{L2=L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk),G,sep}):L}finally{PLC_NOVC=false}
         return L2.ok?{...placerCut(L2,cls),L2}:{ok:false,why:L2.why}};
       // 3 inputs: variant C is preferred; when its wall rows cannot be cut, the same stage is laid out with variant A
@@ -564,7 +566,7 @@ function placerTileX(L,ok){
       r.G=G;r.L=r.L2;
       const sq=q=>Math.abs(q.cols-q.rows),ev=q=>q.L.even!==false;   // even bands first (existing plans unchanged); uneven bands only when no even band count fits
       if(!best||(ev(r)&&!ev(best))||(ev(r)===ev(best)&&(r.blocks.length<best.blocks.length||(r.blocks.length===best.blocks.length&&(sq(r)<sq(best)||(sq(r)===sq(best)&&G<best.G))))))best=r;
-    }});
+    }}
   return best||{ok:false,why:"Does not fit: "+why};
 }
 function placerPaste(){
@@ -616,16 +618,19 @@ function placerBox(w,h){const d=$("plnPrevMap").getContext("2d").getImageData(0,
   for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(d[(y*w+x)*4+3]>=140){if(x<l)l=x;if(x>r)r=x;if(y<t)t=y;if(y>b)b=y}
   return r<0?null:{l,t,r:r+1,b:b+1}}
 // pass 1: layout extents + PLC_PAD; pass 2: scale so the measured drawn box (shells, doorways, items) fills the view minus 12px, centred
-function placerFitView(){if(!plcL)return;const {w,h}=placerSize(),E=plcExt(plcTT()),ew=E.w+2*PLC_PAD,eh=E.h+2*PLC_PAD;
+function placerFitView(){if(!plcL)return;plcCache=null;const {w,h}=placerSize(),E=plcExt(plcTT()),ew=E.w+2*PLC_PAD,eh=E.h+2*PLC_PAD;
   const s=Math.min((w-24)/ew,(h-24)/eh);plcV.z=Math.min(60,Math.max(.01,s/CELLS.F));let k=CELLS.F*plcV.z;plcV.ox=(w-ew*k)/2+PLC_PAD*k;plcV.oy=(h-eh*k)/2+PLC_PAD*k;
   placerShot();
   const bx=placerBox(w,h);if(!bx)return;
   const qx=(bx.l+bx.r)/2-plcV.ox,qy=(bx.t+bx.b)/2-plcV.oy,f=Math.min((w-24)/(bx.r-bx.l),(h-24)/(bx.b-bx.t));
   plcV.z=Math.min(60,Math.max(.01,plcV.z*f));const r=CELLS.F*plcV.z/k;
   plcV.ox=w/2-qx*r;plcV.oy=h/2-qy*r;placerShot()}
+// last full render (offscreen copy) + its view: while panning at the same zoom the copy is shifted; a full repaint follows when the pan stops
+let plcCache=null,plcIdle=0;
 function placerShot(){
   const L=plcL;if(!L||!$("plnPrev").open)return;
   const {w,h}=placerSize(),T=plcTT();
+  if(plcCache&&plcCache.z===plcV.z&&plcCache.w===w&&plcCache.h===h&&plcCache.T===T){const g=$("plnPrevMap").getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.drawImage(plcCache.c,plcV.ox-plcCache.ox,plcV.oy-plcCache.oy);return}
   const sv={S:S.blocks,view,layer,V,W,H,dpr,sel,active,pasting,drag,ugPend,mode,SM,OV,hoverIn,cw:cv.width,ch:cv.height};PLC_PREV=true;
   try{
     S.blocks=[...T.blocks.map((q,i)=>({id:i+1,cls:q.cls,x:q.x,y:q.y,h:0,rot:0,pid:0})),...T.ms.map((it,i)=>({...it,id:T.blocks.length+i+1,h:0}))];
@@ -633,14 +638,25 @@ function placerShot(){
     plcSetSize(cv,w,h);
     paint();
     const g=$("plnPrevMap").getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,w,h);g.drawImage(cv,0,0);
+    {const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage($("plnPrevMap"),0,0);plcCache={c,z:plcV.z,w,h,ox:plcV.ox,oy:plcV.oy,T}}
   }finally{
     S.blocks=sv.S;view=sv.view;layer=sv.layer;V=sv.V;W=sv.W;H=sv.H;dpr=sv.dpr;sel=sv.sel;active=sv.active;pasting=sv.pasting;drag=sv.drag;ugPend=sv.ugPend;mode=sv.mode;SM=sv.SM;OV=sv.OV;hoverIn=sv.hoverIn;SV++;
     cv.width=sv.cw;cv.height=sv.ch;paint();PLC_PREV=false;
   }
 }
+let plcTok=0;   // preview token: a new preview or a closed dialog cancels the running block search
 function placerPreview(L){
   plcBig=false;$("plnPrevBig").textContent="";$("plnPlace").textContent="Place";
-  const ok=placerBk();plcT=ok.some(Boolean)?placerTile(L,ok):null;
+  const ok=placerBk();plcT=null;
+  if(!ok.some(Boolean))return plcFinish(L);
+  const tok=++plcTok,g=placerTileGen(L,ok);$("plnPlace").disabled=true;
+  // runs steps synchronously for up to 200 ms (small plans finish in the same call as before), then yields
+  const step=()=>{if(tok!==plcTok)return;let s,t0=performance.now();try{do{s=g.next()}while(!s.done&&performance.now()-t0<200)}catch(e){s={done:true,value:{ok:false,why:"internal error while fitting the blocks ("+e.message+")",blocks:[]}}}
+    if(!s.done){$("plnPrevErr").textContent="Searching block sizes...";setTimeout(step,0);return}
+    plcT=s.value;plcFinish(L)};
+  step();
+}
+function plcFinish(L){
   const src=plcT&&plcT.ok?plcT.ms:L.items,k={mach:0,belt:0,spl:0,box:0,ug:0},
     kd=b=>b.rec?"mach":PLC_UG.includes(b.cls)?"ug":PLC_BELT.includes(b.cls)?"belt":PLC_SPL.includes(b.cls)?"spl":"box";
   src.forEach(b=>k[kd(b)]++);
@@ -659,7 +675,7 @@ function placerPlace(){
   const L=plcL;if(!L)return;
   const ok=placerBk();
   if(ok.some(Boolean)){
-    const T=placerTile(L,ok);
+    const T=plcT||placerTile(L,ok);
     if(!T.ok){$("plnPrevErr").textContent=T.why;return}
     if(T.blocks.length>PLC_BIG&&!plcBig){plcBig=true;$("plnPrevBig").textContent="This factory needs "+T.cols+" x "+T.rows+" blocks ("+T.blocks.length+" blocks). Build it, or lower the output / change belt, splitter or buffer.";$("plnPlace").textContent="Build it";return}
     plcL=null;$("plnPrev").close();
@@ -678,13 +694,13 @@ const plcDo=()=>{if(!plcRaf)plcRaf=requestAnimationFrame(()=>{plcRaf=0;placerSho
 const plcP=e=>{const r=$("plnPrevMap").getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
 const plcZ=(p,f)=>{const z0=plcV.z,z=Math.min(60,Math.max(.01,z0*f));plcV.ox=p.x-(p.x-plcV.ox)*(z/z0);plcV.oy=p.y-(p.y-plcV.oy)*(z/z0);plcV.z=z;plcDo()};
 $("plnBuild").onclick=placerGo;$("plnPlace").onclick=placerPlace;
-$("plnCancel").onclick=()=>$("plnPrev").close();$("plnPrev").addEventListener("close",()=>{plcL=null;plcT=null});
+$("plnCancel").onclick=()=>$("plnPrev").close();$("plnPrev").addEventListener("close",()=>{plcL=null;plcT=null;plcTok++});
 $("plnPrevMap").addEventListener("wheel",e=>{e.preventDefault();plcZ(plcP(e),e.deltaY<0?1.12:1/1.12)},{passive:false});
 let plcSt=null;
 const plcM=$("plnPrevMap");
 plcM.addEventListener("pointerdown",e=>{plcM.setPointerCapture(e.pointerId);plcSt={x:e.clientX,y:e.clientY,ox:plcV.ox,oy:plcV.oy}});
 plcM.addEventListener("pointermove",e=>{if(!plcSt)return;plcV.ox=plcSt.ox+(e.clientX-plcSt.x);plcV.oy=plcSt.oy+(e.clientY-plcSt.y);plcDo()});
-const plcEnd=()=>{plcSt=null};plcM.addEventListener("pointerup",plcEnd);plcM.addEventListener("pointercancel",plcEnd);
+const plcEnd=()=>{plcSt=null;plcCache=null;plcDo()};   // pan stopped: full repaintplcM.addEventListener("pointerup",plcEnd);plcM.addEventListener("pointercancel",plcEnd);
 $("plnZi").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1.25)};
 $("plnZo").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1/1.25)};
 $("plnZf").onclick=()=>placerFitView();
