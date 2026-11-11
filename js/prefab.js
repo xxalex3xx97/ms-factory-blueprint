@@ -221,27 +221,36 @@ function pfChain(P,item,mk,spMk,o={}){
     // machines per column: the most that fit the floor (as pfCompose) and the belt cap; several columns share one out row
     let mh=Math.min(N,mcap);while(mh>1){const C=pfCol(cls,k,flows,mh,mk);if(C.ok===false||C.h+SH<=Fh-PF_CORR)break;mh--}
     const sizes=[];for(let r=N;r>0;r-=mh)sizes.push(Math.min(mh,r));
-    const outF=P.edges.filter(e=>e.from===y).reduce((a,e)=>a+e.flow,0);
-    const C=sizes.length===1?pfCol(cls,k,flows,N,mk):pfColumns(cls,k,flows,sizes,mk,outF);
-    if(C.ok===false)return no(C.why);
-    if(C.h+SH>Fh-PF_CORR)return no('chain stage taller than the floor minus corridor rows (not built)');
-    const dx=x0,fedSet=new Set(S.ins.filter(i=>P.nodes[i]&&P.nodes[i].crafter)),isHead=q=>q.cls===PLC_BOX&&q.ct&&q.ct.length;
-    // every trunk head of a crafted input becomes a corridor from its upstream sink; raw heads stay as source containers
-    C.items.forEach(q=>{
-      if(isHead(q)&&fedSet.has(q.ct[0].item))return;
-      const o2={...q,x:q.x+dx};if(q.cls===cls)o2.rec=rec;items.push(o2);
-    });
-    if(y===order[0])C.items.filter(q=>isHead(q)&&!fedSet.has(q.ct[0].item)).forEach((h,j)=>ports.push({edge:'N',off:h.x+dx,dir:'in',belts:1,slot:j,mk}));
-    const sk=C.items.find(q=>q.cls===PLC_BOX&&q.y===0&&q.ct&&!q.ct.length);
-    sink.set(y,{x:sk.x+dx});
+    const outF=P.edges.filter(e=>e.from===y).reduce((a,e)=>a+e.flow,0),fo=outF/N;
+    // out groups (step 7e): consecutive columns whose output fits one belt; each group = one out row + one out container (sink)
+    const groups=[];for(const s of sizes){const g=groups[groups.length-1];if(g&&(g.reduce((a,b)=>a+b,0)+s)*fo<=cap+1e-9)g.push(s);else groups.push([s])}
+    const fedSet=new Set(S.ins.filter(i=>P.nodes[i]&&P.nodes[i].crafter)),isHead=q=>q.cls===PLC_BOX&&q.ct&&q.ct.length;
+    const sinks=[],heads=new Map();   // heads: crafted input -> [{h, C, dx}] over all groups of this stage
+    for(const gs of groups){
+      const C=gs.length===1?pfCol(cls,k,flows,gs[0],mk):pfColumns(cls,k,flows,gs,mk,gs.reduce((a,b)=>a+b,0)*fo);
+      if(C.ok===false)return no(C.why);
+      if(C.h+SH>Fh-PF_CORR)return no('chain stage taller than the floor minus corridor rows (not built)');
+      const dx=x0;
+      // every trunk head of a crafted input becomes a corridor from its upstream sink; raw heads stay as source containers
+      C.items.forEach(q=>{
+        if(isHead(q)&&fedSet.has(q.ct[0].item)){(heads.get(q.ct[0].item)||heads.set(q.ct[0].item,[]).get(q.ct[0].item)).push({h:q,C,dx});return}
+        const o2={...q,x:q.x+dx};if(q.cls===cls)o2.rec=rec;items.push(o2);
+      });
+      if(y===order[0])C.items.filter(q=>isHead(q)&&!fedSet.has(q.ct[0].item)).forEach(h=>ports.push({edge:'N',off:h.x+dx,dir:'in',belts:1,slot:ports.length,mk}));
+      const sk=C.items.find(q=>q.cls===PLC_BOX&&q.y===0&&q.ct&&!q.ct.length);
+      sinks.push({x:sk.x+dx,flow:gs.reduce((a,b)=>a+b,0)*fo});
+      if(y===item)ports.push({edge:'N',off:sk.x+dx,dir:'out',belts:1,slot:-1,mk});
+      x0=dx+Math.max(C.w,...C.items.map(q=>q.x+dim(q).w))+PF_GAP;
+    }
+    sink.set(y,sinks);
     for(const i of fedSet){
-      const hs=C.items.filter(q=>isHead(q)&&q.ct[0].item===i),k0=nUse.get(i)||0;
+      const hs=heads.get(i)||[],k0=nUse.get(i)||0;
       if(k0+hs.length>2)return no('more than two consumers of one stage (not built)');
       nUse.set(i,k0+hs.length);
-      hs.forEach((h,t)=>routes.push({sx:sink.get(i).x+k0+t,tx:h.x+dx,item:i,tTop:Math.min(...C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.y>0&&q.x===h.x).map(q=>q.y))}));
+      hs.forEach((h,t)=>routes.push({sx:sink.get(i)[0].x+k0+t,tx:h.h.x+h.dx,item:i,tTop:Math.min(...h.C.items.filter(q=>PLC_BELT.includes(q.cls)&&q.y>0&&q.x===h.h.x).map(q=>q.y))}));
     }
-    if(y===item){ports.push({edge:'N',off:sk.x+dx,dir:'out',belts:1,slot:-1,mk});makes=N*T.pmach}
-    per.push(N);x0=dx+Math.max(C.w,...C.items.map(q=>q.x+dim(q).w))+PF_GAP;
+    if(y===item)makes=N*T.pmach;
+    per.push(N);
   }
   // corridor rows (row r -> R = -2-r; larger r = further north). Rows are shared when x-spans do not overlap. A corridor whose riser or descent sits right next to another corridor's corner must lie north of it (a UG cannot start or end on a corner); every other crossing goes under with a UG pair.
   const n=routes.length,rowsIv=[],rowOf=[],busy=[],key=(x,y)=>x+','+y,occ=new Set(),cells=[];
