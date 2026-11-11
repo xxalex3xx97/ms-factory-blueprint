@@ -553,6 +553,10 @@ function placerTileX(L,ok){const g=placerTileGen(L,ok);for(;;){const s=g.next();
 // One search step per yield (the preview shows progress and stays responsive). Phase 1: the unlimited layout of every (block type, G) and a tile estimate from it (no cutting).
 // Phase 2: cut the candidates in estimate order and stop once the best found is no worse than the next estimate.
 // Choice rule unchanged: even bands first, then fewest blocks, then squarest, then smaller G, then earlier block type.
+// One search step per yield (the preview shows progress and stays responsive). Phase 1: the unlimited layout of every (block type, G) and a tile estimate from it (no cutting).
+// Fast path: when the biggest block type's best estimate is within 30% of the best estimate of any type, cut its candidates in estimate order and accept the first even-band cut that succeeds.
+// Otherwise (or when no fast candidate succeeds): cut all candidates in estimate order, stop once the best found is no worse than the next estimate.
+// Choice rule (old path): even bands first, then fewest blocks, then squarest, then smaller G, then earlier block type.
 function* placerTileGen(L,ok){
   const Gs=PLC_G?[PLC_G]:Array.from({length:L.bank?L.t0:1},(_,i)=>i+1),pre=new Map(),cands=[];
   const lay=(cls,G,sep)=>L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk),G,sep}):L;
@@ -561,20 +565,33 @@ function* placerTileGen(L,ok){
       const L2=lay(cls,G,false);pre.set(i+"|"+G,L2);
       cands.push({i,cls,G,ord:cands.length,est:L2.ok?Math.ceil(L2.w/f.w)*Math.ceil(L2.h/f.h):Infinity})}}
   const sq=q=>Math.abs(q.cols-q.rows),ev=q=>q.L.even!==false;   // even bands first (existing plans unchanged); uneven bands only when no even band count fits
-  const order=cands.slice().sort((a,b)=>a.est-b.est||a.ord-b.ord),fails=[];
-  let best=null;
-  for(let k=0;k<order.length;k++){const c=order[k],G=c.G;
-    yield {phase:2,n:k+1,total:order.length,G,cls:c.cls};
+  // one candidate cut: {r} on success, {fail} with the reason otherwise
+  const runC=c=>{const G=c.G;
     const run1=(sep,novc)=>{PLC_NOVC=novc;let L2;try{L2=(!sep&&!novc&&pre.get(c.i+"|"+G))||lay(c.cls,G,sep)}finally{PLC_NOVC=false}
       return L2.ok?{...placerCut(L2,c.cls),L2}:{ok:false,why:L2.why}};
     // 3 inputs: variant C is preferred; when its wall rows cannot be cut, the same stage is laid out with variant A
     const run=sep=>{const r1=run1(sep,false);return !r1.ok&&L.bank&&L.three?run1(sep,true):r1};
     let r=run(false);   // legacy layout first; sep layout (B chain segmented, on the left) only when legacy fails or overlaps
     if(L.bank&&L.two&&(!r.ok||r.ov||r.span)){const r2=run(true);if(r2.ok&&!r2.ov&&!r2.span)r=r2}
-    if(r.ov)fails[c.ord]="internal: overlap";
-    else if(r.span)fails[c.ord]="internal: underground pair longer than the belt span";
-    else if(!r.ok)fails[c.ord]=r.why;
-    else{r.G=G;r.L=r.L2;r.ord=c.ord;
+    if(r.ov)return{fail:"internal: overlap"};
+    if(r.span)return{fail:"internal: underground pair longer than the belt span"};
+    if(!r.ok)return{fail:r.why};
+    r.G=G;r.L=r.L2;r.ord=c.ord;return{r}};
+  // fast path: biggest ticked type at its cheapest estimate, unless some type's estimate is at least 30% smaller
+  let bigI=-1,minEst=Infinity;cands.forEach(c=>{if(c.est<Infinity&&c.i>bigI)bigI=c.i;if(c.est<minEst)minEst=c.est});
+  const bigC=cands.filter(c=>c.i===bigI&&c.est<Infinity).sort((a,b)=>a.est-b.est||a.ord-b.ord);
+  if(bigC.length&&!(minEst<=0.7*bigC[0].est)){
+    for(let k=0;k<bigC.length;k++){yield {phase:2,n:k+1,total:bigC.length,G:bigC[k].G,cls:bigC[k].cls};
+      const x=runC(bigC[k]);if(x.r&&ev(x.r))return x.r}
+  }
+  // full path: every candidate in estimate order, stop when proven
+  const order=cands.slice().sort((a,b)=>a.est-b.est||a.ord-b.ord),fails=[];
+  let best=null;
+  for(let k=0;k<order.length;k++){const c=order[k],G=c.G;
+    yield {phase:2,n:k+1,total:order.length,G,cls:c.cls};
+    const x=runC(c);
+    if(x.fail)fails[c.ord]=x.fail;
+    else{const r=x.r;
       if(!best||(ev(r)&&!ev(best))||(ev(r)===ev(best)&&(r.blocks.length<best.blocks.length||(r.blocks.length===best.blocks.length&&(sq(r)<sq(best)||(sq(r)===sq(best)&&(G<best.G||(G===best.G&&r.ord<best.ord))))))))best=r;
       const nx=order[k+1];if(nx&&ev(best)&&best.blocks.length<=nx.est)break}   // proven: no remaining estimate beats the best found
   }
