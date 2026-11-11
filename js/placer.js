@@ -12,14 +12,29 @@ function plcMach(cls,inN,outN){
     if(i&&o){const e=dim({cls,rot:r});return{rot:r,inP:i,outP:o,off:ps.filter(p=>p!==i&&p!==o),w:e.w,h:e.h}}}
   return null;
 }
+// 2-input machine variant: ML (side 1) takes both inputs on its E face and outputs on W; MR (side -1) mirrors it. Null + reason when a face has < 2 input ports.
+function plcMach2(cls,side){
+  for(let r=0;r<4;r++){const ps=plcPp(cls,r),ins=ps.filter(p=>p.nx===side&&p.dir!=="out").sort((a,b)=>a.y-b.y),outs=ps.filter(p=>p.nx===-side&&p.dir!=="in");
+    if(ins.length>=2&&outs.length>=1){const i2=ins.slice(0,2),o=outs[0],e=dim({cls,rot:r});
+      return{rot:r,ins:i2,outP:o,off:ps.filter(p=>!i2.includes(p)&&p!==o),w:e.w,h:e.h}}}
+  return null;
+}
 function plcSpl(cls,rot){
   const ps=plcPp(cls,rot),e=dim({cls,rot}),f=rot===1?[0,1]:[0,-1],i=ps.find(p=>p.dir==="in"),o=ps.filter(p=>p.dir==="out");
   return i&&e.w===1&&e.h===1&&i.nx===-f[0]&&i.ny===-f[1]&&o.some(p=>p.nx===f[0]&&p.ny===f[1])&&o.some(p=>p.nx===1&&p.ny===0)&&o.some(p=>p.nx===-1&&p.ny===0)?{i,o}:null;
 }
-function plcStage(n,eI,eU,mk,spMk){
+function plcStage(n,eI,eU,mk,spMk,eI2){
   const no=why=>({ok:false,why}),cb=plnCb(n.crafter);if(!cb)return no("No machine builds "+plnNm(n.item));
-  const d=def(cb.id),inF=n.pmach*eI.flow/eU.flow,m=Math.floor(MKS[mk][1]/Math.max(n.pmach,inF)+1e-9);
-  if(m<1)return no("One machine needs "+plnR2(Math.max(n.pmach,inF))+"/min but a "+MKS[mk][0]+" belt carries "+MKS[mk][1]+"/min: pick a higher belt Mk");
+  const d=def(cb.id),inF=n.pmach*eI.flow/eU.flow,inF2=eI2?n.pmach*eI2.flow/eU.flow:0,m=Math.floor(MKS[mk][1]/Math.max(n.pmach,inF,inF2)+1e-9);
+  if(m<1)return no("One machine needs "+plnR2(Math.max(n.pmach,inF,inF2))+"/min but a "+MKS[mk][0]+" belt carries "+MKS[mk][1]+"/min: pick a higher belt Mk");
+  if(eI2){   // two inputs: both on one face of each machine column
+    const ML=plcMach2(d.key,1),MR=plcMach2(d.key,-1);
+    if(!ML||!MR)return no("Bank: "+plnNm(n.item)+" machine has no face with 2 input ports (2-input stage needs 2 ports on one face)");
+    if(ML.w!==MR.w||ML.h!==MR.h||ML.ins.map(p=>p.y).join()!==MR.ins.map(p=>p.y).join())return no("Bank: the two machine columns do not line up (input ports on different rows)");
+    if(ML.off.concat(MR.off).some(p=>!p.tg))return no("Bank: machine has an unused port that cannot be disabled");
+    const sc=PLC_SPL[spMk];if(!plcSpl(sc,1)||!plcSpl(sc,3))return no("Bank: splitter ports not as expected (Mk id unverified?)");
+    return{ok:true,n,dk:d.key,inF,m,N:n.machines,ML,MR,w:ML.w,h:ML.h,cin:ML.ins[0].y,Wb:2*ML.w+7,sc,rec:rk(n.rec),two:{ya:ML.ins[0].y,yb:ML.ins[1].y,inF2}}
+  }
   const ML=plcMach(d.key,[1,0],[-1,0]),MR=plcMach(d.key,[-1,0],[1,0]);
   if(!ML||!MR)return no("Bank: the machine needs an input port and an output port on opposite faces");
   if(ML.w!==MR.w||ML.h!==MR.h||ML.inP.y!==MR.inP.y)return no("Bank: the two machine columns do not line up (input ports on different rows)");
