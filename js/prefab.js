@@ -257,12 +257,16 @@ function pfChain(P,item,mk,spMk,o={}){
   };
   for(const y of order)if(sizing(y).why)return no(sizing(y).why);
   // needHub (step 7i): an item needs a hub when its stage has several out groups or more than two consumer heads. heads = one per column of each consumer stage.
-  const needHub=new Map(),tab=[];
+  const needHub=new Map(),tab=[],lvl=new Map();
+  // step 0 debug: level = longest path from the stage to the final item (consumers first)
+  for(const i of [...order].reverse()){let L=0;for(const c of order)if(st.get(c).ins.includes(i))L=Math.max(L,lvl.get(c)+1);lvl.set(i,L)}
   for(const i of order){
     const gN=sizing(i).groups.length,dems=[];
     for(const c of order){if(!st.get(c).ins.includes(i))continue;const rc=sizing(c),fl=rc.flows.find(f=>f.item===i).flow;for(const m of rc.sizes)dems.push(m*fl)}
     const hd=dems.length,nh=i!==item&&(gN>1||hd>2);
-    needHub.set(i,nh);tab.push({item:plnNm(i),groups:gN,heads:hd,demand:dems.join('/'),hub:nh});
+    // band width (step 0 debug): sum of column widths from sizing(i) + PF_GAP between columns
+    const rs=sizing(i),bandW=rs.sizes?rs.sizes.reduce((a,s)=>a+pfCol(rs.cls,rs.k,rs.flows,s,mk).w,0)+PF_GAP*(rs.sizes.length-1):NaN;
+    needHub.set(i,nh);tab.push({item:plnNm(i),level:lvl.get(i),band:bandW,groups:gN,heads:hd,demand:dems.join('/'),hub:nh});
   }
   if(PF_DEBUG)console.table(tab);
   for(const q of tab)if(q.hub&&(q.groups>5||q.heads>8))return no('more than one hub needed for '+q.item+' (groups '+q.groups+', heads '+q.heads+'): '+JSON.stringify(tab));
