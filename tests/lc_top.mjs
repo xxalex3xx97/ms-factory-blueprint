@@ -16,7 +16,8 @@ await pg.waitForFunction(() => window.__fb && typeof lcTop === 'function' && typ
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 const cases = [['Basic Motor', 60, 0, 2, 55], ['Basic Circuits', 10, 0, 0, 0], ['Advanced Circuits', 10, 0, 0, 62], ['Advanced Circuits', 50, 1, 0, 310]];
-const rows = [];
+const rows = [], splits = [];
+let rowsAC50 = null;
 for (const [name, rate, slack, , oldBelts] of cases) {
   const r = await pg.evaluate(([name, rate]) => {
     LC_ENGINE = true;
@@ -53,7 +54,20 @@ for (const [name, rate, slack, , oldBelts] of cases) {
   check(r.nOuts === 1 && r.outEdges === 'S', tag + ': one S out port');
   check(r.sinks === 1, tag + ': single sink container (' + r.sinks + ')');
   rows.push({tag, blocks: r.stat.blocks, size: r.w + 'x' + r.h, belts: r.stat.belts, ug: r.stat.ug, spl: r.stat.spl, boxes: r.boxes, machines: r.stat.machines, bpm: (r.stat.belts / r.stat.machines).toFixed(1), old: oldBelts});
+  const grpsK = ['bCell', 'bRaw', 'bThru', 'bTap', 'bSink', 'bOther'];
+  const gSum = grpsK.reduce((a, k) => a + r.stat[k], 0);
+  check(gSum === r.stat.belts, tag + ': belt groups sum ' + gSum + ' == belts ' + r.stat.belts);
+  if (name !== 'Basic Motor') splits.push({tag, s: r.stat});
+  if (tag === 'Advanced Circuits 50') rowsAC50 = r.stat.rows;
 }
+console.log('belt split (count (%)) | belts | bCell | bRaw | bThru | bTap | bSink | bOther');
+for (const {tag, s} of splits) {
+  const cell = k => s[k] + ' (' + (100 * s[k] / s.belts).toFixed(1) + '%)';
+  console.log([tag, s.belts, cell('bCell'), cell('bRaw'), cell('bThru'), cell('bTap'), cell('bSink'), cell('bOther')].join(' | '));
+}
+console.log('AC50 per row (top-down) | row | width | height | cells | tracks');
+for (let r = rowsAC50.rowW.length - 1; r >= 0; r--)
+  console.log('row ' + r + ' | ' + rowsAC50.rowW[r] + ' | ' + rowsAC50.rowH[r] + ' | ' + rowsAC50.cellsPerRow[r] + ' | ' + rowsAC50.tracksPerRow[r]);
 console.log('tag | blocks | w x h | belts | UG | spl | containers | machines | belts/machine | old belts');
 for (const x of rows) console.log([x.tag, x.blocks, x.size, x.belts, x.ug, x.spl, x.boxes, x.machines, x.bpm, x.old].join(' | '));
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));

@@ -140,8 +140,9 @@ function lcPlan(F,mk){
   // rows top-down
   const taps=[],tracks=[],routes=[];
   let top=1+bh;
+  const rowW=[],rowH=[],cellsPerRow=[],tracksPerRow=[];   // T0 measure: per row index r (0 = final row)
   for(let r=nr-1;r>=0;r--){
-    const rn=nodes.filter(n=>n.row===r),res=new Set(),act=[];
+    const rowTop=top,rn=nodes.filter(n=>n.row===r),res=new Set(),act=[];
     for(const l of lanes)if(l.x!==null&&l.srcRow>r&&l.lastRow<r)res.add(l.x);
     for(const l of lanes)if(l.x!==null&&l.srcRow>r&&l.lastRow<=r)act.push(l);
     const bary=n=>{let s=0,k=0;for(const c of n.cs)for(const it of Object.keys(c.feed||{})){const l=lanes[c.feed[it]];if(l.x!==null){s+=l.x;k++}}return k?s/k:0};
@@ -165,6 +166,7 @@ function lcPlan(F,mk){
     iv.sort((a,b)=>a.lo-b.lo);const last=[];
     for(const t of iv){let k=0;while(last[k]!==undefined&&last[k]>=t.lo-1)k++;last[k]=t.hi;t.col=k}
     const C=last.length,H=C?3*C:2,oy=top+H;
+    tracksPerRow[r]=C;
     for(const t of iv){
       const y=top+1+3*t.col,l=t.l;
       if(l.kind==='jog'){tracks.push({kind:'jog',lane:l.id,y,x0:l.x,x1:t.h,hx:t.h,toCell:t.c.id});routes.push({lane:l.id,toCell:t.c.id,kind:'jog',turns:2,x:t.h});l.y1=oy}
@@ -172,6 +174,9 @@ function lcPlan(F,mk){
     for(const l of lanes)if(l.y1===null&&l.cons.some(q=>cells[q.cell].row===r))l.y1=oy;
     for(const n of rn)for(const c of n.cs){c.oy=oy;if(c.lane!==undefined)lanes[c.lane].y0=oy+c.h}
     top=oy+plcMmax(rn.flatMap(n=>n.cs),c=>c.h);
+    let x0=1e9,x1=-1e9,nc=0;
+    for(const n of rn)for(const c of n.cs){nc++;if(c.ox<x0)x0=c.ox;if(c.ox+c.w>x1)x1=c.ox+c.w}
+    cellsPerRow[r]=nc;rowW[r]=nc?x1-x0:0;rowH[r]=top-rowTop;
   }
   let hh=top+bh,sink=null;const fin=nodes.find(n=>n.row===0);
   if(fin.cs.length>1){const xs=fin.cs.map(c=>c.ox+c.out.x);sink={y:top+1,x0:plcMmin(xs,x=>x),x1:plcMmax(xs,x=>x)};hh=top+3+bh}
@@ -181,7 +186,8 @@ function lcPlan(F,mk){
     for(const l of lanes)if(l.id!==t.lane&&l.x>lo&&l.x<hi&&l.y0!==null&&l.y0<t.y&&l.y1>t.y)ug++;
     for(const u of tracks)if(u!==t&&u.y<t.y&&u.hx>lo&&u.hx<hi&&t.y-u.y<60)ug++}
   const w=Math.max(plcMmax(cells,c=>c.ox+c.w),plcMmax(dock,d=>d.x+bw))+1;
-  return{ok:true,cells:cells.map(c=>({id:c.id,item:c.item,ox:c.ox,oy:c.oy,K:c.K,w:c.w,h:c.h,ins:c.ins,out:c.out,row:c.row})),lanes:lanes.map(l=>({id:l.id,item:l.item,x:l.x,y0:l.y0,y1:l.y1,kind:l.kind,raw:!!l.raw,srcRow:l.srcRow,lastRow:l.lastRow,n:l.cons.length})),taps,tracks,routes,dock,ug,sink,w,h:hh};
+  return{ok:true,cells:cells.map(c=>({id:c.id,item:c.item,ox:c.ox,oy:c.oy,K:c.K,w:c.w,h:c.h,ins:c.ins,out:c.out,row:c.row})),lanes:lanes.map(l=>({id:l.id,item:l.item,x:l.x,y0:l.y0,y1:l.y1,kind:l.kind,raw:!!l.raw,srcRow:l.srcRow,lastRow:l.lastRow,n:l.cons.length})),taps,tracks,routes,dock,ug,sink,w,h:hh,
+    rowStat:{rowW,rowH,cellsPerRow,tracksPerRow}};
 }
 // LC step 6: lcBuild(F,plan,mk,spMk) emits all items; lcTop(P,item,mk,spMk,o) = placerLayout-shaped result (flag LC_ENGINE not consulted here).
 // Crossings are computed exactly: any vertical adapter belt landing on a horizontal adapter belt becomes a UG pair (neighbours at y-1,y+1) and the crossed cell is dropped.
@@ -190,39 +196,45 @@ function lcBuild(F,plan,mk,spMk){
   const items=[],A=[],byItem=new Map(F.nodes.map(n=>[n.item,n]));
   const pN=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='N');
   const cells=plan.cells;
+  // T0 measure: belt source group per emitted belt object (no effect on geometry/items)
+  const grp=new Map(),G=(arr,g)=>{for(const q of arr)grp.set(q,g);return arr};
   for(const c of cells){
     const n=byItem.get(c.item),g=lcCell(n.rec,c.K,mk,c.ox,c.oy,n.cls,n.k,n.flows);
     if(g.ok===false)return no('cell: '+g.why);
-    for(const q of g.items)items.push(q.cls===n.cls?Object.assign(q,{rec:n.rec}):q)}
+    for(const q of G(g.items,'bCell'))items.push(q.cls===n.cls?Object.assign(q,{rec:n.rec}):q)}
   for(const d of plan.dock)items.push({cls:PLC_BOX,x:d.x,y:1,rot:0,ct:[{item:d.item,n:0,inf:true}]});
   // lanes: straight / jog / through with taps
   const oyOf=id=>cells[id].oy;
   for(const l of plan.lanes){
     if(!l.n)continue;
+    const lg=l.raw?'bRaw':'bThru';
     const R=plan.routes.filter(r=>r.lane===l.id),T=plan.taps.filter(t=>t.lane===l.id).sort((a,b)=>a.y-b.y);
     const st=R.filter(r=>r.kind==='straight');
     if(st.length>1)return no('lane '+l.id+' has two straight consumers');
     const ys=st.length?oyOf(st[0].toCell):null;
     if(l.kind==='jog'){
       const j=plan.tracks.find(t=>t.kind==='jog'&&t.lane===l.id);
-      if(j)A.push(...lcJog(l.x,l.y0,j.hx,j.y,oyOf(j.toCell),mk).items);
-      else if(ys!==null)A.push(...lcJog(l.x,l.y0,l.x,0,ys,mk).items);
+      if(j)A.push(...G(lcJog(l.x,l.y0,j.hx,j.y,oyOf(j.toCell),mk).items,lg));
+      else if(ys!==null)A.push(...G(lcJog(l.x,l.y0,l.x,0,ys,mk).items,lg));
       else return no('jog lane '+l.id+' has no route');
       continue}
-    if(!T.length){if(ys===null)return no('lane '+l.id+' has no route');A.push(...lcJog(l.x,l.y0,l.x,0,ys,mk).items);continue}
-    A.push(...lcJog(l.x,l.y0,l.x,0,T[0].y,mk).items);
+    if(!T.length){if(ys===null)return no('lane '+l.id+' has no route');A.push(...G(lcJog(l.x,l.y0,l.x,0,ys,mk).items,lg));continue}
+    A.push(...G(lcJog(l.x,l.y0,l.x,0,T[0].y,mk).items,lg));
     T.forEach((t,i)=>{const yf=i<T.length-1?T[i+1].y:(ys!==null?ys:t.y+1);
-      A.push(...lcTap(l.x,t.y,t.dir,t.hx,yf,oyOf(t.toCell),mk,spMk).items)})}
+      const tp=lcTap(l.x,t.y,t.dir,t.hx,yf,oyOf(t.toCell),mk,spMk).items;
+      for(const q of tp)grp.set(q,q.y===t.y?'bTap':lg);   // horizontal tap row = bTap
+      A.push(...tp)})}
   // final output
   const fin=cells.filter(c=>c.row===0);let outX;
   if(plan.sink){
     const s=plan.sink;
-    for(const c of fin)A.push(...lcJog(c.ox+c.out.x,c.oy+c.h,c.ox+c.out.x,0,s.y,mk).items);
-    A.push(...lcSink(s.x0,s.y,s.x1,mk).items);outX=s.x1;
+    for(const c of fin)A.push(...G(lcJog(c.ox+c.out.x,c.oy+c.h,c.ox+c.out.x,0,s.y,mk).items,'bSink'));
+    A.push(...G(lcSink(s.x0,s.y,s.x1,mk).items,'bSink'));outX=s.x1;
   }else{
     if(fin.length!==1)return no('no sink for '+fin.length+' final cells');
     const c=fin[0];outX=c.ox+c.out.x;
-    A.push({cls:bc,x:outX,y:c.oy+c.h,rot:1},{cls:PLC_BOX,x:outX-pN.x,y:c.oy+c.h+1-pN.y,rot:0,ct:[]});
+    const ob={cls:bc,x:outX,y:c.oy+c.h,rot:1};grp.set(ob,'bSink');
+    A.push(ob,{cls:PLC_BOX,x:outX-pN.x,y:c.oy+c.h+1-pN.y,rot:0,ct:[]});
   }
   // exact UG crossings
   const key=q=>q.y*100000+q.x,H=new Set(),V=new Map();
@@ -236,8 +248,9 @@ function lcBuild(F,plan,mk,spMk){
   for(const q of A){if(drop.has(q))continue;if(mark.has(q)){q.cls=PLC_UG[mk];ug++}items.push(q)}
   let belts=0,spl=0,machines=0;
   const crafters=new Set(F.nodes.map(n=>n.cls));
-  for(const q of items){if(PLC_BELT.includes(q.cls))belts++;else if(PLC_SPL.includes(q.cls))spl++;else if(crafters.has(q.cls))machines++}
-  return{ok:true,items,outX,stat:{belts,ug,spl,blocks:cells.length,machines,lanes:plan.lanes.length}};
+  const bk={bCell:0,bRaw:0,bThru:0,bTap:0,bSink:0,bOther:0};
+  for(const q of items){if(PLC_BELT.includes(q.cls)){belts++;bk[grp.get(q)||'bOther']++}else if(PLC_SPL.includes(q.cls))spl++;else if(crafters.has(q.cls))machines++}
+  return{ok:true,items,outX,stat:Object.assign({belts,ug,spl,blocks:cells.length,machines,lanes:plan.lanes.length},bk)};
 }
 function lcTop(P,item,mk,spMk,o={}){
   try{
@@ -247,6 +260,7 @@ function lcTop(P,item,mk,spMk,o={}){
     const pl=lcPlan(F,mk);if(pl.ok===false)return{ok:false,why:'LC: '+pl.why};
     for(const l of pl.lanes)if(pl.lanes.some(m=>m.item===l.item&&m.raw!==l.raw))return{ok:false,why:'LC: '+plnNm(l.item)+' needs two producers on one head (merge)'};
     const B=lcBuild(F,pl,mk,spMk);if(B.ok===false)return{ok:false,why:'LC: '+B.why};
+    B.stat.rows=pl.rowStat;
     const T=P.nodes[item],BX=o.box||PLC_BOX,items=B.items;
     const w=plcMmax(items,q=>q.x+dim(q).w)+1,h=plcMmax(items,q=>q.y+dim(q).h);
     const ports=[{edge:'S',off:B.outX,dir:'out',belts:1,slot:-1,mk}];
