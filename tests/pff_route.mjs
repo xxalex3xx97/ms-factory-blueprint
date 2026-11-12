@@ -74,7 +74,10 @@ const geo = () => {
 };
 
 // sim: manifold M, source box above, 3 empty sinks below the drops. Returns sink deltas over the last 480 s.
-const simEven = () => {
+// blockFirst: no sink under drop 10, so that belt end is blocked and its splitter output drops out.
+// Cascade semantics: head 10 gets 1/2 of the flow, head 14 gets 1/4, head 18 gets 1/4 (2-way splitters, sinks never block).
+// Demand-limited proof (full heads blocking, whole factory) is slice D3 (whole-factory sim within 5%), not this test.
+const simEven = blockFirst => {
   const DY = 4, raw = [...plnBy(false).keys()].find(i => plnNm(i) === 'Nickel Plates');
   if (raw === undefined) return {refused: 'Nickel Plates not found'};
   const RAW = plnBy(false).get(raw)[0].r.i[0][0];
@@ -86,7 +89,7 @@ const simEven = () => {
   const items = [...r.items];
   items.push({cls: PLC_BOX, x: L0.xp - pS.x, y: L0.yp - 1 - pS.y, rot: 0, ct: [{item: RAW, n: 0, inf: true}]});
   const sinkIdx = [];
-  for (const h of L0.heads) { items.push({cls: PLC_BOX, x: h - pN.x, y: L0.y1 - pN.y, rot: 0, ct: []}); sinkIdx.push(items.length - 1) }
+  for (const h of L0.heads) { if (blockFirst && h === L0.heads[0]) continue; items.push({cls: PLC_BOX, x: h - pN.x, y: L0.y1 - pN.y, rot: 0, ct: []}); sinkIdx.push(items.length - 1) }
   S.blocks = items.map((b, i) => ({id: i + 1, cls: b.cls, x: b.x, y: b.y, h: 0, rot: b.rot, pid: 0, off: b.off, ct: b.ct ? b.ct.map(q => ({...q})) : undefined}));
   try { smSet(true) } catch (e) {}
   simReset && simReset();
@@ -101,14 +104,24 @@ const simEven = () => {
 const g = await pg.evaluate(geo);
 for (const [o, m] of g) check(o, m);
 
-const sim = await pg.evaluate(simEven);
+// (1) infinite sinks: cascade gives 1/2, 1/4, 1/4 (480/240/240 of 960). Documented outcome, not an even split.
+const sim = await pg.evaluate(simEven, false);
 if (sim.refused) check(false, 'sim refused: ' + sim.refused);
 else {
-  const sum = sim.v.reduce((a, b) => a + b, 0), mean = sum / sim.v.length;
-  console.log('sim sink values over last 480 s (item ' + sim.raw + '): ' + sim.v.join(', ') + ' sum ' + sum + ' mean ' + mean.toFixed(1));
-  const even = sim.v.every(v => Math.abs(v - mean) <= 0.15 * mean);
-  check(even, even ? 'sim splitter even (each within 15% of mean)' : 'sim splitter not even: ' + sim.v.join(', '));
+  const sum = sim.v.reduce((a, b) => a + b, 0), share = [0.5, 0.25, 0.25];
+  console.log('sim infinite sinks, sink values over last 480 s (item ' + sim.raw + '): ' + sim.v.join(', ') + ' sum ' + sum);
+  const casc = sim.v.every((v, i) => Math.abs(v - share[i] * sum) <= 0.15 * share[i] * sum);
+  check(casc, casc ? 'sim cascade 2:1:1 (each sink within 15% of 1/2,1/4,1/4)' : 'sim cascade not 2:1:1: ' + sim.v.join(', '));
   check(sum >= 0.95 * sim.cap * 8, 'sim sum ' + sum + ' >= 95% of belt cap ' + sim.cap + ' x 8 min (' + (0.95 * sim.cap * 8) + ')');
+}
+// (2) drop-out: no sink under drop 10 (blocked belt end), the other two drops must take the full flow and split it equally.
+const sb = await pg.evaluate(simEven, true);
+if (sb.refused) check(false, 'sim drop-out refused: ' + sb.refused);
+else {
+  const sum = sb.v.reduce((a, b) => a + b, 0), mean = sum / sb.v.length;
+  console.log('sim drop-out (drop 10 blocked), sink values over last 480 s: ' + sb.v.join(', ') + ' sum ' + sum);
+  check(sb.v.length === 2 && sb.v.every(v => Math.abs(v - mean) <= 0.15 * mean), 'sim drop-out: two remaining drops equal within 15% (' + sb.v.join(', ') + ')');
+  check(sum >= 0.95 * sb.cap * 8, 'sim drop-out sum ' + sum + ' >= 95% of belt cap ' + sb.cap + ' x 8 min (' + (0.95 * sb.cap * 8) + ')');
 }
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
 await br.close();
