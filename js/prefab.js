@@ -324,6 +324,48 @@ const pfMod=(v,c)=>((v%c)+c)%c;
 const pfFitX=(x,w,dummy)=>{const c=PF_GRID.cw,m=pfMod(x,c);return dummy?(m>=2&&m<=c-3):(m>=1&&m+w<=c-1)};
 const pfFitY=(y,h)=>{const c=PF_GRID.ch,m=pfMod(y,c);return m>=1&&m+h<=c-1};
 const pfTrackOk=(t,y0)=>{const m=pfMod(t,PF_GRID.ch);return t>=y0+2&&m>=2&&m<=PF_GRID.ch-3};
+// STEP 4 (pfBands gutter router, inert: no caller). links=[{id,item,sx,tx}]: leaves a source port at column sx going south at row y0, must enter a target terminal at column tx going south at row y1 (gutter rows y0..y1-1). Route = top leg south -> track row (east rot 0 / west rot 2) -> descent south. Same column (sx==tx) = straight. A.sx==B.tx => A track above B. A leg that meets another link's track span goes under it: UG pair at t-1,t+1 (cell t skipped). Returns {ok:true,items,tracks} or {ok:false,why}.
+function pfGutter(links,y0,y1,mk){
+  const no=why=>({ok:false,why}),bc=PLC_BELT[mk],ug=PLC_UG[mk],cw=PF_GRID.cw;
+  if(def(ug).maxApart<3)return no('gutter UG too short');
+  const sxs=new Set(),txs=new Set();
+  for(const l of links){if(sxs.has(l.sx)||txs.has(l.tx))return no('gutter cells clash');sxs.add(l.sx);txs.add(l.tx)}
+  const T=links.filter(l=>l.sx!==l.tx).map(l=>({...l,lo:Math.min(l.sx,l.tx),hi:Math.max(l.sx,l.tx),rk:0,ti:-1,t:0}));
+  let ch=true,n=0;
+  while(ch&&n<=T.length){ch=false;n++;for(const a of T)for(const b of T)if(a!==b&&a.sx===b.tx&&b.rk<a.rk+1){b.rk=a.rk+1;ch=true}}
+  if(ch)return no('gutter order cycle');
+  const rows=[];for(let t=y0+2,last=-Infinity;t<=y1-2;t++)if(pfTrackOk(t,y0)&&t-last>=3){rows.push(t);last=t}
+  const occ=[];
+  for(const l of [...T].sort((a,b)=>a.rk-b.rk||a.lo-b.lo)){
+    let i=Math.max(0,...T.filter(a=>a!==l&&a.sx===l.tx).map(a=>a.ti+1));
+    while(occ[i]&&occ[i].some(m=>m.lo<=l.hi&&l.lo<=m.hi))i++;
+    if(i>=rows.length)return no('gutter too short');
+    (occ[i]=occ[i]||[]).push(l);l.ti=i;l.t=rows[i];
+  }
+  const cell=new Map();let bad=null;
+  const put=(x,y,c,rot)=>{const k=x+','+y;if(cell.has(k)){bad='gutter cells clash';return}cell.set(k,{cls:c,x,y,rot})};
+  // one south leg in column c, rows a..b; goes under every other link's track it meets
+  const leg=(l,c,a,b)=>{
+    const X=[];
+    for(const m of T){
+      if(m===l||c<m.lo||c>m.hi||m.t<a||m.t>b)continue;
+      if(c===m.sx||c===m.tx||m.t-1<a||m.t+1>b){bad='gutter cells clash';return}
+      const q=pfMod(c,cw);if(q===0||q===cw-1){bad='gutter UG on wall column';return}
+      X.push(m.t);
+    }
+    for(let y=a;y<=b;y++){if(X.includes(y))continue;put(c,y,X.some(t=>y===t-1||y===t+1)?ug:bc,1)}
+  };
+  links.filter(l=>l.sx===l.tx).forEach(l=>leg(l,l.sx,y0,y1-1));
+  for(const l of T){
+    const r=l.tx>l.sx?0:2,d=r?-1:1;
+    leg(l,l.sx,y0,l.t-1);
+    for(let x=l.sx;x!==l.tx;x+=d)put(x,l.t,bc,r);
+    put(l.tx,l.t,bc,1);
+    leg(l,l.tx,l.t+1,y1-1);
+  }
+  if(bad)return no(bad);
+  return{ok:true,items:[...cell.values()],tracks:occ.length};
+}
 // SEAMS (step 6C): placerCut cuts a layout into floor tiles, each cut column c with c-s in [LO,FW] (LO = the 2x2 block's wall minimum, FW = its floor width). When no free column exists there, insert k blank columns (plcBlank: crossing east belts stretched, UG pair across the seam) and cut at a free column of the new layout. Greedy, same search order as placerCut, so the cut it finds is the one checked here. Only inserts when no free column exists (layouts that already cut are unchanged). Ports on N/S edges shift with the columns.
 function pfSeams(A,mk){
   const big=plcCls(PL_STD[PL_STD.length-1]),FW=floorRect({cls:big,x:0,y:0,h:0,rot:0}).w,LO=Math.max(2,dim({cls:big,rot:0}).w*FC+2-def(PLC_UG[mk]).maxApart),mx=def(PLC_UG[mk]).maxApart;
