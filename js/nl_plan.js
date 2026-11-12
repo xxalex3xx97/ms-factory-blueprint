@@ -14,26 +14,28 @@ function nlAssign(lanes,heads,cap){
 function nlCellU(n){let cum=0;return n.cells.map(g=>{const u=(cum+g.K/2)/n.N;cum+=g.K;return u})}
 function nlWBase(F,bw){let m=0;const rs=[];for(const n of F.nodes){rs[n.row]=(rs[n.row]||0)+n.cells.reduce((a,g)=>a+g.w+1,0)}
   for(const v of rs)if(v>m)m=v;let d=0;for(const q of F.raws)d+=Math.max(q.belts,Math.ceil(q.rate/(F.cap/2)-1e-9))*(bw+1);return Math.max(m,d)+2}
-function nlPlan1(F,mk,hint){
+function nlPlan1(F,mk,hint,W){
   const no=why=>({ok:false,why}),bw=def(PLC_BOX).w,bh=def(PLC_BOX).h,cap=F.cap;
   const sp=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).filter(p=>p.f==='S').sort((a,b)=>a.x-b.x)[0];
   const nodes=F.nodes,nr=Math.max(...nodes.map(n=>n.row))+1,cells=[],lanes=[],dock=[],spills=[];
   for(const n of nodes){n.cs=[];for(const g of n.cells){
-    const c={id:cells.length,item:n.item,node:n,K:g.K,w:g.w,h:g.h,g,heads:g.heads.map((h,i)=>({...h,id:cells.length+':'+i})),out:g.out,row:n.row,ox:0,oy:0,feed:{}};cells.push(c);n.cs.push(c)}}
+    const c={id:cells.length,item:n.item,node:n,K:g.K,w:g.w,h:g.h,g,heads:g.heads.map((h,i)=>({...h,id:cells.length+':'+i})),out:g.out,row:n.row,ox:0,oy:0,feed:{}};cells.push(c);n.cs.push(c)}
+    if(W)nlCellU(n).forEach((u,i)=>{n.cs[i].u=u})}
   let dx=1;
-  const dl=[];for(const q of F.raws){const nb=Math.max(q.belts,Math.ceil(q.rate/(cap/2)-1e-9));for(let b=0;b<nb;b++)dl.push({q,nb,b,t:hint?hint.dock.get(q.item+':'+b):undefined,ord:dl.length})}
-  if(hint)dl.sort((a,b)=>(a.t===undefined)-(b.t===undefined)||(a.t!==undefined&&a.t-b.t)||a.ord-b.ord);
+  const dl=[];for(const q of F.raws){const nb=Math.max(q.belts,Math.ceil(q.rate/(cap/2)-1e-9));for(let b=0;b<nb;b++)dl.push({q,nb,b,t:W?(b+0.5)/nb*W:hint?hint.dock.get(q.item+':'+b):undefined,ord:dl.length})}
+  if(hint||W)dl.sort((a,b)=>(a.t===undefined)-(b.t===undefined)||(a.t!==undefined&&a.t-b.t)||a.ord-b.ord);
   let prevItem=null;
   for(const {q,nb,t} of dl){
-    if(hint){if(prevItem!==null&&prevItem!==q.item)dx++;prevItem=q.item}
+    if(hint&&!W){if(prevItem!==null&&prevItem!==q.item)dx++;prevItem=q.item}
     let bx=t!==undefined?Math.max(dx,Math.round(t-sp.x)):dx;for(let k=0;k<99999;k++,bx++)if(pfFitX(bx,bw)&&pfFitX(bx+sp.x,1,true))break;
-    dock.push({item:q.item,x:bx,lx:bx+sp.x});lanes.push({id:lanes.length,item:q.item,raw:true,s:q.rate/nb,x:bx+sp.x,y0:1+bh,y1:null,srcRow:nr,lastRow:nr,cons:[],kind:'through'});dx=bx+bw+1;if(!hint&&lanes.filter(l=>l.item===q.item).length===nb)dx++}
+    dock.push({item:q.item,x:bx,lx:bx+sp.x});lanes.push({id:lanes.length,item:q.item,raw:true,s:q.rate/nb,x:bx+sp.x,y0:1+bh,y1:null,srcRow:nr,lastRow:nr,cons:[],kind:'through'});dx=bx+bw+1;if(!hint&&!W&&lanes.filter(l=>l.item===q.item).length===nb)dx++}
   for(const c of cells)if(c.node.cons.length){c.lane=lanes.length;lanes.push({id:lanes.length,item:c.item,src:c.id,s:c.g.s,x:null,y0:null,y1:null,srcRow:c.row,lastRow:c.row,cons:[],kind:'through'})}
   const byRowDesc=[...nodes].sort((a,b)=>b.row-a.row);
   for(const it of new Set(lanes.map(l=>l.item))){
     const L=lanes.filter(l=>l.item===it),heads=[];
     for(const n of byRowDesc)for(const c of n.cs)for(const h of c.heads)if(h.item===it)heads.push({id:h.id,d:h.d,c,r:c.row});
-    if(hint)heads.sort((a,b)=>b.r-a.r||(hint.head.get(a.id)||0)-(hint.head.get(b.id)||0));
+    if(W)heads.sort((a,b)=>a.c.u-b.c.u||b.r-a.r);
+    else if(hint)heads.sort((a,b)=>b.r-a.r||(hint.head.get(a.id)||0)-(hint.head.get(b.id)||0));
     const r=nlAssign(L.map(l=>({id:l.id,s:l.s})),heads.map(h=>({id:h.id,d:h.d})),cap);
     L.forEach((l,j)=>{l.pos=j;l.spill=r.spill[j];if(j+1<L.length&&l.spill>1e-6)l.spillTo=L[j+1].id});
     for(const h of heads){const lid=r.of.get(h.id);if(lid===undefined)return no('head '+h.id+' of '+plnNm(it)+' has no lane');lanes[lid].cons.push({cell:h.c.id,head:h.id});h.c.feed[h.id]=lid}
@@ -59,12 +61,13 @@ function nlPlan1(F,mk,hint){
     rn.sort((a,b)=>bary(a)-bary(b));
     const pref=c=>{let bh=null;for(const h of c.heads)if(!bh||h.d>bh.d)bh=h;const l=lanes[c.feed[bh.id]];return l.x!==null?l.x-bh.x:null};
     let cl=rn.flatMap(n=>n.cs);
-    if(hint){   // interleave nodes by target x; inside one node the id (chain) order is kept by a running max
+    if(W)cl=cl.map((c,i)=>({c,i})).sort((a,b)=>a.c.u-b.c.u||a.i-b.i).map(q=>q.c);
+    else if(hint){   // interleave nodes by target x; inside one node the id (chain) order is kept by a running max
       const key=new Map();for(const n of rn){let m=-1e9;for(const c of n.cs){const p=pref(c);m=Math.max(m,p===null?1e9:p);key.set(c,m)}}
       cl=cl.map((c,i)=>({c,i})).sort((a,b)=>key.get(a.c)-key.get(b.c)||a.i-b.i).map(q=>q.c)}
     let cur=1;
     for(const c of cl){
-      let x=cur;const pf=hint?pref(c):null;if(pf!==null&&pf>x)x=pf;
+      let x=cur;const pf=hint?pref(c):null;if(pf!==null&&pf>x)x=pf;if(W)x=Math.max(x,Math.round(c.u*W-c.w/2));
       for(const h of c.heads){const l=lanes[c.feed[h.id]];if(l.kind==='jog'&&l.x!==null){const p=l.x-h.x;if(p>x)x=p;break}}
       for(let t=0;t<99999;t++){
         let bad=-1;for(let q=x;q<x+c.w;q++)if(res.has(q))bad=q;
