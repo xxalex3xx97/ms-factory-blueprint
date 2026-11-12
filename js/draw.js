@@ -321,7 +321,7 @@ function drawShapeFloor(A,s){
   A.floors.forEach(r=>{const b=r.b,t=shapeTf(b);if(!t)return;
     const sh=t.sh,dock=SHIPEND(b),tr=(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
     const rc=(q,f,g=0)=>{cx.fillStyle=f;const x0=X(q.x),y0=Y(q.y);cx.fillRect(x0-g,y0-g,X(q.x+q.w)-x0+2*g,Y(q.y+q.h)-y0+2*g)};
-    if(dock&&sh.hatch)hatchShape(b,t,s);   // Industrial Dock: grey hatch inside the walls, minus the buildable floor box, behind everything
+    if((dock||r.w!=null)&&sh.hatch)hatchShape(b,t,s);   // floored blocks (dock, elevator): hatch behind the shape   // Industrial Dock: grey hatch inside the walls, minus the buildable floor box, behind everything
     const d=def(b.cls),R0=floorRect(b),hall=dock?tr(0,0,Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0])),d.fh):R0&&{x:R0.x,y:R0.y,w:R0.w,h:R0.h};   // dock: hall up to the partition (shaft beyond); other blocks: whole floor; no-floor blocks: no tint
     if(hall&&!sh.polys)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
     // pods (dock only): one per decoded port cell (1 cell, contiguous), x extent from the arm mesh rows of that cell

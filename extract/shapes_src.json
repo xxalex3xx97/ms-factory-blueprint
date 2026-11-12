@@ -1004,11 +1004,11 @@
           -16,
           -15,
           -15,
-          -11.5
+          -11
         ],
         [
           -16,
-          11.5,
+          11,
           -15,
           15
         ],
@@ -1016,11 +1016,11 @@
           15,
           -15,
           16,
-          -11.5
+          -11
         ],
         [
           15,
-          11.5,
+          11,
           16,
           15
         ]
@@ -1594,14 +1594,113 @@
       "w": 2,
       "h": 2,
       "verified": false,
-      "nofloor": true,
-      "floor": null,
+      "floor": {
+        "w": 30,
+        "h": 30,
+        "verified": true,
+        "source": "user 2026-11-12 (screenshot): inside 30x30; buildable ring around the central platform, cells 0..6 / 24..30 bands excluding the 2x2 corner solids; decoded: hull 32x32, interior solids = platform 18x18 (7..25 of the tile) + 4 corner 2x2 (z 0..4)"
+      },
       "floorOrigin": [
-        -16,
-        -16
+        -15,
+        -15
       ],
-      "ground": true,
       "hatch": "interior",
+      "polys": [
+        [
+          [
+            -15,
+            -13
+          ],
+          [
+            -9,
+            -13
+          ],
+          [
+            -9,
+            13
+          ],
+          [
+            -15,
+            13
+          ]
+        ],
+        [
+          [
+            9,
+            -13
+          ],
+          [
+            15,
+            -13
+          ],
+          [
+            15,
+            13
+          ],
+          [
+            9,
+            13
+          ]
+        ],
+        [
+          [
+            -13,
+            -15
+          ],
+          [
+            13,
+            -15
+          ],
+          [
+            13,
+            -9
+          ],
+          [
+            -13,
+            -9
+          ]
+        ],
+        [
+          [
+            -13,
+            9
+          ],
+          [
+            13,
+            9
+          ],
+          [
+            13,
+            15
+          ],
+          [
+            -13,
+            15
+          ]
+        ]
+      ],
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "verified": false,
+        "open": {
+          "sides": [
+            "E",
+            "S",
+            "W",
+            "N"
+          ],
+          "from": 4,
+          "to": 26
+        },
+        "source": "user 2026-11-12: 22x1 open strips on all 4 sides like Station 2x2 C (no doors); strip 4..26 assumed same as Station 2x2 C, unverified"
+      },
+      "entrance": {
+        "kind": "open",
+        "evidence": "user 2026-11-12: same open strips as Station 2x2 C; decoded: 22-wide openings on all 4 sides"
+      },
+      "ground": true,
       "infoPorts": {
         "verified": false,
         "note": "from user screenshot",
@@ -1735,10 +1834,6 @@
           8.621,
           2.05
         ]
-      ],
-      "inner": [
-        30,
-        30
       ],
       "source": "decoded from EA files (BPO ElevatorBlock_02A: colliders, BlockBounds, ItemCost); not tested in game",
       "research": [

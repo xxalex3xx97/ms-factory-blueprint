@@ -52,8 +52,15 @@ try {
     const bl = [['BPO_ElevatorBlock_02A', 0], ['BPO_Station_03', 4], ['BPO_StationCorridor_02', 8]].map(([n, x], i) => ({Class: CATALOG.blocks.find(b => b.name === n).class, GridLocation: {X: x, Y: 0}, Height: 0, GridRotation: 0, BlockID: i + 1, PaletteID: 0}));
     __fb.importJson(JSON.stringify({Version: 1, DisplayName: 't', Blocks: bl, DefaultMachines: []}));
     const ed = S.blocks.map(b => { const t = shapeTf(b), W = t.sh.walls.concat(t.sh.props), xs = W.flatMap(w => [t.f(w[0], 0)[0], t.f(w[2], 0)[0]]); return [Math.min(...xs), Math.max(...xs)] });
-    return {go: GRIDOFF, post: SHAPES.BPO_StationCorridor_02.walls.filter(w => w[2] - w[0] === 1 && w[3] - w[1] === 3.5).length === 4, ed, o: nfOut(S.blocks[0]), t: doorTxt(S.blocks[2]), gaps: areas(0).doors.filter(d => d.bx >= 8).length};
+    return {go: GRIDOFF, post: SHAPES.BPO_StationCorridor_02.walls.filter(w => w[2] - w[0] === 1 && w[3] - w[1] === 4).length === 4, ed, o: floorRect(S.blocks[0]), t: doorTxt(S.blocks[2]), gaps: areas(0).doors.filter(d => d.bx >= 8).length};
   });
   chk('Elevator / Station 2x2 C / Corridor 2x2 hulls tile the cell lines (grid offset 1: hull edges at 32k-1, 32 apart, no gap/overlap), elevator frame 30x30, corridor open ends no doors, corridor end posts complete', hl.go === 1 && Math.abs(hl.ed[0][0] + 1) < .01 && hl.ed[0][1] === 31 && hl.ed[1][0] === 31 && hl.ed[1][1] === 63 && hl.ed[2][0] === 63 && hl.ed[2][1] === 95 && hl.post && hl.o.w === 30 && hl.o.h === 30 && hl.t === 'open sides' && hl.gaps === 0, JSON.stringify(hl));
+  const el = await pg.evaluate(() => {
+    const bl = [['BPO_ElevatorBlock_02A', 0], ['BPO_Station_03', 4]].map(([n, x], i) => ({Class: CATALOG.blocks.find(b => b.name === n).class, GridLocation: {X: x, Y: 0}, Height: 0, GridRotation: 0, BlockID: i + 1, PaletteID: 0}));
+    __fb.importJson(JSON.stringify({Version: 1, DisplayName: 't', Blocks: bl, DefaultMachines: []}));
+    const a = areas(0), ok = (x, y) => !noBuild([{id: 9, x, y, w: 1, h: 1, l: 0}]);
+    return {band: ok(3, 15) && ok(15, 3) && ok(27, 15) && ok(15, 27) && ok(1, 1) === false, corner: ok(0, 0) || ok(29, 29), plat: ok(15, 15) || ok(12, 12) || ok(15, 9) || ok(9, 15) || ok(20, 15), strip: ok(30, 15) && ok(31, 15), out: ok(15, -5), doors: a.doors.filter(d => d.bx === 0).length, mis: a.mis.length, fr: [floorRect(S.blocks[0]).w, floorRect(S.blocks[0]).h]};
+  });
+  chk('Elevator 2x2 floored: belt allowed in the bands + open strip, refused on platform/hatch/corner solids/outside; no doors, connected to Station 2x2 C', el.band && !el.corner && !el.plat && el.strip && !el.out && el.doors === 0 && el.mis === 0 && el.fr.join() === '30,30', JSON.stringify(el));
 } finally { await br.close(); }
 console.log(bad ? bad + ' FAILED' : 'ALL PASS'); process.exit(bad ? 1 : 0);
