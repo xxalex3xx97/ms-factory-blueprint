@@ -21,6 +21,8 @@ const cases = [
   {name: 'Magnetic Coils', rate: 30},
   {name: 'Advanced Circuits', rate: 5},
   {name: 'Advanced Circuits', rate: 10},
+  // KNOWN LIMIT: sim.js caps each container at 8 items/tick (480/min); AC 40 Nickel Ore needs ~540, so 35.2/min (88%) is accepted by the user for the first run (tol 15%)
+  {name: 'Advanced Circuits', rate: 40, tol: 0.15},
 ];
 for (const c of cases) {
   const r = await pg.evaluate(c => {
@@ -63,8 +65,8 @@ for (const c of cases) {
   console.log('out ports ' + r.nOuts);
   check(r.outEdges === 'S', c.name + ' ' + c.rate + ': out port on S edge (' + r.outEdges + ')');
   check(r.collectors === 1, c.name + ' ' + c.rate + ': one collector (' + r.collectors + ')');
-  const tol = Math.abs(r.measured - r.target) <= 0.05 * r.target;
-  check(tol, c.name + ' ' + c.rate + ': sim sink rate ' + r.measured + '/min within 5% of ' + r.target);
+  const tol = Math.abs(r.measured - r.target) <= (c.tol || 0.05) * r.target;
+  check(tol, c.name + ' ' + c.rate + ': sim sink rate ' + r.measured + '/min within ' + (c.tol || 0.05) * 100 + '% of ' + r.target);
   if (r.working < r.machines) console.log('WARN ' + c.name + ' ' + c.rate + ': machines working ' + r.working + '/' + r.machines);
 }
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
