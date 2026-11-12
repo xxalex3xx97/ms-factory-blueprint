@@ -1,8 +1,10 @@
 // No Limits (NL) engine, separate from LC. Flag off by default; enabled by Engine select "No Limits".
 let NL_ENGINE=false;
-// NL1 nlFlow: wraps pfFactTree. Per node: cells = lcSplitN(N,K), K = largest with cell<=60x60 (lcCellGen ok) and K*fo<=cap/2 and every head demand<=cap/2.
+// NL1 nlFlow: wraps pfFactTree. Per node: cells = nlSplitN(N,K), K = largest with cell<=60x60 (lcCellGen ok) and K*fo<=cap/2 and every head demand<=cap/2.
 // Each cell lists ALL heads (item,x,d,col) from pfGrpNode(sizes), not one per item (LC two-column bug). Raws summed per item, belts=ceil(rate/cap).
 // Returns {ok,cap,nodes:[{item,row,N,cls,k,flows,fo,rate,cons,ins,rec,K,cells:[{K,s,w,h,sizes,out,nb,heads:[{item,x,d,col}]}],over}],raws:[{item,rate,belts}]} or {ok:false,why}.
+// floor(N/K) identical cells of size K plus ONE remainder cell (N mod K) if >0
+function nlSplitN(N,K){const q=Math.floor(N/K),r=N-q*K,o=Array(q).fill(K);if(r)o.push(r);return o}
 function nlCellInfo(n,K,mk,inRate){
   const c=lcCellGen(n.cls,n.k,n.flows,K,mk);
   if(c.ok===false)return c;
@@ -31,7 +33,7 @@ function nlFlow(P,item,mk){
     best=1;
     while(lo<hi){const m=Math.ceil((lo+hi)/2);if(nlCellInfo(n,m,mk,inRate).ok!==false){lo=m;best=m}else hi=m-1}
     best=lo;
-    const cells=lcSplitN(n.N,best),memo=new Map();
+    const cells=nlSplitN(n.N,best),memo=new Map();
     const cinfo=cells.map(K=>{if(!memo.has(K))memo.set(K,nlCellInfo(n,K,mk,inRate));return memo.get(K)});
     const bad=cinfo.find(c=>c.ok===false);
     if(bad)return{ok:false,why:plnNm(n.item)+': '+bad.why};

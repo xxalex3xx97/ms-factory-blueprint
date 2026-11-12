@@ -28,6 +28,7 @@ for (const [name, rate] of cases) {
     const cap = F.cap, half = cap / 2 + 1e-9, out = {cap, nodes: [], bad: []};
     for (const n of F.nodes) {
       const nm = plnNm(n.item), sumK = n.cells.reduce((a, c) => a + c.K, 0);
+      if (new Set(n.cells.map(c => c.K)).size > 2) out.bad.push(nm + ': more than 2 distinct cell sizes');
       if (sumK !== n.N) out.bad.push(nm + ': sum K ' + sumK + ' != N ' + n.N);
       const insItems = n.ins.map(i => i.item), got = new Map();
       for (const c of n.cells) {
