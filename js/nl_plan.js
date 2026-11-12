@@ -14,15 +14,20 @@ function nlAssign(lanes,heads,cap){
 function nlCellU(n){let cum=0;return n.cells.map(g=>{const u=(cum+g.K/2)/n.N;cum+=g.K;return u})}
 function nlWBase(F,bw){let m=0;const rs=[];for(const n of F.nodes){rs[n.row]=(rs[n.row]||0)+n.cells.reduce((a,g)=>a+g.w+1,0)}
   for(const v of rs)if(v>m)m=v;let d=0;for(const q of F.raws)d+=Math.max(q.belts,Math.ceil(q.rate/(F.cap/2)-1e-9))*(bw+1);return Math.max(m,d)+2}
-function nlPlan1(F,mk,hint,W){
+function nlPlan1(F,mk,hint,W,cu){
   const no=why=>({ok:false,why}),bw=def(PLC_BOX).w,bh=def(PLC_BOX).h,cap=F.cap;
   const sp=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).filter(p=>p.f==='S').sort((a,b)=>a.x-b.x)[0];
   const nodes=F.nodes,nr=Math.max(...nodes.map(n=>n.row))+1,cells=[],lanes=[],dock=[],spills=[];
   for(const n of nodes){n.cs=[];for(const g of n.cells){
     const c={id:cells.length,item:n.item,node:n,K:g.K,w:g.w,h:g.h,g,heads:g.heads.map((h,i)=>({...h,id:cells.length+':'+i})),out:g.out,row:n.row,ox:0,oy:0,feed:{}};cells.push(c);n.cs.push(c)}
     if(W)nlCellU(n).forEach((u,i)=>{n.cs[i].u=u})}
+  // NL7: producer cells take u from their consumers (demand quantile of the consumer heads sorted by u), top-down from the root; machine-count u stays for the root and for nodes without consumer heads
+  const qu=(it,f)=>{const H=[];for(const c of cells)for(const h of c.heads)if(h.item===it)H.push(h);if(!H.length)return null;H.sort((a,b)=>a.cu-b.cu);let t=0;for(const h of H)t+=h.d;let q=f*t,a=0;for(const h of H){a+=h.d;if(a>=q-1e-9)return h.cu}return H[H.length-1].cu};
+  if(W)for(let r=0;r<nr;r++)for(const n of nodes)if(n.row===r){
+    if(cu&&r>0){let cum=0;n.cs.forEach(c=>{const q=qu(n.item,(cum+c.K/2)/n.N);cum+=c.K;if(q!==null)c.u=q})}
+    for(const c of n.cs)for(const h of c.heads)h.cu=c.u}
   let dx=1;
-  const dl=[];for(const q of F.raws){const nb=Math.max(q.belts,Math.ceil(q.rate/(cap/2)-1e-9));for(let b=0;b<nb;b++)dl.push({q,nb,b,t:W?(b+0.5)/nb*W:hint?hint.dock.get(q.item+':'+b):undefined,ord:dl.length})}
+  const dl=[];for(const q of F.raws){const nb=Math.max(q.belts,Math.ceil(q.rate/(cap/2)-1e-9));for(let b=0;b<nb;b++)dl.push({q,nb,b,t:W?((cu?qu(q.item,(b+0.5)/nb):null)??(b+0.5)/nb)*W:hint?hint.dock.get(q.item+':'+b):undefined,ord:dl.length})}
   if(hint||W)dl.sort((a,b)=>(a.t===undefined)-(b.t===undefined)||(a.t!==undefined&&a.t-b.t)||a.ord-b.ord);
   let prevItem=null;
   for(const {q,nb,t} of dl){
@@ -136,7 +141,7 @@ function nlPlanOld(F,mk){
 // NL6 candidates: u-axis plans at W = nlWBase*{1,1.15,1.3,1.5} plus the NL5c plan, sorted by score (lowest first). chosen = W factor or 'old'.
 function nlPlanAll(F,mk){
   const bw=def(PLC_BOX).w,wb=nlWBase(F,bw),out=[];
-  for(const f of[1,1.15,1.3,1.5]){const p=nlPlan1(F,mk,null,Math.round(wb*f));if(p.ok){p.chosen=f;out.push(p)}}
+  for(const cu of[false,true])for(const f of[1,1.15,1.3,1.5]){const p=nlPlan1(F,mk,null,Math.round(wb*f),cu);if(p.ok){p.chosen=(cu?'c':'')+f;out.push(p)}}
   const o=nlPlanOld(F,mk);if(o.ok){o.chosen='old';out.push(o)}
   out.forEach(p=>{p.score=nlPlanScore(p)});out.sort((a,b)=>a.score-b.score);
   return out.length?out:[o];
