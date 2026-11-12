@@ -662,6 +662,97 @@ function pfBusAssign(Z,F,SZ,mk,spMk){
   }
   return{ok:true,lanes};
 }
+// pfFact2 S4: bus layout. LN = pfBusAssign lanes. nr>1: bus columns at the left, dock row on top, factories left-aligned right of the bus, every link = leg + one horizontal run (west link / east tap). nr==1: direct mode (no bus): raw container left of its first head, plain tap.
+function pfFactLayout2(Z,F,LN,mk,spMk){
+  const no=why=>({ok:false,why}),cw=PF_GRID.cw,nr=Z.rows.length,rowOf=new Map(Z.nodes.map(n=>[n.item,n.row]));
+  const bw=def(PLC_BOX).w,bh=def(PLC_BOX).h;
+  const sp=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).filter(p=>p.f==='S').sort((a,b)=>a.x-b.x)[0];
+  if(!sp)return no('box has no S port');
+  const direct=nr===1,cols=[];
+  if(!direct)for(let x=2;cols.length<LN.length;x++)if(pfFitX(x,1,true))cols.push(x);
+  LN.forEach((l,i)=>l.col=cols[i]);
+  const xs0=direct?0:Math.ceil((cols[cols.length-1]+1)/cw)*cw,dockY=1,dockB=1+bh;
+  const pos=new Map();
+  for(let r=nr-1;r>=0;r--){let x=xs0;for(const it of Z.rows[r]){pos.set(it,{x0:x,row:r});x+=F.get(it).w}}
+  const abs=(c,h)=>pos.get(c).x0+h.x;
+  const raws=LN.filter(l=>l.raw);
+  if(direct){   // one container per raw lane, left of its first head, ordered by first head
+    let cur=1;
+    for(const l of [...raws].sort((a,b)=>abs(a.taps[0].cons,a.taps[0].heads[0])-abs(b.taps[0].cons,b.taps[0].heads[0]))){
+      const hx=abs(l.taps[0].cons,l.taps[0].heads[0]);let bx=-1;
+      for(let x=hx-sp.x;x>=cur;x--)if(pfFitX(x,bw)&&pfFitX(x+sp.x,1,true)){bx=x;break}
+      if(bx<0)return no('direct dock does not fit');
+      l.bx=bx;l.xs=bx+sp.x;cur=bx+bw+1;
+    }
+  }else{
+    let cur=xs0;
+    for(const l of raws){
+      let bx=-1;for(let x=cur;x<cur+3*cw;x++)if(pfFitX(x,bw)&&pfFitX(x+sp.x,1,true)){bx=x;break}
+      if(bx<0)return no('dock does not fit');
+      l.bx=bx;l.xs=bx+sp.x;cur=bx+bw+1;
+    }
+  }
+  const zW=Array.from({length:nr},()=>[]),zT=Array.from({length:nr},()=>[]),links=[];
+  for(const l of LN){
+    if(direct){   // single consumer, single tap
+      const tp=l.taps[0],k={lane:l,xp:l.xs,yp:dockB,heads:tp.heads.map(h=>abs(tp.cons,h)),rc:0,t:-2};
+      k.heads.sort((a,b)=>a-b);l.tl=[k];
+      if(k.heads.length===1&&k.xp===k.heads[0])k.t=-1;else zT[0].push(k);
+      links.push(k);continue;
+    }
+    let xsrc,zi;
+    if(l.raw){xsrc=l.xs;zi=nr-1}else{const o=F.get(l.item).outs[l.idx];xsrc=pos.get(l.item).x0+o.x;zi=rowOf.get(l.item)-1}
+    const w={w:true,lane:l,xp:xsrc,xd:l.col,t:-2,heads:[]};
+    l.w=w;zW[zi].push(w);links.push(w);
+    l.tl=l.taps.map(tp=>{const rc=rowOf.get(tp.cons);
+      const k={lane:l,xp:l.col,heads:tp.heads.map(h=>abs(tp.cons,h)).sort((a,b)=>a-b),rc,t:-2,nofeed:true};zT[rc].push(k);links.push(k);return k});
+  }
+  // y: zone above row r holds west links of producers in row r+1 (dock raw west links for the top zone) first, then taps of row r consumers; pitch 3, no sharing
+  const H=[];for(let r=0;r<nr;r++)H[r]=Math.max(...Z.rows[r].map(i=>F.get(i).h));
+  const Y=[];let y0=dockB,nTrack=0;
+  for(let r=nr-1;r>=0;r--){
+    const tr=[...zW[r],...zT[r]],n=tr.length,rows=[];
+    for(let t=y0+2,last=-Infinity;rows.length<n&&t<y0+4000;t++)if(pfTrackOk(t,y0)&&t-last>=3){rows.push(t);last=t}
+    if(rows.length<n)return no('zone '+r+' track search failed');
+    tr.forEach((l,i)=>l.t=rows[i]);nTrack+=n;
+    let Yc=n?rows[n-1]+2:y0;
+    while(!pfFitY(Yc,H[r])){Yc++;if(Yc>y0+4000)return no('row '+r+' does not fit a wall cell')}
+    Y[r]=Yc;y0=Yc+H[r];
+  }
+  for(const l of LN){
+    if(direct){l.tl[0].yp=dockB;l.tl[0].y1=Y[0];continue}
+    const w=l.w,o=l.raw?null:F.get(l.item).outs[l.idx];
+    w.yp=l.raw?dockB:Y[rowOf.get(l.item)]+o.y;
+    w.yc=l.tl.length?l.tl[0].t:w.t+1;
+    l.tl.forEach((k,i)=>{k.y1=Y[k.rc];if(i<l.tl.length-1){k.heads=[l.col,...k.heads];k.yc=l.tl[i+1].t}});
+  }
+  const R=pfFactRoute(links,mk,spMk);if(R.ok===false)return R;
+  const items=[];let tile=0;
+  for(const [it,f] of F){const {x0}=pos.get(it),y=Y[rowOf.get(it)];
+    f.items.forEach(q=>{items.push({h:0,pid:0,...q,x:q.x+x0,y:q.y+y,ct:q.ct&&q.ct.map(c=>({...c}))});if(PLC_BELT.includes(q.cls)||PLC_UG.includes(q.cls))tile++})}
+  for(const l of raws)items.push({h:0,pid:0,cls:PLC_BOX,x:l.bx,y:dockY,rot:0,ct:[{item:l.item,n:0,inf:true}]});
+  items.push(...R.items);
+  const fin=F.get(Z.item),fx=pos.get(Z.item).x0,fy=Y[0];
+  const ports=fin.outs.map(o=>({edge:'S',off:o.x+fx,dir:'out',belts:1,slot:-1,mk}));
+  fin.outs.forEach(o=>items.push({h:0,pid:0,cls:PLC_BOX,x:o.x+fx,y:fy+fin.h,rot:0,ct:[]}));
+  const w=Math.max(...items.map(q=>q.x+dim(q).w))+1,h=Math.max(...items.map(q=>q.y+dim(q).h));
+  const route=R.items.filter(q=>PLC_BELT.includes(q.cls)||PLC_UG.includes(q.cls)).length;
+  return{ok:true,items,w,h,ports,nRows:nr,nFact:F.size,stat:{tile,route,spl:R.items.filter(q=>PLC_SPL.includes(q.cls)).length,ug:R.items.filter(q=>PLC_UG.includes(q.cls)).length,dock:raws.length,lanes:LN.length,tracks:nTrack}};
+}
+function pfFactTop2(P,item,mk,spMk,o={}){
+  spMk=Math.max(spMk,mk);
+  const Z=pfFactTree(P,item,mk);if(Z.ok===false)return Z;
+  const SZ=new Map(),F=new Map();
+  for(const nd of Z.nodes){const s=pfFactSize2(nd,mk);if(s.ok===false)return s;SZ.set(nd.item,{T:s.T,M:s.M,K:s.K,nd})}
+  for(const nd of Z.nodes){const S=SZ.get(nd.item),nd2={...nd,ins:nd.ins.map(i=>({...i,crafted:true}))};
+    const R=pfFactRow(nd2,S.T,S.K,mk,null,nd.item===item);if(R.ok===false)return R;F.set(nd.item,R)}
+  const A=pfBusAssign(Z,F,SZ,mk,spMk);if(A.ok===false)return A;
+  const L=pfFactLayout2(Z,F,A.lanes,mk,spMk);if(L.ok===false)return L;
+  const T=P.nodes[item],BX=o.box||PLC_BOX;
+  return{ok:true,items:L.items,lanes:1,per:[T.machines],makes:T.machines*T.pmach,pitch:L.h+1,w:L.w,h:L.h,tall:true,mod:false,box:BX,mk,ports:L.ports,
+    note:['Prefab factory: '+L.nFact+' factories, '+L.nRows+' rows, '+L.stat.lanes+' bus lanes, S out'],src:{P,item,mk,spMk,o},prefab:true,
+    stat:L.stat,sizes:Z.nodes.map(n=>({item:n.item,N:n.N,built:SZ.get(n.item).K*SZ.get(n.item).M}))};
+}
 // STEP 5b (pfBands atom, inert: no caller). Builds one graph node at y=0, absolute x from x0, in a layer of body height B (belts run down to row B-1, the gutter starts at row B). grp: pfGrpNode with greedy column origins (each column and the last column's head box fit the wall grid), head boxes replaced by raw hubs. hub/raw: one Large container, W port belt up/over when nIn>4, S outs and E outs (reverse riser order) belted down to row B-1. Returns {ok,items,x0,x1 (exclusive),ins:[{item,head,x}],outs:[{x}]} or {ok:false,why}.
 function pfBandAtom(n,x0,B,nOut,nIn,mk){
   const bc=PLC_BELT[mk],bw=def(PLC_BOX).w,HC='DAT_Container_2',items=[],ins=[],outs=[];
