@@ -993,22 +993,28 @@
         -13
       ],
       "floorCenter": true,
-      "doorMatch": true,
       "door": {
         "w": 6,
         "depth": 2,
-        "offset": 0,
-        "flush": true,
+        "offset": 4,
         "sides": [
           "E",
           "W"
         ],
         "verified": false,
-        "source": "decoded: W/E openings 23 wide (-11.5..11.5); the model slot is 6 wide"
+        "open": {
+          "sides": [
+            "E",
+            "W"
+          ],
+          "from": 2,
+          "to": 24
+        },
+        "source": "no doors (user 2026-11-12): W/E ends are open gaps, the 1-thick strip in the wall line is buildable. Colliders: opening 23 wide (-11.5..11.5, half-integer); nearest whole-cell strip centred on the 26 floor = 2..24 (22 wide, like Station 2x2 C): UNVERIFIED"
       },
       "entrance": {
-        "kind": "doors",
-        "evidence": "decoded BPO_StationCorridor_02: open ends W and E"
+        "kind": "open",
+        "evidence": "decoded BPO_StationCorridor_02: open ends W and E, no door frames; whole-cell strip 2..24 unverified"
       },
       "ground": true,
       "source": "decoded from EA files (BPO StationCorridor_02: colliders, BlockBounds, ItemCost); not tested in game",
@@ -1697,6 +1703,10 @@
           8.621,
           2.05
         ]
+      ],
+      "inner": [
+        30,
+        30
       ],
       "source": "decoded from EA files (BPO ElevatorBlock_02A: colliders, BlockBounds, ItemCost); not tested in game",
       "research": [

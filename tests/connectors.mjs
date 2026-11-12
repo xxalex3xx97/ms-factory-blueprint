@@ -48,5 +48,12 @@ try {
     return {n: has(16, 9), w: has(9.5, 16), s: has(16, 23), e: has(22.5, 16), mid: has(16, 16), ip: sh.iports.length, cat: CATALOG.blocks.find(b => b.name === 'BPO_ElevatorBlock_02A').infoPorts};
   });
   chk('Elevator 2x2: N/W/S/E interior squares all hatched, centre column not; 24 info ports flagged verified:false', h.n && h.w && h.s && h.e && !h.mid && h.ip === 24 && h.cat.verified === false && h.cat.cells.length === 24, JSON.stringify(h));
+  const hl = await pg.evaluate(() => {
+    const bl = [['BPO_ElevatorBlock_02A', 0], ['BPO_Station_03', 4], ['BPO_StationCorridor_02', 8]].map(([n, x], i) => ({Class: CATALOG.blocks.find(b => b.name === n).class, GridLocation: {X: x, Y: 0}, Height: 0, GridRotation: 0, BlockID: i + 1, PaletteID: 0}));
+    __fb.importJson(JSON.stringify({Version: 1, DisplayName: 't', Blocks: bl, DefaultMachines: []}));
+    const ed = S.blocks.map(b => { const t = shapeTf(b), W = t.sh.walls.concat(t.sh.props), xs = W.flatMap(w => [t.f(w[0], 0)[0], t.f(w[2], 0)[0]]); return [Math.min(...xs), Math.max(...xs)] });
+    return {ed, o: nfOut(S.blocks[0]), t: doorTxt(S.blocks[2]), gaps: areas(0).doors.filter(d => d.bx >= 8).length};
+  });
+  chk('Elevator / Station 2x2 C / Corridor 2x2 hull edges touch exactly (32 units apart), elevator frame 30x30, corridor open ends no doors', hl.ed[0][1] === hl.ed[1][0] && hl.ed[1][1] === hl.ed[2][0] && hl.o.w === 30 && hl.o.h === 30 && hl.t === 'open sides' && hl.gaps === 0, JSON.stringify(hl));
 } finally { await br.close(); }
 console.log(bad ? bad + ' FAILED' : 'ALL PASS'); process.exit(bad ? 1 : 0);

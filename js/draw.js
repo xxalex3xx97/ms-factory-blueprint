@@ -384,10 +384,10 @@ function paintFloorBase(s){
   });
   drawShapeFloor(A,s);
   const NF=lyBlocks().all.filter(b=>!isM(b)&&nfRect(b));
-  NF.forEach(b=>{const r=nfRect(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
+  NF.forEach(b=>{const r=nfOut(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
   NF.forEach(b=>{const t=shapeTf(b);if(t&&t.sh.hatch)return hatchShape(b,t,s);const r=nfRect(b);nbHatch(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s,true)});   // grey no-build hatch on the whole tile, behind the shape
   drawShapeFloor({floors:NF.map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
-  NF.forEach(b=>{const r=nfRect(b),w=r.w*s;if(w>70)note(`${lab(def(b.cls))}  ${r.w}×${r.h}`,V.ox+r.x*s,V.oy+r.y*s,w)});   // label like floor blocks: name + tile size, top-left
+  NF.forEach(b=>{const r=nfOut(b),w=r.w*s;if(w>70)note(`${lab(def(b.cls))}  ${r.w}×${r.h}`,V.ox+r.x*s,V.oy+r.y*s,w)});   // label like floor blocks: name + tile size, top-left
   A.floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;   // elevator: ring cells inside the door slot are open buildable floor
     cx.fillStyle="rgba(150,190,230,.08)";
     for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>{const v=ed%2===0,ring=ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q};R(ring,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))});
