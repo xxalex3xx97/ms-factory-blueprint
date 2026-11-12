@@ -327,6 +327,29 @@ function pfBandGraph(P,item,mk,o={}){
   if(PF_DEBUG)console.table(layers.map((ids,i)=>({layer:i,nodes:ids.filter(d=>byId.get(d).kind!=='dummy').join(' '),dummies:ids.filter(d=>byId.get(d).kind==='dummy').length,width:ids.reduce((a,d)=>a+byId.get(d).w,0)+PF_GAP*(ids.length-1)})));
   return{ok:true,nodes,dummies,edges:out,oedges,layers};
 }
+// pfFact step 1: factory tree (DAG, one factory per item). Rows = longest path from the final item (row 0). K = copies so each copy <= MB machines and <= cap per machine output.
+const PF_MB=150;
+function pfFactTree(P,item,mk,o={}){
+  const Z=pfBandSize(P,item,mk);if(Z.ok===false)return Z;
+  const {st,order,sizing,cap}=Z,MB=o.mb||PF_MB,rows=new Map(),nodes=[];
+  // order = producers before consumers; walk it in reverse so consumers are done first
+  for(const y of [...order].reverse()){
+    const r=sizing(y),T=P.nodes[y];
+    const cons=P.edges.filter(e=>e.from===y&&st.has(e.to)&&e.to!==y).map(e=>({to:e.to,flow:e.flow}));
+    const rate=y===item?T.rate:cons.reduce((a,c)=>a+c.flow,0);
+    const row=y===item?0:Math.max(...cons.map(c=>rows.get(c.to)))+1;   // cons non-empty for non-final
+    rows.set(y,row);
+    const fo=rate/r.N,mxC=fo>0?Math.floor(cap/fo+1e-9):Infinity;
+    if(mxC<1)return{ok:false,why:'one machine output above belt cap for '+plnNm(y)};
+    const K=Math.ceil(r.N/Math.min(MB,mxC)),tileM=Math.ceil(r.N/K);
+    nodes.push({item:y,row,N:r.N,cls:r.cls,k:r.k,flows:r.flows,mh:r.mh,fo,rate,mxC,K,Kmb:Math.ceil(r.N/MB),tileM,cons,
+      ins:st.get(y).ins.map(i=>({item:i,crafted:!!(P.nodes[i]&&P.nodes[i].crafter)})),rec:rk(T.rec)});
+  }
+  if(nodes.some(n=>n.item!==item&&!n.cons.length))return{ok:false,why:'orphan item '+plnNm(nodes.find(n=>n.item!==item&&!n.cons.length).item)};
+  const nr=Math.max(...nodes.map(n=>n.row))+1,byRow=Array.from({length:nr},()=>[]);
+  nodes.forEach(n=>byRow[n.row].push(n.item));
+  return{ok:true,item,mb:MB,nodes,rows:byRow};
+}
 // Tile-fit helpers (wall grid every PF_GRID.cw cols / PF_GRID.ch rows). x,y absolute cells.
 const pfMod=(v,c)=>((v%c)+c)%c;
 const pfFitX=(x,w,dummy)=>{const c=PF_GRID.cw,m=pfMod(x,c);return dummy?(m>=2&&m<=c-3):(m>=1&&m+w<=c-1)};
