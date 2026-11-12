@@ -325,6 +325,8 @@ const pfMod=(v,c)=>((v%c)+c)%c;
 const pfFitX=(x,w,dummy)=>{const c=PF_GRID.cw,m=pfMod(x,c);return dummy?(m>=2&&m<=c-3):(m>=1&&m+w<=c-1)};
 const pfFitY=(y,h)=>{const c=PF_GRID.ch,m=pfMod(y,c);return m>=1&&m+h<=c-1};
 const pfTrackOk=(t,y0)=>{const m=pfMod(t,PF_GRID.ch);return t>=y0+2&&m>=2&&m<=PF_GRID.ch-3};
+// bounded x search: first x'>=x within one wall period that fits, else -1 (never loops forever)
+const pfNextX=(x,w,dummy)=>{for(let d=0;d<PF_GRID.cw;d++)if(pfFitX(x+d,w,dummy))return x+d;return -1};
 // STEP 4 (pfBands gutter router, inert: no caller). links=[{id,item,sx,tx}]: leaves a source port at column sx going south at row y0, must enter a target terminal at column tx going south at row y1 (gutter rows y0..y1-1). Route = top leg south -> track row (east rot 0 / west rot 2) -> descent south. Same column (sx==tx) = straight. A.sx==B.tx => A track above B. A leg that meets another link's track span goes under it: UG pair at t-1,t+1 (cell t skipped). Returns {ok:true,items,tracks} or {ok:false,why}.
 function pfGutter(links,y0,y1,mk){
   const no=why=>({ok:false,why}),bc=PLC_BELT[mk],ug=PLC_UG[mk],cw=PF_GRID.cw;
@@ -373,7 +375,7 @@ function pfBandAtom(n,x0,B,nOut,nIn,mk){
   if(n.kind==='grp'){
     const cw=[];for(const m of n.sizes){const C=pfCol(n.cls,n.k,n.flows,m,mk,true);if(C.ok===false)return{ok:false,why:C.why};cw.push(C.w)}
     const org=[];let x=x0;
-    cw.forEach((w,i)=>{const need=i===cw.length-1?w+bw:w;while(!pfFitX(x,need))x++;org.push(x);x+=w});
+    for(const [i,w] of cw.entries()){const need=i===cw.length-1?w+bw:w;const nx=pfNextX(x,need);if(nx<0)return{ok:false,why:'column wider than a wall cell'};x=nx;org.push(x);x+=w}
     const G=pfGrpNode(n.cls,n.k,n.flows,n.sizes,mk,n.sizes.reduce((a,b)=>a+b,0)*n.fo,org);
     if(G.ok===false)return G;
     G.items.forEach(q=>{if(q.cls===PLC_BOX&&q.ct&&q.ct.length)return;items.push(q.cls===n.cls?{...q,rec:n.rec}:q)});
@@ -382,7 +384,7 @@ function pfBandAtom(n,x0,B,nOut,nIn,mk){
     return{ok:true,items,x0:org[0],x1:org[org.length-1]+cw[cw.length-1]+bw,ins,outs};
   }
   const H=pfHubNode(),hw=H.w;
-  let a=x0;while(!pfFitX(a,hw+5))a++;
+  const a=pfNextX(x0,hw+5);if(a<0)return{ok:false,why:'hub does not fit a wall cell'};
   const hx=a+1;
   items.push({cls:HC,x:hx,y:0,rot:0,ct:n.kind==='raw'?[{item:n.item,n:0,inf:true}]:[]});
   H.ins.forEach(p=>ins.push({x:p.edge==='W'?hx-1:hx+p.x}));
@@ -405,23 +407,26 @@ function pfBandsBuild(P,item,mk){
   const Hl=G.layers.map(l=>Math.max(1,...l.map(id=>byId.get(id)).filter(n=>n.kind!=='dummy').map(n=>n.h)));
   if(Hl.some(h=>h>PF_GRID.ch-2))return no('layer taller than a tile');
   const bc=PLC_BELT[mk],atom=new Map(),aItems=[];let wMax=0;
+  let bad=null;
   G.layers.forEach((l,i)=>{
+    if(bad)return;
     let cur=1;const its=[];
     for(const id of l){
       const n=byId.get(id),nIn=(ins[id]||[]).length,ne=(outs[id]||[]).length;let A;
       if(n.kind==='dummy'){
-        let x=cur;while(!pfFitX(x,1,true))x++;cur=x+1+PF_GAP;
+        const x=pfNextX(cur,1,true);if(x<0){bad={ok:false,why:'dummy does not fit a wall cell'};return}cur=x+1+PF_GAP;
         for(let y=0;y<Hl[i];y++)its.push({cls:bc,x,y,rot:1});
         A={ins:[{x}],outs:[{x}],x1:x+1};
       }else{
         A=pfBandAtom(n,cur,Hl[i],isFin(n)?Math.max(1,ne):ne,nIn,mk);
-        if(A.ok===false)return A;
+        if(A.ok===false){bad=A;return}
         cur=A.x1+PF_GAP;its.push(...A.items);
       }
       atom.set(id,A);wMax=Math.max(wMax,A.x1);
     }
     aItems.push(its);
   });
+  if(bad)return bad;
   const sx=ei=>{const e=G.edges[ei];return atom.get(e.from).outs[outs[e.from].indexOf(ei)].x};
   const tx=ei=>{
     const e=G.edges[ei],A=atom.get(e.to);
