@@ -1,4 +1,21 @@
 {
+  "BPO_DeepSpaceObservatory": {
+    "note": "user 2026-11-13: cap building 16x32, 2 ports on the W edge at mid height; EA XLargeConnector grid [-4,0] rot 2",
+    "ports": [
+      {
+        "x": -8,
+        "y": -0.5,
+        "inout": "both",
+        "facing": "W"
+      },
+      {
+        "x": -8,
+        "y": 0.5,
+        "inout": "both",
+        "facing": "W"
+      }
+    ]
+  },
   "BPO_Dock_2": {
     "unit": "block/collider units, block frame, 1 unit = 1 site cell = 100 cm (machine grid units are 50 cm = half)",
     "machine": {

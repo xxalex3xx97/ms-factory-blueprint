@@ -2241,17 +2241,73 @@
       "label": "Deep Space Observatory",
       "class": "/Game/Blueprints/BuildingBlocks/BPO_DeepSpaceObservatory.BPO_DeepSpaceObservatory_C",
       "category": "Functional Blocks",
-      "w": 2,
+      "w": 1,
       "h": 2,
       "verified": true,
       "nofloor": true,
       "floor": null,
       "floorOrigin": [
-        -16,
+        -8,
         -16
       ],
       "ground": false,
       "confidence": "decoded from EA assets, untested in game",
+      "size": [
+        16,
+        32
+      ],
+      "hatch": "interior",
+      "hatchAdd": [
+        [
+          -7,
+          -15,
+          7,
+          15
+        ]
+      ],
+      "drop": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "wallsOverride": [
+        [
+          -8,
+          -16,
+          8,
+          -15
+        ],
+        [
+          -8,
+          15,
+          8,
+          16
+        ],
+        [
+          7,
+          -16,
+          8,
+          16
+        ],
+        [
+          -8,
+          -15,
+          -7,
+          -11
+        ],
+        [
+          -8,
+          11,
+          -7,
+          15
+        ]
+      ],
+      "entrance": {
+        "kind": "ports",
+        "evidence": "user 2026-11-13: only opening on the west side, 2 ports at mid height"
+      },
       "source": "decoded from EA files (BPO DeepSpaceObservatory: colliders, BlockBounds, ItemCost); not tested in game",
       "description": "An advanced scanning array used to gather data from stars and planets.",
       "research": [
@@ -2269,7 +2325,10 @@
           30
         ]
       ],
-      "note": "default machines: DeepSpaceObservatoryMachine"
+      "note": "default machines: DeepSpaceObservatoryMachine",
+      "xl": [
+        "W"
+      ]
     },
     "BPO_AstronomicScanner": {
       "add": true,

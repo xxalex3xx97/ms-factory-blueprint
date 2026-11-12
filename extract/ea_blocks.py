@@ -130,7 +130,7 @@ MK = {'BPO_ShipyardCore_02': 'Shipyard Core Mk. 2', 'BPO_MiningDroneBayBlock': '
 
 
 # XLargeConnector sides (block frame) from floors.json ea.connectors; all other sides are LargeConnector. Only equal classes connect.
-XL = {'BPO_Station_03': ['E', 'S', 'W', 'N'], 'BPO_StationCorridor_02': ['E', 'W'], 'BPO_ElevatorBlock_02A': ['E', 'S', 'W', 'N'], 'BPO_StationAdapter_01': ['W']}
+XL = {'BPO_Station_03': ['E', 'S', 'W', 'N'], 'BPO_StationCorridor_02': ['E', 'W'], 'BPO_ElevatorBlock_02A': ['E', 'S', 'W', 'N'], 'BPO_StationAdapter_01': ['W'], 'BPO_DeepSpaceObservatory': ['W']}
 
 
 def build():
@@ -166,6 +166,11 @@ def build():
             e['verified'] = True
             e['confidence'] = 'user 2026-11-12: prop block, no floor, nothing placed inside'
             notes[:] = [x for x in notes if not x.startswith('default machines')]
+            # cap building 16x32 (1x2 cells, hull like the Station Adapter), user 2026-11-13: closed ring, only opening W (2 ports at mid height, extra_blocks.json), no floor
+            e.update(w=1, h=2, size=[16, 32], floorOrigin=[-8, -16], hatch='interior', hatchAdd=[[-7, -15, 7, 15]], drop=[0, 1, 2, 3, 4],
+                     wallsOverride=[[-8, -16, 8, -15], [-8, 15, 8, 16], [7, -16, 8, 16], [-8, -15, -7, -11], [-8, 11, -7, 15]],
+                     entrance={'kind': 'ports', 'evidence': 'user 2026-11-13: only opening on the west side, 2 ports at mid height'})
+            e.pop('fill', None)
         e.update(EXTRA.get(n, {}))
         e['source'] = 'decoded from EA files (BPO %s: colliders, BlockBounds, ItemCost); not tested in game' % n[4:]
         d = desc(n)
