@@ -193,7 +193,7 @@ function lcBuild(F,plan,mk,spMk){
   for(const c of cells){
     const n=byItem.get(c.item),g=lcCell(n.rec,c.K,mk,c.ox,c.oy,n.cls,n.k,n.flows);
     if(g.ok===false)return no('cell: '+g.why);
-    for(const q of g.items)items.push(q)}
+    for(const q of g.items)items.push(q.cls===n.cls?Object.assign(q,{rec:n.rec}):q)}
   for(const d of plan.dock)items.push({cls:PLC_BOX,x:d.x,y:1,rot:0,ct:[{item:d.item,n:0,inf:true}]});
   // lanes: straight / jog / through with taps
   const oyOf=id=>cells[id].oy;
