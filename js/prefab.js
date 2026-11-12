@@ -504,6 +504,48 @@ function pfGutter(links,y0,y1,mk){
   if(bad)return no(bad);
   return{ok:true,items:[...cell.values()],tracks:occ.length};
 }
+// pfFact step 4b/4c: splitter off keys. keep = WORLD faces (after rot) that stay enabled; every other output port key goes in item.off. portsOf gives base face f and world face index wf.
+const pfSplOff=(sc,rot,keep)=>portsOf({cls:sc,x:0,y:0,rot,off:[]}).filter(p=>p.dir!=='in'&&!keep.includes(FN[p.wf])).map(p=>p.key);
+// pfFact step 4b/4c: routes. links=[{xp,yp,heads:[x asc],y1,t}]: producer belt leaves going south at (xp,yp); t=trunk row (>=0) or -1 straight (needs heads.length===1 && xp===heads[0]); heads = columns where a belt must enter going south at row y1. Trunk: east along row t from xp to last head; xp==heads[0] -> rot-1 T splitter (S + E if more heads); else rot-0 corner belt. Each head x gets a splitter (rot 0, keep E,S; the last keep only S). Vertical legs go under other links' trunks with a UG pair (t-1,t+1), never on a wall column, splitter or corner. Returns {ok,items} or {ok:false,why}.
+function pfFactRoute(links,mk,spMk){
+  const no=why=>({ok:false,why}),bc=PLC_BELT[mk],ug=PLC_UG[mk],sc=PLC_SPL[spMk],cw=PF_GRID.cw;
+  if(def(ug).maxApart<3)return no('route UG too short');
+  const cell=new Map();let bad=null;
+  const put=(x,y,o)=>{const k=x+','+y;if(cell.has(k)){bad='route cells clash '+k;return}cell.set(k,{x,y,h:0,pid:0,...o})};
+  const trunks=links.filter(l=>l.t>=0);
+  for(const l of links){
+    if(l.t<0){if(l.heads.length!==1||l.heads[0]!==l.xp)return no('straight link not aligned');continue}
+    const last=l.heads[l.heads.length-1];
+    if(l.xp>l.heads[0])return no('feed right of heads');
+    l.lo=l.xp;l.hi=last;l.xs=[...l.heads];
+  }
+  const leg=(l,c,a,b)=>{
+    const X=[];
+    for(const m of trunks){
+      if(m===l||c<m.lo||c>m.hi||m.t<a||m.t>b)continue;
+      if(m.xs.includes(c)||c===m.xp){bad='route leg hits splitter/corner';return}
+      if(m.t-1<a||m.t+1>b){bad='route UG no room';return}
+      const q=pfMod(c,cw);if(q===0||q===cw-1){bad='route UG on wall column';return}
+      X.push(m.t);
+    }
+    for(let y=a;y<=b;y++){if(X.includes(y))continue;put(c,y,{cls:X.some(t=>y===t-1||y===t+1)?ug:bc,rot:1})}
+  };
+  for(const l of links){
+    if(l.t<0){leg(l,l.xp,l.yp,l.y1-1);continue}
+    leg(l,l.xp,l.yp,l.t-1);
+    const first=l.heads[0],last=l.heads[l.heads.length-1];
+    for(let x=l.xp;x<=last;x++){
+      const isH=l.heads.includes(x);
+      if(x===l.xp&&x===first)put(x,l.t,{cls:sc,rot:1,off:pfSplOff(sc,1,l.heads.length>1?['S','E']:['S'])});
+      else if(x===l.xp)put(x,l.t,{cls:bc,rot:0});
+      else if(isH)put(x,l.t,{cls:sc,rot:0,off:pfSplOff(sc,0,x===last?['S']:['E','S'])});
+      else put(x,l.t,{cls:bc,rot:0});
+    }
+    for(const x of l.heads)leg(l,x,l.t+1,l.y1-1);
+  }
+  if(bad)return no(bad);
+  return{ok:true,items:[...cell.values()]};
+}
 // STEP 5b (pfBands atom, inert: no caller). Builds one graph node at y=0, absolute x from x0, in a layer of body height B (belts run down to row B-1, the gutter starts at row B). grp: pfGrpNode with greedy column origins (each column and the last column's head box fit the wall grid), head boxes replaced by raw hubs. hub/raw: one Large container, W port belt up/over when nIn>4, S outs and E outs (reverse riser order) belted down to row B-1. Returns {ok,items,x0,x1 (exclusive),ins:[{item,head,x}],outs:[{x}]} or {ok:false,why}.
 function pfBandAtom(n,x0,B,nOut,nIn,mk){
   const bc=PLC_BELT[mk],bw=def(PLC_BOX).w,HC='DAT_Container_2',items=[],ins=[],outs=[];
