@@ -14,7 +14,7 @@ function nlCellInfo(n,K,mk,inRate){
   for(const q of heads){   // demand: the cell's item rate (per machine * K) split over that item's heads by column machine count
     q.d=inRate.get(q.item)*c.sizes[q.col]/heads.filter(h=>h.item===q.item&&h.col===q.col).length;
   }
-  return{K,s:K*n.fo,w:c.w,h:c.h,sizes:c.sizes,out:{x:c.out.x},nb:c.nb,heads};
+  return{K,s:K*n.fo,w:c.w,h:c.h,sizes:c.sizes,out:{x:c.out.x},nb:c.nb,heads,items:c.items};
 }
 function nlFlow(P,item,mk){
   const Z=pfFactTree(P,item,mk);
