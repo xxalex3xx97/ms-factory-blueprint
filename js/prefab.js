@@ -238,11 +238,9 @@ function pfBandSize(P,item,mk,gr){
       const N=T.machines,cls=def(cb.id).key,k=S.ins.length,flows=S.ins.map(i=>({item:i,flow:i===y?T.rec.i.find(([a])=>a===y)[1]*1800/T.rec.t:P.edges.find(q=>q.from===i&&q.to===y).flow/N}));
       if(flows.some(f=>f.flow>cap))R=no2('one machine input above one belt');
       else{
-        const mcap=Math.max(1,Math.floor(Math.min(...flows.map(f=>cap/f.flow))));
-        let mh=Math.min(N,mcap);while(mh>1){const C=pfCol(cls,k,flows,mh,mk);if(C.ok===false||C.h+SH<=Fh-PF_CORR)break;mh--}
+        const mcap=Math.max(1,Math.floor(Math.min(...flows.map(f=>cap/f.flow)))),outF=P.edges.filter(e=>e.from===y).reduce((a,e)=>a+e.flow,0),fo=outF/N,mxC=Math.floor(cap/fo+1e-9);
+        let mh=Math.max(1,Math.min(N,mcap,mxC));while(mh>1){const C=pfCol(cls,k,flows,mh,mk);if(C.ok===false||C.h+SH<=Fh-PF_CORR)break;mh--}
         const sizes=[];for(let r=N;r>0;r-=mh)sizes.push(Math.min(mh,r));
-        const outF=P.edges.filter(e=>e.from===y).reduce((a,e)=>a+e.flow,0),fo=outF/N;
-        const mxC=Math.floor(cap/fo+1e-9);
         if(sizes.some(s=>s>mxC))R=no2('column of '+Math.max(...sizes)+' machines above belt cap (max '+mxC+')');
         else{
           const groups=[];for(const s of [...sizes].sort((a,b)=>b-a)){const g=groups.find(g=>(g.reduce((a,b)=>a+b,0)+s)*fo<=cap+1e-9);if(g)g.push(s);else groups.push([s])}
@@ -429,7 +427,7 @@ function pfFactRow(nd,T,K,mk,segs,isFin){
   if(isFin)outs.forEach(o=>items.push({cls:bc,x:o.x,y:o.y,rot:1}));
   const cells=items.reduce((a,q)=>{const e=dim(q);return a+e.w*e.h},0);
   if(cells!==plcOcc(items).size)return no('factory cells overlap (raw boxes vs heads)');
-  for(const p of isFin?ins:[...ins,...outs])if(!pfFitX(p.x,1,true))return no('port x '+p.x+' on a wall column');
+  for(const p of isFin?ins:[...ins,...outs])if(pfMod(p.x,PF_GRID.cw)<1||pfMod(p.x,PF_GRID.cw)>PF_GRID.cw-2)return no('port x '+p.x+' on a wall column');
   return{ok:true,item:nd.item,items,w:TR.w,h:bodyY+TR.h+(isFin?1:0),bodyY,ins,outs,K,M:T.M,T};
 }
 // pfFact step 4a: allocation. callers pass spMk=mk; pfFactTop must use Math.max(spMk,mk). SZ = Map item->{T,M,K,nd} (K from pfFactSizeTile). Processes rows 0..n (consumers before producers). Each consumer's heads of item i (sorted by x, consumer order = row then index in Z.rows) are cut into groups with demand D <= capG; group gets t=ceil(D/tileOut) tiles; producer K = sum t. Returns Map item->{groups:[{cons,heads:[{x,tile,head,flow}],D,t}]} (non-final items only) or {ok:false,why}.
@@ -628,8 +626,8 @@ function pfFactTop(P,item,mk,spMk,o={}){
 // pfFact2 S1: exact tile sizing. Prefer K*M==N (M a divisor of N in [ceil(maxM/2),maxM]); else try N+1. Non-straddling tile wins; else smallest total width.
 function pfFactSize2(nd,mk){
   const maxM=Math.max(1,Math.min(nd.N,nd.mxC,PF_MB));
-  for(const N of [nd.N,nd.N+1]){
-    const hi=Math.min(maxM,N),lo=Math.min(hi,Math.ceil(maxM/2));
+  for(const wide of [false,true])for(const N of [nd.N,nd.N+1]){   // narrow window first (tile M in [maxM/2,maxM], K*M==N); then ANY divisor (smaller tiles, more copies) so no item is refused for lack of a nice divisor
+    const hi=Math.min(maxM,N),lo=wide?1:Math.min(hi,Math.ceil(maxM/2));
     let best=null;
     for(let M=hi;M>=lo;M--){
       if(N%M)continue;
