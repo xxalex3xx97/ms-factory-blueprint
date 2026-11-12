@@ -85,7 +85,7 @@
       <div id="plnBody">
       <div id="plnForm">
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
-      <label>Rate (items/min) <input id="plnRate" type="number" min="1" step="any" value="1" aria-label="Target rate in items per minute"></label>
+      <label>Rate (items/min) <input id="plnRate" type="number" min="0.001" step="any" value="1" aria-label="Target rate in items per minute"></label>
       <button id="plnBuild" type="button" title="Preview and place machines, belts and source containers for this plan">Build factory</button>
       </div>
       <div id="plnMain">
@@ -269,7 +269,8 @@
     <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2" selected>Large Container</option></select></label>
     <label>Belt <select id="pvMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
     <label>Splitter <select id="pvSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
-    <label>Rate (items/min) <input id="pvRate" type="number" min="1" step="any" aria-label="Target rate in items per minute"></label>
+    <label>Rate (items/min) <input id="pvRate" type="number" min="0.001" step="any" aria-label="Target rate in items per minute"></label>
+    <label>Engine <select id="pvEngine" aria-label="Layout engine"><option value="old">Old (stable)</option><option value="new">New (experimental)</option></select></label>
     <label class="chk" title="Open-ended chainable module: input on west edge, output on east edge, no source/sink containers"><input type="checkbox" id="plnMod"> Modular build</label>
   </div>
   <div id="plnPrevView"><canvas id="plnPrevMap" width="300" height="180" aria-label="Factory layout preview"></canvas></div>

@@ -139,15 +139,22 @@ try {
 
   // ---- placed 3-input stages at 10, 25, 55 per minute (Mk1)
   for (const rate of RATES) {
+    if (RUN && !RUN.split(',').includes(String(rate))) continue;
+    // note text and hub count are old-layout specific: these two checks run on the old placer path, the placement below uses the prefab default
+    await pg.evaluate(() => { PLC_PREFAB = false });
+    await setup(pg, ITEM, rate, 0, 'DAT_Container');
+    const Oold = await openBuild(pg);
+    await pg.evaluate(() => { PLC_PREFAB = true });
+    chk(`S${rate}) modal note names three inputs (old placer path)`, /Three inputs into Superalloy: A Enriched Titanium Ore \(main chain\) \+ B Enriched Nickel Ore \+ C Enriched Cobalt Ore/.test(Oold.note), Oold.note);
+    chk(`S${rate}) one hub per junction (old placer path: 1 stage junction, 1 band)`, Oold.hubs === 1 && Oold.G === 1, `hubs=${Oold.hubs} G=${Oold.G}`);
+    await closeIfOpen(pg);
     await setup(pg, ITEM, rate, 0, 'DAT_Container');
     const O = await openBuild(pg);
-    info(`S${rate}) modal note=${JSON.stringify(O.note)} err=${JSON.stringify(O.err)} hubs=${O.hubs} G=${O.G}`);
+    info(`S${rate}) modal note=${JSON.stringify(O.note)} err=${JSON.stringify(O.err)} G=${O.G}`);
     chk(`S${rate}) Superalloy ${rate}/min Mk1: modal opens, no error, Place enabled`, O.open && O.err === '' && !O.off);
-    chk(`S${rate}) modal note names three inputs`, /Three inputs into Superalloy: A Enriched Titanium Ore \(main chain\) \+ B Enriched Nickel Ore \+ C Enriched Cobalt Ore/.test(O.note), O.note);
-    chk(`S${rate}) one hub per junction (1 stage junction, 1 band)`, O.hubs === 1 && O.G === 1, `hubs=${O.hubs} G=${O.G}`);
-    if (RUN && !RUN.split(',').includes(String(rate))) { await closeIfOpen(pg); continue; }
     if (rate === 55) await shots(pg, 'three');
     await pg.click('#plnPlace');
+    if (await pg.evaluate(() => $('plnPlace').textContent === 'Build it')) await pg.click('#plnPlace');   // more than PLC_BIG blocks: second click builds
     const placed = await stageClick(pg);
     await pg.waitForTimeout(150);
     const ag = await pg.evaluate(audit3);
@@ -227,6 +234,7 @@ try {
     chk(`B) ${label}: builds (no error, Place enabled)`, B.open && B.err === '' && !B.off, JSON.stringify({err: B.err, off: B.off}));
     if (B.err !== '' || B.off) { await closeIfOpen(pg); continue; }
     await pg.click('#plnPlace');
+    if (await pg.evaluate(() => $('plnPlace').textContent === 'Build it')) await pg.click('#plnPlace');   // more than PLC_BIG blocks: second click builds
     const placedB = await stageClick(pg);
     await pg.waitForTimeout(150);
     const agB = await pg.evaluate(audit3);
@@ -297,6 +305,8 @@ try {
 
   // ---- refusals in the modal: Place disabled, reason names the port / 3-input limit
   // no 3-input Refinery recipe exists in the data (checked: the 3-input recipes are Assembler, Enrichment Chamber, Growth Chamber); the non-chain 3-input refusal is checked instead
+  // old placer refusals; the prefab path builds these items (own tests), so these two refusal checks run with PLC_PREFAB off
+  await pg.evaluate(() => { PLC_PREFAB = false });
   await setup(pg, 'ITEM_ContainmentCoil', 10, 0, 'DAT_Container');
   const C = await openBuild(pg);
   chk('R) ITEM_ContainmentCoil (3 inputs, shared intermediate) refused in the modal with a clean reason, Place disabled (shared intermediates now planned; the reason moved on to the wall cut), was: input chain', C.open && C.err !== '' && C.off === true, JSON.stringify(C.err));
@@ -304,6 +314,7 @@ try {
   const N = await openBuild(pg);
   chk('R) ITEM_Nutrients refused in the modal ("3 inputs per machine"), Place disabled', N.open && /3 inputs per machine/.test(N.err) && N.off === true, JSON.stringify(N.err));
   await closeIfOpen(pg);
+  await pg.evaluate(() => { PLC_PREFAB = true });
   chk('page: no pageerror / console.error during the run', errs.length === 0, errs.slice(0, 3).join(' | '));
   process.exitCode = fails.length || errs.length ? 1 : 0;
 } catch (e) {

@@ -16,7 +16,8 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof pfCompose === 'function' && typeof placerLayout === 'function' && typeof placerTile === 'function' && typeof simAdvance === 'function');
-await pg.evaluate(() => { PF_BANDS = false });   // step 8: pinned to the old chain layout (sink = rightmost empty box is chain geometry; bands use S out)
+// pin the chain path: PF_FACT (pfFact2) and PF_BANDS off (sink = rightmost empty box is chain geometry; bands use S out); previous flag values restored before exit
+const keepFlags = await pg.evaluate(() => { const k = {p: PLC_PREFAB, f: PF_FACT, b: PF_BANDS}; PF_FACT = false; PF_BANDS = false; return k });
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 const cases = [
@@ -34,9 +35,10 @@ for (const c of cases) {
     const it = [...plnBy(false).keys()].find(i => plnNm(i) === c.name);
     if (it === undefined) return {refused: 'item not found'};
     const P = plan(it, c.rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+    const prevP = PLC_PREFAB;
     PLC_PREFAB = true;
     const L = placerLayout(P, it, 1, 0, {box: 'DAT_Container_2', mod: false});
-    PLC_PREFAB = false;
+    PLC_PREFAB = prevP;
     if (!L.ok) return {refused: L.why, name: plnNm(it)};
     const T = placerTile(L, placerBk());
     const boxes = L.items.map((b, i) => ({b, id: i + 1})).filter(q => q.b.cls === PLC_BOX);
@@ -79,6 +81,7 @@ for (const k of known) {
   }, k);
   check(r.ok === false && r.why.includes(k.why), 'KNOWN LIMIT ' + k.name + ' ' + k.rate + ' refused: ' + r.why);
 }
+await pg.evaluate(k => { PLC_PREFAB = k.p; PF_FACT = k.f; PF_BANDS = k.b }, keepFlags);
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
 await br.close();
 console.log(fails ? fails + ' FAILED' : 'ALL PASS');

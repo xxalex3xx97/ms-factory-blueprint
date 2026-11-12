@@ -76,6 +76,12 @@ function plnDraw(){
   plnArrows(P.edges);
 }
 // Draw arrows + labels over the box grid (layout only). A node's anchor = union box of its boxes.
+function plnRoute(E){
+  if(PLN_SEL===null||!E.some(e=>e.from===PLN_SEL||e.to===PLN_SEL))return null;
+  const R=new Set([PLN_SEL]),q=[PLN_SEL];
+  while(q.length){const n=q.pop();E.forEach(e=>{if(e.to===n&&!R.has(e.from)){R.add(e.from);q.push(e.from)}})}
+  return R;
+}
 function plnArrows(E){
   const g=document.querySelector("#plnOut .plnGrid");if(!g)return;
   g.querySelectorAll(".plnSvg,.plnLbl").forEach(n=>n.remove());
@@ -85,12 +91,14 @@ function plnArrows(E){
     if(u){u.l=Math.min(u.l,L);u.r=Math.max(u.r,R);u.t=Math.min(u.t,T);u.b=Math.max(u.b,B)}else bx[b.dataset.item]={l:L,r:R,t:T,b:B}});
   const out={},inn={};E.forEach(e=>{(out[e.from]=out[e.from]||[]).push(e);if(e.to!=null)(inn[e.to]=inn[e.to]||[]).push(e)});
   const ys=(b,l,e)=>b.t+(b.b-b.t)*(l.indexOf(e)+1)/(l.length+1);
+  const RT=plnRoute(E);
+  g.querySelectorAll(".plnBox").forEach(b=>{b.classList.toggle("plnDim",!!RT&&!RT.has(b.dataset.item));b.classList.toggle("plnOn",!!RT&&b.dataset.item===PLN_SEL)});
   let sv="",lb=[];
   E.forEach(e=>{
     const a=bx[e.from];if(!a)return;
     const x1=a.r,y1=ys(a,out[e.from],e);let x2,y2;
     if(e.to==null){x2=x1+110;y2=y1}else{const b=bx[e.to];x2=b.l;y2=ys(b,inn[e.to],e)}
-    const c=(x2-x1)/2,cl=e.warn?"warn":"";
+    const c=(x2-x1)/2,cl=(e.warn?"warn":"")+(RT?(RT.has(e.from)&&RT.has(e.to)?" on":" dim"):"");
     sv+=`<path class="plnArr ${cl}" d="M${x1} ${y1}C${x1+c} ${y1} ${x2-c} ${y2} ${x2-7} ${y2}"/><path class="plnHead ${cl}" d="M${x2} ${y2}l-8 -4.5v9z"/>`;
     const lx=e.to==null?x1+55:x2-95;let ly=y1,bd=1e9;
     for(let t=0;t<=1;t+=.02){const s=1-t,X=s*s*s*x1+3*s*s*t*(x1+c)+3*s*t*t*(x2-c)+t*t*t*x2,d=Math.abs(X-lx);if(d<bd){bd=d;ly=s*s*s*y1+3*s*s*t*y1+3*s*t*t*y2+t*t*t*y2}}
@@ -102,6 +110,7 @@ function plnArrows(E){
   const ls=[...g.querySelectorAll(".plnLbl")];
   ls.forEach((d,i)=>{const o=lb[i];let y=o.y;for(let j=0;j<i;j++)if(lb[j].x===o.x&&Math.abs(lb[j].y-y)<ls[j].offsetHeight/2+d.offsetHeight/2+4)y=lb[j].y+ls[j].offsetHeight/2+d.offsetHeight/2+4;o.y=y;d.style.left=o.x+"px";d.style.top=y+"px"});
 }
+let PLN_SEL=null;   // clicked item: its whole route (every upstream item + the arrows between them) is highlighted, the rest dims
 let PLN_PICK={},PLN_OFF=new Map(),PLN_EX=false,PLN_E=[],PLN_DRAG=null,PLN_Z=1,PLN_PX=0,PLN_PY=0,PLN_PAN=null;   // PLN_Z: diagram zoom; PLN_OFF: key (item, or item#machine in expanded) -> {dx,dy}
 // Drag any box (not its recipe select). Offset clamped so the box stays inside the grid (left/top >= 0).
 const plnKey=b=>b.dataset.item+(b.classList.contains("plnM")?"#"+b.dataset.i:"");
@@ -119,7 +128,10 @@ $("plnOut").addEventListener("pointermove",ev=>{
   const dx=Math.max(d.minX,d.ox+(ev.clientX-d.x)/PLN_Z),dy=Math.max(d.minY,d.oy+(ev.clientY-d.y)/PLN_Z);
   PLN_OFF.set(d.k,{dx,dy});d.b.style.transform=`translate(${dx}px,${dy}px)`;plnArrows(PLN_E);
 });
-const plnUp=ev=>{if(PLN_PAN&&ev.pointerId===PLN_PAN.id)PLN_PAN=null;if(PLN_DRAG&&ev.pointerId===PLN_DRAG.id){PLN_DRAG.b.classList.remove("plnDrag");PLN_DRAG=null}};
+const plnUp=ev=>{
+  if(PLN_PAN&&ev.pointerId===PLN_PAN.id){const click=Math.hypot(ev.clientX-PLN_PAN.x,ev.clientY-PLN_PAN.y)<4;PLN_PAN=null;if(click&&PLN_SEL!==null){PLN_SEL=null;plnArrows(PLN_E)}}
+  if(PLN_DRAG&&ev.pointerId===PLN_DRAG.id){const d=PLN_DRAG,click=ev.type==="pointerup"&&Math.hypot(ev.clientX-d.x,ev.clientY-d.y)<4;d.b.classList.remove("plnDrag");PLN_DRAG=null;if(click){PLN_SEL=PLN_SEL===d.b.dataset.item?null:d.b.dataset.item;plnArrows(PLN_E)}}
+};
 $("plnOut").addEventListener("pointerup",plnUp);$("plnOut").addEventListener("pointercancel",plnUp);
 // Wheel over the diagram = zoom around the cursor; double-click empty space = reset zoom.
 $("plnOut").addEventListener("wheel",ev=>{
@@ -146,7 +158,7 @@ const plnDefRate=()=>{const it=$("plnItem").value;if(!it)return;const P=plan(it,
 $("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDefRate();plnDraw();plnFit()};
 $("plnEnr").onchange=plnDraw;
 $("plnProto").onchange=()=>{plnFillItems();plnDraw()};   // PLN_OFF kept: drag offsets survive
-$("plnRate").oninput=plnDraw;$("plnRate").onchange=()=>{if(!(+$("plnRate").value>=1)){$("plnRate").value=1;plnDraw()}};   // redraw only when clamped: a plain blur must not re-render the diagram under a pointer press
+$("plnRate").oninput=plnDraw;$("plnRate").onchange=()=>{if(!(+$("plnRate").value>0)){$("plnRate").value=1;plnDraw()}};   // redraw only when clamped: a plain blur must not re-render the diagram under a pointer press
 $("plnMk").onchange=$("plnSp").onchange=$("plnBal").onchange=plnDraw;
 $("plnOut").onchange=ev=>{const t=ev.target;if(t.classList.contains("plnAlt")){PLN_PICK[t.dataset.item]=t.value;plnDraw()}};
 const sgn=v=>(v>0?"+":"")+v,

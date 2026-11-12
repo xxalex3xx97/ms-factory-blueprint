@@ -130,6 +130,7 @@ const simStats = item => {
 // place the current modal plan with real clicks, audit, simulate, undo
 async function placeAuditSim(pg, item) {
   await pg.click('#plnPlace');
+  if (await pg.evaluate(() => $('plnPlace').textContent === 'Build it')) await pg.click('#plnPlace');   // more than PLC_BIG blocks: second click builds
   const placed = await stageClick(pg);
   await pg.waitForTimeout(150);
   const ag = await pg.evaluate(audit);
@@ -190,13 +191,20 @@ try {
   await reset(pg);
 
   // ---- A) Capacitor 60/min Mk1: two inputs (Nickel Plates main chain, Titanium Plates B band)
+  // note text is old-layout specific: this one check runs on the old placer path, the placement checks below use the prefab default
+  await pg.evaluate(() => { PLC_PREFAB = false });
+  await setup(pg, 'ITEM_Capacitor', 60, 0, 'DAT_Container');
+  const Onote = await openBuild(pg, null);
+  await pg.evaluate(() => { PLC_PREFAB = true });
+  chk('A) modal note names both inputs (old placer path)', /Two inputs into Capacitor: A Nickel Plates \(main chain\) \+ B Titanium Plates/.test(Onote.note), Onote.note);
+  await closeIfOpen(pg);
   await setup(pg, 'ITEM_Capacitor', 60, 0, 'DAT_Container');
   const Ob = await openBuild(pg, null);
   info('A) modal: note=' + JSON.stringify(Ob.note) + ' err=' + JSON.stringify(Ob.err));
   chk('A) Capacitor 60 Mk1: modal opens, no error, Place enabled', Ob.open && Ob.err === '' && await pg.evaluate(() => !$('plnPlace').disabled));
-  chk('A) modal note names both inputs', /Two inputs into Capacitor: A Nickel Plates \(main chain\) \+ B Titanium Plates/.test(Ob.note), Ob.note);
   await shots(pg, 'multi');
   await pg.click('#plnPlace');
+  if (await pg.evaluate(() => $('plnPlace').textContent === 'Build it')) await pg.click('#plnPlace');   // more than PLC_BIG blocks: second click builds
   const placedOk = await stageClick(pg);
   await pg.waitForTimeout(150);
   const ag2 = await pg.evaluate(audit2);
@@ -213,9 +221,11 @@ try {
   // ---- refusals: 2-input machine without 2 ports on one face, and 3 inputs
   for (const [item, pat] of [['ITEM_IridiumPlates', /no face with 2 input ports/], ['ITEM_Nutrients', /3 inputs per machine/]]) {
     await closeIfOpen(pg);
+    await pg.evaluate(() => { PLC_PREFAB = false });   // old placer refusals; the prefab path builds these items (own tests)
     await setup(pg, item, 30, 0, 'DAT_Container');
     const R = await openBuild(pg, null);
     const RR = await pg.evaluate(() => ({err: $('plnPrevErr').textContent, off: $('plnPlace').disabled}));
+    await pg.evaluate(() => { PLC_PREFAB = true });
     chk('R) ' + item + ' refused in the modal with an input/port reason, Place disabled', R.open && pat.test(RR.err) && RR.off === true, JSON.stringify(RR));
   }
   chk('page: no pageerror / console.error during the run', errs.length === 0, errs.slice(0, 3).join(' | '));

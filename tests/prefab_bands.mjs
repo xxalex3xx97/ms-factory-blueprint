@@ -29,12 +29,11 @@ for (const c of cases) {
     const it = [...plnBy(false).keys()].find(i => plnNm(i) === c.name);
     if (it === undefined) return {refused: 'item not found'};
     const P = plan(it, c.rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
-    const lay = () => { PLC_PREFAB = true; try { return placerLayout(P, it, 1, 0, {box: 'DAT_Container_2', mod: false}) } finally { PLC_PREFAB = false } };
-    PF_BANDS = false;
-    const off = lay();
-    PF_BANDS = true;
-    let L;
-    try { L = lay() } finally { PF_BANDS = false }
+    // flags per layout: PLC_PREFAB on, PF_FACT off (pfFact2 would take the call first), PF_BANDS = bands; the previous values are restored after each call
+    const keep = {p: PLC_PREFAB, f: PF_FACT, b: PF_BANDS};
+    const lay = bands => { PLC_PREFAB = true; PF_FACT = false; PF_BANDS = bands; try { return placerLayout(P, it, 1, 0, {box: 'DAT_Container_2', mod: false}) } finally { PLC_PREFAB = keep.p; PF_FACT = keep.f; PF_BANDS = keep.b } };
+    const off = lay(false);   // flag off = old pfChain path
+    const L = lay(true);
     if (!L.ok) return {refused: L.why, name: plnNm(it), offNote: off.note && off.note[0]};
     const T = placerTile(L, placerBk());
     const empty = L.items.filter(q => q.cls === PLC_BOX && q.ct && !q.ct.length);

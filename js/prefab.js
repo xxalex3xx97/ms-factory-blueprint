@@ -150,7 +150,7 @@ PF_BUILD.pfLine=(n,box,mk,item,len,wall)=>{
 };
 const pfLine=(n,box,mk,item,len,wall)=>pfPrefab('pfLine',[n,box,mk,item,len,wall]);
 // COMPOSE (step 6, single stage only, behind PLC_PREFAB): one COL column of all machines (pfCol, m = machines), one sink container (the collector). Refuses growth, multi-stage (old path). Returns the placerLayoutA shape (items, w, h, pitch, mod, box, mk, lanes, per, makes, note).
-let PLC_PREFAB=false;   // test hook: flip on in the page; off = old path only
+let PLC_PREFAB=false;   // prefab path (pfFact2 > pfBands > pfChain); tests pin it off with PLC_PREFAB=false to exercise the old placer path
 // COLUMNS (step 6A): sizes[] = machines per column (pfCol each), side by side (seam cols make a 2-cell gap). Each column's own sink box is removed; its collector stub goes north into one shared out row at row Rb (= the out box port row) that runs east into ONE out container. Columns sit one row lower (SH = Rb+1). Inputs stay per-column infinite source containers (not aggregated). Out total must fit one belt (out stack not built). STEP 6B: pfCompose caps machines per column so the column fits the floor height (h+SH<=30); a wider layout is cut by placerTile at the seams.
 // HUB W entry (step 7g): hubAt=true -> no sink box; a DAT_Container_2 hub at x=xo with its W port on the out row (hub.y = Rb - that port's y). Returns hub:{x,y} (after the minY shift).
 function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt,dn,org){

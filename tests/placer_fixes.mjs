@@ -119,6 +119,8 @@ try {
   await pg.click('#plnCancel').catch(() => {});
 
   // (h) rate in the modal: 3000 -> 300 by typing in #pvRate, preview re-runs (note says target 300); field fits 390px
+  const prefabBefore = await pg.evaluate(() => PLC_PREFAB);
+  await pg.evaluate(() => { PLC_PREFAB = false })   // old placer path (note text 'target 300' is old-layout specific)
   await setup(pg, 'Lightweight Frames', 3000, 0, 'DAT_Container');
   await openModal(pg);
   await pg.fill('#pvRate', '300');
@@ -135,6 +137,7 @@ try {
       chk('h) rate field fits 390px', fit.right <= fit.vw, JSON.stringify(fit));
     }
   }
+  await pg.evaluate(v => { PLC_PREFAB = v }, prefabBefore);   // restore the previous value for the rest of the file
   await pg.setViewportSize({width: 1400, height: 800});
   await pg.click('#plnCancel').catch(() => {});
 

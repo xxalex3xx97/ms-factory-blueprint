@@ -148,6 +148,7 @@ try {
   pg.on('dialog', d => d.dismiss().catch(() => {}));
   await pg.goto(PAGE);
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined' && typeof placerLayout === 'function');
+  await pg.evaluate(() => { PLC_PREFAB = false })   // old placer path (the prefab path has its own pff_*/prefab_* tests)
   await reset(pg);
 
   // ---- U) unit: plcChain

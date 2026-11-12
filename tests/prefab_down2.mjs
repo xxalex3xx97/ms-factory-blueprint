@@ -15,7 +15,8 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof pfCompose === 'function' && typeof placerLayout === 'function' && typeof placerTile === 'function' && typeof simAdvance === 'function');
-await pg.evaluate(() => { PF_BANDS = false });   // step 8: pinned, this test checks the PF_DOWN2 two-row path
+// pin the PF_DOWN2 two-row path: PF_FACT and PF_BANDS off; previous flag values restored before exit
+const keepFlags = await pg.evaluate(() => { const k = {p: PLC_PREFAB, f: PF_FACT, b: PF_BANDS, d: PF_DOWN2}; PF_FACT = false; PF_BANDS = false; return k });
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 const cases = [
@@ -26,12 +27,11 @@ for (const c of cases) {
     const it = [...plnBy(false).keys()].find(i => plnNm(i) === c.name);
     if (it === undefined) return {refused: 'item not found'};
     const P = plan(it, c.rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
-    const lay = () => { PLC_PREFAB = true; try { return placerLayout(P, it, 1, 0, {box: 'DAT_Container_2', mod: false}) } finally { PLC_PREFAB = false } };
-    PF_DOWN2 = false;
-    const off = lay();
-    PF_DOWN2 = true;
-    let L;
-    try { L = lay() } finally { PF_DOWN2 = false }
+    // PLC_PREFAB on, PF_FACT and PF_BANDS off, PF_DOWN2 = two-row flag; previous values restored after each call
+    const keep = {p: PLC_PREFAB, f: PF_FACT, b: PF_BANDS, d: PF_DOWN2};
+    const lay = down2 => { PLC_PREFAB = true; PF_FACT = false; PF_BANDS = false; PF_DOWN2 = down2; try { return placerLayout(P, it, 1, 0, {box: 'DAT_Container_2', mod: false}) } finally { PLC_PREFAB = keep.p; PF_FACT = keep.f; PF_BANDS = keep.b; PF_DOWN2 = keep.d } };
+    const off = lay(false);   // flag off = old pfChain path
+    const L = lay(true);
     if (!L.ok) return {refused: L.why, name: plnNm(it), offNote: off.note && off.note[0]};
     const T = placerTile(L, placerBk());
     const empty = L.items.filter(q => q.cls === PLC_BOX && q.ct && !q.ct.length);
@@ -63,6 +63,7 @@ for (const c of cases) {
   check(tol, c.name + ' ' + c.rate + ': sim sink rate ' + r.measured + '/min within 5% of ' + r.target);
   if (r.working < r.machines) console.log('WARN ' + c.name + ' ' + c.rate + ': machines working ' + r.working + '/' + r.machines);
 }
+await pg.evaluate(k => { PLC_PREFAB = k.p; PF_FACT = k.f; PF_BANDS = k.b; PF_DOWN2 = k.d }, keepFlags);
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
 await br.close();
 console.log(fails ? fails + ' FAILED' : 'ALL PASS');

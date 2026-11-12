@@ -28,6 +28,7 @@ async function newPage(ctx, tag) {
   wire(pg, tag);
   await pg.goto(PAGE);
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined' && typeof placerLayout === 'function');
+  await pg.evaluate(() => { PLC_PREFAB = false })   // old placer path (the prefab path has its own pff_*/prefab_* tests)
   return pg;
 }
 
