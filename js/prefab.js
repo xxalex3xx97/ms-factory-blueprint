@@ -374,19 +374,20 @@ function pfTileFact(nd,mk,M){
   PF_TILE_MEMO.set(key,R);return R;
 }
 // K copies side by side at pitch T.w; out row at y=T.h; segments of g=floor(cap/tileOut) tiles chained east, each ending in one L-bend (cell (xb,T.h) rot 1) with segment port at (xb,T.h+1). No S-curves, wall crossings = plain rot-0 east belts. Returns {ok,items,w:K*T.w,h:T.h+1,K,g,ins,outs:[{x,y,tiles}]}.
-function pfTileRow(T,K,mk){
+function pfTileRow(T,K,mk,segs){
   const no=why=>({ok:false,why}),bc=PLC_BELT[mk],cap=MKS[mk][1];
   if(!T||T.ok===false)return T||no('no tile');
   if(!(K>=1))return no('K<1');
   if(T.h+1>PF_GRID.ch-2)return no('tile row taller than a wall cell');
   const g=Math.max(1,Math.floor(cap/T.tileOut+1e-9)),items=[],ins=[],outs=[];
   for(let j=0;j<K;j++){const ox=j*T.w;T.items.forEach(q=>items.push({...q,x:q.x+ox}));T.ins.forEach(p=>ins.push({...p,x:p.x+ox,tile:j}))}
-  for(let s=0;s<K;s+=g){
-    const e=Math.min(K,s+g)-1,xa=T.out.x+s*T.w,xb=T.out.x+e*T.w;
+  const S=segs||[];if(!segs)for(let s=0;s<K;s+=g)S.push(Math.min(g,K-s));
+  if(S.some(n=>n<1)||S.reduce((a,b)=>a+b,0)!==K)return no('segs do not sum to K');
+  let s=0;
+  for(const n of S){const e=s+n-1,xa=T.out.x+s*T.w,xb=T.out.x+e*T.w;
     for(let x=xa;x<xb;x++)items.push({cls:bc,x,y:T.h,rot:0});
     items.push({cls:bc,x:xb,y:T.h,rot:1});
-    outs.push({x:xb,y:T.h+1,tiles:e-s+1});
-  }
+    outs.push({x:xb,y:T.h+1,tiles:n});s+=n}
   return{ok:true,items,w:K*T.w,h:T.h+1,K,g,ins,outs};
 }
 // pick the tile size for a tree node: largest M (a multiple of the column height mh, or nd.tileM itself) <= nd.tileM whose tile builds without straddling; K=ceil(N/M) identical copies (overbuild by <M machines, never under-deliver). Falls back to the smallest tile (one column) even if it straddles.
@@ -401,6 +402,33 @@ function pfFactSizeTile(nd,mk){
     if(!best||K*T.w<best.K*best.T.w)best={ok:true,T,M,K,straddle:true};
   }
   return best||last||{ok:false,why:'no tile size'};
+}
+// pfFact step 3: one factory = K tile copies (segs optional) + raw source strip above + open crafted heads. Local coords. nd = pfFactTree node. isFin: closes each out with a rot-1 belt cell (layout S port).
+function pfFactRow(nd,T,K,mk,segs,isFin){
+  const no=why=>({ok:false,why}),bc=PLC_BELT[mk];
+  const TR=pfTileRow(T,K,mk,segs);if(TR.ok===false)return TR;
+  const bw=def(PLC_BOX).w,bh=def(PLC_BOX).h,ch=PF_GRID.ch;
+  const sp=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).filter(p=>p.f==='S').sort((a,b)=>a.x-b.x)[0];
+  if(!sp)return no('box has no S port');
+  const isCr=it=>nd.ins.find(i=>i.item===it).crafted;
+  const raws=TR.ins.filter(p=>!isCr(p.item)),open=TR.ins.filter(p=>isCr(p.item));
+  let bodyY=1;
+  if(raws.length){bodyY=bh+2;if(bodyY+TR.h>ch-1)bodyY=ch+1}
+  if(!pfFitY(bodyY,TR.h))return no('factory body does not fit a wall cell');
+  const items=TR.items.map(q=>({...q,y:q.y+bodyY}));
+  for(const p of raws){
+    if(p.x-sp.x<1)return no('raw box left of the wall');
+    items.push({cls:PLC_BOX,x:p.x-sp.x,y:1,rot:0,ct:[{item:p.item,n:0,inf:true}]});
+    for(let y=1+bh;y<bodyY;y++)items.push({cls:bc,x:p.x,y,rot:1});
+  }
+  const flowOf=p=>T.sizes[p.head]*nd.flows.find(f=>f.item===p.item).flow;
+  const ins=open.map(p=>{for(let y=0;y<bodyY;y++)items.push({cls:bc,x:p.x,y,rot:1});return{item:p.item,x:p.x,y:0,flow:flowOf(p),tile:p.tile,head:p.head}});
+  const outs=TR.outs.map(o=>({x:o.x,y:o.y+bodyY,tiles:o.tiles,flow:o.tiles*T.tileOut}));
+  if(isFin)outs.forEach(o=>items.push({cls:bc,x:o.x,y:o.y,rot:1}));
+  const cells=items.reduce((a,q)=>{const e=dim(q);return a+e.w*e.h},0);
+  if(cells!==plcOcc(items).size)return no('factory cells overlap (raw boxes vs heads)');
+  for(const p of isFin?ins:[...ins,...outs])if(!pfFitX(p.x,1,true))return no('port x '+p.x+' on a wall column');
+  return{ok:true,item:nd.item,items,w:TR.w,h:bodyY+TR.h+(isFin?1:0),bodyY,ins,outs,K,M:T.M,T};
 }
 // Tile-fit helpers (wall grid every PF_GRID.cw cols / PF_GRID.ch rows). x,y absolute cells.
 const pfMod=(v,c)=>((v%c)+c)%c;
