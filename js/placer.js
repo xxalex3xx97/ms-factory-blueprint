@@ -615,7 +615,7 @@ function placerCut(L,cls){
       return mk;
     };
     const bl=q=>isB(q)||spl(q)||PLC_UG.includes(q.cls),vt=q=>bl(q)&&(q.rot===1||q.rot===3),ch=(a,b)=>a.x===b.x&&vt(a)&&vt(b)&&a.rot===b.rot;
-    const gapRow=r0=>{
+    const gapRowOld=r0=>{
      const ix=new Map(IT.map((b,i)=>[b,i])),pa=IT.map((_,i)=>i),fd=i=>{while(pa[i]!==i)i=pa[i]=pa[pa[i]];return i},edges=[];
      IT.forEach((b,i)=>{const e=dim(b);for(let u=0;u<e.w;u++)for(let v=0;v<e.h;v++)for(const [dx,dy] of [[1,0],[0,1]]){
       const m=occ.get(K(b.x+u+dx,b.y+v+dy));if(!m||m===b)continue;
@@ -634,6 +634,41 @@ function placerCut(L,cls){
       IT.map((b,i)=>({...b,y:b.y+sh[i]})).concat(fill).forEach(m=>{const q=dim(m);for(let i=0;i<q.w;i++)for(let j=0;j<q.h;j++){const k=K(m.x+i,m.y+j);if(seen.has(k))bad=true;else seen.add(k)}});
       if(!bad)best={D,W,sh,fill}}
      return best};
+    const gapRowFast=r0=>{
+     const n=IT.length,pa=new Int32Array(n);for(let i=0;i<n;i++)pa[i]=i;
+     const ix=new Map(IT.map((b,i)=>[b,i])),fd=i=>{while(pa[i]!==i)i=pa[i]=pa[pa[i]];return i},edges=[];
+     IT.forEach((b,i)=>{const e=dim(b);for(let u=0;u<e.w;u++)for(let v=0;v<e.h;v++)for(const [dx,dy] of [[1,0],[0,1]]){
+      const m=occ.get(K(b.x+u+dx,b.y+v+dy));if(!m||m===b)continue;
+      if(dy&&ch(b,m)){edges.push([b,m,b.rot]);continue}
+      if(dy&&!bl(b)&&!bl(m))continue;
+      pa[fd(i)]=fd(ix.get(m))}});
+     if(edges.some(q=>q[1].y!==q[0].y+1||dim(q[0]).h!==1))return gapRowOld(r0);
+     const T=[],Bm=[];IT.forEach((b,i)=>{const r=fd(i),e=dim(b);T[r]=Math.min(T[r]??1e9,b.y);Bm[r]=Math.max(Bm[r]??-1e9,b.y+e.h-1)});
+     const lo=Math.max(2,d.h*FC+2-mx),rowIt=new Map(),edgeAt=new Map();
+     IT.forEach((b,i)=>{const e=dim(b),a=Math.max(b.y,r0+lo-1),z=Math.min(b.y+e.h-1,r0+Fh);for(let y=a;y<=z;y++){let l=rowIt.get(y);if(!l)rowIt.set(y,l=[]);l.push(i)}});
+     edges.forEach((q,k)=>{const y=q[0].y;if(y>r0&&y<=r0+Fh){let l=edgeAt.get(y);if(!l)edgeAt.set(y,l=[]);l.push(k)}});
+     let best=null;
+     for(let e=Fh;e>=lo;e--){const W=r0+e;
+      let D=2;for(const y of[W-1,W])for(const i of rowIt.get(y)||[]){const r=fd(i);if(Bm[r]>=W-1&&T[r]<=W)D=Math.max(D,W+1-T[r])}
+      if(D>=e||best&&D>=best.D)continue;
+      const sh=i=>Bm[fd(i)]>=W-1?D:0,ks=[];let bad=false;
+      for(let y=r0+1;y<=W&&!bad;y++)for(const k of edgeAt.get(y)||[]){const q=edges[k],sa=sh(ix.get(q[0])),sb=sh(ix.get(q[1]));if(sb<sa){bad=true;break}if(sb>sa)ks.push(k)}
+      if(bad)continue;
+      ks.sort((p,q)=>p-q);
+      const fill=[],seen=new Set();
+      for(const k of ks){const [a,b,r]=edges[k];for(let y=a.y+1;y<b.y+D;y++){
+        const c=K(a.x,y),o1=occ.get(c),o2=occ.get(K(a.x,y-D));
+        if(seen.has(c)||(o1&&sh(ix.get(o1))===0)||(o2&&sh(ix.get(o2))===D)){bad=true;break}
+        seen.add(c);fill.push({cls:y===W-1||y===W?PLC_UG[L.mk]:PLC_BELT[L.mk],x:a.x,y,h:0,rot:r,pid:0})}
+       if(bad)break}
+      if(!bad)best={D,W,fill}}
+     if(!best)return null;
+     return{D:best.D,W:best.W,sh:IT.map((b,i)=>Bm[fd(i)]>=best.W-1?best.D:0),fill:best.fill}};
+    const gapRow=r0=>{
+      if(PLC_GAP_OLD)return gapRowOld(r0);
+      const t0=performance.now(),g=gapRowFast(r0),t1=performance.now();
+      if(PLC_GAP_CMP){const o=gapRowOld(r0),t2=performance.now(),S=PLC_GAP_STAT;S.n++;S.tNew+=t1-t0;S.tOld+=t2-t1;if(JSON.stringify(g)!==JSON.stringify(o))S.bad++}
+      return g};
     let r0=0;
     while(Hh-r0>Fh){
       let ok=null,c=0;
@@ -725,6 +760,7 @@ function placerPaste(){
 }
 let plcL=null;
 let plcPlan=null;
+let PLC_GAP_OLD=false,PLC_GAP_CMP=false,PLC_GAP_STAT={n:0,bad:0,tOld:0,tNew:0};   // test hooks
 let PLC_NOVC=false;   // set while placerTile retries a stage with variant A (variant C wall rows could not be cut)
 let PLC_VC_FIRST=false;   // test hook: force 3-input variant C instead of variant A   // the last placed planner factory {item, rate}: drives the sim shortfall warning; not saved
 // sim shortfall warning: mean of the last 12 samples of the planned item vs the requested rate (warns only, never blocks; no planned factory = no warning)
