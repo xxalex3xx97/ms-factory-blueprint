@@ -222,7 +222,7 @@ function lcBuild(F,plan,mk,spMk){
   }else{
     if(fin.length!==1)return no('no sink for '+fin.length+' final cells');
     const c=fin[0];outX=c.ox+c.out.x;
-    A.push({cls:PLC_BOX,x:outX-pN.x,y:c.oy+c.h-pN.y,rot:0,ct:[]});
+    A.push({cls:bc,x:outX,y:c.oy+c.h,rot:1},{cls:PLC_BOX,x:outX-pN.x,y:c.oy+c.h+1-pN.y,rot:0,ct:[]});
   }
   // exact UG crossings
   const key=q=>q.y*100000+q.x,H=new Set(),V=new Map();
