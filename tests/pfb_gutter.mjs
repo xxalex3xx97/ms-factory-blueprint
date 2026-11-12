@@ -95,7 +95,7 @@ const rowsOf = r => [...new Set(r.items.filter(i => i.rot === 0 || i.rot === 2).
   const r2 = await G([{id:'a',sx:10,tx:20}], 3, 6);
   check(r2.ok === false && r2.why === 'gutter too short', 'short 1 link: ' + r2.ok + ' / ' + r2.why);
 }
-check(await pg.evaluate(() => PF_BANDS) === false, 'PF_BANDS still false');
+check(await pg.evaluate(() => PF_BANDS) === true, 'PF_BANDS default true (step 8)');
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
 await br.close();
 console.log(fails ? fails + ' FAILED' : 'ALL PASS');

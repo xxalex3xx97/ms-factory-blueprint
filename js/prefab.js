@@ -183,8 +183,8 @@ function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt,dn,org){
   const items=it.map(q=>({...q,y:q.y-Math.min(0,minY)}));
   return{ok:true,items,w:xo+(hubAt?def(HC).w:bw),h:Math.max(...items.map(q=>q.y+dim(q).h)),ports:[],hub:hubAt?{x:xo,y:hubY-Math.min(0,minY)}:null,cx:xs0,ob:{x:xo,y:Rs-pw.y-Math.min(0,minY)}};
 }
-// STEP 2 (pfBands node builders, inert until step 5). PF_BANDS gates the assembler (default off).
-let PF_BANDS=false;
+// STEP 2 (pfBands node builders, inert until step 5). PF_BANDS gates the assembler (default on, step 8; a pfBands refusal falls back to pfChain).
+let PF_BANDS=true;
 // GROUP node: a pfColumns group (outDown) as a graph node. ins = one top terminal per input head of every column (item, edge 'N', x, y 0). out = the out box S port (edge 'S').
 function pfGrpNode(cls,k,flows,sizes,mk,outFlow,org){
   const A=pfColumns(cls,k,flows,sizes,mk,outFlow,false,true,org);
@@ -741,7 +741,10 @@ function pfCompose(P,item,mk,spMk,o={}){
   const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
   if(!T||!T.rec)return no('no recipe');
   if(T.rec.i.some(([x])=>x===item))return no('growth not built in prefab');
-  if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter)))return(PF_BANDS?pfBands:PF_DOWN2?pfChainDown:pfChain)(P,item,mk,spMk,o);   // a machine upstream: chain (step 7)
+  if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter))){   // a machine upstream: chain (step 7)
+    if(PF_BANDS){const R=pfBands(P,item,mk,spMk,o);if(R.ok!==false)return R}   // step 8: bands first, refusal falls back to the old chain
+    return(PF_DOWN2?pfChainDown:pfChain)(P,item,mk,spMk,o);
+  }
   const cb=plnCb(T.crafter);if(!cb)return no('No machine builds this recipe');
   const N=T.machines,cls=def(cb.id).key,k=T.rec.i.length,cap=MKS[mk][1];
   const edge=x=>P.edges.find(e=>e.from===x&&e.to===item);

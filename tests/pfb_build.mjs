@@ -37,7 +37,7 @@ if (!r.refused) {
   check(r.tile.ok, 'tall tile ok' + (r.tile.ok ? '' : ' (' + r.tile.why + ')'));
   check(r.tile.ov === 0, 'tile ov 0 (' + r.tile.ov + ')');
   check(r.tile.span === 0, 'tile span 0 (' + r.tile.span + ')');
-  check(r.flag === false, 'PF_BANDS still false');
+  check(r.flag === true, 'PF_BANDS default true (step 8)');
 }
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
 await br.close();
