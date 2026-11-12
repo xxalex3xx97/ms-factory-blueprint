@@ -374,14 +374,27 @@ function pfBandAtom(n,x0,B,nOut,nIn,mk){
   const bc=PLC_BELT[mk],bw=def(PLC_BOX).w,HC='DAT_Container_2',items=[],ins=[],outs=[];
   if(n.kind==='grp'){
     const cw=[];for(const m of n.sizes){const C=pfCol(n.cls,n.k,n.flows,m,mk,true);if(C.ok===false)return{ok:false,why:C.why};cw.push(C.w)}
-    const org=[];let x=x0;
-    for(const [i,w] of cw.entries()){const need=i===cw.length-1?w+bw:w;const nx=pfNextX(x,need);if(nx<0)return{ok:false,why:'column wider than a wall cell'};x=nx;org.push(x);x+=w}
+    const cwid=PF_GRID.cw;let org=[],x=x0,fit=true;
+    for(let i=0;i<cw.length;i++){const need=i===cw.length-1?cw[i]+bw:cw[i];const nx=pfNextX(x,need);if(nx<0){fit=false;break}org.push(nx);x=nx+cw[i]}
+    if(!fit){org=[];x=0;cw.forEach(w=>{org.push(x);x+=w})}   // straddle mode: contiguous, relative origin 0
     const G=pfGrpNode(n.cls,n.k,n.flows,n.sizes,mk,n.sizes.reduce((a,b)=>a+b,0)*n.fo,org);
     if(G.ok===false)return G;
-    G.items.forEach(q=>{if(q.cls===PLC_BOX&&q.ct&&q.ct.length)return;items.push(q.cls===n.cls?{...q,rec:n.rec}:q)});
+    G.items.forEach(q=>{if(q.cls===PLC_BOX&&q.ct&&q.ct.length)return;items.push(q.cls===n.cls?{...q,rec:n.rec}:{...q})});
     G.ins.forEach((p,i)=>{items.push({cls:bc,x:p.x,y:0,rot:1},{cls:bc,x:p.x,y:1,rot:1});ins.push({item:p.item,head:Math.floor(i/n.k),x:p.x})});
     G.outs.slice(0,nOut).forEach(o=>{for(let y=o.y;y<=B-1;y++)items.push({cls:bc,x:o.x,y,rot:1});outs.push({x:o.x})});
-    return{ok:true,items,x0:org[0],x1:org[org.length-1]+cw[cw.length-1]+bw,ins,outs};
+    let x1=org[org.length-1]+cw[cw.length-1]+bw,dx=-1;   // exclusive end; dx = shift (straddle mode only)
+    if(!fit){
+      const occ=plcOcc(items),span=x1;
+      for(let d=0;d<cwid&&dx<0;d++){
+        const a=x0+d;let ok=true;
+        for(let c=Math.ceil((a+1)/cwid)*cwid;c<a+span&&ok;c+=cwid)if(!plcTryCut(items,occ,B,true,c-a))ok=false;
+        if(ok&&[...ins,...outs].some(p=>{const m=pfMod(a+p.x,cwid);return m<1||m>cwid-2}))ok=false;
+        if(ok)dx=a;
+      }
+      if(dx<0)return{ok:false,why:'wide column ('+span+') has no wall cut at any shift'};
+      items.forEach(q=>q.x+=dx);ins.forEach(p=>p.x+=dx);outs.forEach(p=>p.x+=dx);x1+=dx;
+    }
+    return{ok:true,items,x0:(fit?org[0]:dx),x1,ins,outs};
   }
   const H=pfHubNode(),hw=H.w;
   const a=pfNextX(x0,hw+5);if(a<0)return{ok:false,why:'hub does not fit a wall cell'};
