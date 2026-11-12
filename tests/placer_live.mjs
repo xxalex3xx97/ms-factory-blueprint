@@ -114,13 +114,15 @@ try {
     chk('(b) buffer change redraws the preview', b1.hash !== a2.hash);
     await pg.selectOption('#plnBuf', 'DAT_Container');
 
-    // (c) modular build
+    // (c) modular build is not offered in the UI any more: the checkbox is hidden and ticking it never makes the preview modular; the modular code stays reachable by calling placerLayout with mod:true
     const c0 = await snap(pg);
-    await pg.click('label:has(#plnMod)');
+    chk('(c) #plnMod label is hidden', await pg.evaluate(() => $('plnMod').closest('label').hidden === true && $('plnMod').offsetParent === null));
+    await pg.evaluate(() => { $('plnMod').checked = true; $('plnMod').dispatchEvent(new Event('change')) });
     const c1 = await snap(pg);
-    chk('(c) #plnMod ticked: #pvIO text changes to IN west / OUT east', c1.io !== c0.io && /IN west/.test(c1.io) && c1.L.mod === true, `${c0.io} -> ${c1.io}`);
-    await pg.click('label:has(#plnMod)');
-    chk('(c) #plnMod unticked: #pvIO back to the closed text', (await snap(pg)).io === c0.io);
+    chk('(c) #plnMod ticked by script: preview stays closed (mod false, #pvIO unchanged)', c1.io === c0.io && c1.L.mod === false, `${c0.io} -> ${c1.io}`);
+    await pg.evaluate(() => { $('plnMod').checked = false; $('plnMod').dispatchEvent(new Event('change')) });
+    const cm = await pg.evaluate(() => { const x = placerPlan(), L = placerLayout(x.P, x.it, x.mk, x.sp ?? x.mk, {box: $('plnBuf').value, mod: true}); return {ok: L.ok, mod: L.mod} });
+    chk('(c) placerLayout called directly with mod:true still builds a modular layout', cm.ok && cm.mod === true, JSON.stringify(cm));
 
     // (d) Mk sync both ways
     const d0 = await snap(pg);

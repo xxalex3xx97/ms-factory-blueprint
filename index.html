@@ -276,7 +276,7 @@
     <label>Belt <select id="pvMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
     <label>Splitter <select id="pvSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
     <label>Rate (items/min) <input id="pvRate" type="number" min="0.001" step="any" aria-label="Target rate in items per minute"></label>
-    <label class="chk" title="Open-ended chainable module: input on west edge, output on east edge, no source/sink containers"><input type="checkbox" id="plnMod"> Modular build</label>
+    <label class="chk" hidden style="display:none" title="Open-ended chainable module: input on west edge, output on east edge, no source/sink containers"><input type="checkbox" id="plnMod"> Modular build</label>
   </div>
   <div id="plnPrevView"><canvas id="plnPrevMap" width="300" height="180" aria-label="Factory layout preview"></canvas></div>
   <dl id="plnPrevCnt"><dt>Machines</dt><dd id="pvMach"></dd><dt>Belts</dt><dd id="pvBelt"></dd><dt>Splitters</dt><dd id="pvSpl"></dd><dt>Containers</dt><dd id="pvBox"></dd><dt>Undergrounds</dt><dd id="pvUg"></dd><dt>Blocks</dt><dd id="pvBlk"></dd><dt>Cells</dt><dd id="pvCell"></dd><dt>In/Out</dt><dd id="pvIO"></dd></dl>

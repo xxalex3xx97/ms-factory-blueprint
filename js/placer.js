@@ -736,7 +736,7 @@ function plcWarn(ser){
 const placerBk=()=>["plnBk11","plnBk21","plnBk22"].map(i=>$(i).checked);
 function placerRun(open){
   const dl=$("plnPrev");if(!open&&!dl.open)return;
-  const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:$("plnMod").checked}):{ok:false,why:"Pick an item and a rate first"};
+  const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false}):{ok:false,why:"Pick an item and a rate first"};
   if(!L.ok){plcL=null;plcT=null;placerClear();$("plnPrevErr").textContent=L.why;$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
