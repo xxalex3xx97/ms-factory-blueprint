@@ -306,7 +306,7 @@ function interiorRects(sh,dock){
 }
 // grey no-build hatch of a shaped block, clipped to its enclosed interior (Industrial Dock: minus the buildable floor box; Command Module / Blueprint Unit: inside the ring circle)
 // hatch rects (shape frame): interior; a ports block (dock, drone bay) hatches its wall gap on the port side out to the port edge (u=0), the buildable strip in front of the ports stays outside
-function hatchRects(sh,dock){return interiorRects(sh,dock).map(r=>{const q=r.slice();if(sh.entrance&&sh.entrance.kind==="ports"){if(q[0]>0&&q[0]<=.5)q[0]=0;if(q[2]>0&&q[2]<=.5)q[2]=0}return q})}
+function hatchRects(sh,dock){return interiorRects(sh,dock).concat(sh.hatchAdd||[]).map(r=>{const q=r.slice();if(sh.entrance&&sh.entrance.kind==="ports"){if(q[0]>0&&q[0]<=.5)q[0]=0;if(q[2]>0&&q[2]<=.5)q[2]=0}return q})}
 function hatchShape(b,t,s){
   const sh=t.sh,P=(u,v)=>t.f(u,v).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.save();cx.beginPath();
   if(sh.hatch==="ring"){const[a,c]=P(sh.ring.c[0],sh.ring.c[1]);cx.arc(a,c,sh.ring.ri*s,0,2*Math.PI)}
@@ -344,6 +344,8 @@ function drawShapeFloor(A,s){
     // ports (display only): green bar on each port's edge (dock: pod floor-facing edge), bay number only on numbered ports
     if(s>=6){const Ln=Math.min(.6*s,18),Tk=Math.min(5,Math.max(3,.2*s)),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
       marks.forEach(p=>{const[ex,ey]=t.f(p.x,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),w=odd?Ln:Tk,h=odd?Tk:Ln;
+        cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
+      (sh.iports||[]).forEach(([sd,x,y])=>{const[ex,ey]=t.f(x,y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),v=("EW".includes(sd))!==!!odd,w=v?Tk:Ln,h=v?Ln:Tk;   // info ports (elevator): same bar, vertical on E/W sides, display only
         cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
       if(s>=10){cx.font="600 "+Math.min(13,Math.max(9,s*.6))+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillStyle="rgba(255,255,255,.9)";
         marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(p.bay),tx,ty)})}

@@ -981,15 +981,15 @@
       "category": "Basic",
       "w": 2,
       "h": 2,
-      "verified": false,
+      "verified": true,
       "floor": {
-        "w": 32,
+        "w": 30,
         "h": 26,
-        "verified": false,
-        "source": "inferred from colliders: slabs y +-13..15 (2 thick), strip y -13..13 x -16..16, open W/E; not user verified"
+        "verified": true,
+        "source": "user 2026-11-12: buildable floor 30x26 (30 along the long axis, 2 cells thinner than the 30x30 Station 2x2 C on each glass side), centred; decoded: glass slabs y +-13..15 x -15..15, W/E ends open"
       },
       "floorOrigin": [
-        -16,
+        -15,
         -13
       ],
       "floorCenter": true,
@@ -1564,6 +1564,140 @@
       ],
       "ground": true,
       "hatch": "interior",
+      "infoPorts": {
+        "verified": false,
+        "note": "from user screenshot",
+        "cells": [
+          [
+            "N",
+            -5.5,
+            -8.95
+          ],
+          [
+            "N",
+            -4.5,
+            -8.95
+          ],
+          [
+            "N",
+            -3.5,
+            -8.95
+          ],
+          [
+            "N",
+            3.5,
+            -8.95
+          ],
+          [
+            "N",
+            4.5,
+            -8.95
+          ],
+          [
+            "N",
+            5.5,
+            -8.95
+          ],
+          [
+            "S",
+            -5.5,
+            8.95
+          ],
+          [
+            "S",
+            -4.5,
+            8.95
+          ],
+          [
+            "S",
+            -3.5,
+            8.95
+          ],
+          [
+            "S",
+            3.5,
+            8.95
+          ],
+          [
+            "S",
+            4.5,
+            8.95
+          ],
+          [
+            "S",
+            5.5,
+            8.95
+          ],
+          [
+            "W",
+            -8.95,
+            -5.5
+          ],
+          [
+            "W",
+            -8.95,
+            -4.5
+          ],
+          [
+            "W",
+            -8.95,
+            -3.5
+          ],
+          [
+            "W",
+            -8.95,
+            3.5
+          ],
+          [
+            "W",
+            -8.95,
+            4.5
+          ],
+          [
+            "W",
+            -8.95,
+            5.5
+          ],
+          [
+            "E",
+            8.95,
+            -5.5
+          ],
+          [
+            "E",
+            8.95,
+            -4.5
+          ],
+          [
+            "E",
+            8.95,
+            -3.5
+          ],
+          [
+            "E",
+            8.95,
+            3.5
+          ],
+          [
+            "E",
+            8.95,
+            4.5
+          ],
+          [
+            "E",
+            8.95,
+            5.5
+          ]
+        ]
+      },
+      "hatchAdd": [
+        [
+          4.5,
+          -2.05,
+          8.621,
+          2.05
+        ]
+      ],
       "source": "decoded from EA files (BPO ElevatorBlock_02A: colliders, BlockBounds, ItemCost); not tested in game",
       "research": [
         "RSC_MultiblockElevator"

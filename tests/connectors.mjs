@@ -37,5 +37,16 @@ try {
     return {n: a.strips.length, in: !t(9), out: o, one: out, none, title: doorTxt(S.blocks[0]), t2: doorTxt(S.blocks[1])};
   });
   chk('Station 2x2 C open strips: buildable under STRICT, refused outside, no door objects, title open sides', f.n >= 4 && f.in && f.out && f.none === 0 && f.title === 'open sides' && f.t2 === 'open side', JSON.stringify(f));
+  const g = await pg.evaluate(() => {
+    __fb.importJson(JSON.stringify({Version: 1, DisplayName: 't', Blocks: [{Class: CATALOG.blocks.find(b => b.name === 'BPO_StationCorridor_02').class, GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+    const r = floorRect(S.blocks[0]), W = SHAPES.BPO_StationCorridor_02.walls, sl = W.filter(w => w[2] - w[0] > 20), top = sl.find(w => w[1] < 0), bot = sl.find(w => w[1] > 0);
+    return {w: r.w, h: r.h, ok: r.guess, top: -top[1], bot: bot[3] - r.h, x0: top[0], x1: top[2]};
+  });
+  chk('Corridor 2x2 floor 30x26 verified, centred in the 30-high hull (equal margin per glass side, floor x = glass x)', g.w === 30 && g.h === 26 && !g.ok && g.top === 2 && g.bot === 2 && g.x0 === 0 && g.x1 === 30, JSON.stringify(g));
+  const h = await pg.evaluate(() => {
+    const sh = SHAPES.BPO_ElevatorBlock_02A, hr = hatchRects(sh, false), has = (x, y) => hr.some(r => x > r[0] && x < r[2] && y > r[1] && y < r[3]);
+    return {n: has(16, 9), w: has(9.5, 16), s: has(16, 23), e: has(22.5, 16), mid: has(16, 16), ip: sh.iports.length, cat: CATALOG.blocks.find(b => b.name === 'BPO_ElevatorBlock_02A').infoPorts};
+  });
+  chk('Elevator 2x2: N/W/S/E interior squares all hatched, centre column not; 24 info ports flagged verified:false', h.n && h.w && h.s && h.e && !h.mid && h.ip === 24 && h.cat.verified === false && h.cat.cells.length === 24, JSON.stringify(h));
 } finally { await br.close(); }
 console.log(bad ? bad + ' FAILED' : 'ALL PASS'); process.exit(bad ? 1 : 0);

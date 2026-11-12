@@ -42,11 +42,16 @@ FLOORED = {
                                   floorOrigin=[-7, -15], verified=False,
                                   door=dict(w=6, depth=2, offset=4, verified=False, open=dict(sides=['W'], **{'from': 4, 'to': 26}), source='W (XLarge side) = open 22-wide gap, no door, strip buildable (user 2026-11-12); decoded: N/S 6-wide gaps, one 22-wide gap on W, two 6-wide gaps on E (narrow-side rotation vs site axes unverified)'),
                                   entrance=dict(kind='doors', evidence='decoded BPO_StationAdapter_01 colliders; rotation vs site axes unverified')),
-    'BPO_StationCorridor_02': dict(floor=dict(w=32, h=26, verified=False, source='inferred from colliders: slabs y +-13..15 (2 thick), strip y -13..13 x -16..16, open W/E; not user verified'),
-                                   floorOrigin=[-16, -13], floorCenter=True, doorMatch=True, verified=False,
+    'BPO_StationCorridor_02': dict(floor=dict(w=30, h=26, verified=True, source='user 2026-11-12: buildable floor 30x26 (30 along the long axis, 2 cells thinner than the 30x30 Station 2x2 C on each glass side), centred; decoded: glass slabs y +-13..15 x -15..15, W/E ends open'),
+                                   floorOrigin=[-15, -13], floorCenter=True, doorMatch=True, verified=True,
                                    door=dict(w=6, depth=2, offset=0, flush=True, sides=['E', 'W'], verified=False, source='decoded: W/E openings 23 wide (-11.5..11.5); the model slot is 6 wide'),
                                    entrance=dict(kind='doors', evidence='decoded BPO_StationCorridor_02: open ends W and E')),
 }
+# elevator interface ports (informational, no machine/belt logic): 2 segments x 3 ports per platform side, cells at 10..13 and 19..22 of the 32-unit block, measured from the user screenshot 2026-11-12
+_C = [10.5, 11.5, 12.5, 19.5, 20.5, 21.5]
+EXTRA = {'BPO_ElevatorBlock_02A': dict(
+    infoPorts=dict(verified=False, note='from user screenshot', cells=[[sd, round(c - 16, 2), e] for sd, e in (('N', -8.95), ('S', 8.95)) for c in _C] + [[sd, e, round(c - 16, 2)] for sd, e in (('W', -8.95), ('E', 8.95)) for c in _C]),
+    hatchAdd=[[4.5, -2.05, 8.621, 2.05]])}   # E notch of the elevator interior: the flood fill leaks there (0.11 slit), same square as the N/W/S ones
 # extra shape keys per block (hatch inside the closed outline: walled blocks with machines/shafts inside)
 HATCH = {'BPO_ElevatorBlock_01', 'BPO_ElevatorBlock_02A', 'BPO_Hangar_2', 'BPO_AstronomicScanner', 'BPO_BiosampleCollector'}
 # EA icon texture missing in the extracted files
@@ -154,6 +159,7 @@ def build():
             e['verified'] = True
             e['confidence'] = 'user 2026-11-12: prop block, no floor, nothing placed inside'
             notes[:] = [x for x in notes if not x.startswith('default machines')]
+        e.update(EXTRA.get(n, {}))
         e['source'] = 'decoded from EA files (BPO %s: colliders, BlockBounds, ItemCost); not tested in game' % n[4:]
         d = desc(n)
         if d:
