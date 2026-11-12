@@ -186,6 +186,7 @@ function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt,dn,org){
 // STEP 2 (pfBands node builders, inert until step 5). PF_BANDS gates the assembler (default on, step 8; a pfBands refusal falls back to pfChain).
 let PF_BANDS=true;
 let PF_FACT=false;   // pfFact2 dispatch: PF_FACT > PF_BANDS > pfChain (default off)
+const PF_DOCK=2;   // pfFact2: raw dock block = PF_DOCK x PF_DOCK wall cells (60x60), one per raw item
 // GROUP node: a pfColumns group (outDown) as a graph node. ins = one top terminal per input head of every column (item, edge 'N', x, y 0). out = the out box S port (edge 'S').
 function pfGrpNode(cls,k,flows,sizes,mk,outFlow,org){
   const A=pfColumns(cls,k,flows,sizes,mk,outFlow,false,true,org);
@@ -668,27 +669,32 @@ function pfFactLayout2(Z,F,LN,mk,spMk){
   const bw=def(PLC_BOX).w,bh=def(PLC_BOX).h;
   const sp=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).filter(p=>p.f==='S').sort((a,b)=>a.x-b.x)[0];
   if(!sp)return no('box has no S port');
-  const direct=nr===1,cols=[];
-  if(!direct)for(let x=2;cols.length<LN.length;x++)if(pfFitX(x,1,true))cols.push(x);
-  LN.forEach((l,i)=>l.col=cols[i]);
-  const xs0=direct?0:Math.ceil((cols[cols.length-1]+1)/cw)*cw,dockY=1,dockB=1+bh;
+  const direct=nr===1,dockY=1,dockB=1+bh,DW=PF_DOCK*cw,raws=LN.filter(l=>l.raw),dockSp=[];
+  let xs0=0;
+  if(!direct){   // dock zone: one PF_DOCK x PF_DOCK block (60 cols) per raw item, its containers in one row at dockY; raw lane column = the container S port column (straight down). Too many containers for one block = more blocks for that item. Crafted lane columns = free fit columns left of the factories.
+    let cur=0;
+    for(const it of [...new Set(raws.map(l=>l.item))]){
+      const s=Math.ceil(cur/DW)*DW;let x=s,end=s;
+      for(const l of raws.filter(q=>q.item===it)){
+        let bx=-1;for(let a=x;a<x+3*cw;a++)if(pfFitX(a,bw)&&pfFitX(a+sp.x,1,true)){bx=a;break}
+        if(bx<0)return no('dock does not fit');
+        l.bx=bx;l.xs=bx+sp.x;l.col=l.xs;x=bx+bw+1;end=bx+bw;
+      }
+      cur=Math.ceil(end/DW)*DW;dockSp.push({item:it,x0:s,x1:cur});
+    }
+    const taken=new Set(raws.map(l=>l.col));let cx=2,last=cur;
+    for(const l of LN)if(!l.raw){while(taken.has(cx)||!pfFitX(cx,1,true))cx++;l.col=cx;taken.add(cx);last=Math.max(last,cx+1)}
+    xs0=Math.ceil(last/cw)*cw;
+  }
   const pos=new Map();
   for(let r=nr-1;r>=0;r--){let x=xs0;for(const it of Z.rows[r]){pos.set(it,{x0:x,row:r});x+=F.get(it).w}}
   const abs=(c,h)=>pos.get(c).x0+h.x;
-  const raws=LN.filter(l=>l.raw);
   if(direct){   // one container per raw lane, left of its first head, ordered by first head
     let cur=1;
     for(const l of [...raws].sort((a,b)=>abs(a.taps[0].cons,a.taps[0].heads[0])-abs(b.taps[0].cons,b.taps[0].heads[0]))){
       const hx=abs(l.taps[0].cons,l.taps[0].heads[0]);let bx=-1;
       for(let x=hx-sp.x;x>=cur;x--)if(pfFitX(x,bw)&&pfFitX(x+sp.x,1,true)){bx=x;break}
       if(bx<0)return no('direct dock does not fit');
-      l.bx=bx;l.xs=bx+sp.x;cur=bx+bw+1;
-    }
-  }else{
-    let cur=xs0;
-    for(const l of raws){
-      let bx=-1;for(let x=cur;x<cur+3*cw;x++)if(pfFitX(x,bw)&&pfFitX(x+sp.x,1,true)){bx=x;break}
-      if(bx<0)return no('dock does not fit');
       l.bx=bx;l.xs=bx+sp.x;cur=bx+bw+1;
     }
   }
@@ -700,8 +706,11 @@ function pfFactLayout2(Z,F,LN,mk,spMk){
       if(k.heads.length===1&&k.xp===k.heads[0])k.t=-1;else zT[0].push(k);
       links.push(k);continue;
     }
-    let xsrc,zi;
-    if(l.raw){xsrc=l.xs;zi=nr-1}else{const o=F.get(l.item).outs[l.idx];xsrc=pos.get(l.item).x0+o.x;zi=rowOf.get(l.item)-1}
+    if(l.raw){   // straight down from the container; the first tap is fed by the container belt (no west link)
+      l.tl=l.taps.map((tp,i)=>{const rc=rowOf.get(tp.cons),k={lane:l,xp:l.col,heads:tp.heads.map(h=>abs(tp.cons,h)).sort((a,b)=>a-b),rc,t:-2};if(i)k.nofeed=true;zT[rc].push(k);links.push(k);return k});
+      continue;
+    }
+    const o=F.get(l.item).outs[l.idx],xsrc=pos.get(l.item).x0+o.x,zi=rowOf.get(l.item)-1;
     const w={w:true,lane:l,xp:xsrc,xd:l.col,t:-2,heads:[]};
     l.w=w;zW[zi].push(w);links.push(w);
     l.tl=l.taps.map(tp=>{const rc=rowOf.get(tp.cons);
@@ -709,7 +718,7 @@ function pfFactLayout2(Z,F,LN,mk,spMk){
   }
   // y: zone above row r holds west links of producers in row r+1 (dock raw west links for the top zone) first, then taps of row r consumers; pitch 3, no sharing
   const H=[];for(let r=0;r<nr;r++)H[r]=Math.max(...Z.rows[r].map(i=>F.get(i).h));
-  const Y=[];let y0=dockB,nTrack=0;
+  const Y=[];let y0=direct?dockB:PF_DOCK*PF_GRID.ch,nTrack=0;
   for(let r=nr-1;r>=0;r--){
     const tr=[...zW[r],...zT[r]],n=tr.length,rows=[];
     for(let t=y0+2,last=-Infinity;rows.length<n&&t<y0+4000;t++)if(pfTrackOk(t,y0)&&t-last>=3){rows.push(t);last=t}
@@ -721,6 +730,7 @@ function pfFactLayout2(Z,F,LN,mk,spMk){
   }
   for(const l of LN){
     if(direct){l.tl[0].yp=dockB;l.tl[0].y1=Y[0];continue}
+    if(l.raw){l.tl[0].yp=dockB;l.tl.forEach((k,i)=>{k.y1=Y[k.rc];if(i<l.tl.length-1){k.heads=[l.col,...k.heads];k.yc=l.tl[i+1].t}});continue}
     const w=l.w,o=l.raw?null:F.get(l.item).outs[l.idx];
     w.yp=l.raw?dockB:Y[rowOf.get(l.item)]+o.y;
     w.yc=l.tl.length?l.tl[0].t:w.t+1;
@@ -737,7 +747,7 @@ function pfFactLayout2(Z,F,LN,mk,spMk){
   fin.outs.forEach(o=>items.push({h:0,pid:0,cls:PLC_BOX,x:o.x+fx,y:fy+fin.h,rot:0,ct:[]}));
   const w=plcMmax(items,q=>q.x+dim(q).w)+1,h=plcMmax(items,q=>q.y+dim(q).h);
   const route=R.items.filter(q=>PLC_BELT.includes(q.cls)||PLC_UG.includes(q.cls)).length;
-  return{ok:true,items,w,h,ports,nRows:nr,nFact:F.size,stat:{tile,route,spl:R.items.filter(q=>PLC_SPL.includes(q.cls)).length,ug:R.items.filter(q=>PLC_UG.includes(q.cls)).length,dock:raws.length,lanes:LN.length,tracks:nTrack}};
+  return{ok:true,items,w,h,ports,nRows:nr,nFact:F.size,stat:{tile,route,spl:R.items.filter(q=>PLC_SPL.includes(q.cls)).length,ug:R.items.filter(q=>PLC_UG.includes(q.cls)).length,dock:raws.length,dockBlocks:dockSp.length,dockSp,lanes:LN.length,tracks:nTrack}};
 }
 function pfFactTop2(P,item,mk,spMk,o={}){
   spMk=Math.max(spMk,mk);
