@@ -631,6 +631,28 @@ function pfFactSize2(nd,mk){
   }
   return{ok:false,why:'no exact tile for '+plnNm(nd.item)};
 }
+// pfFact2 S2: lanes. F = Map item->pfFactRow (all ins open), SZ = Map item->{T,M,K}. One lane per belt of flow of every consumed item (crafted: = producer out segment; raw: first-fit <= cap). Each lane has taps (one per consumer, consumers top row first), each tap = that consumer's heads (x asc, local to the factory, flow scaled to the tree demand).
+function pfBusAssign(Z,F,SZ,mk,spMk){
+  const capG=Math.min(MKS[mk][1],MKS[spMk][1]),byIt=new Map(Z.nodes.map(n=>[n.item,n]));
+  const ord=c=>{const n=byIt.get(c);return -n.row*1000+Z.rows[n.row].indexOf(c)};
+  const hd=(c,it)=>{const n=byIt.get(c),S=SZ.get(c),s=n.N/(S.K*S.M);return F.get(c).ins.filter(p=>p.item===it).map(p=>({x:p.x,tile:p.tile,head:p.head,flow:p.flow*s})).sort((a,b)=>a.x-b.x)};
+  const lanes=[];
+  for(const it of new Set(Z.nodes.flatMap(n=>n.ins.map(i=>i.item)))){
+    const cons=Z.nodes.filter(n=>n.ins.some(i=>i.item===it)).map(n=>n.item).sort((a,b)=>ord(a)-ord(b)),crafted=byIt.has(it);
+    let sup=[];if(crafted){const n=byIt.get(it),S=SZ.get(it),s=n.N/(S.K*S.M);sup=F.get(it).outs.map(o=>o.flow*s)}
+    const L=[],open=()=>{const l={item:it,raw:!crafted,idx:L.length,cap:crafted?sup[L.length]:capG,taps:[],D:0};L.push(l);lanes.push(l);return l};
+    let cur=open(),rem=cur.cap;
+    for(const c of cons)for(const h of hd(c,it)){
+      if(h.flow>capG+1e-9)return{ok:false,why:'head flow above belt/splitter cap'};
+      const full=crafted?rem<h.flow/2-1e-9:cur.D+h.flow>capG+1e-9;
+      if(full&&cur.taps.length&&(!crafted||L.length<sup.length)){cur=open();rem=cur.cap}
+      let tp=cur.taps[cur.taps.length-1];if(!tp||tp.cons!==c){tp={cons:c,heads:[]};cur.taps.push(tp)}
+      tp.heads.push(h);cur.D+=h.flow;rem-=h.flow;
+    }
+    while(crafted&&L.length<sup.length)open();   // empty lane = producer segment with no consumer head: lane ends blocked
+  }
+  return{ok:true,lanes};
+}
 // STEP 5b (pfBands atom, inert: no caller). Builds one graph node at y=0, absolute x from x0, in a layer of body height B (belts run down to row B-1, the gutter starts at row B). grp: pfGrpNode with greedy column origins (each column and the last column's head box fit the wall grid), head boxes replaced by raw hubs. hub/raw: one Large container, W port belt up/over when nIn>4, S outs and E outs (reverse riser order) belted down to row B-1. Returns {ok,items,x0,x1 (exclusive),ins:[{item,head,x}],outs:[{x}]} or {ok:false,why}.
 function pfBandAtom(n,x0,B,nOut,nIn,mk){
   const bc=PLC_BELT[mk],bw=def(PLC_BOX).w,HC='DAT_Container_2',items=[],ins=[],outs=[];
