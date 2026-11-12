@@ -248,16 +248,17 @@ function note(t,x,y,w,c){
   cx.save();cx.beginPath();cx.rect(x+2,y+2,w-4,40);cx.clip();
   cx.fillStyle=c||"rgba(255,255,255,.75)";cx.font="11px system-ui,sans-serif";cx.textBaseline="top";cx.fillText(t,x+5,y+4);cx.restore();
 }
-function grid(major){
+const GRIDOFF=1;   // Factory floor: floor model puts a floor at its tile origin and the 1-thick hull 1 unit outside it, so the grid lines (cell borders) sit 1 unit before the model origin: hulls land exactly on the cell lines
+function grid(major,off=0){
   const s=sc(),x0=Math.floor(-V.ox/s),x1=Math.ceil((W-V.ox)/s),y0=Math.floor(-V.oy/s),y1=Math.ceil((H-V.oy)/s);
   cx.lineWidth=1;
   const st=i=>i===0?"rgba(120,220,240,.5)":i%major===0?"rgba(140,160,200,.26)":"rgba(140,160,200,.09)";
   if(s>=7){
-    for(let i=x0;i<=x1;i++){cx.strokeStyle=st(i);const X=Math.round(V.ox+i*s)+.5;cx.beginPath();cx.moveTo(X,0);cx.lineTo(X,H);cx.stroke()}
-    for(let j=y0;j<=y1;j++){cx.strokeStyle=st(j);const Y=Math.round(V.oy+j*s)+.5;cx.beginPath();cx.moveTo(0,Y);cx.lineTo(W,Y);cx.stroke()}
+    for(let i=x0;i<=x1;i++){cx.strokeStyle=st(i);const X=Math.round(V.ox+(i-off)*s)+.5;cx.beginPath();cx.moveTo(X,0);cx.lineTo(X,H);cx.stroke()}
+    for(let j=y0;j<=y1;j++){cx.strokeStyle=st(j);const Y=Math.round(V.oy+(j-off)*s)+.5;cx.beginPath();cx.moveTo(0,Y);cx.lineTo(W,Y);cx.stroke()}
   }else{
     cx.strokeStyle="rgba(120,220,240,.5)";
-    cx.beginPath();cx.moveTo(Math.round(V.ox)+.5,0);cx.lineTo(Math.round(V.ox)+.5,H);cx.moveTo(0,Math.round(V.oy)+.5);cx.lineTo(W,Math.round(V.oy)+.5);cx.stroke();
+    const ox=Math.round(V.ox-off*s)+.5,oy=Math.round(V.oy-off*s)+.5;cx.beginPath();cx.moveTo(ox,0);cx.lineTo(ox,H);cx.moveTo(0,oy);cx.lineTo(W,oy);cx.stroke();
   }
 }
 function pieces(a,b,cuts){const o=[];let p=a;cuts.slice().sort((u,v)=>u[0]-v[0]).forEach(c=>{if(c[0]>p)o.push([p,c[0]]);p=Math.max(p,c[1])});if(p<b)o.push([p,b]);return o}
@@ -474,7 +475,7 @@ function paint0(){
   cached("base",()=>{
   RCT=null;
   if(F)RCT=paintFloorBase(s).rects;
-  grid(F?16:8);
+  grid(F?16:8,F?GRIDOFF:0);
   if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*Math.abs(b.h-layer));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
   const cur=lyBlocks().v;CUR=cur;
   drawBlocks(cur,.92,true);   // viewport cull inside drawBlocks

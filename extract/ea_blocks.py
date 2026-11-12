@@ -44,6 +44,7 @@ FLOORED = {
                                   entrance=dict(kind='doors', evidence='decoded BPO_StationAdapter_01 colliders; rotation vs site axes unverified')),
     'BPO_StationCorridor_02': dict(floor=dict(w=30, h=26, verified=True, source='user 2026-11-12: buildable floor 30x26 (30 along the long axis, 2 cells thinner than the 30x30 Station 2x2 C on each glass side), centred; decoded: glass slabs y +-13..15 x -15..15, W/E ends open'),
                                    floorOrigin=[-15, -13], floorCenter=True, verified=True,
+                                   drop=[0, 1, 2, 3], wallsOverride=[[-16, -15, -15, -11.5], [-16, 11.5, -15, 15], [15, -15, 16, -11.5], [15, 11.5, 16, 15]],   # end posts drawn complete: collider posts (y 11.5..13.5) + the missing corner square up to the hull edge (user 2026-11-12: full posts like the station corners)
                                    door=dict(w=6, depth=2, offset=4, sides=['E', 'W'], verified=False, open=dict(sides=['E', 'W'], **{'from': 2, 'to': 24}), source='no doors (user 2026-11-12): W/E ends are open gaps, the 1-thick strip in the wall line is buildable. Colliders: opening 23 wide (-11.5..11.5, half-integer); nearest whole-cell strip centred on the 26 floor = 2..24 (22 wide, like Station 2x2 C): UNVERIFIED'),
                                    entrance=dict(kind='open', evidence='decoded BPO_StationCorridor_02: open ends W and E, no door frames; whole-cell strip 2..24 unverified')),
 }
