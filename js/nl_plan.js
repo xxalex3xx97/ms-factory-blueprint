@@ -10,6 +10,10 @@ function nlAssign(lanes,heads,cap){
 // (lanes in creation order = x order, heads by consumer row top-down then cell order); spills = splitter on lane j + side belt on row y into lane j+1, one reserved row pair after the producer row.
 // Raw docks: lane supply <= cap/2 (belts = max(F belts, ceil(rate/(cap/2)))) so spill + next lane fits one belt. No refusals except a head without a lane (internal bug).
 // Returns {ok,cells,lanes,taps,tracks,routes,spills,dock,ug,sink,w,h,rowStat} or {ok:false,why}.
+// NL6 u-axis: global coordinate u in (0,1) per cell (machines before + K/2 over N of its node); nlWBase = widest packed row or dock row, +2.
+function nlCellU(n){let cum=0;return n.cells.map(g=>{const u=(cum+g.K/2)/n.N;cum+=g.K;return u})}
+function nlWBase(F,bw){let m=0;const rs=[];for(const n of F.nodes){rs[n.row]=(rs[n.row]||0)+n.cells.reduce((a,g)=>a+g.w+1,0)}
+  for(const v of rs)if(v>m)m=v;let d=0;for(const q of F.raws)d+=Math.max(q.belts,Math.ceil(q.rate/(F.cap/2)-1e-9))*(bw+1);return Math.max(m,d)+2}
 function nlPlan1(F,mk,hint){
   const no=why=>({ok:false,why}),bw=def(PLC_BOX).w,bh=def(PLC_BOX).h,cap=F.cap;
   const sp=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).filter(p=>p.f==='S').sort((a,b)=>a.x-b.x)[0];
