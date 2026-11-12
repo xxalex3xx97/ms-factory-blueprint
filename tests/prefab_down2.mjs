@@ -13,7 +13,7 @@ const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrom
 const pg = await (await br.newContext()).newPage();
 const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
-await pg.goto(pathToFileURL(ROOT + '/index.html').href);
+await pg.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=old');
 await pg.waitForFunction(() => window.__fb && typeof pfCompose === 'function' && typeof placerLayout === 'function' && typeof placerTile === 'function' && typeof simAdvance === 'function');
 // pin the PF_DOWN2 two-row path: PF_FACT and PF_BANDS off; previous flag values restored before exit
 const keepFlags = await pg.evaluate(() => { const k = {p: PLC_PREFAB, f: PF_FACT, b: PF_BANDS, d: PF_DOWN2}; PF_FACT = false; PF_BANDS = false; return k });

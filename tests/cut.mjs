@@ -2,7 +2,7 @@
 import {createRequire} from 'module';import path from 'path';import {fileURLToPath,pathToFileURL} from 'url';
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PW||'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
-const PAGE=pathToFileURL(path.join(path.dirname(fileURLToPath(import.meta.url)),'..','index.html')).href;
+const PAGE=pathToFileURL(path.join(path.dirname(fileURLToPath(import.meta.url)),'..','index.html')).href + '?engine=old';
 const br=await chromium.launch({executablePath:process.env.CHROME||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
 const pg=await (await br.newContext({viewport:{width:1400,height:900}})).newPage();
 await pg.goto(PAGE);await pg.waitForFunction(()=>window.__fb&&typeof CATALOG!=='undefined');

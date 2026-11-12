@@ -872,7 +872,7 @@ $("plnMk").addEventListener("change",plcSync);$("plnSp").addEventListener("chang
 // rate in the modal: same field the planner reads (placerPlan), kept in sync both ways
 $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;placerLive()});
 // Engine switch: Old = the original placer (default), New = prefab factory builder (pfFact2 > pfBands > pfChain, falls back to the old path when it refuses). Remembered once chosen.
-const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl");$("pvEngine").value=v;try{localStorage.setItem("fbEngine",v)}catch(_){}};
-try{const e=localStorage.getItem("fbEngine");if(e==="new"||e==="nl")plcEngine(e)}catch(_){}
-$("pvEngine").addEventListener("change",()=>{plcEngine($("pvEngine").value);placerLive()});
+// No Limits is the only engine in the UI (always on). plcEngine stays for tests: ?engine=old|new|nl in the page URL pins an older engine, default nl.
+const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl")};
+try{plcEngine(new URLSearchParams(location.search).get("engine")||"nl")}catch(_){plcEngine("nl")}
 window.addEventListener("resize",()=>{if($("plnPrev").open)requestAnimationFrame(placerFitView)});

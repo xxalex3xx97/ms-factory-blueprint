@@ -10,7 +10,7 @@ const br = await chromium.launch({executablePath: process.env.CHROME || 'C:/Prog
 let bad = 0; const chk = (n, c, d = '') => { console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : ' ' + d)); if (!c) bad++; };
 try {
   const pg = await (await br.newContext()).newPage();
-  await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href);
+  await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href + '?engine=old');
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
   const r = await pg.evaluate(() => {
     const st = CATALOG.blocks.find(b => b.name === 'BPO_Station_01'), cd = CATALOG.buildables.find(m => m.machineClass === 'BP_ContainerObject');

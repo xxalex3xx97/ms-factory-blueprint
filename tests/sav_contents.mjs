@@ -11,7 +11,7 @@ let bad = 0; const chk = (n, c, d = '') => { console.log((c ? 'PASS ' : 'FAIL ')
 try {
   const pg = await (await br.newContext()).newPage();
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
-  await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href);
+  await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href + '?engine=old');
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
   await pg.evaluate(() => document.getElementById('impSav').click()); await pg.setInputFiles('#savFile', SAV); await pg.waitForSelector('#dSav[open]', {timeout: 60000});
   const r = await pg.evaluate(async () => {

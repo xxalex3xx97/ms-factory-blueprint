@@ -11,7 +11,7 @@ let bad = 0; const chk = (n, c, d = '') => { console.log((c ? 'PASS ' : 'FAIL ')
 try {
   const pg = await (await br.newContext({viewport: {width: 1400, height: 900}, acceptDownloads: true})).newPage();
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
-  await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href);
+  await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href + '?engine=old');
   await pg.waitForFunction(() => window.__fb);
   await pg.evaluate(() => document.getElementById('plnB').click());
   const item = 'ITEM_CobaltPlates';
