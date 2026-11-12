@@ -1,0 +1,3019 @@
+{
+ "RSC_AdvancedAssembler": {
+  "label": "AdvancedAssembler",
+  "unlocks": [
+   "DAT_AdvancedAssembler"
+  ],
+  "requires": [
+   "RSC_QuantumScience"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_AdvancedAssembler",
+   "ResearchTechnology",
+   "REC_ReinforcedPlatesAlt",
+   "RSC_QuantumScience",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_AdvancedAssembler1"
+  ]
+ },
+ "RSC_AdvancedCircuits": {
+  "label": "AdvancedCircuits",
+  "unlocks": [],
+  "requires": [
+   "RSC_AdvancedAssembler"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_AdvancedCircuits",
+   "RSC_AdvancedAssembler",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_AdvancedCircuit"
+  ]
+ },
+ "RSC_AdvancedPlates": {
+  "label": "AdvancedPlates",
+  "unlocks": [],
+  "requires": [
+   "RSC_ChitinComposite",
+   "RSC_ChromaticAlloy",
+   "RSC_Multisensor"
+  ],
+  "research_type": [
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_AdvancedPlates",
+   "RSC_ChitinComposite",
+   "RSC_ChromaticAlloy",
+   "RSC_Multisensor",
+   "Default__ResearchTechnology",
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience",
+   "STB_GameObjects",
+   "T_AdvancedPlate"
+  ]
+ },
+ "RSC_AntimatterReactor": {
+  "label": "?????",
+  "unlocks": [],
+  "requires": [
+   "RSC_SolarPanels"
+  ],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "RSC_SolarPanels",
+   "Default__ResearchTechnology",
+   "T_ComingSoonSilhouette"
+  ]
+ },
+ "RSC_Armoury": {
+  "label": "Armoury",
+  "unlocks": [
+   "DAT_Armoury"
+  ],
+  "requires": [
+   "RSC_ComputationScience",
+   "RSC_Servomotors"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_Armoury",
+   "ResearchTechnology",
+   "REC_BackpackMk1",
+   "RSC_ComputationScience",
+   "RSC_Servomotors",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Armoury"
+  ]
+ },
+ "RSC_AstronomicScanning": {
+  "label": "8AC43AB240CB7D78E77B638773E38701",
+  "unlocks": [
+   "BPO_AstronomicScanner"
+  ],
+  "requires": [
+   "RSC_AdvancedCircuits"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_AstronomicScanner_C",
+   "Default__BPO_AstronomicScanner_C",
+   "ResearchTechnology",
+   "ITEM_StellarSurveyData",
+   "RSC_AdvancedCircuits",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "T_AstronomicScanner"
+  ]
+ },
+ "RSC_AstronomicScience": {
+  "label": "AstronomicScience",
+  "unlocks": [
+   "DAT_AstroSciLab"
+  ],
+  "requires": [
+   "RSC_Supercomputer"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_AstroSciLab",
+   "ResearchTechnology",
+   "RSC_Supercomputer",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_AstroSciLab"
+  ]
+ },
+ "RSC_AutomaticMining1": {
+  "label": null,
+  "unlocks": [
+   "DAT_MiningBeacon"
+  ],
+  "requires": [],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_MiningBeacon",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_T1Miner"
+  ]
+ },
+ "RSC_Backpack2": {
+  "label": "Backpack2",
+  "unlocks": [],
+  "requires": [
+   "RSC_Armoury",
+   "RSC_QuantumScience"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_BackpackMk2",
+   "RSC_Armoury",
+   "RSC_QuantumScience",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_Backpack_1"
+  ]
+ },
+ "RSC_Backpack3": {
+  "label": "Backpack3",
+  "unlocks": [],
+  "requires": [
+   "RSC_Backpack2",
+   "RSC_Biolattice",
+   "RSC_SuperalloyFrame",
+   "RSC_XenobiologicScience"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_BackpackMk3",
+   "RSC_Backpack2",
+   "RSC_Biolattice",
+   "RSC_SuperalloyFrame",
+   "RSC_XenobiologicScience",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience",
+   "STB_GameObjects",
+   "T_Backpack_1"
+  ]
+ },
+ "RSC_BasicCircuits": {
+  "label": "BasicCircuits",
+  "unlocks": [],
+  "requires": [
+   "RSC_SilicaRefining"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_BasicCircuit",
+   "RSC_SilicaRefining",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_BasicCircuit"
+  ]
+ },
+ "RSC_BasicOreSynthesis": {
+  "label": "608F76B64D365403CF6020AC69208256",
+  "unlocks": [],
+  "requires": [
+   "RSC_RelicSynthesis"
+  ],
+  "research_type": [
+   "DAT_AlienTechnology"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_NickelSynthesis",
+   "REC_Protomatter",
+   "REC_SilicaSynthesis",
+   "REC_TitaniumSynthesis",
+   "REC_WaterIceSynthesis",
+   "RSC_RelicSynthesis",
+   "Default__ResearchTechnology",
+   "DAT_AlienTechnology",
+   "T_Protomatter"
+  ]
+ },
+ "RSC_Biolattice": {
+  "label": "Biolattice",
+  "unlocks": [],
+  "requires": [
+   "RSC_GrowthChamber"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_AlphaProtein",
+   "REC_BetaProtein",
+   "REC_Biolattice",
+   "RSC_GrowthChamber",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_Biolattice"
+  ]
+ },
+ "RSC_BiomassRecycling": {
+  "label": "BiomassRecycling",
+  "unlocks": [],
+  "requires": [
+   "RSC_XenobiologicScience"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_XenoarchaeaRecycling",
+   "REC_XenobacteriaRecycling",
+   "REC_XenoEukaryaRecycling",
+   "RSC_XenobiologicScience",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience",
+   "STB_GameObjects",
+   "T_XenoarchaeaRecycling"
+  ]
+ },
+ "RSC_BiosampleCollection": {
+  "label": "937310624AB7C73B46C19C8A80AB1A50",
+  "unlocks": [
+   "BPO_BiosampleCollector"
+  ],
+  "requires": [
+   "RSC_InterstellarWarpDrive"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_BiosampleCollector_C",
+   "Default__BPO_BiosampleCollector_C",
+   "ResearchTechnology",
+   "ITEM_Xenoarchaea",
+   "ITEM_Xenobacteria",
+   "ITEM_Xenoeukarya",
+   "RSC_InterstellarWarpDrive",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "T_Xenobacteria"
+  ]
+ },
+ "RSC_CaptainQuarters": {
+  "label": "CaptainQuarters",
+  "unlocks": [
+   "BPO_ShipOffice_01"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_ShipOffice_01_C",
+   "Default__BPO_ShipOffice_01_C",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "STB_GameObjects",
+   "T_CaptainsQuarters"
+  ]
+ },
+ "RSC_ChitinComposite": {
+  "label": "ChitinComposite",
+  "unlocks": [],
+  "requires": [
+   "RSC_XenobiologicScience"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_ChitinComposite",
+   "RSC_XenobiologicScience",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience",
+   "STB_GameObjects",
+   "T_ChitinComposite"
+  ]
+ },
+ "RSC_ChromaticAlloy": {
+  "label": "ChromaticAlloy",
+  "unlocks": [],
+  "requires": [
+   "RSC_AstronomicScience"
+  ],
+  "research_type": [
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_ChromaticAlloy",
+   "RSC_AstronomicScience",
+   "Default__ResearchTechnology",
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_ChromaticAlloy"
+  ]
+ },
+ "RSC_Circuits1": {
+  "label": "BasicCircuits",
+  "unlocks": [],
+  "requires": [
+   "RSC_SilicaRefining"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_BasicCircuit",
+   "RSC_SilicaRefining",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_BasicCircuit"
+  ]
+ },
+ "RSC_CobaltEnrichment": {
+  "label": "?????",
+  "unlocks": [],
+  "requires": [
+   "RSC_CobaltRefining"
+  ],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "RSC_CobaltRefining",
+   "Default__ResearchTechnology",
+   "T_ComingSoonSilhouette"
+  ]
+ },
+ "RSC_CobaltRefining": {
+  "label": "3635817F43DBD38D40D154AC654734CB",
+  "unlocks": [],
+  "requires": [
+   "RSC_WarpDrive"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "ITEM_CobaltOre",
+   "REC_CobaltPlates",
+   "RSC_WarpDrive",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "T_CobaltOre"
+  ]
+ },
+ "RSC_CobaltSynthesis": {
+  "label": "RelicSynthesizer",
+  "unlocks": [],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_CobaltSynthesis",
+   "Default__ResearchTechnology",
+   "STB_GameObjects",
+   "T_CobaltOre"
+  ]
+ },
+ "RSC_ComputationScience": {
+  "label": "ComputationScience",
+  "unlocks": [
+   "DAT_CompSciLab"
+  ],
+  "requires": [
+   "RSC_BasicCircuits",
+   "RSC_Logistics1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_CompSciLab",
+   "ResearchTechnology",
+   "RSC_BasicCircuits",
+   "RSC_Logistics1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_CompSciLab"
+  ]
+ },
+ "RSC_ContainerMachine2": {
+  "label": "LargeContainer",
+  "unlocks": [
+   "DAT_Container_2"
+  ],
+  "requires": [
+   "RSC_Servomotors"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_Container_2",
+   "ResearchTechnology",
+   "RSC_Servomotors",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_LargeContainer"
+  ]
+ },
+ "RSC_ContainmentCoil": {
+  "label": "ContainmentCoil",
+  "unlocks": [],
+  "requires": [
+   "RSC_ComputationScience"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_ContainmentCoil",
+   "RSC_ComputationScience",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_ContainmentCoil1"
+  ]
+ },
+ "RSC_Coolant": {
+  "label": "Coolant",
+  "unlocks": [],
+  "requires": [
+   "RSC_GasExtraction"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_Coolant",
+   "RSC_GasExtraction",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Coolant"
+  ]
+ },
+ "RSC_Corridor2": {
+  "label": "Corridor2",
+  "unlocks": [
+   "BPO_StationAdapter_01",
+   "BPO_StationCorridor_02"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_StationAdapter_01_C",
+   "BPO_StationCorridor_02_C",
+   "Default__BPO_StationAdapter_01_C",
+   "Default__BPO_StationCorridor_02_C",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "STB_GameObjects",
+   "T_StationCorridor_02"
+  ]
+ },
+ "RSC_Crafting1": {
+  "label": "0E14B5A94FA92FDD817A18A5869905A2",
+  "unlocks": [],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "ITEM_AnyItemFilter",
+   "ITEM_NickelOre",
+   "ITEM_TitaniumOre",
+   "ITEM_WaterIce",
+   "REC_BasicMotor",
+   "REC_Capacitor",
+   "REC_HullPlates",
+   "REC_LightweightFrame",
+   "REC_MageticCoils",
+   "REC_RepairKit",
+   "Default__ResearchTechnology",
+   "T_HullPlate"
+  ]
+ },
+ "RSC_DeepSpaceObservatory": {
+  "label": "DeepSpaceObservatory",
+  "unlocks": [
+   "BPO_DeepSpaceObservatory"
+  ],
+  "requires": [
+   "RSC_AstronomicScience"
+  ],
+  "research_type": [
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_DeepSpaceObservatory_C",
+   "Default__BPO_DeepSpaceObservatory_C",
+   "ResearchTechnology",
+   "REC_ObservedStellarSurveyData",
+   "RSC_AstronomicScience",
+   "Default__ResearchTechnology",
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_DeepSpaceObservatory"
+  ]
+ },
+ "RSC_DetectorArray": {
+  "label": "DetectorArray",
+  "unlocks": [],
+  "requires": [
+   "RSC_CobaltRefining",
+   "RSC_GraphiteRefining"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_DetectorArray",
+   "RSC_CobaltRefining",
+   "RSC_GraphiteRefining",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_DetectorArray"
+  ]
+ },
+ "RSC_ElectromagneticScience": {
+  "label": "ElectromagneticScience",
+  "unlocks": [
+   "DAT_ElectroSciLab"
+  ],
+  "requires": [
+   "RSC_DetectorArray"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_ElectroSciLab",
+   "ResearchTechnology",
+   "RSC_DetectorArray",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_ElectroSciLab"
+  ]
+ },
+ "RSC_EnrichmentChamber": {
+  "label": "EnrichmentChamber",
+  "unlocks": [
+   "DAT_EnrichmentChamber"
+  ],
+  "requires": [
+   "RSC_ComputationScience",
+   "RSC_ContainmentCoil"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_EnrichmentChamber",
+   "ResearchTechnology",
+   "REC_EnrichedFuel",
+   "RSC_ComputationScience",
+   "RSC_ContainmentCoil",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_EnrichmentChamber2"
+  ]
+ },
+ "RSC_Exoskeleton1": {
+  "label": "Exoskeleton1",
+  "unlocks": [],
+  "requires": [
+   "RSC_Armoury"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_ExoskeletonMk1",
+   "RSC_Armoury",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Exoskeleton_1"
+  ]
+ },
+ "RSC_Exoskeleton2": {
+  "label": "Exoskeleton2",
+  "unlocks": [],
+  "requires": [
+   "RSC_Coolant",
+   "RSC_Exoskeleton1",
+   "RSC_MaglevCoupling"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_ExoskeletonMk2",
+   "RSC_Coolant",
+   "RSC_Exoskeleton1",
+   "RSC_MaglevCoupling",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Exoskeleton_1"
+  ]
+ },
+ "RSC_Exoskeleton3": {
+  "label": "Exoskeleton3",
+  "unlocks": [],
+  "requires": [
+   "RSC_ChitinComposite",
+   "RSC_ChromaticAlloy",
+   "RSC_Exoskeleton2"
+  ],
+  "research_type": [
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_ExoskeletonMk3",
+   "RSC_ChitinComposite",
+   "RSC_ChromaticAlloy",
+   "RSC_Exoskeleton2",
+   "Default__ResearchTechnology",
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience",
+   "STB_GameObjects",
+   "T_Exoskeleton_1"
+  ]
+ },
+ "RSC_Exosuit": {
+  "label": "Exosuit",
+  "unlocks": [],
+  "requires": [
+   "RSC_AdvancedPlates",
+   "RSC_Backpack3",
+   "RSC_Exoskeleton3"
+  ],
+  "research_type": [
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_Exosuit",
+   "RSC_AdvancedPlates",
+   "RSC_Backpack3",
+   "RSC_Exoskeleton3",
+   "Default__ResearchTechnology",
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "DAT_XenobiologyScience",
+   "STB_GameObjects",
+   "T_Exosuit"
+  ]
+ },
+ "RSC_Factory1": {
+  "label": null,
+  "unlocks": [
+   "DAT_T1Factory",
+   "DAT_T1Junction"
+  ],
+  "requires": [
+   "RSC_Stations1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_T1Factory",
+   "DAT_T1Junction",
+   "ResearchTechnology",
+   "RSC_Stations1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_T1Factory"
+  ]
+ },
+ "RSC_Furniture1": {
+  "label": "54224A4A42B932C84CD1268DF0DDD1E7",
+  "unlocks": [
+   "DAT_SignWall"
+  ],
+  "requires": [],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_SignWall",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_SignWall"
+  ]
+ },
+ "RSC_Furniture2": {
+  "label": "1F73E1614EB273D72BC45FAD23A4D813",
+  "unlocks": [
+   "DAT_Chair",
+   "DAT_CoffeeTable"
+  ],
+  "requires": [
+   "RSC_Furniture1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_Chair",
+   "DAT_CoffeeTable",
+   "ResearchTechnology",
+   "RSC_Furniture1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_Armchair"
+  ]
+ },
+ "RSC_Gallant": {
+  "label": null,
+  "unlocks": [],
+  "requires": [
+   "RSC_Prospector"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "RSC_Prospector",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "REC_Gallant",
+   "T_Gallant"
+  ]
+ },
+ "RSC_GasExtraction": {
+  "label": "4CAFF1C54C99EED94F04C9868BBDFB05",
+  "unlocks": [
+   "DAT_GasExtractor"
+  ],
+  "requires": [
+   "RSC_ReinforcedPlates"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_GasExtractor",
+   "ResearchTechnology",
+   "ITEM_NitrogenGas",
+   "RSC_ReinforcedPlates",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "T_T1Miner"
+  ]
+ },
+ "RSC_GraphiteRefining": {
+  "label": "22E6D6CE4933999519241AB601B02128",
+  "unlocks": [],
+  "requires": [
+   "RSC_WarpDrive"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "ITEM_Graphite",
+   "REC_Graphene",
+   "RSC_WarpDrive",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "T_Graphite"
+  ]
+ },
+ "RSC_GraphiteSynthesis": {
+  "label": "RelicSynthesizer",
+  "unlocks": [],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_GraphiteSynthesis",
+   "Default__ResearchTechnology",
+   "STB_GameObjects",
+   "T_Graphite"
+  ]
+ },
+ "RSC_GrowthChamber": {
+  "label": "GrowthChamber",
+  "unlocks": [
+   "DAT_GrowthChamber"
+  ],
+  "requires": [
+   "RSC_BiosampleCollection"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_GrowthChamber",
+   "ResearchTechnology",
+   "REC_Enzyme",
+   "REC_Nutrients",
+   "RSC_BiosampleCollection",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_GrowthChamber1"
+  ]
+ },
+ "RSC_IndustrialDock": {
+  "label": "IndustrialDock",
+  "unlocks": [
+   "BPO_Dock_2"
+  ],
+  "requires": [
+   "RSC_Logistics2"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Dock_2_C",
+   "Default__BPO_Dock_2_C",
+   "ResearchTechnology",
+   "RSC_Logistics2",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Dock_02"
+  ]
+ },
+ "RSC_InterstellarWarpDrive": {
+  "label": "InterstellarWarpDrive",
+  "unlocks": [
+   "BPO_InterstellarWarpDriveBlock"
+  ],
+  "requires": [
+   "RSC_AdvancedCircuits",
+   "RSC_Shipyard2",
+   "RSC_SuperalloyFrame"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_InterstellarWarpDriveBlock_C",
+   "Default__BPO_InterstellarWarpDriveBlock_C",
+   "ResearchTechnology",
+   "ITEM_Lonsdaleite",
+   "RSC_AdvancedCircuits",
+   "RSC_Shipyard2",
+   "RSC_SuperalloyFrame",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_InterstellarWarpDrive"
+  ]
+ },
+ "RSC_IridiumRefining": {
+  "label": "549BB4DF46F0133D331033B6401ED0BD",
+  "unlocks": [],
+  "requires": [
+   "RSC_InterstellarWarpDrive"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "ITEM_IridiumOre",
+   "REC_IridiumPlates",
+   "RSC_InterstellarWarpDrive",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "T_IridiumOre"
+  ]
+ },
+ "RSC_ItemElevator": {
+  "label": "ItemElevator",
+  "unlocks": [
+   "BPO_ItemElevatorBlock_01"
+  ],
+  "requires": [
+   "RSC_Logistics2"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_ItemElevatorBlock_01_C",
+   "Default__BPO_ItemElevatorBlock_01_C",
+   "ResearchTechnology",
+   "RSC_Logistics2",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_ItemElevator"
+  ]
+ },
+ "RSC_LargeConveyor": {
+  "label": null,
+  "unlocks": [
+   "DAT_LargeConveyorBelt"
+  ],
+  "requires": [
+   "RSC_ComputationScience",
+   "RSC_Logistics1"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_LargeConveyorBelt",
+   "ResearchTechnology",
+   "REC_LargeConveyorBelt",
+   "RSC_ComputationScience",
+   "RSC_Logistics1",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "T_Splitter_1"
+  ]
+ },
+ "RSC_LargeThruster2": {
+  "label": "LargeThruster",
+  "unlocks": [
+   "BPO_Thruster_05"
+  ],
+  "requires": [
+   "RSC_ChromaticAlloy",
+   "RSC_ShipLargeThrusters"
+  ],
+  "research_type": [
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Thruster_05_C",
+   "Default__BPO_Thruster_05_C",
+   "ResearchTechnology",
+   "RSC_ChromaticAlloy",
+   "RSC_ShipLargeThrusters",
+   "Default__ResearchTechnology",
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_Thruster_05"
+  ]
+ },
+ "RSC_Logistics1": {
+  "label": "7D4E842B4BF36AEFEE045D8A5BAF6A08",
+  "unlocks": [
+   "DAT_BeltBalancer_01",
+   "DAT_ConveyorBelt",
+   "DAT_Splitter",
+   "DAT_UndergroundBelt"
+  ],
+  "requires": [],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_BeltBalancer_01",
+   "DAT_ConveyorBelt",
+   "DAT_Splitter",
+   "DAT_UndergroundBelt",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_Conveyor_01-1"
+  ]
+ },
+ "RSC_Logistics2": {
+  "label": "FFD2FAC24AC54EF1D05B8D8DF3ED6A73",
+  "unlocks": [
+   "DAT_BeltBalancer_02",
+   "DAT_ConveyorBelt2",
+   "DAT_Splitter_2",
+   "DAT_UndergroundBelt_2"
+  ],
+  "requires": [
+   "RSC_ComputationScience",
+   "RSC_Servomotors"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_BeltBalancer_02",
+   "DAT_ConveyorBelt2",
+   "DAT_Splitter_2",
+   "DAT_UndergroundBelt_2",
+   "ResearchTechnology",
+   "RSC_ComputationScience",
+   "RSC_Servomotors",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "T_Conveyor_02"
+  ]
+ },
+ "RSC_Logistics3": {
+  "label": "487F8143436B5E3888392AB2A6C7A6ED",
+  "unlocks": [
+   "DAT_BeltBalancer_03",
+   "DAT_ConveyorBelt3",
+   "DAT_Splitter_3",
+   "DAT_UndergroundBelt_3"
+  ],
+  "requires": [
+   "RSC_Logistics2",
+   "RSC_MaglevCoupling"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_BeltBalancer_03",
+   "DAT_ConveyorBelt3",
+   "DAT_Splitter_3",
+   "DAT_UndergroundBelt_3",
+   "ResearchTechnology",
+   "RSC_Logistics2",
+   "RSC_MaglevCoupling",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "T_Conveyor_03-1"
+  ]
+ },
+ "RSC_MaglevCoupling": {
+  "label": "MaglevCoupling",
+  "unlocks": [],
+  "requires": [
+   "RSC_GraphiteRefining",
+   "RSC_Superalloy"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_MaglevCoupling",
+   "RSC_GraphiteRefining",
+   "RSC_Superalloy",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_MaglevCoupling"
+  ]
+ },
+ "RSC_MaglevCouplingAlt": {
+  "label": "MaglevCoupling",
+  "unlocks": [],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_MaglevCouplingAlt",
+   "Default__ResearchTechnology",
+   "STB_GameObjects",
+   "T_MaglevCoupling"
+  ]
+ },
+ "RSC_MagneticCoilsAlt": {
+  "label": "MagneticCoils",
+  "unlocks": [],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_MagneticCoilsAlt1",
+   "Default__ResearchTechnology",
+   "STB_GameObjects",
+   "T_MagneticCoilAlt"
+  ]
+ },
+ "RSC_MediumBridge": {
+  "label": "06792C3E4F1D88BE4EBF2092062CBD94",
+  "unlocks": [
+   "BPO_Cockpit_03"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Cockpit_03_C",
+   "Default__BPO_Cockpit_03_C",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "STB_GameObjects",
+   "T_MediumBridge"
+  ]
+ },
+ "RSC_MiningDroneBay": {
+  "label": "D510E15E40076DC38BBC8190B6CA37D0",
+  "unlocks": [
+   "BPO_MiningDroneBayBlock"
+  ],
+  "requires": [
+   "RSC_Logistics1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_MiningDroneBayBlock_C",
+   "Default__BPO_MiningDroneBayBlock_C",
+   "ResearchTechnology",
+   "RSC_Logistics1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_Drone"
+  ]
+ },
+ "RSC_MiningDroneBay_2": {
+  "label": "546778734709DBAD37646C8CB550BA3E",
+  "unlocks": [
+   "BPO_MiningDroneBayBlock_2"
+  ],
+  "requires": [
+   "RSC_Logistics2",
+   "RSC_MiningDroneBay"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_MiningDroneBayBlock_2_C",
+   "Default__BPO_MiningDroneBayBlock_2_C",
+   "ResearchTechnology",
+   "RSC_Logistics2",
+   "RSC_MiningDroneBay",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "T_Drone"
+  ]
+ },
+ "RSC_MiningLaser": {
+  "label": "MiningLaser",
+  "unlocks": [
+   "BPO_MiningLaserBlock",
+   "BPO_MiningLaserBlock_B"
+  ],
+  "requires": [
+   "RSC_Shipyard1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_MiningLaserBlock_C",
+   "BPO_MiningLaserBlock_B_C",
+   "Default__BPO_MiningLaserBlock_B_C",
+   "Default__BPO_MiningLaserBlock_C",
+   "ResearchTechnology",
+   "RSC_Shipyard1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_MiningLaser2"
+  ]
+ },
+ "RSC_MissileLauncher": {
+  "label": "MissileLauncher",
+  "unlocks": [
+   "BPO_MissileLauncherBlock_01"
+  ],
+  "requires": [
+   "RSC_Coolant",
+   "RSC_MiningLaser"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_MissileLauncherBlock_01_C",
+   "Default__BPO_MissileLauncherBlock_01_C",
+   "ResearchTechnology",
+   "REC_Missile",
+   "RSC_Coolant",
+   "RSC_MiningLaser",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_MissileLauncher"
+  ]
+ },
+ "RSC_MultiblockElevator": {
+  "label": "Elevator2",
+  "unlocks": [
+   "BPO_ElevatorBlock_02A"
+  ],
+  "requires": [
+   "RSC_MaglevCoupling",
+   "RSC_StationModules4"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_ElevatorBlock_02A_C",
+   "Default__BPO_ElevatorBlock_02A_C",
+   "ResearchTechnology",
+   "RSC_MaglevCoupling",
+   "RSC_StationModules4",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_StationElevator_02"
+  ]
+ },
+ "RSC_Multisensor": {
+  "label": "Multisensor",
+  "unlocks": [],
+  "requires": [
+   "RSC_ChromaticAlloy"
+  ],
+  "research_type": [
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_Multisensor",
+   "RSC_ChromaticAlloy",
+   "Default__ResearchTechnology",
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_Multisensor"
+  ]
+ },
+ "RSC_OreEnrichment": {
+  "label": "OreEnrichmentResearch",
+  "unlocks": [],
+  "requires": [
+   "RSC_CobaltRefining",
+   "RSC_EnrichmentChamber"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_EnrichedCobaltOre",
+   "REC_EnrichedCobaltPlates",
+   "REC_EnrichedNickelOre",
+   "REC_EnrichedNickelPlates",
+   "REC_EnrichedTitaniumOre",
+   "REC_EnrichedTitaniumPlates",
+   "RSC_CobaltRefining",
+   "RSC_EnrichmentChamber",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_EnrichedTitanium"
+  ]
+ },
+ "RSC_Plants1": {
+  "label": "55B2258C4ECB11BFC9E0149C43A1C227",
+  "unlocks": [
+   "DAT_Plant_01"
+  ],
+  "requires": [],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_Plant_01",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_Plant_01"
+  ]
+ },
+ "RSC_PlasmaLance": {
+  "label": "PlasmaLance",
+  "unlocks": [
+   "BPO_LanceBlock"
+  ],
+  "requires": [
+   "RSC_MaglevCoupling",
+   "RSC_MiningLaser"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_LanceBlock_C",
+   "Default__BPO_LanceBlock_C",
+   "ResearchTechnology",
+   "RSC_MaglevCoupling",
+   "RSC_MiningLaser",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_PlasmaLance"
+  ]
+ },
+ "RSC_PlasmaTurret": {
+  "label": "?????",
+  "unlocks": [],
+  "requires": [
+   "RSC_PlasmaLance"
+  ],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "RSC_PlasmaLance",
+   "Default__ResearchTechnology",
+   "T_ComingSoonSilhouette"
+  ]
+ },
+ "RSC_PowerGen1": {
+  "label": "52DB66F14681E0081ED5E4B984EBE145",
+  "unlocks": [
+   "BPO_ReactorBlock_Small",
+   "DAT_ReactorMachine"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_ReactorBlock_Small_C",
+   "Default__BPO_ReactorBlock_Small_C",
+   "DAT_ReactorMachine",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "T_ReactorMachine"
+  ]
+ },
+ "RSC_Production1": {
+  "label": "1FF65D3041D53115C74597B5A958733B",
+  "unlocks": [
+   "DAT_Assembler",
+   "DAT_Container",
+   "DAT_MatSciLab",
+   "DAT_Refinery",
+   "DAT_WorkbenchMachine"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_Assembler",
+   "DAT_Container",
+   "DAT_MatSciLab",
+   "DAT_Refinery",
+   "DAT_WorkbenchMachine",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "T_Refinery"
+  ]
+ },
+ "RSC_Prospector": {
+  "label": null,
+  "unlocks": [],
+  "requires": [
+   "RSC_Scout"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "RSC_Scout",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "REC_Prospector",
+   "T_Prospector"
+  ]
+ },
+ "RSC_QuantumScience": {
+  "label": "QuantumScience",
+  "unlocks": [
+   "DAT_QuantumSciLab"
+  ],
+  "requires": [
+   "RSC_ReinforcedPlates",
+   "RSC_SupercondutorCoil"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_QuantumSciLab",
+   "ResearchTechnology",
+   "RSC_ReinforcedPlates",
+   "RSC_SupercondutorCoil",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_QuantumSciLab"
+  ]
+ },
+ "RSC_Refining1": {
+  "label": "0E8CCBB040C9A4E27F83B0941FDD77BE",
+  "unlocks": [],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_HydrogenFuel",
+   "REC_NickelPlates",
+   "REC_TitaniumPlates",
+   "Default__ResearchTechnology",
+   "T_TitaniumOre"
+  ]
+ },
+ "RSC_ReinforcedPlates": {
+  "label": "ReinforcedPlate",
+  "unlocks": [],
+  "requires": [
+   "RSC_Superalloy"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_ReinforcedPlates",
+   "RSC_Superalloy",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_ReinforcedPlate"
+  ]
+ },
+ "RSC_RelicAnalyzer": {
+  "label": "RelicAnalyzer",
+  "unlocks": [
+   "DAT_RelicAnalyzer"
+  ],
+  "requires": [],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_RelicAnalyzer",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_RelicShard"
+  ]
+ },
+ "RSC_RelicCapacitor": {
+  "label": "RelicCapacitor",
+  "unlocks": [],
+  "requires": [
+   "RSC_RelicAnalyzer"
+  ],
+  "research_type": [
+   "DAT_AlienTechnology"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_RelicCapacitor",
+   "RSC_RelicAnalyzer",
+   "Default__ResearchTechnology",
+   "DAT_AlienTechnology",
+   "STB_GameObjects",
+   "T_RelicCapacitor"
+  ]
+ },
+ "RSC_RelicSynthesis": {
+  "label": "RelicSynthesizer",
+  "unlocks": [
+   "DAT_RelicSynthesizer"
+  ],
+  "requires": [
+   "RSC_RelicCapacitor",
+   "RSC_SupercondutorCoil"
+  ],
+  "research_type": [
+   "DAT_AlienTechnology"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_RelicSynthesizer",
+   "ResearchTechnology",
+   "REC_RelicShardSynthesis",
+   "RSC_RelicCapacitor",
+   "RSC_SupercondutorCoil",
+   "Default__ResearchTechnology",
+   "DAT_AlienTechnology",
+   "STB_GameObjects",
+   "T_RelicSynthesizer"
+  ]
+ },
+ "RSC_RelicThruster_01": {
+  "label": "F632EB6C4218847E10B81F887C811F3A",
+  "unlocks": [
+   "BPO_Thruster_04L",
+   "BPO_Thruster_04R"
+  ],
+  "requires": [
+   "RSC_RelicCapacitor"
+  ],
+  "research_type": [
+   "DAT_AlienTechnology"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Thruster_04L_C",
+   "BPO_Thruster_04R_C",
+   "Default__BPO_Thruster_04L_C",
+   "Default__BPO_Thruster_04R_C",
+   "ResearchTechnology",
+   "RSC_RelicCapacitor",
+   "Default__ResearchTechnology",
+   "DAT_AlienTechnology",
+   "T_Thruster_04"
+  ]
+ },
+ "RSC_Scout": {
+  "label": null,
+  "unlocks": [],
+  "requires": [
+   "RSC_Shipyard1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "RSC_Shipyard1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "REC_Scout",
+   "T_Scout2"
+  ]
+ },
+ "RSC_ServoPlates": {
+  "label": "ServoPlates",
+  "unlocks": [],
+  "requires": [
+   "RSC_AdvancedAssembler"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_ServoPlates",
+   "RSC_AdvancedAssembler",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_ServoPlate"
+  ]
+ },
+ "RSC_Servomotors": {
+  "label": "Servomotors",
+  "unlocks": [],
+  "requires": [],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_Servomotor",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Servomotor"
+  ]
+ },
+ "RSC_ShipArmour": {
+  "label": "A919A78A40A3F999E5CAB4A3A8758C42",
+  "unlocks": [
+   "BPO_Armour_01L",
+   "BPO_Armour_01R"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Armour_01L_C",
+   "BPO_Armour_01R_C",
+   "Default__BPO_Armour_01L_C",
+   "Default__BPO_Armour_01R_C",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "T_ArmourWing_2"
+  ]
+ },
+ "RSC_ShipArmourSlopes1": {
+  "label": "A58A2C204AF35BD8056584AB00AC626C",
+  "unlocks": [
+   "BPO_ArmourSlope_01B",
+   "BPO_ArmourSlope_01T",
+   "BPO_ArmourSlope_02B",
+   "BPO_ArmourSlope_02T"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_ArmourSlope_01B_C",
+   "BPO_ArmourSlope_01T_C",
+   "BPO_ArmourSlope_02B_C",
+   "BPO_ArmourSlope_02T_C",
+   "Default__BPO_ArmourSlope_01B_C",
+   "Default__BPO_ArmourSlope_01T_C",
+   "Default__BPO_ArmourSlope_02B_C",
+   "Default__BPO_ArmourSlope_02T_C",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "T_ArmourSlope_1"
+  ]
+ },
+ "RSC_ShipContainer": {
+  "label": "1A760DC04915B78741BD9AB0230E04AB",
+  "unlocks": [
+   "BPO_ShipContainerBlock"
+  ],
+  "requires": [
+   "RSC_ComputationScience",
+   "RSC_Shipyard1"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_ShipContainerBlock_C",
+   "Default__BPO_ShipContainerBlock_C",
+   "ResearchTechnology",
+   "RSC_ComputationScience",
+   "RSC_Shipyard1",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "T_ShipContainer"
+  ]
+ },
+ "RSC_ShipDeco_01": {
+  "label": "3068C8804FB060FF88EEF6B71533A22A",
+  "unlocks": [
+   "BPO_Body_02",
+   "BPO_ShipCorner_01"
+  ],
+  "requires": [
+   "RSC_Shipyard1",
+   "RSC_SilicaRefining"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Body_02_C",
+   "BPO_ShipCorner_01_C",
+   "Default__BPO_Body_02_C",
+   "Default__BPO_ShipCorner_01_C",
+   "ResearchTechnology",
+   "RSC_Shipyard1",
+   "RSC_SilicaRefining",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_ShipHabCorner_01"
+  ]
+ },
+ "RSC_ShipFrames": {
+  "label": "2C4633444A5F84EC17D6DC9A0575B62D",
+  "unlocks": [
+   "BPO_FrameSlope_01B",
+   "BPO_FrameSlope_01T",
+   "BPO_Frame_01"
+  ],
+  "requires": [
+   "RSC_Shipyard1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Frame_01_C",
+   "BPO_FrameSlope_01B_C",
+   "BPO_FrameSlope_01T_C",
+   "Default__BPO_Frame_01_C",
+   "Default__BPO_FrameSlope_01B_C",
+   "Default__BPO_FrameSlope_01T_C",
+   "ResearchTechnology",
+   "RSC_Shipyard1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_Frame_01"
+  ]
+ },
+ "RSC_ShipLadder": {
+  "label": "F9C741C143425F510BA561A76CA7D10C",
+  "unlocks": [
+   "BPO_LadderBlock"
+  ],
+  "requires": [
+   "RSC_Shipyard1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_LadderBlock_C",
+   "Default__BPO_LadderBlock_C",
+   "ResearchTechnology",
+   "RSC_Shipyard1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_ShipLadder_01"
+  ]
+ },
+ "RSC_ShipLargeThrusters": {
+  "label": "MediumThruster",
+  "unlocks": [
+   "BPO_Thruster_03"
+  ],
+  "requires": [
+   "RSC_ContainmentCoil",
+   "RSC_Shipyard1"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Thruster_03_C",
+   "Default__BPO_Thruster_03_C",
+   "ResearchTechnology",
+   "RSC_ContainmentCoil",
+   "RSC_Shipyard1",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Thruster_03"
+  ]
+ },
+ "RSC_ShipLaserTurret": {
+  "label": "PointDefenceLaser",
+  "unlocks": [
+   "BPO_ShipLaserTurretBlock_01",
+   "BPO_ShipLaserTurretBlock_01B"
+  ],
+  "requires": [
+   "RSC_QuantumScience",
+   "RSC_Shipyard2"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_ShipLaserTurretBlock_01_C",
+   "BPO_ShipLaserTurretBlock_01B_C",
+   "Default__BPO_ShipLaserTurretBlock_01_C",
+   "Default__BPO_ShipLaserTurretBlock_01B_C",
+   "ResearchTechnology",
+   "RSC_QuantumScience",
+   "RSC_Shipyard2",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_ShipLaserTurreT_01"
+  ]
+ },
+ "RSC_ShipModules1": {
+  "label": "60689AB94CAAB3FBBF51709F503F251C",
+  "unlocks": [
+   "BPO_Body_01",
+   "BPO_Cockpit_01",
+   "BPO_DockingCollar",
+   "BPO_ReactorBlock_Small",
+   "BPO_Thruster_02L",
+   "BPO_Thruster_02R",
+   "BPO_WorkstationBlock"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Body_01_C",
+   "BPO_Cockpit_01_C",
+   "BPO_DockingCollar_C",
+   "BPO_ReactorBlock_Small_C",
+   "BPO_Thruster_02L_C",
+   "BPO_Thruster_02R_C",
+   "BPO_WorkstationBlock_C",
+   "Default__BPO_Body_01_C",
+   "Default__BPO_Cockpit_01_C",
+   "Default__BPO_DockingCollar_C",
+   "Default__BPO_ReactorBlock_Small_C",
+   "Default__BPO_Thruster_02L_C",
+   "Default__BPO_Thruster_02R_C",
+   "Default__BPO_WorkstationBlock_C",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "T_Cockpit"
+  ]
+ },
+ "RSC_ShipUpgrades": {
+  "label": null,
+  "unlocks": [],
+  "requires": [
+   "RSC_CobaltRefining",
+   "RSC_Shipyard1"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_UpgradesShipSpeed_1",
+   "REC_UpgradesShipSpeed_2",
+   "RSC_CobaltRefining",
+   "RSC_Shipyard1",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "T_Prospector"
+  ]
+ },
+ "RSC_ShipWeapons1": {
+  "label": "40E3BFF5494D038F70CEEFBE435B4B28",
+  "unlocks": [
+   "BPO_CannonBlock",
+   "BPO_CannonBlock_B",
+   "BPO_ShipShieldGenerator_01",
+   "BPO_ShipShieldGenerator_01B",
+   "BPO_TractorBeamBlock",
+   "BPO_TractorBeamBlock_B"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_CannonBlock_C",
+   "BPO_CannonBlock_B_C",
+   "BPO_ShipShieldGenerator_01_C",
+   "BPO_ShipShieldGenerator_01B_C",
+   "BPO_TractorBeamBlock_C",
+   "BPO_TractorBeamBlock_B_C",
+   "Default__BPO_CannonBlock_B_C",
+   "Default__BPO_CannonBlock_C",
+   "Default__BPO_ShipShieldGenerator_01_C",
+   "Default__BPO_ShipShieldGenerator_01B_C",
+   "Default__BPO_TractorBeamBlock_B_C",
+   "Default__BPO_TractorBeamBlock_C",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "T_PlasmaCannons_01"
+  ]
+ },
+ "RSC_Shipyard1": {
+  "label": "Shipyard",
+  "unlocks": [
+   "BPO_ShipyardCore",
+   "BPO_ShipyardSide"
+  ],
+  "requires": [],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_ShipyardCore_C",
+   "BPO_ShipyardSide_C",
+   "Default__BPO_ShipyardCore_C",
+   "Default__BPO_ShipyardSide_C",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_ShipyardCore_01"
+  ]
+ },
+ "RSC_Shipyard2": {
+  "label": "Shipyard2",
+  "unlocks": [
+   "BPO_ShipyardCore_02"
+  ],
+  "requires": [
+   "RSC_Shipyard1",
+   "RSC_Superalloy"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_ShipyardCore_02_C",
+   "Default__BPO_ShipyardCore_02_C",
+   "ResearchTechnology",
+   "RSC_Shipyard1",
+   "RSC_Superalloy",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Shipyard_02"
+  ]
+ },
+ "RSC_SilicaRefining": {
+  "label": "1B31E7054FCAC6378B55059583B09EC4",
+  "unlocks": [
+   "BPO_WindowBlock"
+  ],
+  "requires": [],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_WindowBlock_C",
+   "Default__BPO_WindowBlock_C",
+   "ResearchTechnology",
+   "ITEM_Silica",
+   "REC_ReinforcedGlass",
+   "REC_SiliconWafers",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_Silica"
+  ]
+ },
+ "RSC_SmallBridge": {
+  "label": "SmallBridge",
+  "unlocks": [
+   "BPO_Cockpit_02"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Cockpit_02_C",
+   "Default__BPO_Cockpit_02_C",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "STB_GameObjects",
+   "T_SmallBridge"
+  ]
+ },
+ "RSC_SmallHangar": {
+  "label": "SmallHangar",
+  "unlocks": [
+   "BPO_Hangar_2",
+   "DAT_Fighter"
+  ],
+  "requires": [
+   "RSC_Shipyard2",
+   "RSC_SuperalloyFrame"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Hangar_2_C",
+   "Default__BPO_Hangar_2_C",
+   "DAT_Fighter",
+   "ResearchTechnology",
+   "RSC_Shipyard2",
+   "RSC_SuperalloyFrame",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_SmallHangar"
+  ]
+ },
+ "RSC_SmartContainers": {
+  "label": "SmartContainers",
+  "unlocks": [
+   "DAT_SmartContainerResearch"
+  ],
+  "requires": [
+   "RSC_ComputationScience"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_SmartContainerResearch",
+   "ResearchTechnology",
+   "RSC_ComputationScience",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Container_Filters"
+  ]
+ },
+ "RSC_SolarPanels": {
+  "label": "SolarPanels1",
+  "unlocks": [
+   "BPO_SolarPanelBlock"
+  ],
+  "requires": [
+   "RSC_ComputationScience"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_SolarPanelBlock_C",
+   "Default__BPO_SolarPanelBlock_C",
+   "ResearchTechnology",
+   "RSC_ComputationScience",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_SolarPanels_2"
+  ]
+ },
+ "RSC_SolarPanels2": {
+  "label": "SolarPanels2",
+  "unlocks": [
+   "BPO_SolarPanelBlock_02"
+  ],
+  "requires": [
+   "RSC_ElectromagneticScience",
+   "RSC_SolarPanels"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_SolarPanelBlock_02_C",
+   "Default__BPO_SolarPanelBlock_02_C",
+   "ResearchTechnology",
+   "RSC_ElectromagneticScience",
+   "RSC_SolarPanels",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_SolarPanels_01"
+  ]
+ },
+ "RSC_SolarPanels3": {
+  "label": "SolarPanels3",
+  "unlocks": [
+   "BPO_SolarPanelBlock_03"
+  ],
+  "requires": [
+   "RSC_IridiumRefining",
+   "RSC_SolarPanels2"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_SolarPanelBlock_03_C",
+   "Default__BPO_SolarPanelBlock_03_C",
+   "ResearchTechnology",
+   "RSC_IridiumRefining",
+   "RSC_SolarPanels2",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_SolarPanels_3"
+  ]
+ },
+ "RSC_Station2A": {
+  "label": "Station2A",
+  "unlocks": [
+   "BPO_Station_02A"
+  ],
+  "requires": [
+   "RSC_StationModules1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Station_02A_C",
+   "Default__BPO_Station_02A_C",
+   "ResearchTechnology",
+   "RSC_StationModules1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Station_02A"
+  ]
+ },
+ "RSC_StationArmour1": {
+  "label": "2CB4B95C4F3F5562F42640BE08D46B2B",
+  "unlocks": [
+   "BPO_StationArmour_01",
+   "BPO_StationArmour_01B"
+  ],
+  "requires": [
+   "RSC_StationModules1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_StationArmour_01_C",
+   "BPO_StationArmour_01B_C",
+   "Default__BPO_StationArmour_01_C",
+   "Default__BPO_StationArmour_01B_C",
+   "ResearchTechnology",
+   "RSC_StationModules1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_StationArmour_01"
+  ]
+ },
+ "RSC_StationLift": {
+  "label": "Elevator1",
+  "unlocks": [
+   "BPO_ElevatorBlock_03"
+  ],
+  "requires": [
+   "RSC_Servomotors"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_ElevatorBlock_03_C",
+   "Default__BPO_ElevatorBlock_03_C",
+   "ResearchTechnology",
+   "RSC_Servomotors",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_StationElevator_01"
+  ]
+ },
+ "RSC_StationModules1": {
+  "label": "60507F5F412B82CAD05410B2CA5E5488",
+  "unlocks": [
+   "BPO_CommandModule",
+   "BPO_Dock",
+   "BPO_Station_01",
+   "BPO_Station_2x1"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_CommandModule_C",
+   "BPO_Dock_C",
+   "BPO_Station_01_C",
+   "BPO_Station_2x1_C",
+   "Default__BPO_CommandModule_C",
+   "Default__BPO_Dock_C",
+   "Default__BPO_Station_01_C",
+   "Default__BPO_Station_2x1_C",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "T_CommandModule"
+  ]
+ },
+ "RSC_StationModules2": {
+  "label": "Station2B",
+  "unlocks": [
+   "BPO_Station_02"
+  ],
+  "requires": [
+   "RSC_ReinforcedPlates",
+   "RSC_Station2A",
+   "RSC_StationLift"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Station_02_C",
+   "Default__BPO_Station_02_C",
+   "ResearchTechnology",
+   "RSC_ReinforcedPlates",
+   "RSC_Station2A",
+   "RSC_StationLift",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Station_02B"
+  ]
+ },
+ "RSC_StationModules3": {
+  "label": "6AAB581C496A33ED8EFA06897CFFFB0D",
+  "unlocks": [
+   "BPO_StationCorner_01",
+   "BPO_StationCorridor_01"
+  ],
+  "requires": [
+   "RSC_SilicaRefining"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_StationCorner_01_C",
+   "BPO_StationCorridor_01_C",
+   "Default__BPO_StationCorner_01_C",
+   "Default__BPO_StationCorridor_01_C",
+   "ResearchTechnology",
+   "RSC_SilicaRefining",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_StationCorner_01"
+  ]
+ },
+ "RSC_StationModules4": {
+  "label": "Station2C",
+  "unlocks": [
+   "BPO_StationAdapter_01",
+   "BPO_Station_03"
+  ],
+  "requires": [
+   "RSC_StationModules2"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_Station_03_C",
+   "BPO_StationAdapter_01_C",
+   "Default__BPO_Station_03_C",
+   "Default__BPO_StationAdapter_01_C",
+   "ResearchTechnology",
+   "RSC_StationModules2",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Station_02C"
+  ]
+ },
+ "RSC_StationModules5": {
+  "label": "?????",
+  "unlocks": [],
+  "requires": [
+   "RSC_StationModules4"
+  ],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "RSC_StationModules4",
+   "Default__ResearchTechnology",
+   "T_ComingSoonSilhouette"
+  ]
+ },
+ "RSC_StationTurret": {
+  "label": "PlasmaTurret",
+  "unlocks": [
+   "BPO_StationTurretBlock_01"
+  ],
+  "requires": [
+   "RSC_Logistics1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_StationTurretBlock_01_C",
+   "Default__BPO_StationTurretBlock_01_C",
+   "ResearchTechnology",
+   "RSC_Logistics1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_StationTurret"
+  ]
+ },
+ "RSC_Stations1": {
+  "label": null,
+  "unlocks": [],
+  "requires": [],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_HullPlates",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_HullPlate"
+  ]
+ },
+ "RSC_Stations2": {
+  "label": null,
+  "unlocks": [],
+  "requires": [],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_HullPlate"
+  ]
+ },
+ "RSC_StrangeMatterCrystals": {
+  "label": "StrangegMatterCrystal",
+  "unlocks": [],
+  "requires": [
+   "RSC_DeepSpaceObservatory"
+  ],
+  "research_type": [
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "ITEM_StrangeMatterCrystal",
+   "REC_StrangeWarpFuel",
+   "RSC_DeepSpaceObservatory",
+   "Default__ResearchTechnology",
+   "DAT_AstronomyScience",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_StrangeMatterCrystal"
+  ]
+ },
+ "RSC_Superalloy": {
+  "label": "Superalloy",
+  "unlocks": [],
+  "requires": [
+   "RSC_ElectromagneticScience",
+   "RSC_OreEnrichment"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_Superalloy",
+   "RSC_ElectromagneticScience",
+   "RSC_OreEnrichment",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_Superalloy"
+  ]
+ },
+ "RSC_SuperalloyFrame": {
+  "label": "SuperalloyFrame",
+  "unlocks": [],
+  "requires": [
+   "RSC_AdvancedAssembler"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_SuperalloyFrame",
+   "RSC_AdvancedAssembler",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_SuperalloyFrame"
+  ]
+ },
+ "RSC_Supercomputer": {
+  "label": "Supercomputer",
+  "unlocks": [
+   "DAT_Supercomputer"
+  ],
+  "requires": [
+   "RSC_AstronomicScanning",
+   "RSC_IridiumRefining"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_Supercomputer",
+   "ResearchTechnology",
+   "REC_EmptySimulationMatrix",
+   "REC_EncodedSimulationMatrix",
+   "RSC_AstronomicScanning",
+   "RSC_IridiumRefining",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_Supercomputer"
+  ]
+ },
+ "RSC_SupercondutorCoil": {
+  "label": "SuperconductorCoil",
+  "unlocks": [],
+  "requires": [
+   "RSC_Coolant",
+   "RSC_MaglevCoupling"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_SuperconductorCoil",
+   "RSC_Coolant",
+   "RSC_MaglevCoupling",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_SuperconductorCoil1"
+  ]
+ },
+ "RSC_T1Core": {
+  "label": null,
+  "unlocks": [
+   "DAT_T1Core"
+  ],
+  "requires": [
+   "RSC_Shipyard1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_T1Core",
+   "ResearchTechnology",
+   "RSC_Shipyard1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_T1Core"
+  ]
+ },
+ "RSC_T1Observatory": {
+  "label": null,
+  "unlocks": [
+   "DAT_T1Observatory"
+  ],
+  "requires": [
+   "RSC_Stations1"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_T1Observatory",
+   "ResearchTechnology",
+   "RSC_Stations1",
+   "Default__ResearchTechnology",
+   "DAT_MaterialScience",
+   "T_T1Observatory"
+  ]
+ },
+ "RSC_T2CoreShort": {
+  "label": null,
+  "unlocks": [
+   "DAT_T2CoreShort"
+  ],
+  "requires": [
+   "RSC_Stations2"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_T2CoreShort",
+   "ResearchTechnology",
+   "RSC_Stations2",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "T_T1Core"
+  ]
+ },
+ "RSC_Teleporter": {
+  "label": "ShortRangeTeleporter",
+  "unlocks": [
+   "DAT_Teleporter"
+  ],
+  "requires": [],
+  "research_type": [],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_Teleporter",
+   "ResearchTechnology",
+   "Default__ResearchTechnology",
+   "STB_GameObjects",
+   "T_Teleporter"
+  ]
+ },
+ "RSC_WarpDrive": {
+  "label": "SlipstreamDrive",
+  "unlocks": [
+   "BPO_WarpDriveBlock"
+  ],
+  "requires": [
+   "RSC_EnrichmentChamber",
+   "RSC_Shipyard1"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "BPO_WarpDriveBlock_C",
+   "Default__BPO_WarpDriveBlock_C",
+   "ResearchTechnology",
+   "REC_WarpFuel",
+   "RSC_EnrichmentChamber",
+   "RSC_Shipyard1",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_SlipstreamDrive"
+  ]
+ },
+ "RSC_WarpFuel": {
+  "label": "WarpFuel",
+  "unlocks": [],
+  "requires": [
+   "RSC_AdvancedPlates",
+   "RSC_Coolant"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_MaterialScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "ResearchTechnology",
+   "REC_WarpFuel",
+   "RSC_AdvancedPlates",
+   "RSC_Coolant",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_MaterialScience",
+   "STB_GameObjects",
+   "T_WarpFuel1"
+  ]
+ },
+ "RSC_XenobiologicScience": {
+  "label": "XenobiologicScience",
+  "unlocks": [
+   "DAT_XenoSciLab"
+  ],
+  "requires": [
+   "RSC_Biolattice"
+  ],
+  "research_type": [
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience"
+  ],
+  "cost_items": [],
+  "all_imports": [
+   "DAT_XenoSciLab",
+   "ResearchTechnology",
+   "RSC_Biolattice",
+   "Default__ResearchTechnology",
+   "DAT_ComputationScience",
+   "DAT_ElectromagneticScience",
+   "DAT_MaterialScience",
+   "DAT_QuantumScience",
+   "STB_GameObjects",
+   "T_XenoSciLab"
+  ]
+ }
+}

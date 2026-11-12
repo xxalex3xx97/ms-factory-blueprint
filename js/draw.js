@@ -306,7 +306,7 @@ function interiorRects(sh,dock){
 }
 // grey no-build hatch of a shaped block, clipped to its enclosed interior (Industrial Dock: minus the buildable floor box; Command Module / Blueprint Unit: inside the ring circle)
 // hatch rects (shape frame): interior; a ports block (dock, drone bay) hatches its wall gap on the port side out to the port edge (u=0), the buildable strip in front of the ports stays outside
-function hatchRects(sh,dock){return interiorRects(sh,dock).map(r=>{const q=r.slice();if(sh.entrance&&sh.entrance.kind==="ports"){if(q[0]>0&&q[0]<=.5)q[0]=0;if(q[2]>0&&q[2]<=.5)q[2]=0}return q})}
+function hatchRects(sh,dock){return interiorRects(sh,dock).concat(sh.hatchAdd||[]).map(r=>{const q=r.slice();if(sh.entrance&&sh.entrance.kind==="ports"){if(q[0]>0&&q[0]<=.5)q[0]=0;if(q[2]>0&&q[2]<=.5)q[2]=0}return q})}
 function hatchShape(b,t,s){
   const sh=t.sh,P=(u,v)=>t.f(u,v).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.save();cx.beginPath();
   if(sh.hatch==="ring"){const[a,c]=P(sh.ring.c[0],sh.ring.c[1]);cx.arc(a,c,sh.ring.ri*s,0,2*Math.PI)}
@@ -345,6 +345,8 @@ function drawShapeFloor(A,s){
     if(s>=6){const Ln=Math.min(.6*s,18),Tk=Math.min(5,Math.max(3,.2*s)),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
       marks.forEach(p=>{const[ex,ey]=t.f(p.x,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),w=odd?Ln:Tk,h=odd?Tk:Ln;
         cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
+      (sh.iports||[]).forEach(([sd,x,y])=>{const[ex,ey]=t.f(x,y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),v=("EW".includes(sd))!==!!odd,w=v?Tk:Ln,h=v?Ln:Tk;   // info ports (elevator): same bar, vertical on E/W sides, display only
+        cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
       if(s>=10){cx.font="600 "+Math.min(13,Math.max(9,s*.6))+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillStyle="rgba(255,255,255,.9)";
         marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(p.bay),tx,ty)})}
       cx.restore()}
@@ -378,14 +380,14 @@ function paintFloorBase(s){
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
       });
     }
-    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
+    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(doorTxt(r.b)?" · "+doorTxt(r.b):""),x,y,w)}
   });
   drawShapeFloor(A,s);
   const NF=lyBlocks().all.filter(b=>!isM(b)&&nfRect(b));
-  NF.forEach(b=>{const r=nfRect(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
+  NF.forEach(b=>{const r=nfOut(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
   NF.forEach(b=>{const t=shapeTf(b);if(t&&t.sh.hatch)return hatchShape(b,t,s);const r=nfRect(b);nbHatch(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s,true)});   // grey no-build hatch on the whole tile, behind the shape
   drawShapeFloor({floors:NF.map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
-  NF.forEach(b=>{const r=nfRect(b),w=r.w*s;if(w>70)note(`${lab(def(b.cls))}  ${r.w}×${r.h}`,V.ox+r.x*s,V.oy+r.y*s,w)});   // label like floor blocks: name + tile size, top-left
+  NF.forEach(b=>{const r=nfOut(b),w=r.w*s;if(w>70)note(`${lab(def(b.cls))}  ${r.w}×${r.h}`,V.ox+r.x*s,V.oy+r.y*s,w)});   // label like floor blocks: name + tile size, top-left
   A.floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;   // elevator: ring cells inside the door slot are open buildable floor
     cx.fillStyle="rgba(150,190,230,.08)";
     for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>{const v=ed%2===0,ring=ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q};R(ring,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))});
@@ -401,6 +403,7 @@ function paintFloorBase(s){
     else{cx.fillStyle="rgba(160,170,190,.07)";cx.fillRect(x,y,w,h);cx.strokeStyle="rgba(190,200,220,.5)";cx.lineWidth=1.5;cx.setLineDash([4,3]);cx.strokeRect(x+.5,y+.5,w-1,h-1)}   // an opening: connected or not it looks the same (grey dashed); a door is a Doorway Wall buildable
     cx.restore();
   }));
+  A.mis.forEach(r=>R(r,(x,y,w,h)=>{cx.save();cx.fillStyle="rgba(255,70,70,.9)";cx.fillRect(x,y,w,h);cx.restore();if(w>60)note("needs Station Adapter",x,y+h/2,w,"hsl(0,80%,78%)")}));   // large connector next to a normal block: no doorway
   return A;
 }
 let LKC=null,LKP=false,PK="";   // links() cache persists across paints, keyed by layer + block-set key
@@ -519,7 +522,7 @@ function paint0(){
     bs.forEach(b=>{const d=dim(b);drawBlock(b,.45,false);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)});
     cx.save();cx.fillStyle="hsla(45,95%,62%,.8)";
     pasting.pl.ms.forEach(m=>{const e=dim(m);cx.fillRect(V.ox+(hover.x+m.x/FC)*s,V.oy+(hover.y+m.y/FC)*s,e.w/FC*s,e.h/FC*s)});cx.restore();
-    bs.forEach(b=>{const d=dim(b);if(S.blocks.some(o=>{if(isM(o)||o.h!==layer)return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)}});
+    bs.forEach(b=>{const d=dim(b);if(S.blocks.some(o=>{if(isM(o)||!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)}});
   }else if(pasting&&!drag&&hoverIn){
     const g=clipT(pasting.rot,pasting.fl).map(b=>({...b,x:b.x+hover.x,y:b.y+hover.y,h:layer}));
     g.forEach(b=>{drawBlock(b,.45,false);if(!isM(b)){const d=dim(b);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)}});

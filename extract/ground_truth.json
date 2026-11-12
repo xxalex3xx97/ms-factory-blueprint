@@ -54,8 +54,8 @@
         "w": 30,
         "h": 30
       },
-      "floorNote": "second floor is a non-buildable balcony; treat as 2x2 A",
-      "conf": "high (icon texture T_Station_02B = taller checker block; Station_03 uses T_Station_02C = the locked 2x2 C)",
+      "floorNote": "second floor balcony: buildability unknown (needs live probe); treat as 2x2 A",
+      "conf": "high (icon texture T_Station_02B = taller checker block; Station_03 uses T_Station_02C = the 2x2 C)",
       "doorVerified": true
     },
     {
@@ -509,9 +509,9 @@
       ]
     },
     "DAT_Container_2": {
-      "t": false,
+      "t": true,
       "v": true,
-      "src": "user screenshots/text round 4 (type mapping to Container_2 assumed)",
+      "src": "user screenshots/text round 4 (type mapping to Container_2 assumed); EA: port-toggleable (user 2026-11-12)",
       "ports": [
         [
           "N",
@@ -596,9 +596,9 @@
       ]
     },
     "DAT_Container": {
-      "t": false,
+      "t": true,
       "v": false,
-      "src": "guess: 1 per side (ports unknown)",
+      "src": "guess: 1 per side (ports unknown); EA: port-toggleable (user 2026-11-12)",
       "ports": [
         [
           "N",

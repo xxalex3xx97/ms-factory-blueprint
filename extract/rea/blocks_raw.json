@@ -1,0 +1,5105 @@
+{
+ "BPO_AbandonedComputerRoom_02": {
+  "strings": [
+   "Abd Comp Room 2"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 548
+ },
+ "BPO_AbandonedCorner_01": {
+  "strings": [
+   "Abandoned Corner 1"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 301
+ },
+ "BPO_AbandonedCorridor_01": {
+  "strings": [
+   "Abd Corridor Repair Kit"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 361
+ },
+ "BPO_AbandonedCorridor_02": {
+  "strings": [
+   "Abd Corridor C-Coil"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 357
+ },
+ "BPO_AbandonedCorridor_03": {
+  "strings": [
+   "Abd Corridor S-Frame"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 358
+ },
+ "BPO_AbandonedDock": {
+  "strings": [
+   "AbandonedDock",
+   "DockDesc"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_Dock_01_Holo"
+  ],
+  "icon": [
+   "T_Dock_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 1101
+ },
+ "BPO_AbandonedLadder": {
+  "strings": [
+   "Abandoned Ladder"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 357
+ },
+ "BPO_AbandonedRoom_01": {
+  "strings": [
+   "Abandoned Room 1"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 611
+ },
+ "BPO_AbandonedRoom_02": {
+  "strings": [
+   "Abandoned Room 2"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 611
+ },
+ "BPO_AbandonedRoom_03": {
+  "strings": [
+   "Abandoned Computer Room"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 556
+ },
+ "BPO_AbandonedRoom_04": {
+  "strings": [
+   "Abd Room T3 Loot"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 611
+ },
+ "BPO_AbandonedTCorridor_01": {
+  "strings": [
+   "Abandoned T Corridor"
+  ],
+  "cost": [],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 303
+ },
+ "BPO_ArmourSlope_01B": {
+  "strings": [
+   "ArmourSlope1",
+   "LightArmourDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ArmourSlope"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 5,
+    "ints": [
+     1,
+     0,
+     1,
+     117441792
+    ]
+   }
+  ],
+  "cdo_len": 222
+ },
+ "BPO_ArmourSlope_01T": {
+  "strings": [
+   "ArmourSlope1",
+   "LightArmourDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ArmourSlope"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     83887360,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 175
+ },
+ "BPO_ArmourSlope_02B": {
+  "strings": [
+   "ArmourSlope2",
+   "LightArmourDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ArmourSlope"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 4,
+    "ints": [
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 4,
+    "ints": [
+     -1,
+     0,
+     1,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 270
+ },
+ "BPO_ArmourSlope_02T": {
+  "strings": [
+   "ArmourSlope2",
+   "LightArmourDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ArmourSlope"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     -49542272
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 6,
+    "ints": [
+     -1,
+     0,
+     0,
+     83887360
+    ]
+   }
+  ],
+  "cdo_len": 219
+ },
+ "BPO_Armour_01L": {
+  "strings": [
+   "ArmourWing2",
+   "LightArmourDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ArmourWing"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     1,
+     0,
+     1,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 283
+ },
+ "BPO_Armour_01R": {
+  "strings": [
+   "ArmourWing2",
+   "LightArmourDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ArmourWing"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     1,
+     0,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 281
+ },
+ "BPO_AstronomicScanner": {
+  "strings": [
+   "AstronomicScanner",
+   "AstronomicScannerDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_AdvancedCircuits",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_AstronomicScanner"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     3,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     -3,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 667
+ },
+ "BPO_BasicConnector": {
+  "strings": [],
+  "cost": [],
+  "mesh": [],
+  "icon": [],
+  "connectors_raw": [],
+  "cdo_len": 68
+ },
+ "BPO_BiosampleCollector": {
+  "strings": [
+   "BiosampleCollector",
+   "BiosampleCollectorDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_BiosampleCollector"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     3,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     -3,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 659
+ },
+ "BPO_Body_01": {
+  "strings": [
+   "C9566F184BCB8B9DF17704B9CE5003F4",
+   "Small Habitat"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipHab_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     1,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -1,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 5,
+    "ints": [
+     1,
+     0,
+     -49542272,
+     -2130706433
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     8,
+     117441792,
+     376242944
+    ]
+   }
+  ],
+  "cdo_len": 757
+ },
+ "BPO_Body_02": {
+  "strings": [
+   "1214756F4FB02DBFD72119B8738400DE",
+   "Small Habitat Window"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 3
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipHabWindow_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -1,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 5,
+    "ints": [
+     1,
+     0,
+     -49542272,
+     -2130706433
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     9,
+     117441792,
+     376242944
+    ]
+   }
+  ],
+  "cdo_len": 775
+ },
+ "BPO_BriefingRoom": {
+  "strings": [
+   "D9E3224B4D6C78C120F426A1354E85C3",
+   "Control Room"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_BasicCircuit",
+    "count": 20
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Cockpit_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -3,
+     2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -3,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -3,
+     -2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     3,
+     -2,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     3,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     3,
+     2,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     3,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -3,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 1805
+ },
+ "BPO_CannonBlock": {
+  "strings": [
+   "PlasmaCannon",
+   "PlasmaCannonDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 3
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_PlasmaCannons_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     83887360,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 529
+ },
+ "BPO_CannonBlock_B": {
+  "strings": [
+   "PlasmaCannon",
+   "PlasmaCannonDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 3
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_PlasmaCannons_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 7,
+    "ints": [
+     0,
+     117441792,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 535
+ },
+ "BPO_Cockpit_01": {
+  "strings": [
+   "1D6D11D44309E0ECECE3EC8B2754F2D9",
+   "Cockpit"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 3
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Cockpit"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 668
+ },
+ "BPO_Cockpit_02": {
+  "strings": [
+   "SmallBridge",
+   "CockpitDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_BasicCircuit",
+    "count": 20
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_SmallBridge"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     1,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     -1,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 837
+ },
+ "BPO_Cockpit_03": {
+  "strings": [
+   "06792C3E4F1D88BE4EBF2092062CBD94",
+   "CockpitDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_BasicCircuit",
+    "count": 20
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_MediumBridge"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -3,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 1248
+ },
+ "BPO_CommandModule": {
+  "strings": [
+   "C2E293D24543B80DB3F9B5B6F44BEA8F",
+   "Command Module"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "mesh": [
+   "SM_CommandModule_01_Holo"
+  ],
+  "icon": [
+   "T_CommandModule"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 1203
+ },
+ "BPO_Connector_06B": {
+  "strings": [],
+  "cost": [],
+  "mesh": [],
+  "icon": [],
+  "connectors_raw": [],
+  "cdo_len": 20
+ },
+ "BPO_Connector_06T": {
+  "strings": [],
+  "cost": [],
+  "mesh": [],
+  "icon": [],
+  "connectors_raw": [],
+  "cdo_len": 20
+ },
+ "BPO_Connector_07B": {
+  "strings": [],
+  "cost": [],
+  "mesh": [],
+  "icon": [],
+  "connectors_raw": [],
+  "cdo_len": 20
+ },
+ "BPO_Connector_07T": {
+  "strings": [],
+  "cost": [],
+  "mesh": [],
+  "icon": [],
+  "connectors_raw": [],
+  "cdo_len": 20
+ },
+ "BPO_Connector_08B": {
+  "strings": [],
+  "cost": [],
+  "mesh": [],
+  "icon": [],
+  "connectors_raw": [],
+  "cdo_len": 20
+ },
+ "BPO_Connector_08T": {
+  "strings": [],
+  "cost": [],
+  "mesh": [],
+  "icon": [],
+  "connectors_raw": [],
+  "cdo_len": 20
+ },
+ "BPO_DeepSpaceObservatory": {
+  "strings": [
+   "DeepSpaceObservatory",
+   "AstronomicScannerDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_EncodedSimulationMatrix",
+    "count": 30
+   }
+  ],
+  "mesh": [
+   "SM_Station_02_Holo"
+  ],
+  "icon": [
+   "T_DeepSpaceObservatory"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 610
+ },
+ "BPO_Dock": {
+  "strings": [
+   "AD38137E49965747B5259AB8BF65039F",
+   "Dock"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_Dock_01_Holo"
+  ],
+  "icon": [
+   "T_Dock_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 750
+ },
+ "BPO_Dock_2": {
+  "strings": [
+   "IndustrialDock",
+   "DockDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 20
+   },
+   {
+    "item": "ITEM_BasicCircuit",
+    "count": 20
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Dock_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     -2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     -4,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 1164
+ },
+ "BPO_Dock_3": {
+  "strings": [
+   "LargeDock",
+   "DockDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ServoPlates",
+    "count": 20
+   },
+   {
+    "item": "ITEM_BasicCircuit",
+    "count": 20
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_IndustrialDock"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 634
+ },
+ "BPO_DockingCollar": {
+  "strings": [
+   "DC5FF56F4839C58B1CE41690E71B0F21",
+   "Docking Collar"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 3
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_DockingCollar"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -1,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 544
+ },
+ "BPO_ElevatorBlock_01": {
+  "strings": [
+   "Elevator",
+   "806B31BC4BA16D68DBA3EFAF95E7D4BB"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_MaglevCoupling",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ElevatorBlock_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     2,
+     0,
+     -66319488
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     -2,
+     0,
+     -66319488
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     -2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     2,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     2,
+     -4,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     -4,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_Connector_07B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     -49542272,
+     -2130706433,
+     132359
+    ]
+   },
+   {
+    "cls": "BPO_Connector_07T_C",
+    "flag": 5,
+    "ints": [
+     2,
+     0,
+     25,
+     117441792
+    ]
+   }
+  ],
+  "cdo_len": 1563
+ },
+ "BPO_ElevatorBlock_02": {
+  "strings": [
+   "B0AECDFD4BF5A4348B9C63B26C024C96",
+   "Elevator Extension"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_MaglevCoupling",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ElevatorBlock_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_07B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     -49542272,
+     -2130706433,
+     132359
+    ]
+   },
+   {
+    "cls": "BPO_Connector_07T_C",
+    "flag": 5,
+    "ints": [
+     2,
+     0,
+     9,
+     117441792
+    ]
+   }
+  ],
+  "cdo_len": 780
+ },
+ "BPO_ElevatorBlock_02A": {
+  "strings": [
+   "Elevator2"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_MaglevCoupling",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_StationElevator_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     0,
+     0,
+     -66319488
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -4,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_Connector_07T_C",
+    "flag": 5,
+    "ints": [
+     4,
+     0,
+     -32765056,
+     -2130706433
+    ]
+   },
+   {
+    "cls": "BPO_Connector_07B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     25,
+     117441792,
+     16253696
+    ]
+   }
+  ],
+  "cdo_len": 1458
+ },
+ "BPO_ElevatorBlock_03": {
+  "strings": [
+   "Elevator1",
+   "Elevator1Desc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_Station_01_Holo"
+  ],
+  "icon": [
+   "T_StationElevator_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     2,
+     0,
+     0,
+     -66319488
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     2,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -2,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_Connector_08B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     -49542272,
+     -2130706433,
+     132359
+    ]
+   },
+   {
+    "cls": "BPO_Connector_08T_C",
+    "flag": 5,
+    "ints": [
+     2,
+     0,
+     16,
+     117441792
+    ]
+   }
+  ],
+  "cdo_len": 1024
+ },
+ "BPO_ElevatorBlock_04": {
+  "strings": [
+   "DDE5536C47B66953D94D35BF6E3CF6B7",
+   "Elevator1Desc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_Station_01_Holo"
+  ],
+  "icon": [
+   "T_Station_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     6,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -6,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 431
+ },
+ "BPO_ElevatorBlock_05": {
+  "strings": [
+   "0FD12484458060B15B8AD892131FA55A",
+   "Elevator1Desc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_Station_01_Holo"
+  ],
+  "icon": [
+   "T_Station_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 397
+ },
+ "BPO_FighterDocking_01": {
+  "strings": [
+   "FighterShip",
+   "CockpitDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 3
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_LandingGear_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 410
+ },
+ "BPO_Fighter_01": {
+  "strings": [
+   "FighterShip",
+   "CockpitDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 3
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Cockpit"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 473
+ },
+ "BPO_FrameSlope_01B": {
+  "strings": [
+   "FrameSlope",
+   "FrameBlockDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_FrameSlope_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 5,
+    "ints": [
+     1,
+     0,
+     1,
+     117441792
+    ]
+   }
+  ],
+  "cdo_len": 245
+ },
+ "BPO_FrameSlope_01T": {
+  "strings": [
+   "FrameSlope",
+   "FrameBlockDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_FrameSlope_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     1,
+     117441792,
+     768
+    ]
+   }
+  ],
+  "cdo_len": 241
+ },
+ "BPO_Frame_01": {
+  "strings": [
+   "F83479784FA1D94E39B7568169726025",
+   "Frame"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 8
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Frame_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     1,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -1,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 5,
+    "ints": [
+     1,
+     0,
+     -49542272,
+     -2130706433
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     1,
+     117441792,
+     768
+    ]
+   }
+  ],
+  "cdo_len": 378
+ },
+ "BPO_Hangar_1": {
+  "strings": [
+   "B141695649097E9326B35EB9C9BF8E7C",
+   "Hangar"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_Dock_01_Holo"
+  ],
+  "icon": [
+   "T_Dock_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     5,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -5,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 4,
+    "ints": [
+     7,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 1244
+ },
+ "BPO_Hangar_2": {
+  "strings": [
+   "SmallHangar",
+   "HangarDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_SuperalloyFrame",
+    "count": 10
+   },
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 10
+   }
+  ],
+  "mesh": [
+   "SM_Dock_01_Holo"
+  ],
+  "icon": [
+   "T_SmallHangar"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -4,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -3,
+     1,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -3,
+     -1,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 833
+ },
+ "BPO_InterstellarWarpDriveBlock": {
+  "strings": [
+   "InterstellarWarpDrive",
+   "InterstellarWarpDriveDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_SuperconductorCoil",
+    "count": 10
+   },
+   {
+    "item": "ITEM_AdvancedCircuits",
+    "count": 10
+   },
+   {
+    "item": "ITEM_SuperalloyFrame",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_InterstellarWarpDrive"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     2,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     1,
+     3,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     3,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     1,
+     -3,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     -3,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 1128
+ },
+ "BPO_ItemElevatorBlock_01": {
+  "strings": [
+   "ItemElevator",
+   "F7E2A62544E2FA2B780B9ABAD9BE399B"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 20
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ItemElevator"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnectorOpaque_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnectorOpaque_C",
+    "flag": 2,
+    "ints": [
+     0,
+     2,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnectorOpaque_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -2,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnectorOpaque_C",
+    "flag": 6,
+    "ints": [
+     2,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnectorOpaque_C",
+    "flag": 4,
+    "ints": [
+     2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 1159
+ },
+ "BPO_LadderBlock": {
+  "strings": [
+   "B472565341268739276AA29297839129",
+   "Ladder"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipLadder_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 4,
+    "ints": [
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     1,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -1,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 5,
+    "ints": [
+     2,
+     0,
+     -49542272,
+     -2130706433
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     18,
+     117441792,
+     376242944
+    ]
+   }
+  ],
+  "cdo_len": 1296
+ },
+ "BPO_LanceBlock": {
+  "strings": [
+   "PlasmaLance",
+   "2A5DDA074E7884FEA59686B3E1CD642B"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ContainmentCoil",
+    "count": 10
+   },
+   {
+    "item": "ITEM_MaglevCoupling",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_PlasmaLance"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     1,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -3,
+     1,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     -1,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -3,
+     -1,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 727
+ },
+ "BPO_LandingGear_01": {
+  "strings": [
+   "0731FA024CFD796D304617849C90A34A",
+   "Landing Gear"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_LandingGear_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 5,
+    "ints": [
+     1,
+     0,
+     1,
+     117441792
+    ]
+   }
+  ],
+  "cdo_len": 330
+ },
+ "BPO_LargeConnector": {
+  "strings": [],
+  "cost": [],
+  "mesh": [],
+  "icon": [],
+  "connectors_raw": [],
+  "cdo_len": 68
+ },
+ "BPO_LargeConnectorOpaque": {
+  "strings": [],
+  "cost": [],
+  "mesh": [],
+  "icon": [],
+  "connectors_raw": [],
+  "cdo_len": 68
+ },
+ "BPO_LargeSideConnector": {
+  "strings": [],
+  "cost": [],
+  "mesh": [],
+  "icon": [],
+  "connectors_raw": [],
+  "cdo_len": 65
+ },
+ "BPO_MiningDroneBayBlock": {
+  "strings": [
+   "MiningDroneBay1",
+   "C69F13D94E477A950B6A01B9FFB119FB"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 10
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 10
+   }
+  ],
+  "mesh": [
+   "SM_DroneBay_Holo"
+  ],
+  "icon": [
+   "T_DroneBay_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 735
+ },
+ "BPO_MiningDroneBayBlock_2": {
+  "strings": [
+   "MiningDroneBay2",
+   "9CA556C749AF56088674C79CE2337FC8"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_Servomotor",
+    "count": 10
+   },
+   {
+    "item": "ITEM_BasicCircuit",
+    "count": 10
+   }
+  ],
+  "mesh": [
+   "SM_DroneBay_Holo"
+  ],
+  "icon": [
+   "T_DroneBay_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 725
+ },
+ "BPO_MiningLaserBlock": {
+  "strings": [
+   "MiningLaser",
+   "MiningLaserDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 30
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_MiningLaser2"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 423
+ },
+ "BPO_MiningLaserBlock_B": {
+  "strings": [
+   "MiningLaser",
+   "MiningLaserDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 30
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_MiningLaser2"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 429
+ },
+ "BPO_MissileLauncherBlock_01": {
+  "strings": [
+   "594546024F9FE60576E3C99A8732F806",
+   "Missile Launcher"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_Coolant",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_MissileLauncher"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     1,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -1,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 5,
+    "ints": [
+     1,
+     0,
+     -49542272,
+     -2130706433
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     9,
+     117441792,
+     376242944
+    ]
+   }
+  ],
+  "cdo_len": 1075
+ },
+ "BPO_NPC_Apartment_01": {
+  "strings": [
+   "NPC Apartment 1",
+   "StationModuleDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   }
+  ],
+  "mesh": [
+   "SM_Station_01_Holo"
+  ],
+  "icon": [
+   "T_Station_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     2,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 256
+ },
+ "BPO_NPC_Cafeteria_01": {
+  "strings": [
+   "NPC Cafeteria",
+   "StationModuleDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   }
+  ],
+  "mesh": [
+   "SM_Station_01_Holo"
+  ],
+  "icon": [
+   "T_Station_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 254
+ },
+ "BPO_Penthouse_01": {
+  "strings": [
+   "26D36BB74DD21DC124090CA529CB7CF8",
+   "NPC Penthouse"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_Station_01_Holo"
+  ],
+  "icon": [
+   "T_Station_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 383
+ },
+ "BPO_Plaza_01": {
+  "strings": [
+   "Plaza",
+   "StationModuleDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 20
+   }
+  ],
+  "mesh": [
+   "SM_Station_02_Holo"
+  ],
+  "icon": [
+   "T_Station"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     6,
+     -4,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 4,
+    "ints": [
+     6,
+     -4,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     6,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 4,
+    "ints": [
+     6,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     6,
+     4,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 4,
+    "ints": [
+     6,
+     4,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     6,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     6,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     4,
+     6,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     -6,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -6,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     4,
+     -6,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -6,
+     -4,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -6,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -6,
+     4,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 2218
+ },
+ "BPO_ReactorBlock_Small": {
+  "strings": [
+   "CB3A11AC4DD5067CE6AAF384EB6D390A",
+   "Small Reactor"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 20
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ReactorBlock"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     5
+    ]
+   }
+  ],
+  "cdo_len": 622
+ },
+ "BPO_RelicPulseCannon_L": {
+  "strings": [
+   "RelicPulseCannon",
+   "RelicPulseCannonDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 3
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_PlasmaCannons_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     83887360,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 537
+ },
+ "BPO_RelicPulseCannon_R": {
+  "strings": [
+   "RelicPulseCannon",
+   "RelicPulseCannonDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 3
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_PlasmaCannons_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     83887360,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 537
+ },
+ "BPO_ScannerModule": {
+  "strings": [
+   "ScannerModule",
+   "ScannerModuleDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "ITEM_BasicCircuit",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_CommandModule_01_Holo"
+  ],
+  "icon": [
+   "T_CommandModule"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 1069
+ },
+ "BPO_ShipContainerBlock": {
+  "strings": [
+   "Container",
+   "6324B646461EE8512F9AB9B40F6F7E0F"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipContainer"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 485
+ },
+ "BPO_ShipCorner_01": {
+  "strings": [
+   "AFFD025548F17D58CE015EA789759646",
+   "Corner Window"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 3
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipHabCorner_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -1,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 964
+ },
+ "BPO_ShipElevatorBlock_01": {
+  "strings": [
+   "Ship Elevator",
+   "A basic building block with connections on all sides."
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipHab_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     -66319488
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 5,
+    "ints": [
+     1,
+     0,
+     -49542272,
+     -2130706433
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     9,
+     117441792,
+     -1920662784
+    ]
+   }
+  ],
+  "cdo_len": 661
+ },
+ "BPO_ShipElevatorBlock_02": {
+  "strings": [
+   "Ship Elevator",
+   "A basic building block with connections on all sides."
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipHab_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 5,
+    "ints": [
+     1,
+     0,
+     -32765056,
+     -2130706433
+    ]
+   },
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     3,
+     117441792,
+     -1195310336
+    ]
+   }
+  ],
+  "cdo_len": 399
+ },
+ "BPO_ShipLaserTurretBlock_01": {
+  "strings": [
+   "PointDefenceLaser",
+   "PointDefenceLaserDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 3
+   },
+   {
+    "item": "ITEM_SuperconductorCoil",
+    "count": 2
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipLaserTurreT_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     83887360,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 297
+ },
+ "BPO_ShipLaserTurretBlock_01B": {
+  "strings": [
+   "PointDefenceLaser",
+   "PointDefenceLaserDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 3
+   },
+   {
+    "item": "ITEM_SuperconductorCoil",
+    "count": 2
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipLaserTurreT_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 7,
+    "ints": [
+     0,
+     117441792,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 303
+ },
+ "BPO_ShipOffice_01": {
+  "strings": [
+   "CaptainQuarters",
+   "A87621224839996657B064B8EE1D44EC"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 15
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 5
+   },
+   {
+    "item": "ITEM_BasicCircuit",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_CaptainsQuarters"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     -1,
+     -1,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 497
+ },
+ "BPO_ShipShieldGenerator_01": {
+  "strings": [
+   "ShieldGenerator1",
+   "ShieldGeneratorDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 3
+   },
+   {
+    "item": "ITEM_Capacitor",
+    "count": 8
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipShieldGenerator_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     83887360,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 458
+ },
+ "BPO_ShipShieldGenerator_01B": {
+  "strings": [
+   "ShieldGenerator1",
+   "ShieldGeneratorDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 3
+   },
+   {
+    "item": "ITEM_Capacitor",
+    "count": 8
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipShieldGenerator_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 7,
+    "ints": [
+     0,
+     117441792,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 464
+ },
+ "BPO_ShipTurret_01": {
+  "strings": [
+   "PlasmaTurret",
+   "PlasmaTurretDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 3
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_PlasmaCannons_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     83887360,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 529
+ },
+ "BPO_ShipyardBottom": {
+  "strings": [
+   "Shipyard Bottom",
+   "Extends the size of a shipyard."
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_BottomFrame"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 184
+ },
+ "BPO_ShipyardCore": {
+  "strings": [
+   "C20125FF4995E9D874D33F88C9E4C89E",
+   "Shipyard Core"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipyardCore_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeSideConnector_C",
+    "flag": 6,
+    "ints": [
+     0,
+     -2,
+     0,
+     -49542272
+    ]
+   },
+   {
+    "cls": "BPO_LargeSideConnector_C",
+    "flag": 6,
+    "ints": [
+     0,
+     2,
+     0,
+     11
+    ]
+   }
+  ],
+  "cdo_len": 866
+ },
+ "BPO_ShipyardCore_02": {
+  "strings": [
+   "BA4669CD42F221B2E49C648BD0B16C7A",
+   "Shipyard Core Mk. 2"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_Superalloy",
+    "count": 10
+   },
+   {
+    "item": "ITEM_ContainmentCoil",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Shipyard_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     -2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeSideConnector_C",
+    "flag": 6,
+    "ints": [
+     0,
+     -4,
+     0,
+     -49542272
+    ]
+   },
+   {
+    "cls": "BPO_LargeSideConnector_C",
+    "flag": 6,
+    "ints": [
+     0,
+     4,
+     0,
+     12
+    ]
+   }
+  ],
+  "cdo_len": 951
+ },
+ "BPO_ShipyardSide": {
+  "strings": [
+   "30054C134DDD736EC30554A81581C6BC",
+   "Shipyard Side"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipyardSide_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeSideConnector_C",
+    "flag": 6,
+    "ints": [
+     0,
+     -2,
+     0,
+     -49542272
+    ]
+   },
+   {
+    "cls": "BPO_LargeSideConnector_C",
+    "flag": 6,
+    "ints": [
+     0,
+     2,
+     0,
+     5
+    ]
+   }
+  ],
+  "cdo_len": 533
+ },
+ "BPO_ShipyardTop": {
+  "strings": [
+   "Shipyard Top",
+   "Extends the size of a shipyard."
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_ShipyardTop"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 181
+ },
+ "BPO_SolarPanelBlock": {
+  "strings": [
+   "SolarPanels1",
+   "3C0B028E42F8EECFF17E9587D2D1FC7D"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 20
+   },
+   {
+    "item": "ITEM_Capacitor",
+    "count": 20
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_SolarPanelBlock"
+  ],
+  "icon": [
+   "T_SolarPanels"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     2,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 473
+ },
+ "BPO_SolarPanelBlock_02": {
+  "strings": [
+   "SolarPanels2",
+   "SolarPanelsDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_DetectorArray",
+    "count": 20
+   },
+   {
+    "item": "ITEM_Capacitor",
+    "count": 20
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_SolarPanelBlock"
+  ],
+  "icon": [
+   "T_SolarPanels_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     2,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 394
+ },
+ "BPO_SolarPanelBlock_03": {
+  "strings": [
+   "SolarPanels3",
+   "SolarPanelsDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_IridiumPlates",
+    "count": 20
+   },
+   {
+    "item": "ITEM_SuperconductorCoil",
+    "count": 5
+   },
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_SolarPanelBlock"
+  ],
+  "icon": [
+   "T_SolarPanels"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 413
+ },
+ "BPO_StationAdapter_01": {
+  "strings": [
+   "1F96D94D4128AB6654A19693D2717C04",
+   "Station Adapter"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_StationAdapter_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     2,
+     2,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     2,
+     -2,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -4,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 1002
+ },
+ "BPO_StationArmour_01": {
+  "strings": [
+   "StationArmour",
+   "StationArmourDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_StationArmour_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 157
+ },
+ "BPO_StationArmour_01B": {
+  "strings": [
+   "StationArmour",
+   "StationArmourDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_StationArmour_01"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 163
+ },
+ "BPO_StationCorner_01": {
+  "strings": [
+   "8B72F1A64914384A0D4C8D8997493AD2",
+   "9FDD841648A0BF1392344C969C236B66"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_StationCorner_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     2,
+     1,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 989
+ },
+ "BPO_StationCorridor_01": {
+  "strings": [
+   "2D7F6701467C21F1100DD88E7522FEEA",
+   "944BCFC34B07E417A644A2BB8659ABFB"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     2,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 451
+ },
+ "BPO_StationCorridor_02": {
+  "strings": [
+   "Corridor2",
+   "3CFA486B4DBED73F4A96A6BBA4ACD335"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 30
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 50
+   }
+  ],
+  "mesh": [
+   "SM_LargeCorridor_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 604
+ },
+ "BPO_StationCurve_01": {
+  "strings": [
+   "Station 2x2 Curve",
+   "A large module with a factory floor for building machines."
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 30
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Station2x2Curve"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     -2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     2,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     4,
+     1,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 301
+ },
+ "BPO_StationFoundation_01": {
+  "strings": [
+   "Foundation"
+  ],
+  "cost": [],
+  "mesh": [],
+  "icon": [
+   "T_HullPlate"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 81
+ },
+ "BPO_StationHUB_01": {
+  "strings": [
+   "2C82C21949E659742B6DE2AD928B9AF6",
+   "Station Hub"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 6,
+    "ints": [
+     12,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     12,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -12,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -12,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 2469
+ },
+ "BPO_StationLift_01": {
+  "strings": [
+   "C4A710F846074635389A738EEFA11B10",
+   "Lift"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 15
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_StationLift"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     2,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -2,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 980
+ },
+ "BPO_StationTurretBlock_01": {
+  "strings": [
+   "PlasmaTurret",
+   "PlasmaTurretDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_Capacitor",
+    "count": 10
+   }
+  ],
+  "mesh": [
+   "SM_CommandModule_01_Holo"
+  ],
+  "icon": [
+   "T_StationTurret"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 295
+ },
+ "BPO_Station_01": {
+  "strings": [
+   "BF2581C8431DCB60E379C1BDE27E646A",
+   "StationModuleDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   }
+  ],
+  "mesh": [
+   "SM_Station_01_Holo"
+  ],
+  "icon": [
+   "T_Station_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     2,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     2,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -2,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 862
+ },
+ "BPO_Station_02": {
+  "strings": [
+   "ACF27C344F80D0A02A32B7A181F4661F",
+   "StationModuleDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 10
+   }
+  ],
+  "mesh": [
+   "SM_Station_02_Holo"
+  ],
+  "icon": [
+   "T_Station_02B"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     2,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     -2,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     -2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     2,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     2,
+     -4,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     -4,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 4,
+    "ints": [
+     4,
+     2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 4,
+    "ints": [
+     4,
+     -2,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 1505
+ },
+ "BPO_Station_02A": {
+  "strings": [
+   "BB26EE7A4D7225AF1C48BAA4EEA4CA35",
+   "StationModuleDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 40
+   }
+  ],
+  "mesh": [
+   "SM_Station_02A_Holo"
+  ],
+  "icon": [
+   "T_Station_02A"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     2,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     -2,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     -2,
+     2,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     2,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     2,
+     -4,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     -4,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 1237
+ },
+ "BPO_Station_03": {
+  "strings": [
+   "765721794872EF98AB4F0D9A118FE3DD",
+   "StationModuleDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 20
+   }
+  ],
+  "mesh": [
+   "SM_Station_02_Holo"
+  ],
+  "icon": [
+   "T_Station_02C"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     4,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -4,
+     3,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 710
+ },
+ "BPO_Station_2x1": {
+  "strings": [
+   "Station2x1",
+   "StationModuleDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 15
+   }
+  ],
+  "mesh": [
+   "SM_Station_01_Holo"
+  ],
+  "icon": [
+   "T_Station_2x1"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 616
+ },
+ "BPO_Thruster_01": {
+  "strings": [
+   "SmallThruster",
+   "SmallThrusterDesc"
+  ],
+  "cost": [],
+  "mesh": [],
+  "icon": [
+   "T_Thruster_02"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 266
+ },
+ "BPO_Thruster_02L": {
+  "strings": [
+   "SmallThruster",
+   "SmallThrusterDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Thruster_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     1,
+     1,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 357
+ },
+ "BPO_Thruster_02R": {
+  "strings": [
+   "SmallThruster",
+   "SmallThrusterDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Thruster_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -1,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 357
+ },
+ "BPO_Thruster_03": {
+  "strings": [
+   "MediumThruster",
+   "2094748345E3F667E9DB3285944416CE"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_ContainmentCoil",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Thruster_03"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 4,
+    "ints": [
+     1,
+     0,
+     1,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 501
+ },
+ "BPO_Thruster_04L": {
+  "strings": [
+   "SmallRelicThruster",
+   "SmallRelicThrusterDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_RelicCapacitor",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Thruster_04"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     1,
+     1,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 367
+ },
+ "BPO_Thruster_04R": {
+  "strings": [
+   "SmallRelicThruster",
+   "SmallRelicThrusterDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_RelicCapacitor",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Thruster_04"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     -1,
+     3,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 367
+ },
+ "BPO_Thruster_05": {
+  "strings": [
+   "LargeThruster",
+   "LargeThrusterDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ChromaticAlloy",
+    "count": 20
+   },
+   {
+    "item": "ITEM_SuperalloyFrame",
+    "count": 10
+   },
+   {
+    "item": "ITEM_SuperconductorCoil",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Thruster_05"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     -2,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     2,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 4,
+    "ints": [
+     1,
+     -2,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 4,
+    "ints": [
+     1,
+     0,
+     1,
+     0
+    ]
+   },
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 4,
+    "ints": [
+     1,
+     2,
+     1,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 488
+ },
+ "BPO_TractorBeamBlock": {
+  "strings": [
+   "TractorBeam",
+   "E7439F2F4D07B8E16BCF118B996BD7BF"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_TractorBeam"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06B_C",
+    "flag": 7,
+    "ints": [
+     0,
+     83887360,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 364
+ },
+ "BPO_TractorBeamBlock_B": {
+  "strings": [
+   "TractorBeam",
+   "TractorBeamDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 5
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_TractorBeam"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_Connector_06T_C",
+    "flag": 7,
+    "ints": [
+     0,
+     117441792,
+     6554368,
+     50397180
+    ]
+   }
+  ],
+  "cdo_len": 292
+ },
+ "BPO_TradeDock_01": {
+  "strings": [
+   "TradeDock",
+   "TradingDockDesc"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_Dock_01_Holo"
+  ],
+  "icon": [
+   "T_Dock_01"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_LargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -2,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 689
+ },
+ "BPO_VendorCorridor_01": {
+  "strings": [
+   "Corridor 2x2"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_StationCorridor_02_Floor2_GEN_VARIABLE"
+  ],
+  "icon": [
+   "T_Corridor_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 656
+ },
+ "BPO_VendorCorridor_02": {
+  "strings": [
+   "Corridor 2x2"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_StationCorridor_02_Floor2_GEN_VARIABLE"
+  ],
+  "icon": [
+   "T_Corridor_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 656
+ },
+ "BPO_VendorCorridor_03": {
+  "strings": [
+   "Corridor 2x2"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 5
+   }
+  ],
+  "mesh": [
+   "SM_StationCorridor_02_Floor2_GEN_VARIABLE"
+  ],
+  "icon": [
+   "T_Corridor_02"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 6,
+    "ints": [
+     4,
+     0,
+     0,
+     -32765056
+    ]
+   },
+   {
+    "cls": "BPO_XLargeConnector_C",
+    "flag": 2,
+    "ints": [
+     -4,
+     0,
+     2,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 656
+ },
+ "BPO_WarpDriveBlock": {
+  "strings": [
+   "WarpDrive",
+   "B5818F8E41573F7ADC5CF3839ED14056"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 20
+   },
+   {
+    "item": "ITEM_ContainmentCoil",
+    "count": 10
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_SlipstreamDrive"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 6,
+    "ints": [
+     1,
+     0,
+     0,
+     3
+    ]
+   }
+  ],
+  "cdo_len": 445
+ },
+ "BPO_WindowBlock": {
+  "strings": [
+   "CCEB0FDE47D4EED913048A8CCF57054E",
+   "Window"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 1
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 2
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_WindowBlock"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 3,
+    "ints": [
+     2,
+     0,
+     1,
+     117441792
+    ]
+   }
+  ],
+  "cdo_len": 328
+ },
+ "BPO_WindowBlock_02": {
+  "strings": [
+   "Window 2"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 1
+   },
+   {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 2
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_WindowBlock"
+  ],
+  "connectors_raw": [],
+  "cdo_len": 137
+ },
+ "BPO_WorkstationBlock": {
+  "strings": [
+   "3009F7D64C41E6BC788772AC9C0BB74E",
+   "Workstation"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 3
+   }
+  ],
+  "mesh": [],
+  "icon": [
+   "T_Workstation"
+  ],
+  "connectors_raw": [
+   {
+    "cls": "BPO_BasicConnector_C",
+    "flag": 2,
+    "ints": [
+     0,
+     1,
+     1,
+     0
+    ]
+   }
+  ],
+  "cdo_len": 635
+ },
+ "BPO_XLargeConnector": {
+  "strings": [],
+  "cost": [],
+  "mesh": [],
+  "icon": [],
+  "connectors_raw": [],
+  "cdo_len": 65
+ }
+}

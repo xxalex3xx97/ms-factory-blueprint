@@ -28,7 +28,7 @@ import base64, json, os, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 EX = os.path.join(ROOT, 'extract')
 OUT = os.path.join(ROOT, 'js', 'shapes.js')
-SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'drop', 'chain', 'hatch', 'clip', 'shapeOf', 'flipY', 'wallsOverride')
+SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'drop', 'chain', 'hatch', 'clip', 'shapeOf', 'flipY', 'wallsOverride', 'hatchAdd')
 
 
 def rd(name):
@@ -136,7 +136,7 @@ def build():
         if p.get('polys'):
             entry['polys'] = [[[r3(x - ox), r3((-y if p.get('flipY') else y) - oy)] for x, y in poly] for poly in p['polys']]
         if p.get('entrance'):   # entrance: {kind: 'doors'|'ports', evidence}; Layout marks door slots (catalog door data) or the side of the output ports
-            if p['entrance'].get('kind') not in ('doors', 'ports') or not p['entrance'].get('evidence'):
+            if p['entrance'].get('kind') not in ('doors', 'ports', 'open') or not p['entrance'].get('evidence'):
                 sys.exit('bad entrance for ' + name)
             entry['entrance'] = p['entrance']
             if p['entrance'].get('gaps'):   # no-floor doors: [side, x0, y0, x1, y1] gap rects on the block edge, shape frame (Layout marks)
@@ -146,6 +146,10 @@ def build():
             entry['chain'] = {'group': ch['group'], 'closing': {k: [r3(v[0] - ox), r3(v[1] - oy), r3(v[2] - ox), r3(v[3] - oy)] for k, v in ch['edges'].items()}}
         if p.get('hatch'):
             entry['hatch'] = p['hatch']   # 'interior' = grey no-build hatch inside the closed wall outline; 'ring' = inside the circle
+        if p.get('hatchAdd'):   # hatchAdd: block-frame rects hatched in addition to the flood-filled interior
+            entry['hatchAdd'] = [[r3(a - ox), r3(b - oy), r3(c - ox), r3(d - oy)] for a, b, c, d in p['hatchAdd']]
+        if p.get('infoPorts'):   # infoPorts.cells [side, x, y] block frame: display-only port marks (no model logic) -> shape frame
+            entry['iports'] = [[sd, r3(x - ox), r3(y - oy)] for sd, x, y in p['infoPorts']['cells']]
         if p.get('ring'):   # circular ring (Command Module / Blueprint Unit): centre + radii fitted in shapes_src (see ring.evidence), gap = door opening on one side
             rg = p['ring']
             entry['ring'] = {'c': [r3(rg['c'][0] - ox), r3(rg['c'][1] - oy)], 'ro': rg['rOut'], 'ri': rg['rIn'], 'gap': rg['gap'], 'n': len(ring_idx)}

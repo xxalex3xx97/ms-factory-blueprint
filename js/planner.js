@@ -3,7 +3,7 @@ const plnR2=v=>Math.round(v*100)/100,plnNm=id=>(ITEMS[id]||{}).n||String(id).rep
 // proto off drops the Protomatter chain: RelicSynthesizer recipes and any recipe that consumes Protomatter (Enrichment ores).
 const PLN_PROTO_CR="CRAFT_RelicSynthesizer",PLN_PROTO_IT="ITEM_Protomatter";
 const plnBy=proto=>{const m=new Map();Object.keys(RECS).forEach(c=>RECS[c].forEach(r=>{if(!proto&&(c===PLN_PROTO_CR||r.i.some(([x])=>x===PLN_PROTO_IT)))return;const k=r.o[0],l=m.get(k)||[],key=rk(r);if(!l.some(x=>rk(x.r)===key)){l.push({c,r});m.set(k,l)}}));return m};
-const plnCb=c=>CATALOG.buildables.find(b=>(b.crafters||[]).includes(c));
+const plnCb=c=>CATALOG.buildables.find(b=>b.w!=null&&(b.crafters||[]).includes(c));   // footprint unknown (Deep Space Observatory machine) = cannot be planned
 const plnCname=c=>{const b=plnCb(c);return b?lab(def(b.id)):c};
 const plnCico=c=>{const b=plnCb(c),d=b&&def(b.id),u=d&&iurl(d.icon);return u?`<img class="ic plnCic" alt="" title="${esc(lab(d))}" src="${u}">`:""};
 // mk: 0..2 index into MKS (belt). ovr={sp,bal}: splitter/balancer Mk index or null (follow belt). pick={item:recipeKey}.

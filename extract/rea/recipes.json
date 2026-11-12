@@ -1,0 +1,1622 @@
+{
+ "recipes": {
+  "REC_AdvancedCircuits": {
+   "crafter": "CRAFT_AdvancedAssembler",
+   "output": {
+    "item": "ITEM_AdvancedCircuits",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_DetectorArray",
+     "count": 3
+    },
+    {
+     "item": "ITEM_BasicCircuit",
+     "count": 3
+    },
+    {
+     "item": "ITEM_Superalloy",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Coolant",
+     "count": 6
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 360,
+   "layout_ok": true
+  },
+  "REC_AdvancedPlates": {
+   "crafter": "CRAFT_AdvancedAssembler",
+   "output": {
+    "item": "ITEM_AdvancedPlates",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_ChromaticAlloy",
+     "count": 6
+    },
+    {
+     "item": "ITEM_ChitinComposite",
+     "count": 6
+    },
+    {
+     "item": "ITEM_ReinforcedPlates",
+     "count": 2
+    },
+    {
+     "item": "ITEM_Multisensor",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 360,
+   "layout_ok": true
+  },
+  "REC_AlphaProtein": {
+   "crafter": "CRAFT_GrowthChamber",
+   "output": {
+    "item": "ITEM_AlphaProtein",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Biomass",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Xenoeukarya",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Enzyme",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Nutrients",
+     "count": 2
+    }
+   ],
+   "input_groups": [
+    [
+     {
+      "item": "ITEM_Biomass",
+      "count": 1
+     }
+    ],
+    [
+     {
+      "item": "ITEM_Xenoeukarya",
+      "count": 1
+     },
+     {
+      "item": "ITEM_Enzyme",
+      "count": 1
+     },
+     {
+      "item": "ITEM_Nutrients",
+      "count": 2
+     }
+    ]
+   ],
+   "time_raw": 120,
+   "layout_ok": true
+  },
+  "REC_BackpackMk1": {
+   "crafter": "CRAFT_Armoury",
+   "output": {
+    "item": "ITEM_BackpackMk1",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_HullPlates",
+     "count": 10
+    },
+    {
+     "item": "ITEM_LightweightFrame",
+     "count": 10
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_BackpackMk2": {
+   "crafter": "CRAFT_Armoury",
+   "output": {
+    "item": "ITEM_BackpackMk2",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_ReinforcedPlates",
+     "count": 10
+    },
+    {
+     "item": "ITEM_Graphene",
+     "count": 20
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_BackpackMk3": {
+   "crafter": "CRAFT_Armoury",
+   "output": {
+    "item": "ITEM_BackpackMk3",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_SuperalloyFrame",
+     "count": 10
+    },
+    {
+     "item": "ITEM_Biolattice",
+     "count": 10
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_BasicCircuit": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_BasicCircuit",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_SiliconWafers",
+     "count": 2
+    },
+    {
+     "item": "ITEM_MagneticCoils",
+     "count": 2
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_BasicMotor": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_BasicMotor",
+    "count": 2
+   },
+   "inputs": [
+    {
+     "item": "ITEM_TitaniumPlates",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_BetaProtein": {
+   "crafter": "CRAFT_GrowthChamber",
+   "output": {
+    "item": "ITEM_BetaProtein",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Biomass",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Xenoarchaea",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Enzyme",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Nutrients",
+     "count": 2
+    }
+   ],
+   "input_groups": [
+    [
+     {
+      "item": "ITEM_Biomass",
+      "count": 1
+     }
+    ],
+    [
+     {
+      "item": "ITEM_Xenoarchaea",
+      "count": 1
+     },
+     {
+      "item": "ITEM_Enzyme",
+      "count": 1
+     },
+     {
+      "item": "ITEM_Nutrients",
+      "count": 2
+     }
+    ]
+   ],
+   "time_raw": 120,
+   "layout_ok": true
+  },
+  "REC_Biolattice": {
+   "crafter": "CRAFT_GrowthChamber",
+   "output": {
+    "item": "ITEM_Biolattice",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_AlphaProtein",
+     "count": 2
+    },
+    {
+     "item": "ITEM_BetaProtein",
+     "count": 2
+    },
+    {
+     "item": "ITEM_Nutrients",
+     "count": 4
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 120,
+   "layout_ok": true
+  },
+  "REC_Capacitor": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_Capacitor",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_NickelPlates",
+     "count": 2
+    },
+    {
+     "item": "ITEM_TitaniumPlates",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 120,
+   "layout_ok": true
+  },
+  "REC_ChitinComposite": {
+   "crafter": "CRAFT_AdvancedAssembler",
+   "output": {
+    "item": "ITEM_ChitinComposite",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Biolattice",
+     "count": 6
+    },
+    {
+     "item": "ITEM_Graphene",
+     "count": 3
+    },
+    {
+     "item": "ITEM_ReinforcedGlass",
+     "count": 3
+    },
+    {
+     "item": "ITEM_Enzyme",
+     "count": 12
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 360,
+   "layout_ok": true
+  },
+  "REC_ChromaticAlloy": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_ChromaticAlloy",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_IridiumPlates",
+     "count": 6
+    },
+    {
+     "item": "ITEM_Superalloy",
+     "count": 3
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_CobaltPlates": {
+   "crafter": "CRAFT_Refinery",
+   "output": {
+    "item": "ITEM_CobaltPlates",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_CobaltOre",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_CobaltSynthesis": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_CobaltOre",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Protomatter",
+     "count": 2
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_ContainmentCoil": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_ContainmentCoil",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_MagneticCoils",
+     "count": 3
+    },
+    {
+     "item": "ITEM_Capacitor",
+     "count": 1
+    },
+    {
+     "item": "ITEM_BasicCircuit",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_Coolant": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_Coolant",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_NitrogenGas",
+     "count": 2
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_DetectorArray": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_DetectorArray",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Graphene",
+     "count": 2
+    },
+    {
+     "item": "ITEM_CobaltPlates",
+     "count": 2
+    },
+    {
+     "item": "ITEM_BasicCircuit",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_EmptySimulationMatrix": {
+   "crafter": "CRAFT_AdvancedAssembler",
+   "output": {
+    "item": "ITEM_EmptySimulationMatrix",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_AdvancedCircuits",
+     "count": 2
+    },
+    {
+     "item": "ITEM_Lonsdaleite",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_EncodedSimulationMatrix": {
+   "crafter": "CRAFT_Supercomputer",
+   "output": {
+    "item": "ITEM_EncodedSimulationMatrix",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_EmptySimulationMatrix",
+     "count": 1
+    },
+    {
+     "item": "ITEM_StellarSurveyData",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 900,
+   "layout_ok": true
+  },
+  "REC_EnrichedCobaltOre": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_EnrichedCobaltOre",
+    "count": 2
+   },
+   "inputs": [
+    {
+     "item": "ITEM_CobaltOre",
+     "count": 3
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_EnrichedCobaltPlates": {
+   "crafter": "CRAFT_Refinery",
+   "output": {
+    "item": "ITEM_CobaltPlates",
+    "count": 3
+   },
+   "inputs": [
+    {
+     "item": "ITEM_EnrichedCobaltOre",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_EnrichedFuel": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_EnrichedFuel",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_HydrogenFuel",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_EnrichedNickelOre": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_EnrichedNickelOre",
+    "count": 2
+   },
+   "inputs": [
+    {
+     "item": "ITEM_NickelOre",
+     "count": 3
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_EnrichedNickelPlates": {
+   "crafter": "CRAFT_Refinery",
+   "output": {
+    "item": "ITEM_NickelPlates",
+    "count": 3
+   },
+   "inputs": [
+    {
+     "item": "ITEM_EnrichedNickelOre",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_EnrichedTitaniumOre": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_EnrichedTitaniumOre",
+    "count": 2
+   },
+   "inputs": [
+    {
+     "item": "ITEM_TitaniumOre",
+     "count": 3
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_EnrichedTitaniumPlates": {
+   "crafter": "CRAFT_Refinery",
+   "output": {
+    "item": "ITEM_TitaniumPlates",
+    "count": 3
+   },
+   "inputs": [
+    {
+     "item": "ITEM_EnrichedTitaniumOre",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_Enzyme": {
+   "crafter": "CRAFT_GrowthChamber",
+   "output": {
+    "item": "ITEM_Enzyme",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Biomass",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Xenobacteria",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Nutrients",
+     "count": 2
+    }
+   ],
+   "input_groups": [
+    [
+     {
+      "item": "ITEM_Biomass",
+      "count": 1
+     }
+    ],
+    [
+     {
+      "item": "ITEM_Xenobacteria",
+      "count": 1
+     },
+     {
+      "item": "ITEM_Nutrients",
+      "count": 2
+     }
+    ]
+   ],
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_ExoskeletonMk1": {
+   "crafter": "CRAFT_Armoury",
+   "output": {
+    "item": "ITEM_ExoskeletonMk1",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Servomotor",
+     "count": 30
+    },
+    {
+     "item": "ITEM_Capacitor",
+     "count": 20
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_ExoskeletonMk2": {
+   "crafter": "CRAFT_Armoury",
+   "output": {
+    "item": "ITEM_ExoskeletonMk2",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_MaglevCoupling",
+     "count": 20
+    },
+    {
+     "item": "ITEM_Coolant",
+     "count": 20
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_ExoskeletonMk3": {
+   "crafter": "CRAFT_Armoury",
+   "output": {
+    "item": "ITEM_ExoskeletonMk3",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_ChitinComposite",
+     "count": 10
+    },
+    {
+     "item": "ITEM_ChromaticAlloy",
+     "count": 10
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_Exosuit": {
+   "crafter": "CRAFT_Armoury",
+   "output": {
+    "item": "ITEM_Exosuit",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_AdvancedPlates",
+     "count": 30
+    },
+    {
+     "item": "ITEM_BackpackMk3",
+     "count": 2
+    },
+    {
+     "item": "ITEM_ExoskeletonMk3",
+     "count": 2
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_Graphene": {
+   "crafter": "CRAFT_Refinery",
+   "output": {
+    "item": "ITEM_Graphene",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Graphite",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_GraphiteSynthesis": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_Graphite",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Protomatter",
+     "count": 2
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_HullPlates": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_HullPlates",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_TitaniumPlates",
+     "count": 2
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 120,
+   "layout_ok": true
+  },
+  "REC_HydrogenFuel": {
+   "crafter": "CRAFT_Refinery",
+   "output": {
+    "item": "ITEM_HydrogenFuel",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_WaterIce",
+     "count": 2
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_IridiumPlates": {
+   "crafter": "CRAFT_Refinery",
+   "output": {
+    "item": "ITEM_IridiumPlates",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_IridiumOre",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_LightweightFrame": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_LightweightFrame",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_TitaniumPlates",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_MageticCoils": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_MagneticCoils",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_NickelPlates",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_MaglevCoupling": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_MaglevCoupling",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Servomotor",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Superalloy",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 120,
+   "layout_ok": true
+  },
+  "REC_MaglevCouplingAlt": {
+   "crafter": "CRAFT_AdvancedAssembler",
+   "output": {
+    "item": "ITEM_MaglevCoupling",
+    "count": 2
+   },
+   "inputs": [
+    {
+     "item": "ITEM_BasicMotor",
+     "count": 8
+    },
+    {
+     "item": "ITEM_Superalloy",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_MagneticCoilsAlt1": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_MagneticCoils",
+    "count": 8
+   },
+   "inputs": [
+    {
+     "item": "ITEM_NickelPlates",
+     "count": 2
+    },
+    {
+     "item": "ITEM_CobaltPlates",
+     "count": 2
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 120,
+   "layout_ok": true
+  },
+  "REC_Missile": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_Missile",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_HullPlates",
+     "count": 1
+    },
+    {
+     "item": "ITEM_ContainmentCoil",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Coolant",
+     "count": 4
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_Multisensor": {
+   "crafter": "CRAFT_AdvancedAssembler",
+   "output": {
+    "item": "ITEM_Multisensor",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_ChromaticAlloy",
+     "count": 3
+    },
+    {
+     "item": "ITEM_Lonsdaleite",
+     "count": 3
+    },
+    {
+     "item": "ITEM_EncodedSimulationMatrix",
+     "count": 1
+    },
+    {
+     "item": "ITEM_SuperconductorCoil",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_NickelPlates": {
+   "crafter": "CRAFT_Refinery",
+   "output": {
+    "item": "ITEM_NickelPlates",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_NickelOre",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_NickelSynthesis": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_NickelOre",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Protomatter",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_Nutrients": {
+   "crafter": "CRAFT_GrowthChamber",
+   "output": {
+    "item": "ITEM_Nutrients",
+    "count": 2
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Graphite",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Silica",
+     "count": 1
+    },
+    {
+     "item": "ITEM_WaterIce",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 30,
+   "layout_ok": true
+  },
+  "REC_ObservedStellarSurveyData": {
+   "crafter": "CRAFT_DeepSpaceObservatory",
+   "output": {
+    "item": "ITEM_StellarSurveyData",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_AdvancedCircuits",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_Protomatter": {
+   "crafter": "CRAFT_RelicSynthesizer",
+   "output": {
+    "item": "ITEM_Protomatter",
+    "count": 1
+   },
+   "inputs": [],
+   "input_groups": null,
+   "time_raw": 30,
+   "layout_ok": true
+  },
+  "REC_ReinforcedGlass": {
+   "crafter": "CRAFT_Refinery",
+   "output": {
+    "item": "ITEM_ReinforcedGlass",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Silica",
+     "count": 2
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_ReinforcedPlates": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_HullPlates",
+     "count": 6
+    },
+    {
+     "item": "ITEM_Superalloy",
+     "count": 3
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_ReinforcedPlatesAlt": {
+   "crafter": "CRAFT_AdvancedAssembler",
+   "output": {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_HullPlates",
+     "count": 3
+    },
+    {
+     "item": "ITEM_Superalloy",
+     "count": 3
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_RelicCapacitor": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_RelicCapacitor",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Capacitor",
+     "count": 1
+    },
+    {
+     "item": "ITEM_RelicShard",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 120,
+   "layout_ok": true
+  },
+  "REC_RelicShardSynthesis": {
+   "crafter": "CRAFT_RelicSynthesizer",
+   "output": {
+    "item": "ITEM_RelicShard",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Superalloy",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_RepairKit": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_RepairKit",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_LightweightFrame",
+     "count": 1
+    },
+    {
+     "item": "ITEM_NickelPlates",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 45,
+   "layout_ok": true
+  },
+  "REC_RepairKitElectric": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_RepairKitElectric",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_MagneticCoils",
+     "count": 10
+    },
+    {
+     "item": "ITEM_Capacitor",
+     "count": 10
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 45,
+   "layout_ok": true
+  },
+  "REC_RepairKitHull": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_RepairKitHull",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_HullPlates",
+     "count": 5
+    },
+    {
+     "item": "ITEM_LightweightFrame",
+     "count": 5
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 45,
+   "layout_ok": true
+  },
+  "REC_ServoPlates": {
+   "crafter": "CRAFT_AdvancedAssembler",
+   "output": {
+    "item": "ITEM_ServoPlates",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_ReinforcedPlates",
+     "count": 2
+    },
+    {
+     "item": "ITEM_MaglevCoupling",
+     "count": 2
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 180,
+   "layout_ok": true
+  },
+  "REC_Servomotor": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_Servomotor",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_LightweightFrame",
+     "count": 1
+    },
+    {
+     "item": "ITEM_BasicMotor",
+     "count": 4
+    },
+    {
+     "item": "ITEM_Capacitor",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 120,
+   "layout_ok": true
+  },
+  "REC_SilicaSynthesis": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_Silica",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Protomatter",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_SiliconWafers": {
+   "crafter": "CRAFT_Refinery",
+   "output": {
+    "item": "ITEM_SiliconWafers",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Silica",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_StrangeWarpFuel": {
+   "crafter": "CRAFT_DeepSpaceObservatory",
+   "output": {
+    "item": "ITEM_WarpFuel",
+    "count": 2
+   },
+   "inputs": [
+    {
+     "item": "ITEM_StrangeMatterCrystal",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 240,
+   "layout_ok": true
+  },
+  "REC_Superalloy": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_Superalloy",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_EnrichedTitaniumOre",
+     "count": 1
+    },
+    {
+     "item": "ITEM_EnrichedNickelOre",
+     "count": 1
+    },
+    {
+     "item": "ITEM_EnrichedCobaltOre",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 120,
+   "layout_ok": true
+  },
+  "REC_SuperalloyFrame": {
+   "crafter": "CRAFT_AdvancedAssembler",
+   "output": {
+    "item": "ITEM_SuperalloyFrame",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Superalloy",
+     "count": 3
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 360,
+   "layout_ok": true
+  },
+  "REC_SuperconductorCoil": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_SuperconductorCoil",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_MaglevCoupling",
+     "count": 3
+    },
+    {
+     "item": "ITEM_ContainmentCoil",
+     "count": 3
+    },
+    {
+     "item": "ITEM_Coolant",
+     "count": 12
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 360,
+   "layout_ok": true
+  },
+  "REC_Thruster": {
+   "crafter": "CRAFT_Assembler",
+   "output": {
+    "item": "ITEM_Thruster",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_MagneticCoils",
+     "count": 5
+    },
+    {
+     "item": "ITEM_TitaniumPlates",
+     "count": 4
+    },
+    {
+     "item": "ITEM_Servomotor",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 150,
+   "layout_ok": true
+  },
+  "REC_TitaniumPlates": {
+   "crafter": "CRAFT_Refinery",
+   "output": {
+    "item": "ITEM_TitaniumPlates",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_TitaniumOre",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_TitaniumSynthesis": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_TitaniumOre",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Protomatter",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_UpgradesShipSpeed_1": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_UpgradeShipSpeed_1",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_BasicCircuit",
+     "count": 10
+    },
+    {
+     "item": "ITEM_HydrogenFuel",
+     "count": 10
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_UpgradesShipSpeed_2": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_UpgradeShipSpeed_2",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_UpgradeShipSpeed_1",
+     "count": 2
+    },
+    {
+     "item": "ITEM_CobaltPlates",
+     "count": 10
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 90,
+   "layout_ok": true
+  },
+  "REC_WarpFuel": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_WarpFuel",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_EnrichedFuel",
+     "count": 2
+    },
+    {
+     "item": "ITEM_ContainmentCoil",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 360,
+   "layout_ok": true
+  },
+  "REC_WaterIceSynthesis": {
+   "crafter": "CRAFT_Enrichment",
+   "output": {
+    "item": "ITEM_WaterIce",
+    "count": 1
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Protomatter",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_XenoEukaryaRecycling": {
+   "crafter": "CRAFT_GrowthChamber",
+   "output": {
+    "item": "ITEM_Xenoeukarya",
+    "count": 2
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Xenoeukarya",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Biomass",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_XenoarchaeaRecycling": {
+   "crafter": "CRAFT_GrowthChamber",
+   "output": {
+    "item": "ITEM_Xenoarchaea",
+    "count": 2
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Xenoarchaea",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Biomass",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  },
+  "REC_XenobacteriaRecycling": {
+   "crafter": "CRAFT_GrowthChamber",
+   "output": {
+    "item": "ITEM_Xenobacteria",
+    "count": 2
+   },
+   "inputs": [
+    {
+     "item": "ITEM_Xenobacteria",
+     "count": 1
+    },
+    {
+     "item": "ITEM_Biomass",
+     "count": 1
+    }
+   ],
+   "input_groups": null,
+   "time_raw": 60,
+   "layout_ok": true
+  }
+ },
+ "by_crafter": {
+  "CRAFT_AdvancedAssembler": [
+   "REC_AdvancedCircuits",
+   "REC_AdvancedPlates",
+   "REC_ChitinComposite",
+   "REC_EmptySimulationMatrix",
+   "REC_MaglevCouplingAlt",
+   "REC_Multisensor",
+   "REC_ReinforcedPlatesAlt",
+   "REC_ServoPlates",
+   "REC_SuperalloyFrame"
+  ],
+  "CRAFT_GrowthChamber": [
+   "REC_AlphaProtein",
+   "REC_BetaProtein",
+   "REC_Biolattice",
+   "REC_Enzyme",
+   "REC_Nutrients",
+   "REC_XenoEukaryaRecycling",
+   "REC_XenoarchaeaRecycling",
+   "REC_XenobacteriaRecycling"
+  ],
+  "CRAFT_Armoury": [
+   "REC_BackpackMk1",
+   "REC_BackpackMk2",
+   "REC_BackpackMk3",
+   "REC_ExoskeletonMk1",
+   "REC_ExoskeletonMk2",
+   "REC_ExoskeletonMk3",
+   "REC_Exosuit"
+  ],
+  "CRAFT_Assembler": [
+   "REC_BasicCircuit",
+   "REC_BasicMotor",
+   "REC_Capacitor",
+   "REC_ContainmentCoil",
+   "REC_DetectorArray",
+   "REC_HullPlates",
+   "REC_LightweightFrame",
+   "REC_MageticCoils",
+   "REC_MaglevCoupling",
+   "REC_MagneticCoilsAlt1",
+   "REC_Missile",
+   "REC_ReinforcedPlates",
+   "REC_RelicCapacitor",
+   "REC_RepairKit",
+   "REC_RepairKitElectric",
+   "REC_RepairKitHull",
+   "REC_Servomotor",
+   "REC_SuperconductorCoil",
+   "REC_Thruster"
+  ],
+  "CRAFT_Enrichment": [
+   "REC_ChromaticAlloy",
+   "REC_CobaltSynthesis",
+   "REC_Coolant",
+   "REC_EnrichedCobaltOre",
+   "REC_EnrichedFuel",
+   "REC_EnrichedNickelOre",
+   "REC_EnrichedTitaniumOre",
+   "REC_GraphiteSynthesis",
+   "REC_NickelSynthesis",
+   "REC_SilicaSynthesis",
+   "REC_Superalloy",
+   "REC_TitaniumSynthesis",
+   "REC_UpgradesShipSpeed_1",
+   "REC_UpgradesShipSpeed_2",
+   "REC_WarpFuel",
+   "REC_WaterIceSynthesis"
+  ],
+  "CRAFT_Refinery": [
+   "REC_CobaltPlates",
+   "REC_EnrichedCobaltPlates",
+   "REC_EnrichedNickelPlates",
+   "REC_EnrichedTitaniumPlates",
+   "REC_Graphene",
+   "REC_HydrogenFuel",
+   "REC_IridiumPlates",
+   "REC_NickelPlates",
+   "REC_ReinforcedGlass",
+   "REC_SiliconWafers",
+   "REC_TitaniumPlates"
+  ],
+  "CRAFT_Supercomputer": [
+   "REC_EncodedSimulationMatrix"
+  ],
+  "CRAFT_DeepSpaceObservatory": [
+   "REC_ObservedStellarSurveyData",
+   "REC_StrangeWarpFuel"
+  ],
+  "CRAFT_RelicSynthesizer": [
+   "REC_Protomatter",
+   "REC_RelicShardSynthesis"
+  ]
+ },
+ "note": "time_raw = int32 after last ingredient (unit not stored in the asset)"
+}

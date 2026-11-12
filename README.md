@@ -26,7 +26,7 @@ Browser tool to plan a station factory for **Main Sequence**: a top-down grid of
 - **Build** places the machines, belts and ports on your station. Parts that already match are kept, different ones are changed in place, stale ones are removed and refunded to the unit. A splitter whose ports differ is replaced.
 - With the optional **Station Build** checkbox the unit also places the station blocks of the JSON first (a block in the way is removed, research and cost are checked).
 
-**What you need:** Main Sequence Demo and MSCore (installed with MSCoreManager): MSCore 0.7.6 or newer, 0.8.0 for Station Build, 0.8.1 so hand deconstruction refunds into your own inventory. Install steps are in the mod's README.
+**What you need:** Main Sequence and MSCore (installed with MSCoreManager): MSCore 0.7.6 or newer, 0.8.0 for Station Build, 0.8.1 so hand deconstruction refunds into your own inventory. Install steps are in the mod's README.
 
 ## Roadmap
 - [x] Savegame station selection: load a save and pick one of its stations to plan or edit.
@@ -39,5 +39,5 @@ Game data and icons belong to the Main Sequence developers. This is an unofficia
 - `index.html`: markup only (header, panels, dialogs). Loads `css/style.css` and the `js/*.js` scripts.
 - `css/style.css`: all styles.
 - `js/*.js`: classic scripts, global scope (no modules, no IIFE). `<script defer>` in this order: catalog, core, model, sim, draw, input, snippets, palette, inspector, planner, panel, io, simui, panels, autosave, boot. Order matters; boot.js last (sets `window.__fb`, restores autosave, first draw).
-- `js/catalog.js`: generated `CATALOG` line (icon data URIs), rewritten by `extract/inject_catalog.py` in the mod repo.
+- `js/catalog.js`: generated `CATALOG` line (icon data URIs). EA data pipeline, in order: `powershell extract/decode_bpo.ps1` (all BuildingBlocks to a temp dir) -> `python -I extract/ea_floors.py <dir>` (floors.json) -> `python -I extract/ea_blocks.py` (shapes_src.json: station blocks, levels) -> `python -I extract/gen_shapes.py` (js/shapes.js) -> `python -I extract/ea_catalog.py` (recipes, research, items, toggleable containers) -> `MS_MODS_ROOT=<EA root> python -I extract/hd_icons.py --catalog js/catalog.js`.
 - Tests: `node tests/harness.mjs`, `node tests/snippets-planner.mjs`.

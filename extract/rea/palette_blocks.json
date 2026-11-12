@@ -1,0 +1,1053 @@
+{
+ "BPO_Station_01": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 10
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": 2,
+    "y": 0,
+    "rot": 0
+   },
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   },
+   {
+    "x": 0,
+    "y": 2,
+    "rot": 1
+   },
+   {
+    "x": 0,
+    "y": -2,
+    "rot": 3
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "30": 1,
+   "20": 1,
+   "0": 2,
+   "-7": 10,
+   "-8": 11,
+   "7": 18,
+   "-3": 8,
+   "2": 8,
+   "3": 8,
+   "8": 13,
+   "4": 1
+  },
+  "interior_floor_cells": {
+   "w": 14,
+   "h": 14
+  },
+  "mesh": [
+   "SM_Station_01_Holo"
+  ],
+  "icon": [
+   "T_Station_01"
+  ],
+  "unlocked_by": [
+   "RSC_StationModules1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_StationModules1": []
+  }
+ },
+ "BPO_Station_2x1": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 15
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": 4,
+    "y": 0,
+    "rot": 0
+   },
+   {
+    "x": -4,
+    "y": 0,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 2,
+   "30": 1,
+   "20": 1,
+   "-15": 5,
+   "-8": 5,
+   "7": 9,
+   "15": 5,
+   "-7": 3,
+   "2": 6,
+   "8": 7,
+   "-16": 4,
+   "-3": 4,
+   "3": 4,
+   "16": 4,
+   "4": 1
+  },
+  "interior_floor_cells": {
+   "w": 30,
+   "h": 14
+  },
+  "mesh": [
+   "SM_Station_01_Holo"
+  ],
+  "icon": [
+   "T_Station_2x1"
+  ],
+  "unlocked_by": [
+   "RSC_StationModules1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_StationModules1": []
+  }
+ },
+ "BPO_Station_02A": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 40
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": 4,
+    "y": 2,
+    "rot": 0
+   },
+   {
+    "x": 4,
+    "y": -2,
+    "rot": 0
+   },
+   {
+    "x": -4,
+    "y": 2,
+    "rot": 2
+   },
+   {
+    "x": -4,
+    "y": -2,
+    "rot": 2
+   },
+   {
+    "x": 2,
+    "y": 4,
+    "rot": 1
+   },
+   {
+    "x": -2,
+    "y": 4,
+    "rot": 1
+   },
+   {
+    "x": 2,
+    "y": -4,
+    "rot": 3
+   },
+   {
+    "x": -2,
+    "y": -4,
+    "rot": 3
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 4,
+   "120": 1,
+   "80": 1,
+   "-15": 14,
+   "-16": 12,
+   "7": 12,
+   "-11": 8,
+   "2": 12,
+   "11": 8,
+   "15": 14,
+   "16": 12,
+   "5": 8,
+   "-5": 8,
+   "8": 1
+  },
+  "interior_floor_cells": {
+   "w": 30,
+   "h": 30
+  },
+  "mesh": [
+   "SM_Station_02A_Holo"
+  ],
+  "icon": [
+   "T_Station_02A"
+  ],
+  "unlocked_by": [
+   "RSC_Station2A"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Station2A": [
+    "RSC_StationModules1"
+   ]
+  }
+ },
+ "BPO_Station_02": {
+  "cost": [
+   {
+    "item": "Reinforced Plate",
+    "id": "ITEM_ReinforcedPlates",
+    "count": 10
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": 4,
+    "y": 2,
+    "rot": 0
+   },
+   {
+    "x": 4,
+    "y": -2,
+    "rot": 0
+   },
+   {
+    "x": -4,
+    "y": 2,
+    "rot": 2
+   },
+   {
+    "x": -4,
+    "y": -2,
+    "rot": 2
+   },
+   {
+    "x": 2,
+    "y": 4,
+    "rot": 1
+   },
+   {
+    "x": -2,
+    "y": 4,
+    "rot": 1
+   },
+   {
+    "x": 2,
+    "y": -4,
+    "rot": 3
+   },
+   {
+    "x": -2,
+    "y": -4,
+    "rot": 3
+   },
+   {
+    "x": 4,
+    "y": 2,
+    "rot": 2
+   },
+   {
+    "x": 4,
+    "y": -2,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 6,
+   "240": 1,
+   "160": 1,
+   "-15": 14,
+   "-16": 12,
+   "7": 12,
+   "-11": 8,
+   "10": 13,
+   "11": 8,
+   "15": 14,
+   "16": 13,
+   "5": 8,
+   "-5": 8,
+   "8": 1
+  },
+  "interior_floor_cells": {
+   "w": 30,
+   "h": 30
+  },
+  "mesh": [
+   "SM_Station_02_Holo"
+  ],
+  "icon": [
+   "T_Station_02B"
+  ],
+  "unlocked_by": [
+   "RSC_StationModules2"
+  ],
+  "unlocked_by_requires": {
+   "RSC_StationModules2": [
+    "RSC_ReinforcedPlates",
+    "RSC_Station2A",
+    "RSC_StationLift"
+   ]
+  }
+ },
+ "BPO_StationCorner_01": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "Reinforced Glass",
+    "id": "ITEM_ReinforcedGlass",
+    "count": 5
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   },
+   {
+    "x": 0,
+    "y": 2,
+    "rot": 1
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 1,
+   "30": 1,
+   "20": 1,
+   "-7": 8,
+   "-8": 6,
+   "7": 21,
+   "-2": 4,
+   "2": 18,
+   "-1": 4,
+   "-6": 2,
+   "-3": 6,
+   "8": 7,
+   "3": 9,
+   "6": 2,
+   "1": 4,
+   "5": 2,
+   "4": 2,
+   "-4": 2,
+   "-32761": 1
+  },
+  "interior_floor_cells": null,
+  "mesh": [],
+  "icon": [
+   "T_StationCorner_01"
+  ],
+  "unlocked_by": [
+   "RSC_StationModules3"
+  ],
+  "unlocked_by_requires": {
+   "RSC_StationModules3": [
+    "RSC_SilicaRefining"
+   ]
+  }
+ },
+ "BPO_StationCorridor_01": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "Reinforced Glass",
+    "id": "ITEM_ReinforcedGlass",
+    "count": 5
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": 2,
+    "y": 0,
+    "rot": 0
+   },
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "30": 1,
+   "20": 1,
+   "-8": 7,
+   "-7": 1,
+   "7": 3,
+   "8": 8,
+   "-3": 1,
+   "2": 2,
+   "3": 2,
+   "0": 1
+  },
+  "interior_floor_cells": null,
+  "mesh": [
+   "SM_StationCorridor_01_Ext"
+  ],
+  "icon": [
+   "T_StationCorridor_01"
+  ],
+  "unlocked_by": [
+   "RSC_StationModules3"
+  ],
+  "unlocked_by_requires": {
+   "RSC_StationModules3": [
+    "RSC_SilicaRefining"
+   ]
+  }
+ },
+ "BPO_ElevatorBlock_03": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 5
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": 2,
+    "y": 0,
+    "rot": 0
+   },
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   },
+   {
+    "x": 0,
+    "y": 2,
+    "rot": 1
+   },
+   {
+    "x": 0,
+    "y": -2,
+    "rot": 3
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 3,
+   "30": 1,
+   "20": 1,
+   "-7": 4,
+   "-8": 11,
+   "7": 16,
+   "-3": 8,
+   "-6": 6,
+   "2": 16,
+   "3": 8,
+   "6": 6,
+   "8": 13,
+   "1": 4,
+   "-2": 4,
+   "-1": 4,
+   "4": 1
+  },
+  "interior_floor_cells": null,
+  "mesh": [
+   "SM_Station_01_Holo"
+  ],
+  "icon": [
+   "T_StationElevator_01"
+  ],
+  "unlocked_by": [
+   "RSC_StationLift"
+  ],
+  "unlocked_by_requires": {
+   "RSC_StationLift": [
+    "RSC_Servomotors"
+   ]
+  }
+ },
+ "BPO_StationTurretBlock_01": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "Capacitor",
+    "id": "ITEM_Capacitor",
+    "count": 10
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 3,
+   "30": 1,
+   "10": 1,
+   "-8": 5,
+   "7": 1,
+   "8": 5,
+   "2": 1
+  },
+  "interior_floor_cells": null,
+  "mesh": [
+   "SM_CommandModule_01_Holo"
+  ],
+  "icon": [
+   "T_StationTurret"
+  ],
+  "unlocked_by": [
+   "RSC_StationTurret"
+  ],
+  "unlocked_by_requires": {
+   "RSC_StationTurret": [
+    "RSC_Logistics1"
+   ]
+  }
+ },
+ "BPO_StationArmour_01": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "connectors_grid_units": [],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 2,
+   "30": 1,
+   "10": 1,
+   "-8": 2,
+   "8": 2,
+   "4": 1
+  },
+  "interior_floor_cells": null,
+  "mesh": [],
+  "icon": [
+   "T_StationArmour_01"
+  ],
+  "unlocked_by": [
+   "RSC_StationArmour1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_StationArmour1": [
+    "RSC_StationModules1"
+   ]
+  }
+ },
+ "BPO_Dock": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 5
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "20": 1,
+   "10": 1,
+   "0": 2,
+   "-8": 4,
+   "-1": 1,
+   "7": 1,
+   "1": 2,
+   "-2": 1,
+   "5": 1,
+   "8": 3,
+   "-6": 3,
+   "6": 3
+  },
+  "interior_floor_cells": null,
+  "mesh": [
+   "SM_Dock_01_Holo"
+  ],
+  "icon": [
+   "T_Dock_01"
+  ],
+  "unlocked_by": [
+   "RSC_StationModules1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_StationModules1": []
+  }
+ },
+ "BPO_Dock_2": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 20
+   },
+   {
+    "item": "Basic Circuits",
+    "id": "ITEM_BasicCircuit",
+    "count": 20
+   },
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 10
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": -4,
+    "y": 2,
+    "rot": 2
+   },
+   {
+    "x": -4,
+    "y": -2,
+    "rot": 2
+   },
+   {
+    "x": -2,
+    "y": 4,
+    "rot": 1
+   },
+   {
+    "x": -2,
+    "y": -4,
+    "rot": 3
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 7,
+   "20": 1,
+   "10": 1,
+   "-15": 8,
+   "-16": 8,
+   "7": 19,
+   "-11": 3,
+   "2": 15,
+   "15": 3,
+   "16": 4,
+   "11": 1,
+   "-1": 9,
+   "-6": 4,
+   "1": 6,
+   "-5": 3,
+   "-14": 2,
+   "9": 2,
+   "-4": 1,
+   "5": 1,
+   "14": 2,
+   "6": 4,
+   "3": 2,
+   "4": 1,
+   "32": 1,
+   "8": 1
+  },
+  "interior_floor_cells": null,
+  "mesh": [],
+  "icon": [
+   "T_Dock_02"
+  ],
+  "unlocked_by": [
+   "RSC_IndustrialDock"
+  ],
+  "unlocked_by_requires": {
+   "RSC_IndustrialDock": [
+    "RSC_Logistics2"
+   ]
+  }
+ },
+ "BPO_CommandModule": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 2,
+   "30": 1,
+   "10": 1,
+   "-8": 4,
+   "8": 2,
+   "4": 1
+  },
+  "interior_floor_cells": null,
+  "mesh": [
+   "SM_CommandModule_01_Holo"
+  ],
+  "icon": [
+   "T_CommandModule"
+  ],
+  "unlocked_by": [
+   "RSC_StationModules1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_StationModules1": []
+  }
+ },
+ "BPO_MiningDroneBayBlock": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 10
+   },
+   {
+    "item": "Magnetic Coils",
+    "id": "ITEM_MagneticCoils",
+    "count": 10
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 7,
+   "20": 1,
+   "10": 1,
+   "-32768": 1,
+   "4": 5,
+   "-3": 2,
+   "5": 1,
+   "3": 2,
+   "1": 5,
+   "-8": 5,
+   "-4": 1,
+   "7": 3,
+   "-1": 1,
+   "-6": 1,
+   "6": 1,
+   "8": 3
+  },
+  "interior_floor_cells": null,
+  "mesh": [
+   "SM_DroneBay_Holo"
+  ],
+  "icon": [
+   "T_DroneBay_01"
+  ],
+  "unlocked_by": [
+   "RSC_MiningDroneBay"
+  ],
+  "unlocked_by_requires": {
+   "RSC_MiningDroneBay": [
+    "RSC_Logistics1"
+   ]
+  }
+ },
+ "BPO_SolarPanelBlock": {
+  "cost": [
+   {
+    "item": "Reinforced Glass",
+    "id": "ITEM_ReinforcedGlass",
+    "count": 20
+   },
+   {
+    "item": "Capacitor",
+    "id": "ITEM_Capacitor",
+    "count": 20
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": 2,
+    "y": 0,
+    "rot": 0
+   },
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 5,
+   "5": 2,
+   "12544": 1,
+   "-8": 4,
+   "7": 1,
+   "8": 5,
+   "1": 1
+  },
+  "interior_floor_cells": null,
+  "mesh": [
+   "SM_SolarPanelBlock"
+  ],
+  "icon": [
+   "T_SolarPanels"
+  ],
+  "unlocked_by": [
+   "RSC_SolarPanels"
+  ],
+  "unlocked_by_requires": {
+   "RSC_SolarPanels": [
+    "RSC_ComputationScience"
+   ]
+  }
+ },
+ "BPO_SolarPanelBlock_02": {
+  "cost": [
+   {
+    "item": "Detector Array",
+    "id": "ITEM_DetectorArray",
+    "count": 20
+   },
+   {
+    "item": "Capacitor",
+    "id": "ITEM_Capacitor",
+    "count": 20
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": 2,
+    "y": 0,
+    "rot": 0
+   },
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 6,
+   "5": 2,
+   "13312": 1,
+   "-8": 4,
+   "7": 1,
+   "8": 4,
+   "1": 1,
+   "-15": 1,
+   "15": 1
+  },
+  "interior_floor_cells": null,
+  "mesh": [
+   "SM_SolarPanelBlock"
+  ],
+  "icon": [
+   "T_SolarPanels_01"
+  ],
+  "unlocked_by": [
+   "RSC_SolarPanels2"
+  ],
+  "unlocked_by_requires": {
+   "RSC_SolarPanels2": [
+    "RSC_ElectromagneticScience",
+    "RSC_SolarPanels"
+   ]
+  }
+ },
+ "BPO_ShipyardCore": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 5,
+   "20": 1,
+   "10": 1,
+   "-32768": 1,
+   "1": 11,
+   "-8": 4,
+   "7": 7,
+   "-7": 2,
+   "-4": 1,
+   "8": 3
+  },
+  "interior_floor_cells": null,
+  "mesh": [],
+  "icon": [
+   "T_ShipyardCore_01"
+  ],
+  "unlocked_by": [
+   "RSC_Shipyard1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Shipyard1": []
+  }
+ },
+ "BPO_ShipyardCore_02": {
+  "cost": [
+   {
+    "item": "Superalloy",
+    "id": "ITEM_Superalloy",
+    "count": 10
+   },
+   {
+    "item": "Containment Coil",
+    "id": "ITEM_ContainmentCoil",
+    "count": 10
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": -2,
+    "y": 2,
+    "rot": 2
+   },
+   {
+    "x": -2,
+    "y": -2,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 5,
+   "20": 1,
+   "10": 1,
+   "1": 12,
+   "-8": 4,
+   "7": 8,
+   "-7": 3,
+   "-16": 1,
+   "-4": 1,
+   "16": 2,
+   "8": 1
+  },
+  "interior_floor_cells": null,
+  "mesh": [],
+  "icon": [
+   "T_Shipyard_02"
+  ],
+  "unlocked_by": [
+   "RSC_Shipyard2"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Shipyard2": [
+    "RSC_Shipyard1",
+    "RSC_Superalloy"
+   ]
+  }
+ },
+ "BPO_ShipyardSide": {
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "connectors_grid_units": [
+   {
+    "x": -2,
+    "y": 0,
+    "rot": 2
+   }
+  ],
+  "grid_units_per_cell": 2,
+  "packed_value_histogram_cells": {
+   "0": 2,
+   "20": 1,
+   "10": 1,
+   "-32768": 1,
+   "-8": 5,
+   "7": 5,
+   "-7": 2,
+   "1": 6,
+   "8": 3,
+   "-4": 1
+  },
+  "interior_floor_cells": null,
+  "mesh": [],
+  "icon": [
+   "T_ShipyardSide_01"
+  ],
+  "unlocked_by": [
+   "RSC_Shipyard1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Shipyard1": []
+  }
+ }
+}

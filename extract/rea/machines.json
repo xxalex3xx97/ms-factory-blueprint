@@ -1,0 +1,3244 @@
+{
+ "DAT_AdvancedAssembler": {
+  "label": "Advanced Assembler",
+  "key": "AdvancedAssembler",
+  "object_class": "BPO_AdvancedAssembler_C",
+  "size_cells": [
+   9,
+   9
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_AdvancedAssembler.uasset",
+  "port_boundary_cells": [
+   9,
+   9
+  ],
+  "inputs_by_side": {
+   "E": [
+    3,
+    5,
+    7
+   ],
+   "W": [
+    3,
+    5,
+    7
+   ],
+   "N": [
+    3,
+    5,
+    7
+   ],
+   "S": [
+    3,
+    5,
+    7
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    3,
+    5,
+    7
+   ],
+   "W": [
+    3,
+    5,
+    7
+   ],
+   "N": [
+    3,
+    5,
+    7
+   ],
+   "S": [
+    3,
+    5,
+    7
+   ]
+  },
+  "input_port_count": 12,
+  "output_port_count": 12,
+  "outputs_same_as_inputs": true,
+  "port_components": [
+   "Port10_GEN_VARIABLE",
+   "Port11_GEN_VARIABLE",
+   "Port12_GEN_VARIABLE",
+   "Port1_GEN_VARIABLE",
+   "Port2_GEN_VARIABLE",
+   "Port3_GEN_VARIABLE",
+   "Port4_GEN_VARIABLE",
+   "Port5_GEN_VARIABLE",
+   "Port6_GEN_VARIABLE",
+   "Port7_GEN_VARIABLE",
+   "Port8_GEN_VARIABLE",
+   "Port9_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "ConsumePower": 18.0
+  },
+  "cost": [
+   {
+    "item": "Reinforced Plate",
+    "id": "ITEM_ReinforcedPlates",
+    "count": 5
+   },
+   {
+    "item": "Maglev Coupling",
+    "id": "ITEM_MaglevCoupling",
+    "count": 2
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_AdvancedAssembler1"
+  ],
+  "mesh": [
+   "SM2_AdvancedAssembler"
+  ],
+  "crafters": [
+   "CRAFT_AdvancedAssembler"
+  ],
+  "recipe_count": 9,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_AdvancedAssembler"
+  ],
+  "unlocked_by_requires": {
+   "RSC_AdvancedAssembler": [
+    "RSC_QuantumScience"
+   ]
+  }
+ },
+ "DAT_Armoury": {
+  "label": "Armoury",
+  "key": "Armoury",
+  "object_class": "BPO_Armoury_C",
+  "size_cells": [
+   4,
+   4
+  ],
+  "size_source": "CDO ints [5][8][W][H] of Blueprints/Machines/BPO_Armoury.uasset",
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 5
+   },
+   {
+    "item": "Capacitor",
+    "id": "ITEM_Capacitor",
+    "count": 5
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Armoury"
+  ],
+  "mesh": [
+   "SM2_Armoury"
+  ],
+  "crafters": [
+   "CRAFT_Armoury"
+  ],
+  "recipe_count": 7,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Armoury"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Armoury": [
+    "RSC_ComputationScience",
+    "RSC_Servomotors"
+   ]
+  }
+ },
+ "DAT_Assembler": {
+  "label": "Assembler",
+  "key": "Assembler",
+  "object_class": "BP_AssemblerObject_C",
+  "size_cells": [
+   5,
+   5
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_AssemblerObject.uasset",
+  "port_boundary_cells": [
+   5,
+   5
+  ],
+  "inputs_by_side": {
+   "E": [
+    2,
+    4
+   ],
+   "W": [
+    2,
+    4
+   ],
+   "N": [
+    2,
+    4
+   ],
+   "S": [
+    2,
+    4
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    2,
+    4
+   ],
+   "W": [
+    2,
+    4
+   ],
+   "N": [
+    2,
+    4
+   ],
+   "S": [
+    2,
+    4
+   ]
+  },
+  "input_port_count": 8,
+  "output_port_count": 8,
+  "outputs_same_as_inputs": true,
+  "port_components": [
+   "Port0_GEN_VARIABLE",
+   "Port1_GEN_VARIABLE",
+   "Port2_GEN_VARIABLE",
+   "Port3_GEN_VARIABLE",
+   "Port4_GEN_VARIABLE",
+   "Port5_GEN_VARIABLE",
+   "Port6_GEN_VARIABLE",
+   "Port7_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "ConsumePower": 6.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 3
+   },
+   {
+    "item": "Capacitor",
+    "id": "ITEM_Capacitor",
+    "count": 2
+   },
+   {
+    "item": "Basic Motor",
+    "id": "ITEM_BasicMotor",
+    "count": 2
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Assembler"
+  ],
+  "mesh": [
+   "S_Assembler_03"
+  ],
+  "crafters": [
+   "CRAFT_Assembler"
+  ],
+  "recipe_count": 19,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Production1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Production1": []
+  }
+ },
+ "DAT_AstroSciLab": {
+  "label": "Astronomic Science Lab",
+  "key": "AstronomicScienceLab",
+  "object_class": "BPO_AstroSciLab_C",
+  "size_cells": [
+   5,
+   5
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_AstroSciLab.uasset",
+  "port_boundary_cells": [
+   5,
+   5
+  ],
+  "inputs_by_side": {
+   "E": [
+    3
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": null,
+  "input_port_count": 1,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "ConsumePower": 12.0
+  },
+  "cost": [
+   {
+    "item": "Iridium Plates",
+    "id": "ITEM_IridiumPlates",
+    "count": 5
+   },
+   {
+    "item": "Encoded Simulation Matrix",
+    "id": "ITEM_EncodedSimulationMatrix",
+    "count": 3
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_AstroSciLab"
+  ],
+  "mesh": [
+   "SM2_AstronomicScienceLab"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [
+   "DAT_AstronomyScience"
+  ],
+  "lab_input_items": [
+   "Encoded Simulation Matrix"
+  ],
+  "unlocked_by": [
+   "RSC_AstronomicScience"
+  ],
+  "unlocked_by_requires": {
+   "RSC_AstronomicScience": [
+    "RSC_Supercomputer"
+   ]
+  }
+ },
+ "DAT_BeltBalancer_01": {
+  "label": "Belt Balancer Mk. 1",
+  "key": "BeltBalancer1",
+  "object_class": "BPO_BeltBalancer_01_C",
+  "size_cells": [
+   1,
+   2
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_BeltBalancer_01.uasset",
+  "port_boundary_cells": [
+   1,
+   2
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1,
+    2
+   ],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": {
+   "E": [
+    1,
+    2
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "input_port_count": 2,
+  "output_port_count": 2,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "Speed": 60.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "Basic Motor",
+    "id": "ITEM_BasicMotor",
+    "count": 2
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Balancer_01"
+  ],
+  "mesh": [
+   "SM_Preview_Balancer"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics1": []
+  }
+ },
+ "DAT_BeltBalancer_02": {
+  "label": "Belt Balancer Mk. 2",
+  "key": "BeltBalancer2",
+  "object_class": "BPO_BeltBalancer_02_C",
+  "size_cells": [
+   1,
+   2
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_BeltBalancer_02.uasset",
+  "port_boundary_cells": [
+   1,
+   2
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1,
+    2
+   ],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": {
+   "E": [
+    1,
+    2
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "input_port_count": 2,
+  "output_port_count": 2,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "Speed": 120.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 2
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Balancer_02"
+  ],
+  "mesh": [
+   "SM_Preview_Balancer"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics2"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics2": [
+    "RSC_ComputationScience",
+    "RSC_Servomotors"
+   ]
+  }
+ },
+ "DAT_BeltBalancer_03": {
+  "label": "Belt Balancer Mk. 3",
+  "key": "BeltBalancer3",
+  "object_class": "BPO_BeltBalancer_03_C",
+  "size_cells": [
+   1,
+   2
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_BeltBalancer_03.uasset",
+  "port_boundary_cells": [
+   1,
+   2
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1,
+    2
+   ],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": {
+   "E": [
+    1,
+    2
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "input_port_count": 2,
+  "output_port_count": 2,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "Speed": 180.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "Maglev Coupling",
+    "id": "ITEM_MaglevCoupling",
+    "count": 2
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Balancer_03"
+  ],
+  "mesh": [
+   "SM_Preview_Balancer"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics3"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics3": [
+    "RSC_Logistics2",
+    "RSC_MaglevCoupling"
+   ]
+  }
+ },
+ "DAT_CompSciLab": {
+  "label": "Computation Science Lab",
+  "key": "ComputationScienceLab",
+  "object_class": "BP_CompSciLabObject_C",
+  "size_cells": [
+   3,
+   3
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_CompSciLabObject.uasset",
+  "port_boundary_cells": [
+   3,
+   3
+  ],
+  "inputs_by_side": {
+   "E": [
+    2
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": null,
+  "input_port_count": 1,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "ConsumePower": 6.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "Basic Circuits",
+    "id": "ITEM_BasicCircuit",
+    "count": 5
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_CompSciLab"
+  ],
+  "mesh": [
+   "S_Science_Lab_01"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [
+   "DAT_ComputationScience"
+  ],
+  "lab_input_items": [
+   "Basic Circuits"
+  ],
+  "unlocked_by": [
+   "RSC_ComputationScience"
+  ],
+  "unlocked_by_requires": {
+   "RSC_ComputationScience": [
+    "RSC_BasicCircuits",
+    "RSC_Logistics1"
+   ]
+  }
+ },
+ "DAT_Container": {
+  "label": "Container",
+  "key": "Container",
+  "object_class": "BP_ContainerObject_C",
+  "size_cells": [
+   2,
+   2
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_ContainerObject.uasset",
+  "port_boundary_cells": [
+   2,
+   2
+  ],
+  "inputs_by_side": {
+   "E": [
+    1,
+    2
+   ],
+   "W": [
+    1,
+    2
+   ],
+   "N": [
+    1,
+    2
+   ],
+   "S": [
+    1,
+    2
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    1,
+    2
+   ],
+   "W": [
+    1,
+    2
+   ],
+   "N": [
+    1,
+    2
+   ],
+   "S": [
+    1,
+    2
+   ]
+  },
+  "input_port_count": 8,
+  "output_port_count": 8,
+  "outputs_same_as_inputs": true,
+  "port_components": [
+   "BPC_MachinePortInteraction1_GEN_VARIABLE",
+   "BPC_MachinePortInteraction2_GEN_VARIABLE",
+   "BPC_MachinePortInteraction3_GEN_VARIABLE",
+   "BPC_MachinePortInteraction4_GEN_VARIABLE",
+   "BPC_MachinePortInteraction5_GEN_VARIABLE",
+   "BPC_MachinePortInteraction6_GEN_VARIABLE",
+   "BPC_MachinePortInteraction7_GEN_VARIABLE",
+   "BPC_MachinePortInteraction_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "StoresItems": 16.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Container_1"
+  ],
+  "mesh": [],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Production1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Production1": []
+  }
+ },
+ "DAT_Container_2": {
+  "label": "Large Container",
+  "key": "LargeContainer",
+  "object_class": "BP_ContainerObject_2_C",
+  "size_cells": [
+   4,
+   4
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_ContainerObject_2.uasset",
+  "port_boundary_cells": [
+   4,
+   4
+  ],
+  "inputs_by_side": {
+   "E": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "W": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "N": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "S": [
+    1,
+    2,
+    3,
+    4
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "W": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "N": [
+    1,
+    2,
+    3,
+    4
+   ],
+   "S": [
+    1,
+    2,
+    3,
+    4
+   ]
+  },
+  "input_port_count": 16,
+  "output_port_count": 16,
+  "outputs_same_as_inputs": true,
+  "port_components": [
+   "BPC_MachinePortInteraction10_GEN_VARIABLE",
+   "BPC_MachinePortInteraction11_GEN_VARIABLE",
+   "BPC_MachinePortInteraction12_GEN_VARIABLE",
+   "BPC_MachinePortInteraction13_GEN_VARIABLE",
+   "BPC_MachinePortInteraction14_GEN_VARIABLE",
+   "BPC_MachinePortInteraction15_GEN_VARIABLE",
+   "BPC_MachinePortInteraction1_GEN_VARIABLE",
+   "BPC_MachinePortInteraction2_GEN_VARIABLE",
+   "BPC_MachinePortInteraction3_GEN_VARIABLE",
+   "BPC_MachinePortInteraction4_GEN_VARIABLE",
+   "BPC_MachinePortInteraction5_GEN_VARIABLE",
+   "BPC_MachinePortInteraction6_GEN_VARIABLE",
+   "BPC_MachinePortInteraction7_GEN_VARIABLE",
+   "BPC_MachinePortInteraction8_GEN_VARIABLE",
+   "BPC_MachinePortInteraction9_GEN_VARIABLE",
+   "BPC_MachinePortInteraction_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "StoresItems": 32.0,
+   "StackSize": 500.0
+  },
+  "cost": [
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 10
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_LargeContainer"
+  ],
+  "mesh": [
+   "SM_Container_02"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_ContainerMachine2"
+  ],
+  "unlocked_by_requires": {
+   "RSC_ContainerMachine2": [
+    "RSC_Servomotors"
+   ]
+  }
+ },
+ "DAT_ConveyorBelt": {
+  "label": "Conveyor Belt Mk. 1",
+  "key": "Conveyor Belt Mk. 1",
+  "object_class": "BP_ConveyorBeltObject_C",
+  "size_cells": [
+   1,
+   1
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_ConveyorBeltObject.uasset",
+  "port_boundary_cells": [
+   1,
+   1
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1
+   ],
+   "N": [
+    1
+   ],
+   "S": [
+    1
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    1
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "input_port_count": 3,
+  "output_port_count": 1,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "Speed": 60.0
+  },
+  "cost": [
+   {
+    "item": "Basic Motor",
+    "id": "ITEM_BasicMotor",
+    "count": 1
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Conveyor_01-1"
+  ],
+  "mesh": [],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics1": []
+  }
+ },
+ "DAT_ConveyorBelt2": {
+  "label": "Conveyor Belt Mk. 2",
+  "key": "Conveyor Belt Mk. 2",
+  "object_class": "BP_ConveyorBelt2Object_C",
+  "size_cells": [
+   1,
+   1
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_ConveyorBelt2Object.uasset",
+  "port_boundary_cells": [
+   1,
+   1
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1
+   ],
+   "N": [
+    1
+   ],
+   "S": [
+    1
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    1
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "input_port_count": 3,
+  "output_port_count": 1,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "Speed": 120.0
+  },
+  "cost": [
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 1
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Conveyor_02"
+  ],
+  "mesh": [],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics2"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics2": [
+    "RSC_ComputationScience",
+    "RSC_Servomotors"
+   ]
+  }
+ },
+ "DAT_ConveyorBelt3": {
+  "label": "Conveyor Belt Mk. 3",
+  "key": "Conveyor Belt Mk. 3",
+  "object_class": "BP_ConveyorBeltObject_3_C",
+  "size_cells": [
+   1,
+   1
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_ConveyorBeltObject_3.uasset",
+  "port_boundary_cells": [
+   1,
+   1
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1
+   ],
+   "N": [
+    1
+   ],
+   "S": [
+    1
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    1
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "input_port_count": 3,
+  "output_port_count": 1,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "Speed": 180.0
+  },
+  "cost": [
+   {
+    "item": "Maglev Coupling",
+    "id": "ITEM_MaglevCoupling",
+    "count": 1
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Conveyor_03-1"
+  ],
+  "mesh": [],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics3"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics3": [
+    "RSC_Logistics2",
+    "RSC_MaglevCoupling"
+   ]
+  }
+ },
+ "DAT_ElectroSciLab": {
+  "label": "Electromagnetic Science Lab",
+  "key": "ElectromagneticScienceLab",
+  "object_class": "BPO_ElectroSciLab_C",
+  "size_cells": [
+   5,
+   5
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_ElectroSciLab.uasset",
+  "port_boundary_cells": [
+   5,
+   5
+  ],
+  "inputs_by_side": {
+   "E": [
+    3
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": null,
+  "input_port_count": 1,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "ConsumePower": 12.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "Detector Array",
+    "id": "ITEM_DetectorArray",
+    "count": 5
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_ElectroSciLab"
+  ],
+  "mesh": [
+   "SM2_ElectromagneticScienceLab_Prev"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [
+   "DAT_ElectromagneticScience"
+  ],
+  "lab_input_items": [
+   "Detector Array"
+  ],
+  "unlocked_by": [
+   "RSC_ElectromagneticScience"
+  ],
+  "unlocked_by_requires": {
+   "RSC_ElectromagneticScience": [
+    "RSC_DetectorArray"
+   ]
+  }
+ },
+ "DAT_EnrichmentChamber": {
+  "label": "Enrichment Chamber",
+  "key": "EnrichmentChamber",
+  "object_class": "BP_EnrichmentChamberObject_C",
+  "size_cells": [
+   9,
+   9
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_EnrichmentChamberObject.uasset",
+  "port_boundary_cells": [
+   9,
+   9
+  ],
+  "inputs_by_side": {
+   "E": [
+    3,
+    5,
+    7
+   ],
+   "W": [
+    3,
+    5,
+    7
+   ],
+   "N": [
+    3,
+    5,
+    7
+   ],
+   "S": [
+    3,
+    5,
+    7
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    3,
+    5,
+    7
+   ],
+   "W": [
+    3,
+    5,
+    7
+   ],
+   "N": [
+    3,
+    5,
+    7
+   ],
+   "S": [
+    3,
+    5,
+    7
+   ]
+  },
+  "input_port_count": 12,
+  "output_port_count": 12,
+  "outputs_same_as_inputs": true,
+  "port_components": [
+   "Port10_GEN_VARIABLE",
+   "Port11_GEN_VARIABLE",
+   "Port12_GEN_VARIABLE",
+   "Port1_GEN_VARIABLE",
+   "Port2_GEN_VARIABLE",
+   "Port3_GEN_VARIABLE",
+   "Port4_GEN_VARIABLE",
+   "Port5_GEN_VARIABLE",
+   "Port6_GEN_VARIABLE",
+   "Port7_GEN_VARIABLE",
+   "Port8_GEN_VARIABLE",
+   "Port9_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "ConsumePower": 18.0
+  },
+  "cost": [
+   {
+    "item": "Containment Coil",
+    "id": "ITEM_ContainmentCoil",
+    "count": 5
+   },
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 10
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_EnrichmentChamber2"
+  ],
+  "mesh": [
+   "SM_EnrichmentChamber"
+  ],
+  "crafters": [
+   "CRAFT_Enrichment"
+  ],
+  "recipe_count": 16,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_EnrichmentChamber"
+  ],
+  "unlocked_by_requires": {
+   "RSC_EnrichmentChamber": [
+    "RSC_ComputationScience",
+    "RSC_ContainmentCoil"
+   ]
+  }
+ },
+ "DAT_GasExtractor": {
+  "label": "Gas Extractor",
+  "key": "GasExtractor",
+  "object_class": "BPO_GasExtractor_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Reinforced Plate",
+    "id": "ITEM_ReinforcedPlates",
+    "count": 10
+   },
+   {
+    "item": "Containment Coil",
+    "id": "ITEM_ContainmentCoil",
+    "count": 10
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_T1Miner"
+  ],
+  "mesh": [
+   "SM_Miner_01"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_GasExtraction"
+  ],
+  "unlocked_by_requires": {
+   "RSC_GasExtraction": [
+    "RSC_ReinforcedPlates"
+   ]
+  }
+ },
+ "DAT_GrowthChamber": {
+  "label": "Growth Chamber",
+  "key": "GrowthChamber",
+  "object_class": "BPO_GrowthChamber_C",
+  "size_cells": [
+   5,
+   5
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_GrowthChamber.uasset",
+  "port_boundary_cells": [
+   7,
+   7
+  ],
+  "inputs_by_side": {
+   "E": [
+    3,
+    5
+   ],
+   "W": [
+    3,
+    5
+   ],
+   "N": [
+    3,
+    5
+   ],
+   "S": [
+    3,
+    5
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    3,
+    5
+   ],
+   "W": [
+    3,
+    5
+   ],
+   "N": [
+    3,
+    5
+   ],
+   "S": [
+    3,
+    5
+   ]
+  },
+  "input_port_count": 8,
+  "output_port_count": 8,
+  "outputs_same_as_inputs": true,
+  "port_components": [
+   "Port0_GEN_VARIABLE",
+   "Port1_GEN_VARIABLE",
+   "Port2_GEN_VARIABLE",
+   "Port3_GEN_VARIABLE",
+   "Port4_GEN_VARIABLE",
+   "Port5_GEN_VARIABLE",
+   "Port6_GEN_VARIABLE",
+   "Port7_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "ConsumePower": 6.0
+  },
+  "cost": [
+   {
+    "item": "Iridium Plates",
+    "id": "ITEM_IridiumPlates",
+    "count": 10
+   },
+   {
+    "item": "Advanced Circuits",
+    "id": "ITEM_AdvancedCircuits",
+    "count": 10
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_GrowthChamber1"
+  ],
+  "mesh": [
+   "SM2_GrowthChamber"
+  ],
+  "crafters": [
+   "CRAFT_GrowthChamber"
+  ],
+  "recipe_count": 8,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_GrowthChamber"
+  ],
+  "unlocked_by_requires": {
+   "RSC_GrowthChamber": [
+    "RSC_BiosampleCollection"
+   ]
+  }
+ },
+ "DAT_LargeConveyorBelt": {
+  "label": "Large Transport Block",
+  "key": "Large Transport Block",
+  "object_class": "BP_LargeConveyorBeltObject_C",
+  "size_cells": [
+   3,
+   3
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_LargeConveyorBeltObject.uasset",
+  "port_boundary_cells": [
+   3,
+   3
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    2
+   ],
+   "N": [
+    2
+   ],
+   "S": [
+    2
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    2
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "input_port_count": 3,
+  "output_port_count": 1,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [],
+  "built_on_station": true,
+  "icon": [
+   "T_Conveyor_01-1"
+  ],
+  "mesh": [
+   "SM_LargeConveyor"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_LargeConveyor"
+  ],
+  "unlocked_by_requires": {
+   "RSC_LargeConveyor": [
+    "RSC_ComputationScience",
+    "RSC_Logistics1"
+   ]
+  }
+ },
+ "DAT_MatSciLab": {
+  "label": "Material Science Lab",
+  "key": "MaterialScienceLab",
+  "object_class": "BP_MatSciLabObject_C",
+  "size_cells": [
+   3,
+   3
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_MatSciLabObject.uasset",
+  "port_boundary_cells": [
+   3,
+   3
+  ],
+  "inputs_by_side": {
+   "E": [
+    2
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": null,
+  "input_port_count": 1,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "ConsumePower": 6.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "Capacitor",
+    "id": "ITEM_Capacitor",
+    "count": 2
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_MatSciLab"
+  ],
+  "mesh": [
+   "S_Materials_Lab_01"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [
+   "DAT_MaterialScience"
+  ],
+  "lab_input_items": [
+   "Hull Plate"
+  ],
+  "unlocked_by": [
+   "RSC_Production1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Production1": []
+  }
+ },
+ "DAT_MiningBeacon": {
+  "label": "Mining Beacon",
+  "key": "Mining Beacon",
+  "object_class": "BP_MiningBeaconObject_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 10
+   },
+   {
+    "item": "Nickel Plates",
+    "id": "ITEM_NickelPlates",
+    "count": 10
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_MiningBeacon"
+  ],
+  "mesh": [
+   "SM_MiningBeacon"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_AutomaticMining1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_AutomaticMining1": []
+  }
+ },
+ "DAT_QuantumSciLab": {
+  "label": "Quantum Science Lab",
+  "key": "QuantumScienceLab",
+  "object_class": "BPO_QuantumSciLab_C",
+  "size_cells": [
+   9,
+   9
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_QuantumSciLab.uasset",
+  "port_boundary_cells": [
+   9,
+   9
+  ],
+  "inputs_by_side": {
+   "E": [
+    2
+   ],
+   "W": [],
+   "N": [],
+   "S": [
+    8
+   ]
+  },
+  "outputs_by_side": null,
+  "input_port_count": 2,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "ConsumePower": 12.0
+  },
+  "cost": [
+   {
+    "item": "Reinforced Plate",
+    "id": "ITEM_ReinforcedPlates",
+    "count": 10
+   },
+   {
+    "item": "Superconductor Coil",
+    "id": "ITEM_SuperconductorCoil",
+    "count": 10
+   },
+   {
+    "item": "Detector Array",
+    "id": "ITEM_DetectorArray",
+    "count": 10
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_QuantumSciLab"
+  ],
+  "mesh": [
+   "SM2_QuantumSciLab"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [
+   "DAT_QuantumScience"
+  ],
+  "lab_input_items": [
+   "Superconductor Coil"
+  ],
+  "unlocked_by": [
+   "RSC_QuantumScience"
+  ],
+  "unlocked_by_requires": {
+   "RSC_QuantumScience": [
+    "RSC_ReinforcedPlates",
+    "RSC_SupercondutorCoil"
+   ]
+  }
+ },
+ "DAT_ReactorMachine": {
+  "label": "Reactor",
+  "key": "Reactor",
+  "object_class": "BPO_ReactorMachine_C",
+  "size_cells": [
+   6,
+   6
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_ReactorMachine.uasset",
+  "port_boundary_cells": [
+   6,
+   6
+  ],
+  "inputs_by_side": {
+   "E": [
+    3,
+    4
+   ],
+   "W": [
+    3,
+    4
+   ],
+   "N": [
+    3,
+    4
+   ],
+   "S": [
+    3,
+    4
+   ]
+  },
+  "outputs_by_side": null,
+  "input_port_count": 8,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "GeneratesPower": 48.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "Magnetic Coils",
+    "id": "ITEM_MagneticCoils",
+    "count": 10
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_ReactorMachine"
+  ],
+  "mesh": [
+   "SM_ReactorMachine"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_PowerGen1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_PowerGen1": []
+  }
+ },
+ "DAT_Refinery": {
+  "label": "Refinery",
+  "key": "Refinery",
+  "object_class": "BP_RefineryObject_C",
+  "size_cells": [
+   3,
+   3
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_RefineryObject.uasset",
+  "port_boundary_cells": [
+   3,
+   3
+  ],
+  "inputs_by_side": {
+   "E": [
+    2
+   ],
+   "W": [
+    2
+   ],
+   "N": [
+    2
+   ],
+   "S": [
+    2
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    2
+   ],
+   "W": [
+    2
+   ],
+   "N": [
+    2
+   ],
+   "S": [
+    2
+   ]
+  },
+  "input_port_count": 4,
+  "output_port_count": 4,
+  "outputs_same_as_inputs": true,
+  "port_components": [
+   "Port0_GEN_VARIABLE",
+   "Port1_GEN_VARIABLE",
+   "Port2_GEN_VARIABLE",
+   "Port3_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "ConsumePower": 4.5
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "Magnetic Coils",
+    "id": "ITEM_MagneticCoils",
+    "count": 5
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Refinery"
+  ],
+  "mesh": [
+   "S_Refinery_01"
+  ],
+  "crafters": [
+   "CRAFT_Refinery"
+  ],
+  "recipe_count": 11,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Production1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Production1": []
+  }
+ },
+ "DAT_RelicAnalyzer": {
+  "label": "Relic Analyzer",
+  "key": "RelicAnalyzer",
+  "object_class": "BPO_RelicAnalyzer_C",
+  "size_cells": [
+   3,
+   3
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_RelicAnalyzer.uasset",
+  "port_boundary_cells": [
+   3,
+   3
+  ],
+  "inputs_by_side": {
+   "E": [
+    2
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": null,
+  "input_port_count": 1,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "ConsumePower": 6.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "Relic Shard",
+    "id": "ITEM_RelicShard",
+    "count": 5
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_RelicSciLab"
+  ],
+  "mesh": [
+   "SM2_RelicSciLab"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [
+   "DAT_AlienTechnology"
+  ],
+  "lab_input_items": [
+   "Relic Shard"
+  ],
+  "unlocked_by": [
+   "RSC_RelicAnalyzer"
+  ],
+  "unlocked_by_requires": {
+   "RSC_RelicAnalyzer": []
+  }
+ },
+ "DAT_RelicSynthesizer": {
+  "label": "Relic Synthesizer",
+  "key": "RelicSynthesizer",
+  "object_class": "BPO_RelicSynthesizer_C",
+  "size_cells": [
+   9,
+   9
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_RelicSynthesizer.uasset",
+  "port_boundary_cells": [
+   9,
+   9
+  ],
+  "inputs_by_side": {
+   "E": [
+    3,
+    5,
+    7
+   ],
+   "W": [
+    3,
+    5,
+    7
+   ],
+   "N": [
+    3,
+    5,
+    7
+   ],
+   "S": [
+    3,
+    5,
+    7
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    3,
+    5,
+    7
+   ],
+   "W": [
+    3,
+    5,
+    7
+   ],
+   "N": [
+    3,
+    5,
+    7
+   ],
+   "S": [
+    3,
+    5,
+    7
+   ]
+  },
+  "input_port_count": 12,
+  "output_port_count": 12,
+  "outputs_same_as_inputs": true,
+  "port_components": [
+   "Port10_GEN_VARIABLE",
+   "Port11_GEN_VARIABLE",
+   "Port12_GEN_VARIABLE",
+   "Port1_GEN_VARIABLE",
+   "Port2_GEN_VARIABLE",
+   "Port3_GEN_VARIABLE",
+   "Port4_GEN_VARIABLE",
+   "Port5_GEN_VARIABLE",
+   "Port6_GEN_VARIABLE",
+   "Port7_GEN_VARIABLE",
+   "Port8_GEN_VARIABLE",
+   "Port9_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "ConsumePower": 54.0
+  },
+  "cost": [
+   {
+    "item": "Relic Core",
+    "id": "ITEM_RelicCore",
+    "count": 1
+   },
+   {
+    "item": "Reinforced Plate",
+    "id": "ITEM_ReinforcedPlates",
+    "count": 5
+   },
+   {
+    "item": "Superconductor Coil",
+    "id": "ITEM_SuperconductorCoil",
+    "count": 5
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_RelicSynthesizer"
+  ],
+  "mesh": [
+   "SM2_RelicSynthesizer"
+  ],
+  "crafters": [
+   "CRAFT_RelicSynthesizer"
+  ],
+  "recipe_count": 2,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_RelicSynthesis"
+  ],
+  "unlocked_by_requires": {
+   "RSC_RelicSynthesis": [
+    "RSC_RelicCapacitor",
+    "RSC_SupercondutorCoil"
+   ]
+  }
+ },
+ "DAT_SignWall": {
+  "label": "Doorway Wall",
+  "key": "Doorway Wall",
+  "object_class": "BPO_SignWall_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Titanium Plates",
+    "id": "ITEM_TitaniumPlates",
+    "count": 12
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_SignWall"
+  ],
+  "mesh": [
+   "SM_SignWall"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Furniture1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Furniture1": []
+  }
+ },
+ "DAT_SmartContainerResearch": {
+  "label": "Smart Containers",
+  "key": "SmartContainers",
+  "object_class": null,
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [],
+  "built_on_station": false,
+  "icon": [
+   "T_Container_1"
+  ],
+  "mesh": [
+   "SM2_AdvancedAssembler"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_SmartContainers"
+  ],
+  "unlocked_by_requires": {
+   "RSC_SmartContainers": [
+    "RSC_ComputationScience"
+   ]
+  }
+ },
+ "DAT_Splitter": {
+  "label": "Splitter Mk. 1",
+  "key": "Splitter Mk. 1",
+  "object_class": "BP_SplitterObject_C",
+  "size_cells": [
+   1,
+   1
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_SplitterObject.uasset",
+  "port_boundary_cells": [
+   1,
+   1
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1
+   ],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": {
+   "E": [
+    1
+   ],
+   "W": [],
+   "N": [
+    1
+   ],
+   "S": [
+    1
+   ]
+  },
+  "input_port_count": 1,
+  "output_port_count": 3,
+  "outputs_same_as_inputs": false,
+  "port_components": [
+   "BPC_MachinePortInteraction1_GEN_VARIABLE",
+   "BPC_MachinePortInteraction2_GEN_VARIABLE",
+   "BPC_MachinePortInteraction_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "Speed": 60.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 1
+   },
+   {
+    "item": "Basic Motor",
+    "id": "ITEM_BasicMotor",
+    "count": 2
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Splitter_1"
+  ],
+  "mesh": [
+   "SM_SplitterHologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics1": []
+  }
+ },
+ "DAT_Splitter_2": {
+  "label": "Splitter Mk. 2",
+  "key": "Splitter Mk. 2",
+  "object_class": "BP_SplitterObject_2_C",
+  "size_cells": [
+   1,
+   1
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_SplitterObject_2.uasset",
+  "port_boundary_cells": [
+   1,
+   1
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1
+   ],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": {
+   "E": [
+    1
+   ],
+   "W": [],
+   "N": [
+    1
+   ],
+   "S": [
+    1
+   ]
+  },
+  "input_port_count": 1,
+  "output_port_count": 3,
+  "outputs_same_as_inputs": false,
+  "port_components": [
+   "BPC_MachinePortInteraction1_GEN_VARIABLE",
+   "BPC_MachinePortInteraction2_GEN_VARIABLE",
+   "BPC_MachinePortInteraction_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "Speed": 120.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 2
+   },
+   {
+    "item": "Basic Circuits",
+    "id": "ITEM_BasicCircuit",
+    "count": 2
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Splitter_2"
+  ],
+  "mesh": [
+   "SM_SplitterHologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics2"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics2": [
+    "RSC_ComputationScience",
+    "RSC_Servomotors"
+   ]
+  }
+ },
+ "DAT_Splitter_3": {
+  "label": "Splitter Mk. 3",
+  "key": "Splitter Mk. 3",
+  "object_class": "BP_SplitterObject_3_C",
+  "size_cells": [
+   1,
+   1
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_SplitterObject_3.uasset",
+  "port_boundary_cells": [
+   1,
+   1
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1
+   ],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": {
+   "E": [
+    1
+   ],
+   "W": [],
+   "N": [
+    1
+   ],
+   "S": [
+    1
+   ]
+  },
+  "input_port_count": 1,
+  "output_port_count": 3,
+  "outputs_same_as_inputs": false,
+  "port_components": [
+   "BPC_MachinePortInteraction1_GEN_VARIABLE",
+   "BPC_MachinePortInteraction2_GEN_VARIABLE",
+   "BPC_MachinePortInteraction_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "Speed": 180.0
+  },
+  "cost": [
+   {
+    "item": "Maglev Coupling",
+    "id": "ITEM_MaglevCoupling",
+    "count": 2
+   },
+   {
+    "item": "Basic Circuits",
+    "id": "ITEM_BasicCircuit",
+    "count": 5
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Splitter_3"
+  ],
+  "mesh": [
+   "SM_SplitterHologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics3"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics3": [
+    "RSC_Logistics2",
+    "RSC_MaglevCoupling"
+   ]
+  }
+ },
+ "DAT_StarterStationBlock": {
+  "label": "Starter Station",
+  "key": "Starter Station",
+  "object_class": "BPO_CommandModule_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 20
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_StarterStation"
+  ],
+  "mesh": [
+   "SM_StarterStation_Hologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [],
+  "unlocked_by_requires": {}
+ },
+ "DAT_Supercomputer": {
+  "label": "Supercomputer",
+  "key": "Supercomputer",
+  "object_class": "BPO_Supercomputer_C",
+  "size_cells": [
+   5,
+   5
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_Supercomputer.uasset",
+  "port_boundary_cells": [
+   7,
+   7
+  ],
+  "inputs_by_side": {
+   "E": [
+    3,
+    5
+   ],
+   "W": [
+    3,
+    5
+   ],
+   "N": [
+    3,
+    5
+   ],
+   "S": [
+    3,
+    5
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    3,
+    5
+   ],
+   "W": [
+    3,
+    5
+   ],
+   "N": [
+    3,
+    5
+   ],
+   "S": [
+    3,
+    5
+   ]
+  },
+  "input_port_count": 8,
+  "output_port_count": 8,
+  "outputs_same_as_inputs": true,
+  "port_components": [
+   "Port0_GEN_VARIABLE",
+   "Port1_GEN_VARIABLE",
+   "Port2_GEN_VARIABLE",
+   "Port3_GEN_VARIABLE",
+   "Port4_GEN_VARIABLE",
+   "Port5_GEN_VARIABLE",
+   "Port6_GEN_VARIABLE",
+   "Port7_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "ConsumePower": 18.0
+  },
+  "cost": [
+   {
+    "item": "Iridium Plates",
+    "id": "ITEM_IridiumPlates",
+    "count": 10
+   },
+   {
+    "item": "Advanced Circuits",
+    "id": "ITEM_AdvancedCircuits",
+    "count": 10
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Supercomputer"
+  ],
+  "mesh": [
+   "SM2_Supercomputer"
+  ],
+  "crafters": [
+   "CRAFT_Supercomputer"
+  ],
+  "recipe_count": 1,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Supercomputer"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Supercomputer": [
+    "RSC_AstronomicScanning",
+    "RSC_IridiumRefining"
+   ]
+  }
+ },
+ "DAT_T0Core": {
+  "label": "Basic Core",
+  "key": "Basic Core",
+  "object_class": "BP_StationBuildProgressObject_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_T0Core"
+  ],
+  "mesh": [
+   "SM_T0Core_Hologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [],
+  "unlocked_by_requires": {}
+ },
+ "DAT_T1Core": {
+  "label": "Tier 1 Core",
+  "key": "Tier 1 Core",
+  "object_class": "BP_StationBuildProgressObject_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 60
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 30
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_T1Core"
+  ],
+  "mesh": [
+   "SM_T1Core_Hologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_T1Core"
+  ],
+  "unlocked_by_requires": {
+   "RSC_T1Core": [
+    "RSC_Shipyard1"
+   ]
+  }
+ },
+ "DAT_T1Factory": {
+  "label": "Factory Tier 1",
+  "key": "Factory Tier 1",
+  "object_class": "BP_StationBuildProgressObject_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_T1Factory"
+  ],
+  "mesh": [
+   "SM_T1Factory_Hologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Factory1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Factory1": [
+    "RSC_Stations1"
+   ]
+  }
+ },
+ "DAT_T1Junction": {
+  "label": "Tier 1 Junction",
+  "key": "Tier 1 Junction",
+  "object_class": "BP_StationBuildProgressObject_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_T1Junction"
+  ],
+  "mesh": [
+   "SM_T1Junction_Hologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Factory1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Factory1": [
+    "RSC_Stations1"
+   ]
+  }
+ },
+ "DAT_T1Miner": {
+  "label": "Miner Mk. 1",
+  "key": "Miner Mk. 1",
+  "object_class": "BP_MinerBuildProgressObject_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 2
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_T1Miner"
+  ],
+  "mesh": [
+   "SM_Miner_01"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [],
+  "unlocked_by_requires": {}
+ },
+ "DAT_T1Observatory": {
+  "label": "Observatory",
+  "key": "Observatory",
+  "object_class": "BP_StationBuildProgressObject_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "Silica",
+    "id": "ITEM_Silica",
+    "count": 10
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_T1Observatory"
+  ],
+  "mesh": [
+   "SM_T1Observatory_Hologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_T1Observatory"
+  ],
+  "unlocked_by_requires": {
+   "RSC_T1Observatory": [
+    "RSC_Stations1"
+   ]
+  }
+ },
+ "DAT_T1Shipyard": {
+  "label": "Shipyard Tier 1",
+  "key": "Shipyard Tier 1",
+  "object_class": "BP_StationBuildProgressObject_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 10
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_T1Shipyard"
+  ],
+  "mesh": [
+   "SM_T1Shipyard_Hologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [],
+  "unlocked_by_requires": {}
+ },
+ "DAT_T2CoreShort": {
+  "label": "Tier 2 Core",
+  "key": "Tier 2 Core",
+  "object_class": "BP_T2CoreObject_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 60
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 30
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_T1Core"
+  ],
+  "mesh": [
+   "SM_T2Core_Hologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_T2CoreShort"
+  ],
+  "unlocked_by_requires": {
+   "RSC_T2CoreShort": [
+    "RSC_Stations2"
+   ]
+  }
+ },
+ "DAT_T2Shipyard": {
+  "label": "Shipyard Tier 2",
+  "key": "Shipyard Tier 2",
+  "object_class": "BP_T2ShipyardObject_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": null,
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Hull Plate",
+    "id": "ITEM_HullPlates",
+    "count": 16
+   },
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 30
+   },
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 20
+   }
+  ],
+  "built_on_station": false,
+  "icon": [
+   "T_T1Shipyard"
+  ],
+  "mesh": [
+   "SM_T2Shipyard_Hologram"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [],
+  "unlocked_by_requires": {}
+ },
+ "DAT_Teleporter": {
+  "label": "Short-Range Teleporter",
+  "key": "ShortRangeTeleporter",
+  "object_class": "BPO_Teleporter_C",
+  "size_cells": null,
+  "size_source": null,
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "ConsumePower": 12.0
+  },
+  "cost": [
+   {
+    "item": "Superconductor Coil",
+    "id": "ITEM_SuperconductorCoil",
+    "count": 1
+   },
+   {
+    "item": "Reinforced Plate",
+    "id": "ITEM_ReinforcedPlates",
+    "count": 2
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Teleporter"
+  ],
+  "mesh": [
+   "SM_TeleporterPad"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Teleporter"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Teleporter": []
+  }
+ },
+ "DAT_TradeConsole": {
+  "label": "Trade Console",
+  "key": "TradeConsole",
+  "object_class": "BP_AssemblerObject_C",
+  "size_cells": [
+   5,
+   5
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_AssemblerObject.uasset",
+  "port_boundary_cells": [
+   5,
+   5
+  ],
+  "inputs_by_side": {
+   "E": [
+    2,
+    4
+   ],
+   "W": [
+    2,
+    4
+   ],
+   "N": [
+    2,
+    4
+   ],
+   "S": [
+    2,
+    4
+   ]
+  },
+  "outputs_by_side": {
+   "E": [
+    2,
+    4
+   ],
+   "W": [
+    2,
+    4
+   ],
+   "N": [
+    2,
+    4
+   ],
+   "S": [
+    2,
+    4
+   ]
+  },
+  "input_port_count": 8,
+  "output_port_count": 8,
+  "outputs_same_as_inputs": true,
+  "port_components": [
+   "Port0_GEN_VARIABLE",
+   "Port1_GEN_VARIABLE",
+   "Port2_GEN_VARIABLE",
+   "Port3_GEN_VARIABLE",
+   "Port4_GEN_VARIABLE",
+   "Port5_GEN_VARIABLE",
+   "Port6_GEN_VARIABLE",
+   "Port7_GEN_VARIABLE"
+  ],
+  "toggleable_ports": true,
+  "stats": {
+   "ConsumePower": 6.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 3
+   },
+   {
+    "item": "Capacitor",
+    "id": "ITEM_Capacitor",
+    "count": 2
+   },
+   {
+    "item": "Basic Motor",
+    "id": "ITEM_BasicMotor",
+    "count": 2
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Assembler"
+  ],
+  "mesh": [
+   "S_Assembler_03"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [
+   "DAT_Assembler"
+  ],
+  "lab_input_items": [],
+  "unlocked_by": [],
+  "unlocked_by_requires": {}
+ },
+ "DAT_UndergroundBelt": {
+  "label": "Underground Belt Mk. 1",
+  "key": "Underground Belt Mk. 1",
+  "object_class": "BP_UndergroundBeltObject_C",
+  "size_cells": [
+   1,
+   1
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_UndergroundBeltObject.uasset",
+  "port_boundary_cells": [
+   1,
+   1
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1
+   ],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": null,
+  "input_port_count": 1,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "Speed": 60.0,
+   "MaxLength": 8.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "Basic Motor",
+    "id": "ITEM_BasicMotor",
+    "count": 8
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Underground_1"
+  ],
+  "mesh": [
+   "S_Underground_Belt_02"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics1": []
+  }
+ },
+ "DAT_UndergroundBelt_2": {
+  "label": "Underground Belt Mk. 2",
+  "key": "Underground Belt Mk. 2",
+  "object_class": "BP_UndergroundBeltObject_2_C",
+  "size_cells": [
+   1,
+   1
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_UndergroundBeltObject_2.uasset",
+  "port_boundary_cells": [
+   1,
+   1
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1
+   ],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": null,
+  "input_port_count": 1,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "Speed": 120.0,
+   "MaxLength": 10.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "Servomotor",
+    "id": "ITEM_Servomotor",
+    "count": 10
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Underground_2"
+  ],
+  "mesh": [
+   "SM_Underground_04"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics2"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics2": [
+    "RSC_ComputationScience",
+    "RSC_Servomotors"
+   ]
+  }
+ },
+ "DAT_UndergroundBelt_3": {
+  "label": "Underground Belt Mk. 3",
+  "key": "Underground Belt Mk. 3",
+  "object_class": "BP_UndergroundBeltObject_3_C",
+  "size_cells": [
+   1,
+   1
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BP_UndergroundBeltObject_3.uasset",
+  "port_boundary_cells": [
+   1,
+   1
+  ],
+  "inputs_by_side": {
+   "E": [],
+   "W": [
+    1
+   ],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": null,
+  "input_port_count": 1,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "Speed": 180.0,
+   "MaxLength": 12.0
+  },
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "Maglev Coupling",
+    "id": "ITEM_MaglevCoupling",
+    "count": 12
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_Underground_3"
+  ],
+  "mesh": [
+   "SM_Underground_06"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Logistics3"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Logistics3": [
+    "RSC_Logistics2",
+    "RSC_MaglevCoupling"
+   ]
+  }
+ },
+ "DAT_WorkbenchMachine": {
+  "label": "Workstation",
+  "key": "Workstation",
+  "object_class": "BPO_WorkbenchMachine_C",
+  "size_cells": [
+   2,
+   4
+  ],
+  "size_source": "CDO ints [5][8][W][H] of Blueprints/Machines/BPO_WorkbenchMachine.uasset",
+  "port_boundary_cells": null,
+  "inputs_by_side": null,
+  "outputs_by_side": null,
+  "input_port_count": null,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {},
+  "cost": [
+   {
+    "item": "Lightweight Frames",
+    "id": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "Capacitor",
+    "id": "ITEM_Capacitor",
+    "count": 5
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_WorkbenchMachine1"
+  ],
+  "mesh": [
+   "SM2_WorkbenchMachine"
+  ],
+  "crafters": [
+   "CRAFT_Assembler",
+   "CRAFT_Refinery"
+  ],
+  "recipe_count": 30,
+  "lab_research_types": [],
+  "lab_input_items": [],
+  "unlocked_by": [
+   "RSC_Production1"
+  ],
+  "unlocked_by_requires": {
+   "RSC_Production1": []
+  }
+ },
+ "DAT_XenoSciLab": {
+  "label": "Xenobiologic Science Lab",
+  "key": "XenobiologicScienceLab",
+  "object_class": "BPO_XenoSciLab_C",
+  "size_cells": [
+   5,
+   5
+  ],
+  "size_source": "CDO [Size.x,Size.y,nIn,..] of Blueprints/Machines/BPO_XenoSciLab.uasset",
+  "port_boundary_cells": [
+   5,
+   5
+  ],
+  "inputs_by_side": {
+   "E": [
+    3
+   ],
+   "W": [],
+   "N": [],
+   "S": []
+  },
+  "outputs_by_side": null,
+  "input_port_count": 1,
+  "output_port_count": 0,
+  "outputs_same_as_inputs": false,
+  "port_components": [],
+  "toggleable_ports": false,
+  "stats": {
+   "ConsumePower": 12.0
+  },
+  "cost": [
+   {
+    "item": "Iridium Plates",
+    "id": "ITEM_IridiumPlates",
+    "count": 5
+   },
+   {
+    "item": "Biolattice",
+    "id": "ITEM_Biolattice",
+    "count": 3
+   }
+  ],
+  "built_on_station": true,
+  "icon": [
+   "T_XenoSciLab"
+  ],
+  "mesh": [
+   "SM2_XenobiologicScienceLab"
+  ],
+  "crafters": [],
+  "recipe_count": 0,
+  "lab_research_types": [
+   "DAT_XenobiologyScience"
+  ],
+  "lab_input_items": [
+   "Biolattice"
+  ],
+  "unlocked_by": [
+   "RSC_XenobiologicScience"
+  ],
+  "unlocked_by_requires": {
+   "RSC_XenobiologicScience": [
+    "RSC_Biolattice"
+   ]
+  }
+ }
+}

@@ -12,7 +12,7 @@ $env:DOTNET_ROOT = 'F:\ms-tools\dotnet'
 $env:DOTNET_CLI_HOME = 'F:\ms-tools\home'
 $env:NUGET_PACKAGES = 'F:\ms-tools\nuget'
 $cli = 'F:\ms-tools\cue4parse-bin\CUE4Parse.CLI.exe'
-$paks = 'F:\SteamLibrary\steamapps\common\Main Sequence Demo\Windows\MainSequence\Content\Paks'
+$paks = 'F:\SteamLibrary\steamapps\common\Main Sequence\Windows\MainSequence\Content\Paks'
 $usmap = 'F:\ms-tools\Mappings.usmap'
 New-Item -ItemType Directory -Force -Path $Out | Out-Null
 $pk = @()

@@ -44,7 +44,7 @@ function panel(){
         const u=ugWarn().get(one.id);if(u)h+='<div class="warnline">Underground: length '+u.n+' &gt; max '+u.max+'</div>';
       }else{
         const fr=floorRect(one),fo=fcell(one);
-        if(fr)h+='<div class="sub">Floor '+fr.w+'&times;'+fr.h+(fr.known?(fr.guess?" "+BQ:""):" "+BQ)+(dv(one)?"":" &middot; doors "+BQ)+'</div>';
+        if(fr)h+='<div class="sub">Floor '+fr.w+'&times;'+fr.h+(fr.known?(fr.guess?" "+BQ:""):" "+BQ)+(dv(one)?"":" &middot; "+(doorTxt(one).endsWith("!?")?"doors "+BQ:doorTxt(one)))+'</div>';
         if(dd&&dd.elevator)h+='<div class="sub">Elevator centre '+dd.elevator.w+'&times;'+dd.elevator.h+' blocked</div>';
         const n=S.blocks.filter(m=>isM(m)&&m.h===one.h&&m.x>=fo.cx*FC&&m.x<(fo.cx+fo.cw)*FC&&m.y>=fo.cy*FC&&m.y<(fo.cy+fo.ch)*FC).length;
         h+='<div class="sub">'+n+' buildable'+(n===1?"":"s")+' on this block (level '+(one.h+1)+')</div>';
