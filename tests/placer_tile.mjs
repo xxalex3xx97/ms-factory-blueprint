@@ -23,7 +23,7 @@ function chk(name, cond, detail = '') {
   else { fails.push({name, detail}); console.log(`FAIL ${name}${detail ? '\n     ' + detail : ''}`); }
 }
 async function setTicks(pg, ids) {
-  for (const id of ALL) await pg.setChecked('#' + id, ids.includes(id));
+  await pg.selectOption('#plnBk', {plnBk11: 'BPO_Station_01', plnBk21: 'BPO_Station_2x1', plnBk22: 'BPO_Station_02'}[ids[ids.length - 1]]);   // UI has one block type: several ticks = the largest
 }
 // build settings (block types) live in the modal now: tick them after it opens (live preview)
 async function openBuild(pg, ticks) {
@@ -160,7 +160,7 @@ try {
   chk('B) one undo removes all blocks and items', un === 0, `left ${un}`);
 
   // ---- E) tick sets: placed classes belong to the ticked set; a set where one block fits gives exactly 1 block
-  const sets = [['plnBk11'], ['plnBk21'], ['plnBk22'], ['plnBk11', 'plnBk21'], ['plnBk21', 'plnBk22']];
+  const sets = [['plnBk11'], ['plnBk21'], ['plnBk22']];
   for (const set of sets) {
     for (const rv of [rate, 1]) {
       await closeIfOpen(pg); await reset(pg); await openPlanner(pg);
@@ -195,7 +195,7 @@ try {
   // ---- G) Exosuit: modal opens with the error inside, Place disabled, nothing placed; Cancel closes
   await reset(pg); await openPlanner(pg);
   await pg.selectOption('#plnItem', 'ITEM_Exosuit'); await pg.fill('#plnRate', '1');
-  await pg.evaluate(() => ['plnBk11', 'plnBk21', 'plnBk22'].forEach(i => { document.getElementById(i).checked = true; }));   // modal closed here: plain state set
+  await pg.evaluate(() => { document.getElementById('plnBk').value = 'BPO_Station_02'; });   // modal closed here: plain state set
   await pg.click('#plnBuild');
   const G = await pg.evaluate(() => ({open: $('plnPrev').open, err: $('plnPrevErr').textContent, placeOff: $('plnPlace').disabled, n: S.blocks.length}));
   chk('G) Exosuit: #plnPrev open, #plnPrevErr matches "single-input single-recipe", #plnPlace disabled, nothing placed', G.open === true && /single-input single-recipe/.test(G.err) && G.placeOff === true && G.n === 0, JSON.stringify(G));

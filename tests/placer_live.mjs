@@ -22,7 +22,7 @@ function chk(name, cond, detail = '') {
   else { fails.push({name, detail}); console.log(`FAIL ${name}${detail ? '\n     ' + detail : ''}`); }
 }
 async function setTicks(pg, ids) {   // real clicks on the modal's block checkboxes
-  for (const id of ALL) await pg.setChecked('#' + id, ids.includes(id));
+  await pg.selectOption('#plnBk', {plnBk11: 'BPO_Station_01', plnBk21: 'BPO_Station_2x1', plnBk22: 'BPO_Station_02'}[ids[ids.length - 1]]);   // UI has one block type: several ticks = the largest
 }
 async function openPlanner(pg) {
   await pg.evaluate(() => { if (document.getElementById('pln').hidden) document.getElementById('plnB').click(); });

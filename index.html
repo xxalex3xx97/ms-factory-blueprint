@@ -268,11 +268,7 @@
 <dialog id="plnPrev" aria-labelledby="plnPrevT">
   <div class="pvHd"><h3 id="plnPrevT">Factory preview</h3><div class="pvTb" role="toolbar" aria-label="Preview zoom"><button id="plnZo" type="button" aria-label="Zoom out" title="Zoom out">&minus;</button><button id="plnZi" type="button" aria-label="Zoom in" title="Zoom in">+</button><button id="plnZf" type="button" aria-label="Fit to view" title="Fit to view">Fit</button></div></div>
   <div id="pvSet">
-    <fieldset id="plnBk" title="Block types the factory may use. None ticked = factory only, into an existing floor"><legend>Blocks</legend>
-      <label class="chk"><input type="checkbox" id="plnBk11" value="BPO_Station_01" checked> 1x1</label>
-      <label class="chk"><input type="checkbox" id="plnBk21" value="BPO_Station_2x1" checked> 2x1</label>
-      <label class="chk"><input type="checkbox" id="plnBk22" value="BPO_Station_02" checked> 2x2</label>
-    </fieldset>
+    <label>Blocks <select id="plnBk" aria-label="Block type" title="Block type the factory is cut from"><option value="BPO_Station_01">1x1</option><option value="BPO_Station_2x1">2x1</option><option value="BPO_Station_02" selected>2x2</option></select></label>
     <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2" selected>Large Container</option></select></label>
     <label class="chk"><input type="checkbox" id="plnDkI"> Raw inputs come from docks</label>
     <label>Dock <select id="plnDk" aria-label="Dock type"><option value="ind">Industrial</option><option value="nrm">Normal</option></select></label>

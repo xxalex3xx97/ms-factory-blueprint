@@ -38,7 +38,7 @@ try {
   const pg = await newPage(ctx, 'main');
   await pg.evaluate(() => { window.BLK_CLS = () => Object.keys(BASE).find(k => BASE[k].kind === 'b' && BASE[k].name === 'BPO_Station_01'); });
   await pg.evaluate(() => {
-    window.BK = on => ['plnBk11', 'plnBk21', 'plnBk22'].forEach(i => { document.getElementById(i).checked = on });
+    window.BK = on => { document.getElementById('plnBk').value = 'BPO_Station_02' };   // one block type in the UI; the 'none ticked' (floor only) mode is gone
     window.GO = () => { placerGo(); placerPlace(); };
   });
 

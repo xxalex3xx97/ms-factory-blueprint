@@ -733,13 +733,13 @@ function plcWarn(ser){
   const got=ser.slice(-12).reduce((a,s)=>a+(s.it[pl.item]||0),0)/12;
   e.textContent=got<pl.rate*0.95?"Simulation returned "+Math.round(got)+"/min, you asked for "+pl.rate+"/min ("+plnNm(pl.item)+")":"";
 }
-const placerBk=()=>["plnBk11","plnBk21","plnBk22"].map(i=>$(i).checked);
+const PLC_BKV=PL_STD;
+const placerBk=()=>PLC_BKV.map(c=>c===$("plnBk").value);
 const placerDock=()=>{const i=$("plnDkI").checked,o=$("plnDkO").checked;if(!i&&!o)return null;const t=$("plnDk").value;return{in:i?t:null,out:o?($("plnDkOT").value||t):null}};
 function placerRun(open){
   const dl=$("plnPrev");if(!open&&!dl.open)return;
-  const bkOn=placerBk().some(Boolean),dk=bkOn?placerDock():null;
+  const dk=placerDock();
   const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk}):{ok:false,why:"Pick an item and a rate first"};
-  if(L.ok&&!bkOn&&placerDock())L.note=[...L.note,"Docks need a block type ticked: docks ignored"];
   if(!L.ok){plcL=null;plcT=null;placerClear();$("plnPrevErr").textContent=L.why;$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
@@ -878,6 +878,8 @@ $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;
 // Engine switch: Old = the original placer (default), New = prefab factory builder (pfFact2 > pfBands > pfChain, falls back to the old path when it refuses). Remembered once chosen.
 // No Limits is the only engine in the UI (always on). plcEngine stays for tests: ?engine=old|new|nl in the page URL pins an older engine, default nl.
 const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl")};
+try{const v=localStorage.getItem("msfb.block");if(PLC_BKV.includes(v))$("plnBk").value=v}catch(_){}
+$("plnBk").addEventListener("change",()=>{try{localStorage.setItem("msfb.block",$("plnBk").value)}catch(_){}});
 const PLC_DK="msfb.docks",plcDkSave=()=>{try{localStorage.setItem(PLC_DK,JSON.stringify({i:$("plnDkI").checked,o:$("plnDkO").checked,t:$("plnDk").value,ot:$("plnDkOT").value}))}catch(_){}};
 try{const s=JSON.parse(localStorage.getItem(PLC_DK)||"{}");$("plnDkI").checked=!!s.i;$("plnDkO").checked=!!s.o;if(["ind","nrm"].includes(s.t))$("plnDk").value=s.t;if(["","ind","nrm"].includes(s.ot))$("plnDkOT").value=s.ot}catch(_){}
 ["plnDkI","plnDkO","plnDk","plnDkOT"].forEach(id=>$(id).addEventListener("change",()=>{plcDkSave();placerLive()}));

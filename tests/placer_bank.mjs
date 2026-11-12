@@ -24,7 +24,7 @@ function chk(name, cond, detail = '') {
 function info(msg) { console.log(`INFO ${msg}`); }
 
 async function setTicks(pg, ids) {
-  for (const id of ['plnBk11', 'plnBk21', 'plnBk22']) await pg.setChecked('#' + id, ids.includes(id));
+  await pg.selectOption('#plnBk', {plnBk11: 'BPO_Station_01', plnBk21: 'BPO_Station_2x1', plnBk22: 'BPO_Station_02'}[ids[ids.length - 1]]);   // UI has one block type: several ticks = the largest
 }
 async function openBuild(pg, ticks) {
   await pg.click('#plnBuild');
