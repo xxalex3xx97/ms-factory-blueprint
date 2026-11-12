@@ -137,6 +137,6 @@
         "facing": "W"
       }
     ],
-    "evidence": "BPO_MiningDroneBay_2 Outputs identical to Mk1; bLockedInDemo, decoded from paks, untested in game. facing W INF as Mk1."
+    "evidence": "BPO_MiningDroneBay_2 Outputs identical to Mk1; decoded from EA files, untested in game. facing W INF as Mk1."
   }
 }
