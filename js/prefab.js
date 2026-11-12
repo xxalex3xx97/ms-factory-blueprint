@@ -506,7 +506,7 @@ function pfGutter(links,y0,y1,mk){
 }
 // pfFact step 4b/4c: splitter off keys. keep = WORLD faces (after rot) that stay enabled; every other output port key goes in item.off. portsOf gives base face f and world face index wf.
 const pfSplOff=(sc,rot,keep)=>portsOf({cls:sc,x:0,y:0,rot,off:[]}).filter(p=>p.dir!=='in'&&!keep.includes(FN[p.wf])).map(p=>p.key);
-// pfFact step 4b/4c: routes. links=[{xp,yp,heads:[x asc],y1,t}]: producer belt leaves going south at (xp,yp); t=trunk row (>=0) or -1 straight (needs heads.length===1 && xp===heads[0]); heads = columns where a belt must enter going south at row y1. Trunk: east along row t from xp to last head; xp==heads[0] -> rot-1 T splitter (S + E if more heads); else rot-0 corner belt. Each head x gets a splitter (rot 0, keep E,S; the last keep only S). Vertical legs go under other links' trunks with a UG pair (t-1,t+1), never on a wall column, splitter or corner. Returns {ok,items} or {ok:false,why}.
+// pfFact step 4b/4c: routes. links=[{xp,yp,heads:[x asc],y1,t}]: producer belt leaves going south at (xp,yp); t=trunk row (>=0) or -1 straight (needs heads.length===1 && xp===heads[0]); heads = columns where a belt must enter going south at row y1. Optional (pfFact S3): yc = row where the xp head's leg ends (default y1); nofeed=true skips the xp feed leg (fed from elsewhere); w=true west link {xp,xd,yp,t,yc}: source leaves south at xp, turns west on row t (rot2 run), lane column xd (<xp) turns south (rot1) and ends at yc-1; no heads. Trunk: east along row t from xp to last head; xp==heads[0] -> rot-1 T splitter (S + E if more heads); else rot-0 corner belt. Each head x gets a splitter (rot 0, keep E,S; the last keep only S). Vertical legs go under other links' trunks with a UG pair (t-1,t+1), never on a wall column, splitter or corner. Returns {ok,items} or {ok:false,why}.
 function pfFactRoute(links,mk,spMk){
   const no=why=>({ok:false,why}),bc=PLC_BELT[mk],ug=PLC_UG[mk],sc=PLC_SPL[spMk],cw=PF_GRID.cw;
   if(def(ug).maxApart<3)return no('route UG too short');
@@ -515,6 +515,7 @@ function pfFactRoute(links,mk,spMk){
   const trunks=links.filter(l=>l.t>=0);
   for(const l of links){
     if(l.t<0){if(l.heads.length!==1||l.heads[0]!==l.xp)return no('straight link not aligned');continue}
+    if(l.w){l.lo=l.xd;l.hi=l.xp;l.xs=[l.xp,l.xd];continue}
     const last=l.heads[l.heads.length-1];
     if(l.xp>l.heads[0])return no('feed right of heads');
     l.lo=l.xp;l.hi=last;l.xs=[...l.heads];
@@ -532,7 +533,15 @@ function pfFactRoute(links,mk,spMk){
   };
   for(const l of links){
     if(l.t<0){leg(l,l.xp,l.yp,l.y1-1);continue}
-    leg(l,l.xp,l.yp,l.t-1);
+    if(l.w){   // west link: source column xp leaves south at yp, turns west at row t, lane column xd goes south to yc-1
+      leg(l,l.xp,l.yp,l.t-1);
+      put(l.xp,l.t,{cls:bc,rot:2});
+      for(let x=l.xp-1;x>l.xd;x--)put(x,l.t,{cls:bc,rot:2});
+      put(l.xd,l.t,{cls:bc,rot:1});
+      leg(l,l.xd,l.t+1,l.yc-1);
+      continue;
+    }
+    if(!l.nofeed)leg(l,l.xp,l.yp,l.t-1);
     const first=l.heads[0],last=l.heads[l.heads.length-1];
     for(let x=l.xp;x<=last;x++){
       const isH=l.heads.includes(x);
@@ -541,7 +550,7 @@ function pfFactRoute(links,mk,spMk){
       else if(isH)put(x,l.t,{cls:sc,rot:0,off:pfSplOff(sc,0,x===last?['S']:['E','S'])});
       else put(x,l.t,{cls:bc,rot:0});
     }
-    for(const x of l.heads)leg(l,x,l.t+1,l.y1-1);
+    for(const x of l.heads)leg(l,x,l.t+1,(x===l.xp&&l.yc!=null?l.yc:l.y1)-1);
   }
   if(bad)return no(bad);
   return{ok:true,items:[...cell.values()]};
