@@ -98,6 +98,13 @@ function lcSink(x0,y,x1,mk){
   items.push({cls:PLC_BOX,x:x1-pN.x,y:y+1-pN.y,rot:0,ct:[]});
   return{items,end:{x:x1,y:y+1}};
 }
+// Wide cell (w>28) at column x: every wall column of the planning grid touching it must be a free cut (plcTryCut on the cell's own items, lazily cached as g.wo).
+function lcWallOk(g,x){
+  const cw=PF_GRID.cw;
+  if(!g.wo){const occ=plcOcc(g.items);g.wo=new Set();for(let o=0;o<=g.w;o++)if(plcTryCut(g.items,occ,g.h,true,o))g.wo.add(o)}
+  for(let W=Math.ceil(x/cw)*cw;W<=x+g.w;W+=cw)if(!g.wo.has(W-x))return false;
+  return true;
+}
 // LC step 5: lcPlan(F,mk) pure geometry from lcFlow output. Rows top-down (producers above), dock row y=1, one out lane per producer cell at its out port x.
 // Link = jog/straight (single consumer in row below) or through-lane + taps (lane column reserved in lower rows). Channel above a row = interval-colored tracks, pitch 3.
 // Returns {ok,cells,lanes,taps,tracks,routes,dock,ug,sink,w,h} or {ok:false,why}. ponytail: even split of consumer heads over lanes, ignores wall rows (cut='col').
@@ -109,7 +116,7 @@ function lcPlan(F,mk){
   for(const n of nodes){n.cs=[];const q=[...n.cells];for(let i=0;i<q.length;i++){
     const K=q[i],key=n.rec+'|'+K;let g=geo.get(key);
     if(!g){g=lcCell(n.rec,K,mk,0,0,n.cls,n.k,n.flows);geo.set(key,g)}
-    if(g.ok===false){if(K<2)return no('cell '+plnNm(n.item)+' x'+K+': '+g.why);q.splice(i,1,Math.ceil(K/2),Math.floor(K/2));i--;continue}   // cell too big (>60): split in two
+    if(g.ok===false||(g.w>28&&K>1)){if(g.ok===false&&K<2)return no('cell '+plnNm(n.item)+' x'+K+': '+g.why);q.splice(i,1,Math.ceil(K/2),Math.floor(K/2));i--;continue}   // cell too big (>60): split in two
     const c={id:cells.length,item:n.item,node:n,K,w:g.w,h:g.h,ins:g.ins,out:g.out,row:n.row,ox:0,oy:0};cells.push(c);n.cs.push(c)}}
   // dock: one container per raw belt, grouped per item
   const dock=[],lanes=[];let dx=1;
@@ -134,8 +141,9 @@ function lcPlan(F,mk){
   const taps=[],tracks=[],routes=[];
   let top=1+bh;
   for(let r=nr-1;r>=0;r--){
-    const rn=nodes.filter(n=>n.row===r),res=new Set();
+    const rn=nodes.filter(n=>n.row===r),res=new Set(),act=[];
     for(const l of lanes)if(l.x!==null&&l.srcRow>r&&l.lastRow<r)res.add(l.x);
+    for(const l of lanes)if(l.x!==null&&l.srcRow>r&&l.lastRow<=r)act.push(l);
     const bary=n=>{let s=0,k=0;for(const c of n.cs)for(const it of Object.keys(c.feed||{})){const l=lanes[c.feed[it]];if(l.x!==null){s+=l.x;k++}}return k?s/k:0};
     rn.sort((a,b)=>bary(a)-bary(b));
     let cur=1;
@@ -145,7 +153,7 @@ function lcPlan(F,mk){
       for(let t=0;t<99999;t++){
         let bad=-1;for(let q=x;q<x+c.w;q++)if(res.has(q))bad=q;
         if(bad>=0){x=bad+1;continue}
-        if((c.w>28||pfFitX(x,c.w))&&c.ins.every(q=>pfFitX(x+q.x,1,true))&&pfFitX(x+c.out.x,1,true))break;
+        if((c.w>28?lcWallOk(geo.get(c.node.rec+'|'+c.K),x):pfFitX(x,c.w))&&c.ins.every(q=>pfFitX(x+q.x,1,true)&&!act.some(l=>l.x===x+q.x&&(c.feed||{})[q.item]!==l.id))&&pfFitX(x+c.out.x,1,true))break;
         x++}
       c.ox=x;cur=x+c.w+1;
       if(c.lane!==undefined)lanes[c.lane].x=x+c.out.x}
@@ -174,4 +182,76 @@ function lcPlan(F,mk){
     for(const u of tracks)if(u!==t&&u.y<t.y&&u.hx>lo&&u.hx<hi&&t.y-u.y<60)ug++}
   const w=Math.max(plcMmax(cells,c=>c.ox+c.w),plcMmax(dock,d=>d.x+bw))+1;
   return{ok:true,cells:cells.map(c=>({id:c.id,item:c.item,ox:c.ox,oy:c.oy,K:c.K,w:c.w,h:c.h,ins:c.ins,out:c.out,row:c.row})),lanes:lanes.map(l=>({id:l.id,item:l.item,x:l.x,y0:l.y0,y1:l.y1,kind:l.kind,raw:!!l.raw,srcRow:l.srcRow,lastRow:l.lastRow,n:l.cons.length})),taps,tracks,routes,dock,ug,sink,w,h:hh};
+}
+// LC step 6: lcBuild(F,plan,mk,spMk) emits all items; lcTop(P,item,mk,spMk,o) = placerLayout-shaped result (flag LC_ENGINE not consulted here).
+// Crossings are computed exactly: any vertical adapter belt landing on a horizontal adapter belt becomes a UG pair (neighbours at y-1,y+1) and the crossed cell is dropped.
+function lcBuild(F,plan,mk,spMk){
+  const no=why=>({ok:false,why}),bc=PLC_BELT[mk];
+  const items=[],A=[],byItem=new Map(F.nodes.map(n=>[n.item,n]));
+  const pN=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='N');
+  const cells=plan.cells;
+  for(const c of cells){
+    const n=byItem.get(c.item),g=lcCell(n.rec,c.K,mk,c.ox,c.oy,n.cls,n.k,n.flows);
+    if(g.ok===false)return no('cell: '+g.why);
+    for(const q of g.items)items.push(q)}
+  for(const d of plan.dock)items.push({cls:PLC_BOX,x:d.x,y:1,rot:0,ct:[{item:d.item,n:0,inf:true}]});
+  // lanes: straight / jog / through with taps
+  const oyOf=id=>cells[id].oy;
+  for(const l of plan.lanes){
+    if(!l.n)continue;
+    const R=plan.routes.filter(r=>r.lane===l.id),T=plan.taps.filter(t=>t.lane===l.id).sort((a,b)=>a.y-b.y);
+    const st=R.filter(r=>r.kind==='straight');
+    if(st.length>1)return no('lane '+l.id+' has two straight consumers');
+    const ys=st.length?oyOf(st[0].toCell):null;
+    if(l.kind==='jog'){
+      const j=plan.tracks.find(t=>t.kind==='jog'&&t.lane===l.id);
+      if(j)A.push(...lcJog(l.x,l.y0,j.hx,j.y,oyOf(j.toCell),mk).items);
+      else if(ys!==null)A.push(...lcJog(l.x,l.y0,l.x,0,ys,mk).items);
+      else return no('jog lane '+l.id+' has no route');
+      continue}
+    if(!T.length){if(ys===null)return no('lane '+l.id+' has no route');A.push(...lcJog(l.x,l.y0,l.x,0,ys,mk).items);continue}
+    A.push(...lcJog(l.x,l.y0,l.x,0,T[0].y,mk).items);
+    T.forEach((t,i)=>{const yf=i<T.length-1?T[i+1].y:(ys!==null?ys:t.y+1);
+      A.push(...lcTap(l.x,t.y,t.dir,t.hx,yf,oyOf(t.toCell),mk,spMk).items)})}
+  // final output
+  const fin=cells.filter(c=>c.row===0);let outX;
+  if(plan.sink){
+    const s=plan.sink;
+    for(const c of fin)A.push(...lcJog(c.ox+c.out.x,c.oy+c.h,c.ox+c.out.x,0,s.y,mk).items);
+    A.push(...lcSink(s.x0,s.y,s.x1,mk).items);outX=s.x1;
+  }else{
+    if(fin.length!==1)return no('no sink for '+fin.length+' final cells');
+    const c=fin[0];outX=c.ox+c.out.x;
+    A.push({cls:PLC_BOX,x:outX-pN.x,y:c.oy+c.h-pN.y,rot:0,ct:[]});
+  }
+  // exact UG crossings
+  const key=q=>q.y*100000+q.x,H=new Set(),V=new Map();
+  for(const q of A)if(q.cls===bc){if(q.rot===1)V.set(key(q),q);else H.add(key(q))}
+  const drop=new Set(),mark=new Set();let ug=0;
+  for(const [k,q] of V)if(H.has(k)){
+    drop.add(q);
+    for(const dy of[-1,1]){const nb=V.get(key({x:q.x,y:q.y+dy}));
+      if(!nb||H.has(key(nb))||mark.has(nb))return no('UG crossing at '+q.x+','+q.y+' has no room');
+      mark.add(nb)}}
+  for(const q of A){if(drop.has(q))continue;if(mark.has(q)){q.cls=PLC_UG[mk];ug++}items.push(q)}
+  let belts=0,spl=0,machines=0;
+  const crafters=new Set(F.nodes.map(n=>n.cls));
+  for(const q of items){if(PLC_BELT.includes(q.cls))belts++;else if(PLC_SPL.includes(q.cls))spl++;else if(crafters.has(q.cls))machines++}
+  return{ok:true,items,outX,stat:{belts,ug,spl,blocks:cells.length,machines,lanes:plan.lanes.length}};
+}
+function lcTop(P,item,mk,spMk,o={}){
+  try{
+    spMk=Math.max(spMk,mk);
+    const F=lcFlow(P,item,mk);if(F.ok===false)return{ok:false,why:'LC: '+F.why};
+    if(F.nodes.some(n=>/Armoury/i.test(n.cls)))return{ok:false,why:'LC: Armoury recipes are not handled'};
+    const pl=lcPlan(F,mk);if(pl.ok===false)return{ok:false,why:'LC: '+pl.why};
+    for(const l of pl.lanes)if(pl.lanes.some(m=>m.item===l.item&&m.raw!==l.raw))return{ok:false,why:'LC: '+plnNm(l.item)+' needs two producers on one head (merge)'};
+    const B=lcBuild(F,pl,mk,spMk);if(B.ok===false)return{ok:false,why:'LC: '+B.why};
+    const T=P.nodes[item],BX=o.box||PLC_BOX,items=B.items;
+    const w=plcMmax(items,q=>q.x+dim(q).w)+1,h=plcMmax(items,q=>q.y+dim(q).h);
+    const ports=[{edge:'S',off:B.outX,dir:'out',belts:1,slot:-1,mk}];
+    const cuts=[];for(let c=PF_GRID.cw;c<w-1;c+=PF_GRID.cw)cuts.push(c);   // walls on the planning grid (columns the cells/lanes were fitted to)
+    return{ok:true,items,cuts,lanes:1,per:[T.machines],makes:T.machines*T.pmach,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
+      note:['Layout compiler: '+pl.cells.length+' cells, '+pl.lanes.length+' lanes, S out'],src:{P,item,mk,spMk,o},prefab:true,stat:B.stat}
+  }catch(e){return{ok:false,why:'LC: internal error '+e.message}}
 }
