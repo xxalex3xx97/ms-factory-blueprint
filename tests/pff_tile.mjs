@@ -40,8 +40,8 @@ const runCase = c => {
     const T = S.T;
     rows.push({item: nm, M: S.M, K: S.K, w: T.w, h: T.h, straddle: !!T.straddle});
     if (T.straddle) {
-      if (S.M <= nd.mh && T.w > PFX) warns.push(nm + ': single column straddles, w ' + T.w);
-      else add('no straddle', nm + ' M' + S.M + ' w' + T.w);
+      // pfFactSizeTile only returns a straddling tile when EVERY size straddles (a single column is a full wall cell wide): it then keeps the smallest total width K*w
+      warns.push(nm + ': every size straddles, kept M' + S.M + ' K' + S.K + ' w' + T.w + ' (total ' + S.K * T.w + ')');
     }
     if (S.M * S.K < nd.N) add('no under-delivery', nm + ' ' + S.M + '*' + S.K + '<' + nd.N);
     if (pfTileFact(nd, MK, S.M) !== pfTileFact(nd, MK, S.M)) add('memo', nm);

@@ -392,14 +392,15 @@ function pfTileRow(T,K,mk){
 // pick the tile size for a tree node: largest M (a multiple of the column height mh, or nd.tileM itself) <= nd.tileM whose tile builds without straddling; K=ceil(N/M) identical copies (overbuild by <M machines, never under-deliver). Falls back to the smallest tile (one column) even if it straddles.
 function pfFactSizeTile(nd,mk){
   const cand=[];for(let M=nd.tileM;M>=1;M--)if(M===nd.tileM||M%nd.mh===0||M<=nd.mh)cand.push(M);
-  let last=null;
+  let last=null,best=null;
   for(const M of cand){
     const T=pfTileFact(nd,mk,M);
     if(T.ok===false){last=T;continue}
-    last=T;
     if(!T.straddle)return{ok:true,T,M,K:Math.ceil(nd.N/M)};
+    const K=Math.ceil(nd.N/M);   // every size straddles (a single column is a full wall cell wide): keep the smallest total width K*w, ties the larger tile
+    if(!best||K*T.w<best.K*best.T.w)best={ok:true,T,M,K,straddle:true};
   }
-  return last&&last.ok!==false?{ok:true,T:last,M:last.M,K:Math.ceil(nd.N/last.M),straddle:true}:(last||{ok:false,why:'no tile size'});
+  return best||last||{ok:false,why:'no tile size'};
 }
 // Tile-fit helpers (wall grid every PF_GRID.cw cols / PF_GRID.ch rows). x,y absolute cells.
 const pfMod=(v,c)=>((v%c)+c)%c;
