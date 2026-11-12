@@ -367,6 +367,32 @@ function pfGutter(links,y0,y1,mk){
   if(bad)return no(bad);
   return{ok:true,items:[...cell.values()],tracks:occ.length};
 }
+// STEP 5b (pfBands atom, inert: no caller). Builds one graph node at y=0, absolute x from x0, in a layer of body height B (belts run down to row B-1, the gutter starts at row B). grp: pfGrpNode with greedy column origins (each column and the last column's head box fit the wall grid), head boxes replaced by raw hubs. hub/raw: one Large container, W port belt up/over when nIn>4, S outs and E outs (reverse riser order) belted down to row B-1. Returns {ok,items,x0,x1 (exclusive),ins:[{item,head,x}],outs:[{x}]} or {ok:false,why}.
+function pfBandAtom(n,x0,B,nOut,nIn,mk){
+  const bc=PLC_BELT[mk],bw=def(PLC_BOX).w,HC='DAT_Container_2',items=[],ins=[],outs=[];
+  if(n.kind==='grp'){
+    const cw=[];for(const m of n.sizes){const C=pfCol(n.cls,n.k,n.flows,m,mk,true);if(C.ok===false)return{ok:false,why:C.why};cw.push(C.w)}
+    const org=[];let x=x0;
+    cw.forEach((w,i)=>{const need=i===cw.length-1?w+bw:w;while(!pfFitX(x,need))x++;org.push(x);x+=w});
+    const G=pfGrpNode(n.cls,n.k,n.flows,n.sizes,mk,n.sizes.reduce((a,b)=>a+b,0)*n.fo,org);
+    if(G.ok===false)return G;
+    G.items.forEach(q=>{if(q.cls===PLC_BOX&&q.ct&&q.ct.length)return;items.push(q.cls===n.cls?{...q,rec:n.rec}:q)});
+    G.ins.forEach((p,i)=>{items.push({cls:bc,x:p.x,y:0,rot:1},{cls:bc,x:p.x,y:1,rot:1});ins.push({item:p.item,head:Math.floor(i/n.k),x:p.x})});
+    G.outs.slice(0,nOut).forEach(o=>{for(let y=o.y;y<=B-1;y++)items.push({cls:bc,x:o.x,y,rot:1});outs.push({x:o.x})});
+    return{ok:true,items,x0:org[0],x1:org[org.length-1]+cw[cw.length-1]+bw,ins,outs};
+  }
+  const H=pfHubNode(),hw=H.w;
+  let a=x0;while(!pfFitX(a,hw+5))a++;
+  const hx=a+1;
+  items.push({cls:HC,x:hx,y:0,rot:0,ct:n.kind==='raw'?[{item:n.item,n:0,inf:true}]:[]});
+  H.ins.forEach(p=>ins.push({x:p.edge==='W'?hx-1:hx+p.x}));
+  if(nIn>4){const Wy=H.ins.find(p=>p.edge==='W').y;for(let y=0;y<Wy;y++)items.push({cls:bc,x:hx-1,y,rot:1});items.push({cls:bc,x:hx-1,y:Wy,rot:0})}
+  H.outs.slice(0,nOut).forEach(o=>{
+    if(o.edge==='S'){const x=hx+o.x;for(let y=o.y;y<=B-1;y++)items.push({cls:bc,x,y,rot:1});outs.push({x})}
+    else{const j=+o.name.slice(1),c=hx+hw+(3-j);for(let x=hx+hw;x<c;x++)items.push({cls:bc,x,y:o.y,rot:0});for(let y=o.y;y<=B-1;y++)items.push({cls:bc,x:c,y,rot:1});outs.push({x:c})}
+  });
+  return{ok:true,items,x0:a,x1:a+hw+5,ins,outs};
+}
 // SEAMS (step 6C): placerCut cuts a layout into floor tiles, each cut column c with c-s in [LO,FW] (LO = the 2x2 block's wall minimum, FW = its floor width). When no free column exists there, insert k blank columns (plcBlank: crossing east belts stretched, UG pair across the seam) and cut at a free column of the new layout. Greedy, same search order as placerCut, so the cut it finds is the one checked here. Only inserts when no free column exists (layouts that already cut are unchanged). Ports on N/S edges shift with the columns.
 function pfSeams(A,mk){
   const big=plcCls(PL_STD[PL_STD.length-1]),FW=floorRect({cls:big,x:0,y:0,h:0,rot:0}).w,LO=Math.max(2,dim({cls:big,rot:0}).w*FC+2-def(PLC_UG[mk]).maxApart),mx=def(PLC_UG[mk]).maxApart;
