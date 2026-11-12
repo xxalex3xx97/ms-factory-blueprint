@@ -525,11 +525,12 @@ function plcTryCut(IT,occ,h,bank,c){
       if(a&&a===b)return null;
       if(bank){   // bank: only east-flowing belt pairs cross the wall; empty cells and vertical belts are fine
         if(a&&b){
-          if(!(isB(a)&&isB(b)&&a.rot===0&&b.rot===0))return null;
+          if(!(isB(a)&&isB(b)&&a.rot===b.rot&&(a.rot===0||a.rot===2)))return null;   // same-direction east or west belt pair
           const sd=(q,dy)=>{const n=occ.get(K(q.x,q.y+dy));return !!n&&isB(n)&&n.rot===(dy<0?1:3)};
           if(sd(a,-1)||sd(a,1)||sd(b,-1)||sd(b,1))return null;
           mk.push(a,b);
         }else if(a&&isB(a)&&a.rot===0)return null;   // belt flowing into nothing across the wall (a machine/box beside the wall is fine)
+        else if(b&&isB(b)&&b.rot===2)return null;   // west belt at a wall mismatch: flows across the wall into an empty cell
         continue;
       }
       if(isB(a)&&isB(b)&&a.rot===0&&b.rot===0){mk.push(a,b);continue}
@@ -561,12 +562,13 @@ function plcBlank(IT,p,k,h,mx){
 }
 function placerCut(L,cls){
   const f=floorRect({cls,x:0,y:0,h:0,rot:0}),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,Fw=f.w,Fh=f.h,nm=BASE[cls].name;
+  const BK=L.bank||L.tall;   // tall: virtual tall canvas (pfBands) cut into the same wall grid as a bank
   const mx=def(PLC_UG[L.mk]).maxApart,per=Math.floor((Fh+1)/L.pitch);
-  if(!L.bank&&per<1)return{ok:false,why:(L.bank?"the factory is ":"one lane is ")+(L.pitch-1)+" cells tall, the "+nm+" floor is only "+Fh};
+  if(!BK&&per<1)return{ok:false,why:(L.bank?"the factory is ":"one lane is ")+(L.pitch-1)+" cells tall, the "+nm+" floor is only "+Fh};
   const IT=L.items.map(b=>({...b}));let occ,Hh=L.h;   // working copies: a row gap shifts them in place
   const mkOcc=()=>{occ=new Map();IT.forEach(b=>{const e=dim(b);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)occ.set(K(b.x+i,b.y+j),b)})};mkOcc();
   const isB=b=>!!b&&PLC_BELT.includes(b.cls);
-  const tryCut=c=>plcTryCut(IT,occ,L.h,L.bank,c);
+  const tryCut=c=>plcTryCut(IT,occ,L.h,BK,c);
   const cuts=[],ugs=[];let s=0;
   if(L.cuts){const cl=L.cuts.slice();
     for(let i=0;i<cl.length;i++){let c=cl[i],r=tryCut(c);
@@ -586,7 +588,7 @@ function placerCut(L,cls){
     cuts.push(c);ugs.push(...ok);s=c;
   }
   const rc=[];
-  if(L.bank){   // bank: also cut rows (2D tiling); a vertical belt crossing a row wall = underground pair
+  if(BK){   // bank: also cut rows (2D tiling); a vertical belt crossing a row wall = underground pair
     const spl=q=>!!q&&PLC_SPL.includes(q.cls),hz=q=>isB(q)&&(q.rot===0||q.rot===2);
     const tryRow=c=>{
       const mk=[],side=(x,yy)=>{const l=occ.get(K(x-1,yy)),r=occ.get(K(x+1,yy));return !!(l&&isB(l)&&l.rot===0)||!!(r&&isB(r)&&r.rot===2)};
@@ -641,12 +643,12 @@ function placerCut(L,cls){
   }
   const ug=new Set(ugs),pc=x=>cuts.filter(c=>c<=x).length,pr=y=>rc.filter(c=>c<=y).length;
   const ms=IT.map(b=>{const i=pc(b.x);let y;
-    if(L.bank){const q=pr(b.y);y=q*TH+b.y-(rc[q-1]||0)}
+    if(BK){const q=pr(b.y);y=q*TH+b.y-(rc[q-1]||0)}
     else{const g=Math.floor(Math.floor(b.y/L.pitch)/per);y=g*TH+b.y-g*per*L.pitch}
     return{...b,cls:ug.has(b)?PLC_UG[L.mk]:b.cls,x:i*TW+b.x-(i?cuts[i-1]:0),y}});
   const seen=new Set();let ov=0;   // cells claimed by two items: a layout bug, the caller retries or reports it
   for(const m of ms){const e=dim(m);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++){const k=K(m.x+i,m.y+j);if(seen.has(k))ov++;else seen.add(k)}}
-  const cols=cuts.length+1,rows=L.bank?rc.length+1:Math.ceil(L.lanes/per),blocks=[];
+  const cols=cuts.length+1,rows=BK?rc.length+1:Math.ceil(L.lanes/per),blocks=[];
   for(let g=0;g<rows;g++)for(let i=0;i<cols;i++)
     if(ms.some(m=>m.x>=i*TW&&m.x<(i+1)*TW&&m.y>=g*TH&&m.y<(g+1)*TH))blocks.push({cls,x:i*d.w,y:g*d.h});
   const span=ugPairs(ms.filter(isM)).filter(p=>p&&p.n>mx).length;   // a pair longer than the Mk span (ugPairs pairs same-row UGs in order): layout bug, placerTile skips it
