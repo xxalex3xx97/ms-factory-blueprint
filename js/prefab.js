@@ -546,6 +546,24 @@ function pfFactRoute(links,mk,spMk){
   if(bad)return no(bad);
   return{ok:true,items:[...cell.values()]};
 }
+// pfFact step 4c: x placement, rows top (Z.rows last) to bottom (0). F = Map item->pfFactRow result (final built with isFin), AL = pfFactAlloc Map. Returns {ok,pos:Map item->{x0,row},lanes:[{x,rp,rc}]}.
+function pfFactPlace(Z,F,AL){
+  const cw=PF_GRID.cw,nr=Z.rows.length,pos=new Map(),lanes=[],rowOf=new Map(Z.nodes.map(n=>[n.item,n.row]));
+  const up=v=>Math.ceil(v/cw)*cw;
+  for(let r=nr-1;r>=0;r--){
+    let x=0;
+    for(const it of Z.rows[r]){
+      const f=F.get(it);let need=x;
+      for(const [p,al] of AL){if(!pos.has(p))continue;al.groups.forEach((g,gi)=>{if(g.cons===it)need=Math.max(need,pos.get(p).x0+F.get(p).outs[gi].x-g.heads[0].x)})}
+      let x0=up(need);
+      for(let moved=true;moved;){moved=false;for(const L of lanes)if(L.rp>r&&L.rc<r&&L.x>=x0&&L.x<x0+f.w){x0+=cw;moved=true}}
+      pos.set(it,{x0,row:r});x=x0+f.w;
+    }
+    for(const it of Z.rows[r]){const al=AL.get(it);if(!al)continue;
+      al.groups.forEach((g,gi)=>{const rc=rowOf.get(g.cons);if(rc<r-1)lanes.push({x:pos.get(it).x0+F.get(it).outs[gi].x,rp:r,rc})})}
+  }
+  return{ok:true,pos,lanes};
+}
 // STEP 5b (pfBands atom, inert: no caller). Builds one graph node at y=0, absolute x from x0, in a layer of body height B (belts run down to row B-1, the gutter starts at row B). grp: pfGrpNode with greedy column origins (each column and the last column's head box fit the wall grid), head boxes replaced by raw hubs. hub/raw: one Large container, W port belt up/over when nIn>4, S outs and E outs (reverse riser order) belted down to row B-1. Returns {ok,items,x0,x1 (exclusive),ins:[{item,head,x}],outs:[{x}]} or {ok:false,why}.
 function pfBandAtom(n,x0,B,nOut,nIn,mk){
   const bc=PLC_BELT[mk],bw=def(PLC_BOX).w,HC='DAT_Container_2',items=[],ins=[],outs=[];
