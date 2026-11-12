@@ -871,7 +871,7 @@ $("plnMk").addEventListener("change",plcSync);$("plnSp").addEventListener("chang
 // rate in the modal: same field the planner reads (placerPlan), kept in sync both ways
 $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;placerLive()});
 // Engine switch: Old = the original placer (default), New = prefab factory builder (pfFact2 > pfBands > pfChain, falls back to the old path when it refuses). Remembered once chosen.
-const plcEngine=v=>{PLC_PREFAB=PF_FACT=v==="new";$("pvEngine").value=v;try{localStorage.setItem("fbEngine",v)}catch(_){}};
-try{if(localStorage.getItem("fbEngine")==="new")plcEngine("new")}catch(_){}
+const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl");$("pvEngine").value=v;try{localStorage.setItem("fbEngine",v)}catch(_){}};
+try{const e=localStorage.getItem("fbEngine");if(e==="new"||e==="nl")plcEngine(e)}catch(_){}
 $("pvEngine").addEventListener("change",()=>{plcEngine($("pvEngine").value);placerLive()});
 window.addEventListener("resize",()=>{if($("plnPrev").open)requestAnimationFrame(placerFitView)});
