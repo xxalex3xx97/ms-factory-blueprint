@@ -21,6 +21,7 @@ const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!o
 let cases = [
   {name: 'Magnetic Coils', rate: 30},
   {name: 'Basic Circuits', rate: 10},
+  {name: 'Basic Circuits', rate: 100},
   {name: 'Advanced Circuits', rate: 5},
   {name: 'Advanced Circuits', rate: 10},
   // KNOWN LIMIT: AC 50 sims at ~86% (Basic Circuits lane share runs short into the AC/Detector heads); user accepted ~88% on first runs, tol 15%. Nickel Plates is raw-only (old pfColumn path), not a factory case.

@@ -60,6 +60,67 @@ for (const [name, rate, slack, , oldBelts] of cases) {
   if (name !== 'Basic Motor') splits.push({tag, s: r.stat});
   if (tag === 'Advanced Circuits 50') rowsAC50 = r.stat.rows;
 }
+// Connectivity (user bug 2026-11-12: producer lane with no consumer = output belt-less container). Full placerLayout + placerTile, then walk the tile.
+// Checked only when the compiler ran; a refusal falls back to the old engine (its own layout, not under test here).
+for (const [name, rate] of [['Basic Circuits', 100], ['Basic Circuits', 150], ['Basic Circuits', 200], ['Basic Circuits', 500], ['Basic Circuits', 1000]]) {
+  const r = await pg.evaluate(([name, rate]) => {
+    LC_ENGINE = true; PLC_PREFAB = true; PF_FACT = true;
+    const it = [...plnBy(false).keys()].find(i => plnNm(i) === name);
+    const P = plan(it, rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+    const L = placerLayout(P, it, 1, 1, {box: 'DAT_Container_2', mod: false});
+    if (!L.ok) return {refused: L.why};
+    if (!/^Layout compiler/.test((L.note && L.note[0]) || '')) return {fallback: (L.note && L.note[0]) || '?'};
+    const T = placerTile(L, placerBk());
+    if (!T.ok) return {tileFail: String(T.why)};
+    const items = T.ms.map(q => ({h: 0, ...q}));
+    const occ = new Map();
+    for (const b of items) { const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) occ.set(x + ',' + y, b) }
+    const isBelt = b => PLC_BELT.includes(b.cls), isUG = b => PLC_UG.includes(b.cls), isSpl = b => PLC_SPL.includes(b.cls), isBox = b => b.cls.startsWith('DAT_Container');
+    const pairs = ugPairs(items), partner = new Map();
+    pairs.forEach(({u, t}) => { partner.set(u, t); partner.set(t, u) });
+    const exitUG = new Set(pairs.map(p => p.t)), entUG = new Set(pairs.map(p => p.u));
+    const out = {dangEnd: 0, noSrc: 0, ugUnpaired: 0, boxNoBelt: 0, ex: []};
+    const pm = new Map();
+    for (const b of items) if (!isBelt(b) && !isUG(b)) pm.set(b, portsOf(b));
+    const fed = new Set(), mark = (x, y) => fed.add(x + ',' + y);
+    for (const b of items) if (isSpl(b)) { const d = dim(b); for (let x = b.x - 1; x <= b.x + d.w; x++) for (let y = b.y - 1; y <= b.y + d.h; y++) mark(x, y) }
+    for (const b of items) {
+      if (isBelt(b)) { const [dx, dy] = DIR[b.rot]; mark(b.x + dx, b.y + dy) }
+      else if (isUG(b)) { if (entUG.has(b)) { const t = partner.get(b); mark(t.x, t.y) } else if (exitUG.has(b)) { const [dx, dy] = DIR[b.rot]; mark(b.x + dx, b.y + dy) } }
+    }
+    for (const [b, ps] of pm) for (const p of ps) if (p.en) mark(p.x + p.nx, p.y + p.ny);
+    for (const b of items) {
+      if (!isBelt(b) && !isUG(b)) continue;
+      const pos = b.cls.slice(-4) + '(' + b.x + ',' + b.y + ')';
+      if (isUG(b) && !entUG.has(b) && !exitUG.has(b)) { out.ugUnpaired++; out.ex.push('ugUnpaired ' + pos) }
+      if (!(isUG(b) && entUG.has(b))) {
+        const [dx, dy] = DIR[b.rot], tx = b.x + dx, ty = b.y + dy, Q = occ.get(tx + ',' + ty);
+        let ok = !!Q;
+        if (Q && !isBelt(Q) && !isUG(Q) && !isSpl(Q)) ok = (pm.get(Q) || []).some(p => p.en && p.x === tx && p.y === ty && p.nx === -dx && p.ny === -dy && p.dir !== 'out');
+        if (!ok) { out.dangEnd++; out.ex.push('dangEnd ' + pos) }
+      }
+      if (!(isUG(b) && exitUG.has(b)) && !fed.has(b.x + ',' + b.y)) { out.noSrc++; out.ex.push('noSrc ' + pos) }
+    }
+    const emp = items.filter(b => isBox(b) && b.y > 1 && !(b.ct && b.ct[0]));
+    const sinkY = Math.max(...emp.map(b => b.y));
+    for (const b of emp) {
+      if (b.y === sinkY) continue;
+      const s = pm.get(b).find(p => p.f === 'S');
+      const q = s && occ.get((s.x + s.nx) + ',' + (s.y + s.ny));
+      if (!q || !(isBelt(q) || isUG(q) || isSpl(q))) { out.boxNoBelt++; out.ex.push('boxNoBelt (' + b.x + ',' + b.y + ')') }
+    }
+    return {ok: true, out: {...out, ex: out.ex.slice(0, 6)}, belts: L.stat.belts, size: L.w + 'x' + L.h, spl: L.stat.spl, ug: L.stat.ug, lanes: L.stat.lanes};
+  }, [name, rate]);
+  const tag = name + ' ' + rate + ' connectivity';
+  console.log(tag, JSON.stringify(r));
+  if (r.refused || r.tileFail) { check(false, tag + ': ' + (r.refused || r.tileFail)); continue }
+  if (r.fallback) { console.log('NOTE ' + tag + ': compiler refused, old engine used (' + r.fallback.slice(0, 50) + '), not checked'); continue }
+  check(r.out.boxNoBelt === 0, tag + ': every producer container has an S belt (' + r.out.boxNoBelt + ' dead)');
+  check(r.out.dangEnd === 0, tag + ': every belt end lands on belt/UG/port (' + r.out.dangEnd + ' dangling)');
+  check(r.out.noSrc === 0, tag + ': every belt has a source (' + r.out.noSrc + ' orphan)');
+  check(r.out.ugUnpaired === 0, tag + ': UGs pair (' + r.out.ugUnpaired + ' unpaired)');
+  if (r.out.ex.length) console.log('  ' + r.out.ex.join(' | '));
+}
 console.log('belt split (count (%)) | belts | bCell | bRaw | bThru | bTap | bSink | bOther');
 for (const {tag, s} of splits) {
   const cell = k => s[k] + ' (' + (100 * s[k] / s.belts).toFixed(1) + '%)';

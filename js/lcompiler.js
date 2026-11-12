@@ -44,7 +44,10 @@ function lcFlow(P,item,mk){
   const Z=pfFactTree(P,item,mk);
   if(Z.ok===false)return{ok:false,why:Z.why};
   const nodes=Z.nodes.map(n=>({item:n.item,row:n.row,N:n.N,cls:n.cls,k:n.k,flows:n.flows,rate:n.rate,cons:n.cons,ins:n.ins,rec:n.rec,cells:lcSplitN(n.N,n.tileM)}));
-  const cap=MKS[mk][1],raw=new Map();
+  const cap=MKS[mk][1],raw=new Map(),byI=new Map(nodes.map(n=>[n.item,n]));
+  // a cell has ONE head per input item: cap its K so head demand fl*K/N fits one belt
+  for(const n of nodes){let mx=0;for(const i of n.ins)mx=Math.max(mx,i.crafted?(byI.get(i.item).cons.find(q=>q.to===n.item)||{flow:1}).flow:((n.flows.find(f=>f.item===i.item)||{flow:1}).flow));
+    const Kmax=Math.max(1,Math.min(Z.nodes.find(z=>z.item===n.item).tileM,Math.floor(cap*n.N/mx+1e-9)));n.cells=lcSplitN(n.N,Kmax)}
   for(const n of nodes)for(const i of n.ins){
     if(i.crafted)continue;
     const rate=P.edges.filter(e=>e.from===i.item&&e.to===n.item).reduce((a,e)=>a+e.flow,0);
@@ -178,6 +181,20 @@ function lcPlan(F,mk){
     for(const n of rn)for(const c of n.cs){nc++;if(c.ox<x0)x0=c.ox;if(c.ox+c.w>x1)x1=c.ox+c.w}
     cellsPerRow[r]=nc;rowW[r]=nc?x1-x0:0;rowH[r]=top-rowTop;
   }
+  // dead producer lanes (no consumer head): merge sideways into nearest same-item lane, nearest first (chain). Horizontal run on row l.y0, joins target lane at (t.x,l.y0).
+  {const cap=MKS[mk][1],end=l=>{const T=taps.filter(t=>t.lane===l.id).map(t=>t.y),R=routes.filter(r=>r.lane===l.id);
+      return T.length?Math.min(...T):l.kind==='jog'&&tracks.some(t=>t.kind==='jog'&&t.lane===l.id)?tracks.find(t=>t.kind==='jog'&&t.lane===l.id).y:Math.min(...R.map(r=>cells[r.toCell].oy))};
+    const flow=l=>{const c=cells[l.src];return c.node.rate*c.K/c.node.N};
+    const live=lanes.filter(l=>l.src!==undefined&&l.cons.length);
+    for(const l of live){l.grp=flow(l);l.sy=end(l)-1}
+    const dead=lanes.filter(l=>l.src!==undefined&&!l.cons.length&&l.x!==null);
+    while(dead.length){
+      let bi=-1,bt=null,bd=1e9;
+      dead.forEach((l,i)=>{for(const t of lanes)if(t.item===l.item&&t.src!==undefined&&(t.cons.length||t.merge!==undefined)&&t.y0<=l.y0&&l.y0<=t.sy&&Math.abs(t.x-l.x)<bd){bd=Math.abs(t.x-l.x);bi=i;bt=t}});
+      if(!bt)return no('dead lane '+plnNm(dead[0].item)+' has no reachable lane to merge into');
+      const l=dead.splice(bi,1)[0];l.merge=bt.id;l.sy=l.y0;
+      let r=bt;while(r.merge!==undefined)r=lanes[r.merge];
+      r.grp+=flow(l);if(r.grp>cap+1e-9)return no('merge group of '+plnNm(l.item)+' exceeds belt capacity ('+r.grp.toFixed(2)+' > '+cap+')')}}
   let hh=top+bh,sink=null;const fin=nodes.find(n=>n.row===0);
   if(fin.cs.length>1){const xs=fin.cs.map(c=>c.ox+c.out.x);sink={y:top+1,x0:plcMmin(xs,x=>x),x1:plcMmax(xs,x=>x)};hh=top+3+bh}
   // UG crossings: tracks vs lanes active at the track row, and vs descents of upper tracks
@@ -186,7 +203,7 @@ function lcPlan(F,mk){
     for(const l of lanes)if(l.id!==t.lane&&l.x>lo&&l.x<hi&&l.y0!==null&&l.y0<t.y&&l.y1>t.y)ug++;
     for(const u of tracks)if(u!==t&&u.y<t.y&&u.hx>lo&&u.hx<hi&&t.y-u.y<60)ug++}
   const w=Math.max(plcMmax(cells,c=>c.ox+c.w),plcMmax(dock,d=>d.x+bw))+1;
-  return{ok:true,cells:cells.map(c=>({id:c.id,item:c.item,ox:c.ox,oy:c.oy,K:c.K,w:c.w,h:c.h,ins:c.ins,out:c.out,row:c.row})),lanes:lanes.map(l=>({id:l.id,item:l.item,x:l.x,y0:l.y0,y1:l.y1,kind:l.kind,raw:!!l.raw,srcRow:l.srcRow,lastRow:l.lastRow,n:l.cons.length})),taps,tracks,routes,dock,ug,sink,w,h:hh,
+  return{ok:true,cells:cells.map(c=>({id:c.id,item:c.item,ox:c.ox,oy:c.oy,K:c.K,w:c.w,h:c.h,ins:c.ins,out:c.out,row:c.row})),lanes:lanes.map(l=>({id:l.id,item:l.item,x:l.x,y0:l.y0,y1:l.y1,kind:l.kind,merge:l.merge,src:l.src,raw:!!l.raw,srcRow:l.srcRow,lastRow:l.lastRow,n:l.cons.length})),taps,tracks,routes,dock,ug,sink,w,h:hh,
     rowStat:{rowW,rowH,cellsPerRow,tracksPerRow}};
 }
 // LC step 6: lcBuild(F,plan,mk,spMk) emits all items; lcTop(P,item,mk,spMk,o) = placerLayout-shaped result (flag LC_ENGINE not consulted here).
@@ -206,6 +223,9 @@ function lcBuild(F,plan,mk,spMk){
   // lanes: straight / jog / through with taps
   const oyOf=id=>cells[id].oy;
   for(const l of plan.lanes){
+    if(l.merge!==undefined){const m=plan.lanes[l.merge],r=m.x>l.x?0:2,d=r?-1:1;
+      for(let x=l.x;x!==m.x;x+=m.x>l.x?1:-1)A.push(...G([{cls:bc,x,y:l.y0,rot:r}],'bThru'));
+      continue}
     if(!l.n)continue;
     const lg=l.raw?'bRaw':'bThru';
     const R=plan.routes.filter(r=>r.lane===l.id),T=plan.taps.filter(t=>t.lane===l.id).sort((a,b)=>a.y-b.y);
@@ -259,6 +279,7 @@ function lcTop(P,item,mk,spMk,o={}){
     if(F.nodes.some(n=>/Armoury/i.test(n.cls)))return{ok:false,why:'LC: Armoury recipes are not handled'};
     const pl=lcPlan(F,mk);if(pl.ok===false)return{ok:false,why:'LC: '+pl.why};
     for(const l of pl.lanes)if(pl.lanes.some(m=>m.item===l.item&&m.raw!==l.raw))return{ok:false,why:'LC: '+plnNm(l.item)+' needs two producers on one head (merge)'};
+    if(pl.lanes.some(l=>l.src!==undefined&&!l.n&&l.merge===undefined))return{ok:false,why:'LC: producer lane with no consumer'};
     const B=lcBuild(F,pl,mk,spMk);if(B.ok===false)return{ok:false,why:'LC: '+B.why};
     B.stat.rows=pl.rowStat;
     const T=P.nodes[item],BX=o.box||PLC_BOX,items=B.items;
