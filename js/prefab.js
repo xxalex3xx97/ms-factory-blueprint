@@ -393,6 +393,61 @@ function pfBandAtom(n,x0,B,nOut,nIn,mk){
   });
   return{ok:true,items,x0:a,x1:a+hw+5,ins,outs};
 }
+// STEP 5c (pfBands assembler, inert: no caller). Layers top to bottom; each layer = atoms left to right (dummies = 1-wide belt columns) at body height Hl; gutters (pfGutter) between layers, each layer top row Tb[i] fits the wall grid. Returns {ok,items,w,h,ports,nLayers} or {ok:false,why}.
+function pfBandsBuild(P,item,mk){
+  const no=why=>({ok:false,why}),G=pfBandGraph(P,item,mk);
+  if(G.ok===false)return G;
+  const byId=new Map();[...G.nodes,...G.dummies].forEach(n=>byId.set(n.id,n));
+  const outs={},ins={};
+  G.edges.forEach((e,ei)=>{(outs[e.from]=outs[e.from]||[]).push(ei);(ins[e.to]=ins[e.to]||[]).push(ei)});
+  const nL=G.layers.length,isFin=n=>n.kind==='grp'&&n.item===item;
+  if(!G.layers[nL-1].every(id=>isFin(byId.get(id))))return no('final groups wrapped');
+  const Hl=G.layers.map(l=>Math.max(1,...l.map(id=>byId.get(id)).filter(n=>n.kind!=='dummy').map(n=>n.h)));
+  if(Hl.some(h=>h>PF_GRID.ch-2))return no('layer taller than a tile');
+  const bc=PLC_BELT[mk],atom=new Map(),aItems=[];let wMax=0;
+  G.layers.forEach((l,i)=>{
+    let cur=1;const its=[];
+    for(const id of l){
+      const n=byId.get(id),nIn=(ins[id]||[]).length,ne=(outs[id]||[]).length;let A;
+      if(n.kind==='dummy'){
+        let x=cur;while(!pfFitX(x,1,true))x++;cur=x+1+PF_GAP;
+        for(let y=0;y<Hl[i];y++)its.push({cls:bc,x,y,rot:1});
+        A={ins:[{x}],outs:[{x}],x1:x+1};
+      }else{
+        A=pfBandAtom(n,cur,Hl[i],isFin(n)?Math.max(1,ne):ne,nIn,mk);
+        if(A.ok===false)return A;
+        cur=A.x1+PF_GAP;its.push(...A.items);
+      }
+      atom.set(id,A);wMax=Math.max(wMax,A.x1);
+    }
+    aItems.push(its);
+  });
+  const sx=ei=>{const e=G.edges[ei];return atom.get(e.from).outs[outs[e.from].indexOf(ei)].x};
+  const tx=ei=>{
+    const e=G.edges[ei],A=atom.get(e.to);
+    if(byId.get(e.to).kind==='grp')return A.ins.find(p=>p.item===e.item&&p.head===e.head).x;
+    return A.ins[ins[e.to].indexOf(ei)].x;
+  };
+  const Tb=[];let t0=1;while(!pfFitY(t0,Hl[0]))t0++;Tb[0]=t0;
+  const gut=[];
+  for(let i=1;i<nL;i++){
+    const y0=Tb[i-1]+Hl[i-1],links=[];
+    G.edges.forEach((e,ei)=>{if(byId.get(e.from).layer===i-1&&byId.get(e.to).layer===i)links.push({id:ei,item:e.item,sx:sx(ei),tx:tx(ei)})});
+    let done=false;
+    for(let T=y0+1;T<=y0+150&&!done;T++){
+      if(!pfFitY(T,Hl[i]))continue;
+      const r=pfGutter(links,y0,T,mk);
+      if(r.ok){Tb[i]=T;gut.push(...r.items);done=true}
+      else if(r.why!=='gutter too short')return no(r.why+' (layer '+i+')');
+    }
+    if(!done)return no('gutter search failed layer '+i);
+  }
+  const items=[];
+  aItems.forEach((its,i)=>its.forEach(q=>items.push({...q,y:q.y+Tb[i]})));
+  items.push(...gut);
+  const ports=G.layers[nL-1].map(id=>({edge:'S',off:atom.get(id).outs[0].x,dir:'out',belts:1,slot:-1,mk}));
+  return{ok:true,items,w:wMax+1,h:Tb[nL-1]+Hl[nL-1],ports,nLayers:nL};
+}
 // SEAMS (step 6C): placerCut cuts a layout into floor tiles, each cut column c with c-s in [LO,FW] (LO = the 2x2 block's wall minimum, FW = its floor width). When no free column exists there, insert k blank columns (plcBlank: crossing east belts stretched, UG pair across the seam) and cut at a free column of the new layout. Greedy, same search order as placerCut, so the cut it finds is the one checked here. Only inserts when no free column exists (layouts that already cut are unchanged). Ports on N/S edges shift with the columns.
 function pfSeams(A,mk){
   const big=plcCls(PL_STD[PL_STD.length-1]),FW=floorRect({cls:big,x:0,y:0,h:0,rot:0}).w,LO=Math.max(2,dim({cls:big,rot:0}).w*FC+2-def(PLC_UG[mk]).maxApart),mx=def(PLC_UG[mk]).maxApart;
