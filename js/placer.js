@@ -446,7 +446,7 @@ function plcFourLane(P,item,mk,spMk,o={}){
   const note=ins.map((x,i)=>"Input "+(i+1)+" "+plnNm(x)+": "+(P.nodes[x]&&P.nodes[x].rec?"made by another factory: build it separately and feed this container":"source container (infinite)"));
   return{ok:true,items,lanes:N,per:Array(N).fill(1),makes:N*T.pmach,h:N*step-1,pitch:step,w:W,mod:false,box:BX,mk,four:true,note:["Four inputs: one machine per lane, "+N+" lane(s)",...note],src:{P,item,mk,spMk,o}};
 }
-function placerLayoutA(P,item,mk,spMk,o={}){if(PLC_PREFAB&&!o.nopf&&!o.mod){const q=pfCompose(P,item,mk,spMk,o);if(q.ok&&placerTile(q,placerBk()).ok)return q}const FR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.length===4&&!P.nodes[item].rec.i.some(([x])=>x===item);if(FR){try{return plcFourLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Four: layout not built for this recipe ("+e.message+")"}}}const GR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.some(([x])=>x===item);if(GR&&P.nodes[item].rec.i.length===2){try{return plcGrowthLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": feedback layout not built for this recipe ("+e.message+")"}}}if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": the feedback layout for more than one extra input is not built yet"};const GA=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GA)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GA.item)+": the feedback layout inside a chain is not built yet"};
+function placerLayoutA(P,item,mk,spMk,o={}){if(PLC_PREFAB&&!o.nopf&&!o.mod){const q=pfCompose(P,item,mk,spMk,o);if(q.ok){const bk=placerBk(),T=placerTile(q,bk);if(T.ok){q.tile=T;q.tileBk=bk.join();return q}}}const FR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.length===4&&!P.nodes[item].rec.i.some(([x])=>x===item);if(FR){try{return plcFourLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Four: layout not built for this recipe ("+e.message+")"}}}const GR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.some(([x])=>x===item);if(GR&&P.nodes[item].rec.i.length===2){try{return plcGrowthLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": feedback layout not built for this recipe ("+e.message+")"}}}if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": the feedback layout for more than one extra input is not built yet"};const GA=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GA)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GA.item)+": the feedback layout inside a chain is not built yet"};
 P=plcUnshare(P,item);
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why});
   const tr=plcTree(P,item);if(!tr.ok)return no(tr.why);
@@ -680,7 +680,7 @@ function* placerTileGen(L,ok){
   const rk=q=>[q.L.even!==false?0:1,bad(q)?1:0,q.blocks.length,sq(q),q.G,q.ord];
   const better=(r,b)=>{const x=rk(r),y=rk(b);for(let i=0;i<x.length;i++){if(x[i]!==y[i])return x[i]<y[i]}return false};   // even bands first (existing plans unchanged); uneven bands only when no even band count fits
   // one candidate cut: {r} on success, {fail} with the reason otherwise
-  const runC=c=>{const G=c.G;
+  const memo=new Map(),runC=c=>{const k=c.i+"|"+c.G;if(!memo.has(k))memo.set(k,runC0(c));return memo.get(k)},runC0=c=>{const G=c.G;
     const run1=(sep,novc)=>{PLC_NOVC=novc;let L2;try{L2=(!sep&&!novc&&pre.get(c.i+"|"+G))||lay(c.cls,G,sep)}finally{PLC_NOVC=false}
       return L2.ok?nlDockCut(L2,c.cls):{ok:false,why:L2.why}};
     // 3 inputs: variant C is preferred; when its wall rows cannot be cut, the same stage is laid out with variant A
@@ -696,7 +696,7 @@ function* placerTileGen(L,ok){
   const bigC=cands.filter(c=>c.i===bigI&&c.est<Infinity).sort((a,b)=>a.est-b.est||a.ord-b.ord);
   if(bigC.length&&!(minEst<=0.7*bigC[0].est)){
     for(let k=0;k<bigC.length;k++){yield {phase:2,n:k+1,total:bigC.length,G:bigC[k].G,cls:bigC[k].cls};
-      const x=runC(bigC[k]);if(x.r&&ev(x.r)&&!bad(x.r))return x.r}
+      const x=runC(bigC[k]);if(x.r&&ev(x.r)&&(!L.bank||!bad(x.r)))return x.r}
   }
   // full path: every candidate in estimate order, stop when proven
   const order=cands.slice().sort((a,b)=>a.est-b.est||a.ord-b.ord),fails=[];
@@ -707,7 +707,7 @@ function* placerTileGen(L,ok){
     if(x.fail)fails[c.ord]=x.fail;
     else{const r=x.r;
       if(!best||better(r,best))best=r;
-      const nx=order[k+1];if(nx&&ev(best)&&!bad(best)&&best.blocks.length<=nx.est)break}   // proven: no remaining estimate beats the best found
+      const nx=order[k+1];if(nx&&ev(best)&&(!L.bank||!bad(best))&&best.blocks.length<=nx.est)break}   // proven: no remaining estimate beats the best found
   }
   if(best)return best;
   let why="";fails.forEach(w=>{if(w!==undefined)why=w});   // last failure in search order, as before
@@ -798,6 +798,7 @@ function placerPreview(L){
   plcBig=false;$("plnPrevBig").textContent="";$("plnPlace").textContent="Place";
   const ok=placerBk();plcT=null;
   if(!ok.some(Boolean))return plcFinish(L);
+  if(L.tile&&L.tileBk===ok.join()){plcT=L.tile;return plcFinish(L)}   // tiled once already in placerLayoutA for these ticks
   const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}   // open at once, so the progress bar shows during the search
   const tok=++plcTok,g=placerTileGen(L,ok),t00=performance.now();$("plnPlace").disabled=true;
   // runs steps synchronously for up to 200 ms (small plans finish in the same call as before), then yields
