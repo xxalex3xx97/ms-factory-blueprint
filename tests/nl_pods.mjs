@@ -80,7 +80,10 @@ for (const k of Object.keys(BASE.plans || {})) {
   if (!n.parts) { check(false, k + ': ' + JSON.stringify(n)); continue }
   console.log(k, 'score', sum(n), 'base', sum(b), 'ratio', (sum(n) / sum(b)).toFixed(3));
   check(sum(n) <= 0.5 * sum(b), 'G1 ' + k + ' score <= 0.50 x base');
-  n.parts.forEach((q, i) => check(q.w * q.h <= b.parts[i].w * b.parts[i].h, 'G5 ' + k + ' ' + q.part + ' area ' + q.w * q.h + ' <= ' + b.parts[i].w * b.parts[i].h));
+  // Exosuit is one item: its Armoury parts trade area, so G5 compares the summed w*h; single-plan cases compare their one part
+  const ar = x => x.parts.reduce((a, q) => a + q.w * q.h, 0);
+  if (n.parts.length > 1) check(ar(n) <= ar(b), 'G5 ' + k + ' summed area ' + ar(n) + ' <= ' + ar(b));
+  else n.parts.forEach((q, i) => check(q.w * q.h <= b.parts[i].w * b.parts[i].h, 'G5 ' + k + ' ' + q.part + ' area ' + q.w * q.h + ' <= ' + b.parts[i].w * b.parts[i].h));
 }
 if (BASE.plans) {
   const ap = M.plans['Advanced Plate 30'];

@@ -141,7 +141,7 @@ function nlPlanOld(F,mk){
 }
 // NL6 candidates: u-axis plans at W = nlWBase*{1,1.15,1.3,1.5} plus the NL5c plan, sorted by score (lowest first). chosen = W factor or 'old'.
 // NL8 pods: the x axis is cut into P pods of ~NL_PODW tiles, each sized to the real occupancy of its rows (cells + through lanes), then widened until no cell ends outside its pod; bounds tap length.
-let NL_PODW=1200;let NL_PODMIN=1200;
+let NL_PODW=1200;let NL_PODMIN=600;
 function nlPlanPods(F,mk,cu,wb){
   const bw=def(PLC_BOX).w,P=Math.max(2,Math.round(wb/NL_PODW)),pod=u=>Math.min(P-1,Math.max(0,Math.floor(u*P)));
   const mkP=PW=>{const PO=[];let o=0;for(const w of PW){PO.push(o);o+=w}return{P,PO,PW,W:Math.round(o)}};
