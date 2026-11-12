@@ -368,7 +368,7 @@ function pfTileFact(nd,mk,M){
     const A=pfBandAtom(n,0,G.h,1,0,mk);
     if(A.ok===false){R=A;continue}
     R={ok:true,item:nd.item,M,sizes,items:A.items,w:Math.ceil((A.x1+1)/PF_GRID.cw)*PF_GRID.cw,h:G.h,
-      ins:A.ins.map(p=>({item:p.item,head:p.head,x:p.x,y:0})),out:{x:A.outs[0].x,y:G.h},tileOut:M*nd.fo};
+      ins:A.ins.map(p=>({item:p.item,head:p.head,x:p.x,y:0})),out:{x:A.outs[0].x,y:G.h},tileOut:M*nd.fo,straddle:A.straddle};
     break;
   }
   PF_TILE_MEMO.set(key,R);return R;
@@ -388,6 +388,18 @@ function pfTileRow(T,K,mk){
     outs.push({x:xb,y:T.h+1,tiles:e-s+1});
   }
   return{ok:true,items,w:K*T.w,h:T.h+1,K,g,ins,outs};
+}
+// pick the tile size for a tree node: largest M (a multiple of the column height mh, or nd.tileM itself) <= nd.tileM whose tile builds without straddling; K=ceil(N/M) identical copies (overbuild by <M machines, never under-deliver). Falls back to the smallest tile (one column) even if it straddles.
+function pfFactSizeTile(nd,mk){
+  const cand=[];for(let M=nd.tileM;M>=1;M--)if(M===nd.tileM||M%nd.mh===0||M<=nd.mh)cand.push(M);
+  let last=null;
+  for(const M of cand){
+    const T=pfTileFact(nd,mk,M);
+    if(T.ok===false){last=T;continue}
+    last=T;
+    if(!T.straddle)return{ok:true,T,M,K:Math.ceil(nd.N/M)};
+  }
+  return last&&last.ok!==false?{ok:true,T:last,M:last.M,K:Math.ceil(nd.N/last.M),straddle:true}:(last||{ok:false,why:'no tile size'});
 }
 // Tile-fit helpers (wall grid every PF_GRID.cw cols / PF_GRID.ch rows). x,y absolute cells.
 const pfMod=(v,c)=>((v%c)+c)%c;
@@ -463,7 +475,7 @@ function pfBandAtom(n,x0,B,nOut,nIn,mk){
       if(dx<0)return{ok:false,why:'wide column ('+span+') has no wall cut at any shift'};
       items.forEach(q=>q.x+=dx);ins.forEach(p=>p.x+=dx);outs.forEach(p=>p.x+=dx);x1+=dx;
     }
-    return{ok:true,items,x0:(fit?org[0]:dx),x1,ins,outs};
+    return{ok:true,items,x0:(fit?org[0]:dx),x1,ins,outs,straddle:!fit};
   }
   const H=pfHubNode(),hw=H.w;
   const a=pfNextX(x0,hw+5);if(a<0)return{ok:false,why:'hub does not fit a wall cell'};
@@ -475,7 +487,7 @@ function pfBandAtom(n,x0,B,nOut,nIn,mk){
     if(o.edge==='S'){const x=hx+o.x;for(let y=o.y;y<=B-1;y++)items.push({cls:bc,x,y,rot:1});outs.push({x})}
     else{const j=+o.name.slice(1),c=hx+hw+(3-j);for(let x=hx+hw;x<c;x++)items.push({cls:bc,x,y:o.y,rot:0});for(let y=o.y;y<=B-1;y++)items.push({cls:bc,x:c,y,rot:1});outs.push({x:c})}
   });
-  return{ok:true,items,x0:a,x1:a+hw+5,ins,outs};
+  return{ok:true,items,x0:a,x1:a+hw+5,ins,outs,straddle:false};
 }
 // STEP 5c (pfBands assembler, inert: no caller). Layers top to bottom; each layer = atoms left to right (dummies = 1-wide belt columns) at body height Hl; gutters (pfGutter) between layers, each layer top row Tb[i] fits the wall grid. Returns {ok,items,w,h,ports,nLayers} or {ok:false,why}.
 function pfBandsBuild(P,item,mk){
