@@ -1,4 +1,4 @@
-// NL4 nlTop gates. Run: node tests/nl_top.mjs   (env CASE='Basic Circuits 1000' = one case, NOSIM=1 skips sims, WIN=<s> sim window)  Exit 1 on FAIL or page error.
+// NL4 nlTop gates. Run: node tests/nl_top.mjs   (env BOX=<container class> (Buffer container), CASE='Basic Circuits 1000' = one case, NOSIM=1 skips sims, WIN=<s> sim window)  Exit 1 on FAIL or page error.
 // Per case: nlTop ok + note 'No Limits'; placerTile ok; pfCheck ov 0; tile ov 0 / span 0; machines == planner N per class; sink containers == out ports == plan sink groups, all out ports on S;
 // connectivity on the tiled result (dangEnd, noSrc, ugUnpaired, boxNoBelt all 0); per-lane carry replay (load <= cap, covers heads, ends 0); no page errors.
 // BC10000: tile + connectivity are only reported (NOTE) when they exceed 60 s; its nlTop stages, time and heap are always printed. Sim (BC1000, AC10): 600 s, sink stock rate from t=120 s within 15% of target (printed). Heavy cases (BC10000) run last, each stage raced against a 120 s limit and its time/heap printed.
@@ -14,6 +14,7 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof nlTop === 'function' && typeof placerTile === 'function' && typeof simAdvance === 'function');
+await pg.evaluate(b => { window.__BOX = b }, process.env.BOX || null);   // env BOX=DAT_Container or DAT_Container_2: Buffer container passed to nlTop
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 const LIM = 120000, TLIM = 60000;
@@ -33,7 +34,7 @@ for (const [name, rate] of cases) {
     const P = plan(it, rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
     const h0 = performance.memory ? performance.memory.usedJSHeapSize : 0, t0 = performance.now();
     let L;
-    try { L = nlTop(P, it, 1, 0, {}) } catch (e) { return {thrown: e.message} }
+    try { L = nlTop(P, it, 1, 0, window.__BOX ? {box: window.__BOX} : {}) } catch (e) { return {thrown: e.message} }
     const ms = Math.round(performance.now() - t0), heap = performance.memory ? Math.round((performance.memory.usedJSHeapSize - h0) / 1e6) : -1;
     if (!L.ok) return {refused: L.why};
     const t1 = performance.now(), chk = pfCheck({items: L.items, w: L.w, h: L.h, ports: L.ports});
@@ -44,7 +45,7 @@ for (const [name, rate] of cases) {
     for (const q of L.items) cnt[q.cls] = (cnt[q.cls] || 0) + 1;
     const mdiff = Object.keys(clsN).reduce((a, c) => a + Math.abs((cnt[c] || 0) - clsN[c]), 0);
     const outs = L.ports.filter(p => p.dir === 'out');
-    const sinks = gr || ar ? outs : L.items.filter(q => q.cls === PLC_BOX && q.ct && !q.ct.length && q.y + dim(q).h === L.h);
+    const sinks = gr || ar ? outs : L.items.filter(q => q.cls === L.box && q.ct && !q.ct.length && q.y + dim(q).h === L.h);
     // lane carry replay
     const pl = L.nlPlan || {lanes: [], cells: [], spills: []}, cap = gr || ar ? 0 : F.cap, E = 1e-6, bad = [];
     for (const itm of new Set(pl.lanes.map(l => l.key))) {
@@ -78,7 +79,7 @@ for (const [name, rate] of cases) {
   const b = await race(pg.evaluate(([name, rate]) => {
     const it = [...plnBy(false).keys()].find(i => plnNm(i) === name);
     const P = plan(it, rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
-    const L = nlTop(P, it, 1, 0, {});
+    const L = nlTop(P, it, 1, 0, window.__BOX ? {box: window.__BOX} : {});
     const t0 = performance.now(), T = placerTile(L, placerBk()), tileMs = Math.round(performance.now() - t0);
     if (!T.ok) return {tileFail: String(T.why).slice(0, 200), tileMs};
     const items = T.ms.map(q => ({h: 0, ...q}));
@@ -150,10 +151,10 @@ async function runSims() {
     const r = await race(pg.evaluate(([name, rate, WIN]) => {
       const it = [...plnBy(false).keys()].find(i => plnNm(i) === name);
       const P = plan(it, rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
-      const L = nlTop(P, it, 1, 0, {});
+      const L = nlTop(P, it, 1, 0, window.__BOX ? {box: window.__BOX} : {});
       if (!L.ok) return {refused: L.why};
       const below = q => L.items.some(b => PLC_BELT.includes(b.cls) && b.y === q.y + dim(q).h && b.x >= q.x && b.x < q.x + dim(q).w);
-      const sinks = L.items.map((q, i) => ({q, id: i + 1})).filter(({q}) => q.cls === PLC_BOX && q.ct && !q.ct.length && (L.growth ? !below(q) : q.y + dim(q).h === L.h));
+      const sinks = L.items.map((q, i) => ({q, id: i + 1})).filter(({q}) => q.cls === L.box && q.ct && !q.ct.length && (L.growth ? !below(q) : q.y + dim(q).h === L.h));
       const itemStock = (id, item) => { const cn = SIM.C.get(id); const x = cn && cn.st.get(item); return x ? x.n : 0 };
       S.blocks = L.items.map((b, i) => ({id: i + 1, cls: b.cls, x: b.x, y: b.y, h: 0, rot: b.rot, pid: 0, off: b.off, ct: b.ct ? b.ct.map(q => ({...q})) : undefined, rec: b.rec}));
       try { smSet(true) } catch (e) {}

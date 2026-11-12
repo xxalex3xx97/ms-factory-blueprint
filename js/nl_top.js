@@ -1,6 +1,7 @@
 // NL4 nlTop(P,item,mk,spMk,o): placerLayout-shaped result like lcTop, flag NL_ENGINE decides at the prefab.js dispatch. No capacity refusal, no fallback.
 // Explicit errors only for: Armoury cells (NL9), growth recipes / one machine above belt cap (pfFactTree), internal failures.
 function nlTop(P,item,mk,spMk,o={}){
+  const prevBox=PLC_BOX;if(o.box)PLC_BOX=o.box;   // honour the Buffer container choice for every container NL emits (cells, docks, sinks, Armoury outputs)
   try{
     spMk=Math.max(spMk,mk);
     const GT=P.nodes[item];
@@ -17,7 +18,7 @@ function nlTop(P,item,mk,spMk,o={}){
     const cuts=[];for(let c=PF_GRID.cw;c<w-1;c+=PF_GRID.cw)cuts.push(c);
     return{ok:true,items,cuts,lanes:1,per:[T.machines],makes:T.machines*T.pmach,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
       note:['No Limits: '+pl.cells.length+' cells, '+pl.lanes.length+' lanes, '+pl.spills.length+' spills, '+ports.length+' out'],src:{P,item,mk,spMk,o},prefab:true,stat:B.stat,nlPlan:pl,chosen:pl.chosen,times:{flow:Math.round(t1-t0),plan:Math.round(t2-t1),build:Math.round(t3-t2)}}
-  }catch(e){return{ok:false,why:'NL: internal error '+e.message}}
+  }catch(e){return{ok:false,why:'NL: internal error '+e.message}}finally{PLC_BOX=prevBox}
 }
 
 // NL growth final: plcGrowthLane = one verified growth lane per machine stacked (seed + Biomass containers inside, net out into a sink container per lane). Any rate: lanes = machines.

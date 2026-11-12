@@ -1,6 +1,7 @@
 const plcMmax=(a,f=x=>x)=>{let m=-Infinity;for(const x of a){const v=f(x);if(v>m)m=v}return m},plcMmin=(a,f=x=>x)=>{let m=Infinity;for(const x of a){const v=f(x);if(v<m)m=v}return m};   // spread-free min/max: Math.max(...big) overflows the call stack on huge layouts
 // Build factory (Step 1): single-recipe, single-raw-input plan -> ghost. Layout is pure.
-const PLC_BELT=["DAT_ConveyorBelt","DAT_ConveyorBelt2","DAT_ConveyorBelt3"],PLC_SPL=["DAT_Splitter","DAT_Splitter_2","DAT_Splitter_3"],PLC_BOX="DAT_Container";
+const PLC_BELT=["DAT_ConveyorBelt","DAT_ConveyorBelt2","DAT_ConveyorBelt3"],PLC_SPL=["DAT_Splitter","DAT_Splitter_2","DAT_Splitter_3"];
+let PLC_BOX="DAT_Container";   // NL swaps it for the duration of nlTop (Buffer container choice), everything else reads it as a constant
 const PL_STD=["BPO_Station_01","BPO_Station_2x1","BPO_Station_02"];   // smallest first; floors 14x14, 30x14, 30x30
 const PLC_UG=["DAT_UndergroundBelt","DAT_UndergroundBelt_2","DAT_UndergroundBelt_3"];const plcCls=nm=>Object.keys(BASE).find(k=>BASE[k].kind==="b"&&BASE[k].name===nm);
 const PLC_SRC=480;
