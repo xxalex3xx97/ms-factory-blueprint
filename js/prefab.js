@@ -185,6 +185,7 @@ function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt,dn,org){
 }
 // STEP 2 (pfBands node builders, inert until step 5). PF_BANDS gates the assembler (default on, step 8; a pfBands refusal falls back to pfChain).
 let PF_BANDS=true;
+let PF_FACT=false;   // pfFact (inert until pfFactTop + dispatch PF_FACT>PF_BANDS>pfChain, step 5)
 // GROUP node: a pfColumns group (outDown) as a graph node. ins = one top terminal per input head of every column (item, edge 'N', x, y 0). out = the out box S port (edge 'S').
 function pfGrpNode(cls,k,flows,sizes,mk,outFlow,org){
   const A=pfColumns(cls,k,flows,sizes,mk,outFlow,false,true,org);
@@ -207,7 +208,7 @@ function pfHubNode(){
 }
 // STEP 3 (pfBands graph, inert): stage graph for the band assembler. Nodes = raw hubs (layer 0, ceil(heads/8) per raw item), one group node per out group, one hub node per stage that needHub (not the final item). Edges = producer -> consumer group column head. Layers = longest path from raws; layers wider than PF_WRAP are cut into sub-layers; edges spanning >1 layer become chains of 1-wide dummies, so every edge joins layer i to i+1. Walk/sizing copied from pfChain (pfChain unchanged).
 const PF_WRAP=120;
-function pfBandGraph(P,item,mk,o={}){
+function pfBandSize(P,item,mk){
   const no=why=>({ok:false,why}),cap=MKS[mk][1];
   const st=new Map(),order=[];let err=null;
   const walk=(x,stack)=>{
@@ -243,13 +244,19 @@ function pfBandGraph(P,item,mk,o={}){
         if(sizes.some(s=>s>mxC))R=no2('column of '+Math.max(...sizes)+' machines above belt cap (max '+mxC+')');
         else{
           const groups=[];for(const s of [...sizes].sort((a,b)=>b-a)){const g=groups.find(g=>(g.reduce((a,b)=>a+b,0)+s)*fo<=cap+1e-9);if(g)g.push(s);else groups.push([s])}
-          R={cls,k,N,flows,sizes,groups,fo,outF};
+          R={cls,k,N,flows,sizes,groups,fo,outF,mh};
         }
       }
     }
     sz.set(y,R);return R;
   };
   for(const y of order)if(sizing(y).why)return no(sizing(y).why);
+  return{ok:true,st,order,sizing,cap,Fh,SH};
+}
+function pfBandGraph(P,item,mk,o={}){
+  const no=why=>({ok:false,why});let err=null;
+  const Z=pfBandSize(P,item,mk);if(Z.ok===false)return Z;
+  const {st,order,sizing}=Z;
   // needHub: same rule as pfChain (gN>1 || heads>2, never the final item); heads = one per column of each consumer stage
   const needHub=new Map();
   for(const i of order){
