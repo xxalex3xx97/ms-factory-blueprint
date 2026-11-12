@@ -27,7 +27,9 @@ function nlDockApply(L,T,cls){
     slot=(q,c)=>[0,1].find(k=>{const M=c*TW+16*k+DOFF+2,bw=dim(q).w;return q.x<=M&&q.x+bw-1>=M+1}),
     below=(c,g)=>blocks.some(b=>b.x>=c*d.w&&b.x<c*d.w+d.w&&b.y===(g+1)*d.h),
     lxOk=lx=>(lx>=4&&lx<=7)||(lx>=22&&lx<=25),
-    asm=nlIndAsm();
+    asm=nlIndAsm(),
+    ad=cls===plcCls('BPO_Station_03')?1:0,A=16*ad,adc=plcCls('BPO_StationAdapter_01'),ads=new Set(),   // 2x2 C: a station adapter between tile and dock moves the dock stack out one cell
+    adp=(c,y,rot)=>{const k=c+'|'+y;if(!ads.has(k)){ads.add(k);blocks.push({cls:adc,x:c*d.w,y,rot})}};
   // (1) Normal input: one dock per raw container
   const used=new Set();
   for(const q of ms.filter(q=>q.dk==='in')){
@@ -36,20 +38,20 @@ function nlDockApply(L,T,cls){
     if(used.has(c+'|'+k))return no('two input docks in one slot');
     used.add(c+'|'+k);
     const M=c*TW+16*k+DOFF+2;
-    belt(M,0,1);belt(M+1,0,1);belt(M,-1,1);belt(M+1,-1,1);
-    blocks.push({cls:plcCls('BPO_Dock'),x:c*d.w+k,y:-1,rot:3})}
+    for(const x of[M,M+1])for(let y=-1-A;y<=0;y++)belt(x,y,1);
+    blocks.push({cls:plcCls('BPO_Dock'),x:c*d.w+k,y:-1-ad,rot:3});if(ad)adp(c,-1,3)}
   // (2) Industrial input: one Industrial Dock + assembly per column
   const ie=new Map();
   for(const q of ms.filter(q=>q.dk==='ie')){
     const c=cx(q.x);if(!lxOk(q.x-c*TW))return no('dock slot misaligned');
     if(!ie.has(c))ie.set(c,[]);ie.get(c).push(q)}
   for(const [c,E] of ie){
-    const ox=c*TW,oy=-16,di=E[0].di;
-    blocks.push({cls:plcCls('BPO_Dock_2'),x:c*d.w,y:-3,rot:3});
+    const ox=c*TW,oy=-16-A,di=E[0].di;
+    blocks.push({cls:plcCls('BPO_Dock_2'),x:c*d.w,y:-3-ad,rot:3});if(ad)adp(c,-1,3);
     for(const b of asm.boxes){const inf=(b.x===22&&b.y===9)||(b.x===4&&b.y===9);
       ms.push({cls:NLD.BOX_I,x:ox+b.x,y:oy+b.y,h:0,rot:0,pid:0,ct:inf?[{item:di,n:0,inf:true}]:[],dk:'in'})}
     for(const k of asm.belts)belt(ox+k.x,oy+k.y,k.rot);
-    for(const q of E)for(let y=-3;y<=-1;y++)belt(q.x,y,1)}
+    for(const q of E)for(let y=oy+13;y<=-1;y++)belt(q.x,y,1)}
   // (3) Normal output: container moved to the block floor bottom, belts to the dock ports
   for(const q of ms.filter(q=>q.dk==='out')){
     const c=cx(q.x),g=Math.floor(q.y/TH),Fb=g*TH+fl.h-1,k=slot(q,c),bh=dim(q).h,dy=Fb-bh-q.y;
@@ -58,8 +60,8 @@ function nlDockApply(L,T,cls){
     const pN=portsOf({cls:q.cls,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='N'),xN=q.x+pN.x,M=c*TW+16*k+DOFF+2;
     for(let y=q.y;y<q.y+dy;y++)belt(xN,y,1);
     q.y+=dy;
-    for(const x of[M,M+1])for(const y of[Fb,Fb+1])belt(x,y,1);
-    blocks.push({cls:plcCls('BPO_Dock'),x:c*d.w+k,y:(g+1)*d.h,rot:1})}
+    for(const x of[M,M+1])for(let y=Fb;y<=Fb+1+A;y++)belt(x,y,1);
+    blocks.push({cls:plcCls('BPO_Dock'),x:c*d.w+k,y:(g+1)*d.h+ad,rot:1});if(ad)adp(c,(g+1)*d.h,1)}
   // (4) Industrial output: assembly mirrored 180 under the block, tails extended to its first row
   const oe=new Map();
   for(const q of ms.filter(q=>q.dk==='oe')){
@@ -67,8 +69,8 @@ function nlDockApply(L,T,cls){
     if(below(c,g))return no('a block lies below the output dock');
     const key=c+'|'+g;if(!oe.has(key))oe.set(key,{c,g,E:[]});oe.get(key).E.push(q)}
   for(const {c,g,E} of oe.values()){
-    const ox=c*TW,oy=(g+1)*TH;
-    blocks.push({cls:plcCls('BPO_Dock_2'),x:c*d.w,y:(g+1)*d.h,rot:1});
+    const ox=c*TW,oy=(g+1)*TH+A;
+    blocks.push({cls:plcCls('BPO_Dock_2'),x:c*d.w,y:(g+1)*d.h+ad,rot:1});if(ad)adp(c,(g+1)*d.h,1);
     for(const b of asm.boxes)ms.push({cls:NLD.BOX_I,x:ox+26-b.x,y:oy+10-b.y,h:0,rot:0,pid:0,ct:[],dk:'out'});
     for(const k of asm.belts)belt(ox+29-k.x,oy+13-k.y,k.rot);
     for(const q of E)for(let y=q.y+1;y<=oy;y++)belt(q.x,y,1)}
