@@ -108,13 +108,26 @@ def size(n):
     return [max(1, math.ceil(max(cb[i], hu[i] / 16) - 0.05)) for i in (0, 1)]
 
 
+# palette (user 2026-11-12, in-game build menu): only these blocks are offered; every other block gets hidden:true (kept in the catalog so imports/saves still load)
+VISIBLE = set('BPO_' + n for n in '''Station_01 Station_2x1 Station_02A Station_02 StationAdapter_01 Station_03 StationCorner_01 StationCorridor_01 StationCorridor_02
+ElevatorBlock_03 ElevatorBlock_02A StationTurretBlock_01 StationArmour_01 Dock Dock_2 CommandModule ScannerModule MiningDroneBayBlock MiningDroneBayBlock_2
+SolarPanelBlock SolarPanelBlock_02 SolarPanelBlock_03 DeepSpaceObservatory BlueprintUnit ShipyardCore ShipyardCore_02 ShipyardSide'''.split())
+# in-game labels where the catalog text differs
+MK = {'BPO_ShipyardCore_02': 'Shipyard Core Mk. 2', 'BPO_MiningDroneBayBlock': 'Mining Drone Bay Mk. 1', 'BPO_MiningDroneBayBlock_2': 'Mining Drone Bay Mk. 2',
+      'BPO_SolarPanelBlock': 'Solar Panels Mk. 1', 'BPO_SolarPanelBlock_02': 'Solar Panels Mk. 2', 'BPO_SolarPanelBlock_03': 'Solar Panels Mk. 3'}
+
+
+# XLargeConnector sides (block frame) from floors.json ea.connectors; all other sides are LargeConnector. Only equal classes connect.
+XL = {'BPO_Station_03': ['E', 'S', 'W', 'N'], 'BPO_StationCorridor_02': ['E', 'W'], 'BPO_ElevatorBlock_02A': ['E', 'S', 'W', 'N'], 'BPO_StationAdapter_01': ['W']}
+
+
 def build():
     out, labels = {}, {}
     for n, cat in ADD.items():
         f = fl[n]
         w, h = size(n)
         lab, derived = label(n)
-        lab = LABELS.get(n, lab).replace('Mk. ', 'Mk.')   # site style 'Mk.1'
+        lab = LABELS.get(n, lab)
         if n not in LABELS:
             labels.setdefault(lab, []).append(n)
         e = {'add': True, 'label': lab, 'class': '/Game/Blueprints/BuildingBlocks/%s.%s_C' % (n, n), 'category': cat, 'w': w, 'h': h, 'verified': False}
@@ -137,6 +150,10 @@ def build():
                 e['ground'] = n in GROUND
                 if n in HATCH:
                     e['hatch'] = 'interior'
+        if n == 'BPO_DeepSpaceObservatory':   # prop block like Solar Panels / Plasma Turret (user 2026-11-12): no buildable floor, nothing placed inside
+            e['verified'] = True
+            e['confidence'] = 'user 2026-11-12: prop block, no floor, nothing placed inside'
+            notes[:] = [x for x in notes if not x.startswith('default machines')]
         e['source'] = 'decoded from EA files (BPO %s: colliders, BlockBounds, ItemCost); not tested in game' % n[4:]
         d = desc(n)
         if d:
@@ -177,6 +194,16 @@ def main():
         old = B.get(n, {})
         keep = {k: old[k] for k in ('entrance', 'wallIdx', 'ring', 'drop', 'chain', 'polys') if k in old and k not in e}
         B[n] = {**e, **keep} if n in B and old.get('add') else e
+    for n, e in B.items():   # palette visibility + in-game labels (all blocks, existing and added)
+        if n in VISIBLE:
+            e.pop('hidden', None)
+        else:
+            e['hidden'] = True
+        if n in XL:
+            e['xl'] = XL[n]
+        if n in MK:
+            e['label'] = MK[n]
+    src.setdefault('buildables', {})['DAT_DeepSpaceObservatory'] = {'note': 'Deep Space Observatory is a prop block (no machine placed inside); hidden stub kept only so old data resolves', 'evidence': 'user 2026-11-12: prop block like Solar Panels'}
     # levels for every existing catalog block (decoded BlockBounds z / 4); changes only existing entries that lack it
     for n, e in B.items():
         if e.get('add') or e.get('mirrorOf') or n not in fl:

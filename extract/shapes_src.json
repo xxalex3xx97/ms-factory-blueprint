@@ -158,7 +158,8 @@
       ],
       "floor": null,
       "note": null,
-      "levels": 2
+      "levels": 2,
+      "label": "Solar Panels Mk. 1"
     },
     "BPO_SolarPanelBlock_02": {
       "w": 1,
@@ -172,7 +173,8 @@
       ],
       "floor": null,
       "note": null,
-      "levels": 4
+      "levels": 4,
+      "label": "Solar Panels Mk. 2"
     },
     "BPO_StationTurretBlock_01": {
       "w": 1,
@@ -211,11 +213,12 @@
         2
       ],
       "hatch": "interior",
-      "levels": 2
+      "levels": 2,
+      "label": "Mining Drone Bay Mk. 1"
     },
     "BPO_MiningDroneBayBlock_2": {
       "add": true,
-      "label": "Mining Drone Bay Mk.2",
+      "label": "Mining Drone Bay Mk. 2",
       "class": "/Game/Blueprints/BuildingBlocks/BPO_MiningDroneBayBlock_2.BPO_MiningDroneBayBlock_2_C",
       "category": "Functional Blocks",
       "w": 1,
@@ -302,7 +305,8 @@
         -8
       ],
       "floor": null,
-      "note": "mirror of BPO_StationArmour_01; no catalog entry (palette shows 01 only)"
+      "note": "mirror of BPO_StationArmour_01; no catalog entry (palette shows 01 only)",
+      "hidden": true
     },
     "BPO_CommandModule": {
       "w": 1,
@@ -578,7 +582,8 @@
       },
       "hatch": "interior",
       "clip": true,
-      "levels": 2
+      "levels": 2,
+      "label": "Shipyard Core Mk. 2"
     },
     "BPO_BlueprintUnit": {
       "add": true,
@@ -895,7 +900,13 @@
           20
         ]
       ],
-      "note": "label = the user's name '2x2 C' (in-game text key not extractable); label derived from the asset id (in-game text key not extractable)"
+      "note": "label = the user's name '2x2 C' (in-game text key not extractable); label derived from the asset id (in-game text key not extractable)",
+      "xl": [
+        "E",
+        "S",
+        "W",
+        "N"
+      ]
     },
     "BPO_StationAdapter_01": {
       "add": true,
@@ -941,6 +952,9 @@
           "ITEM_ReinforcedPlates",
           5
         ]
+      ],
+      "xl": [
+        "W"
       ]
     },
     "BPO_StationCorridor_02": {
@@ -996,6 +1010,10 @@
           "ITEM_ReinforcedGlass",
           50
         ]
+      ],
+      "xl": [
+        "E",
+        "W"
       ]
     },
     "BPO_Plaza_01": {
@@ -1027,7 +1045,8 @@
           20
         ]
       ],
-      "note": "BlockBounds 2.0x2.0 cells, hull [48.0, 48.0]: footprint rounded up to 3x3 (in-game snapping unverified); default machines: TradeConsole_01"
+      "note": "BlockBounds 2.0x2.0 cells, hull [48.0, 48.0]: footprint rounded up to 3x3 (in-game snapping unverified); default machines: TradeConsole_01",
+      "hidden": true
     },
     "BPO_StationCurve_01": {
       "add": true,
@@ -1061,7 +1080,8 @@
           30
         ]
       ],
-      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)"
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)",
+      "hidden": true
     },
     "BPO_StationFoundation_01": {
       "add": true,
@@ -1089,7 +1109,8 @@
       "confidence": "decoded from EA assets, untested in game",
       "icon": "BPO_StationFoundation_01",
       "cost": [],
-      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)"
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)",
+      "hidden": true
     },
     "BPO_StationHUB_01": {
       "add": true,
@@ -1122,7 +1143,8 @@
           5
         ]
       ],
-      "note": "BlockBounds 1.0x1.0 cells, hull [96.0, 96.0]: footprint rounded up to 6x6 (in-game snapping unverified); default machines: StationCommander"
+      "note": "BlockBounds 1.0x1.0 cells, hull [96.0, 96.0]: footprint rounded up to 6x6 (in-game snapping unverified); default machines: StationCommander",
+      "hidden": true
     },
     "BPO_Penthouse_01": {
       "add": true,
@@ -1160,7 +1182,8 @@
           5
         ]
       ],
-      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown); default machines: Elevator_03, Elevator_03, Elevator_03, Elevator_03 ..."
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown); default machines: Elevator_03, Elevator_03, Elevator_03, Elevator_03 ...",
+      "hidden": true
     },
     "BPO_NPC_Apartment_01": {
       "add": true,
@@ -1194,7 +1217,8 @@
           10
         ]
       ],
-      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)"
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)",
+      "hidden": true
     },
     "BPO_NPC_Cafeteria_01": {
       "add": true,
@@ -1228,7 +1252,8 @@
           10
         ]
       ],
-      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)"
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)",
+      "hidden": true
     },
     "BPO_BriefingRoom": {
       "add": true,
@@ -1262,7 +1287,8 @@
           20
         ]
       ],
-      "note": "BlockBounds 1.0x1.0 cells, hull [23.913, 24.238]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: TutorialBriefingOfficer, BriefingRoomTutorialDoor"
+      "note": "BlockBounds 1.0x1.0 cells, hull [23.913, 24.238]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: TutorialBriefingOfficer, BriefingRoomTutorialDoor",
+      "hidden": true
     },
     "BPO_VendorCorridor_01": {
       "add": true,
@@ -1294,7 +1320,8 @@
           5
         ]
       ],
-      "note": "BlockBounds 1.0x1.0 cells, hull [32.0, 30.0]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: Lounge2, Lounge1, CommunicationsOfficer, BotanistVendor"
+      "note": "BlockBounds 1.0x1.0 cells, hull [32.0, 30.0]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: Lounge2, Lounge1, CommunicationsOfficer, BotanistVendor",
+      "hidden": true
     },
     "BPO_VendorCorridor_02": {
       "add": true,
@@ -1326,7 +1353,8 @@
           5
         ]
       ],
-      "note": "BlockBounds 1.0x1.0 cells, hull [32.0, 30.0]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: ShipwrightVendor, Mechanic, MilitaryLiaison, Lounge1"
+      "note": "BlockBounds 1.0x1.0 cells, hull [32.0, 30.0]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: ShipwrightVendor, Mechanic, MilitaryLiaison, Lounge1",
+      "hidden": true
     },
     "BPO_VendorCorridor_03": {
       "add": true,
@@ -1358,7 +1386,8 @@
           5
         ]
       ],
-      "note": "BlockBounds 1.0x1.0 cells, hull [32.0, 30.0]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: RequisitionOfficer, InventorVendor, Lounge2, ArmourerVendor"
+      "note": "BlockBounds 1.0x1.0 cells, hull [32.0, 30.0]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: RequisitionOfficer, InventorVendor, Lounge2, ArmourerVendor",
+      "hidden": true
     },
     "BPO_WindowBlock": {
       "add": true,
@@ -1391,7 +1420,8 @@
           2
         ]
       ],
-      "note": "BlockBounds 0.12x0.25 cells, hull [1.945, 3.945]: footprint rounded up to 1x1 (in-game snapping unverified)"
+      "note": "BlockBounds 0.12x0.25 cells, hull [1.945, 3.945]: footprint rounded up to 1x1 (in-game snapping unverified)",
+      "hidden": true
     },
     "BPO_WindowBlock_02": {
       "add": true,
@@ -1428,7 +1458,8 @@
           2
         ]
       ],
-      "note": "BlockBounds 0.1215x0.2465 cells, hull None: footprint rounded up to 1x1 (in-game snapping unverified); no colliders decoded: footprint shown as one solid no-build tile (interior unknown)"
+      "note": "BlockBounds 0.1215x0.2465 cells, hull None: footprint rounded up to 1x1 (in-game snapping unverified); no colliders decoded: footprint shown as one solid no-build tile (interior unknown)",
+      "hidden": true
     },
     "BPO_ElevatorBlock_01": {
       "add": true,
@@ -1462,7 +1493,8 @@
           10
         ]
       ],
-      "note": "default machines: Elevator, Elevator, Elevator, Elevator"
+      "note": "default machines: Elevator, Elevator, Elevator, Elevator",
+      "hidden": true
     },
     "BPO_ElevatorBlock_02": {
       "add": true,
@@ -1496,7 +1528,8 @@
           5
         ]
       ],
-      "note": "default machines: ElevatorFiller, ElevatorFiller, ElevatorFiller, ElevatorFiller"
+      "note": "default machines: ElevatorFiller, ElevatorFiller, ElevatorFiller, ElevatorFiller",
+      "hidden": true
     },
     "BPO_ElevatorBlock_02A": {
       "add": true,
@@ -1531,7 +1564,13 @@
           10
         ]
       ],
-      "note": "default machines: Elevator, Elevator, Elevator, Elevator ..."
+      "note": "default machines: Elevator, Elevator, Elevator, Elevator ...",
+      "xl": [
+        "E",
+        "S",
+        "W",
+        "N"
+      ]
     },
     "BPO_ElevatorBlock_04": {
       "add": true,
@@ -1569,7 +1608,8 @@
           5
         ]
       ],
-      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown); label derived from the asset id (in-game text key not extractable); default machines: Elevator_03, Elevator_03, Elevator_03, Elevator_03"
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown); label derived from the asset id (in-game text key not extractable); default machines: Elevator_03, Elevator_03, Elevator_03, Elevator_03",
+      "hidden": true
     },
     "BPO_ElevatorBlock_05": {
       "add": true,
@@ -1607,7 +1647,8 @@
           5
         ]
       ],
-      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown); label derived from the asset id (in-game text key not extractable); default machines: Elevator_03, Elevator_03, Elevator_03, Elevator_03"
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown); label derived from the asset id (in-game text key not extractable); default machines: Elevator_03, Elevator_03, Elevator_03, Elevator_03",
+      "hidden": true
     },
     "BPO_ItemElevatorBlock_01": {
       "add": true,
@@ -1640,7 +1681,8 @@
           20
         ]
       ],
-      "note": "default machines: ItemElevator_1, ItemElevator_1, ItemElevator_1, ItemElevator_1 ..."
+      "note": "default machines: ItemElevator_1, ItemElevator_1, ItemElevator_1, ItemElevator_1 ...",
+      "hidden": true
     },
     "BPO_StationLift_01": {
       "add": true,
@@ -1672,7 +1714,8 @@
           5
         ]
       ],
-      "note": "default machines: LiftMachine"
+      "note": "default machines: LiftMachine",
+      "hidden": true
     },
     "BPO_LadderBlock": {
       "add": true,
@@ -1705,7 +1748,8 @@
           5
         ]
       ],
-      "note": "BlockBounds 0.5x0.5 cells, hull [7.903, 7.901]: footprint rounded up to 1x1 (in-game snapping unverified); default machines: Ladder_01"
+      "note": "BlockBounds 0.5x0.5 cells, hull [7.903, 7.901]: footprint rounded up to 1x1 (in-game snapping unverified); default machines: Ladder_01",
+      "hidden": true
     },
     "BPO_Hangar_1": {
       "add": true,
@@ -1733,7 +1777,8 @@
           5
         ]
       ],
-      "note": "BlockBounds 1.0x1.0 cells, hull [47.724, 40.059]: footprint rounded up to 3x3 (in-game snapping unverified); default machines: HangarDock"
+      "note": "BlockBounds 1.0x1.0 cells, hull [47.724, 40.059]: footprint rounded up to 3x3 (in-game snapping unverified); default machines: HangarDock",
+      "hidden": true
     },
     "BPO_Hangar_2": {
       "add": true,
@@ -1769,7 +1814,8 @@
           10
         ]
       ],
-      "note": "BlockBounds 1.4998x1.9998 cells, hull [24.5672, 31.9154]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: HangarDock_02"
+      "note": "BlockBounds 1.4998x1.9998 cells, hull [24.5672, 31.9154]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: HangarDock_02",
+      "hidden": true
     },
     "BPO_TradeDock_01": {
       "add": true,
@@ -1798,7 +1844,8 @@
           5
         ]
       ],
-      "note": "default machines: NPCDock"
+      "note": "default machines: NPCDock",
+      "hidden": true
     },
     "BPO_Dock_3": {
       "add": true,
@@ -1831,7 +1878,8 @@
           20
         ]
       ],
-      "note": "default machines: NPCDock"
+      "note": "default machines: NPCDock",
+      "hidden": true
     },
     "BPO_WorkstationBlock": {
       "add": true,
@@ -1860,7 +1908,8 @@
           3
         ]
       ],
-      "note": "BlockBounds 0.5x0.5 cells, hull [5.876, 3.568]: footprint rounded up to 1x1 (in-game snapping unverified); default machines: Workbench"
+      "note": "BlockBounds 0.5x0.5 cells, hull [5.876, 3.568]: footprint rounded up to 1x1 (in-game snapping unverified); default machines: Workbench",
+      "hidden": true
     },
     "BPO_ScannerModule": {
       "add": true,
@@ -1905,7 +1954,7 @@
       "category": "Functional Blocks",
       "w": 2,
       "h": 2,
-      "verified": false,
+      "verified": true,
       "nofloor": true,
       "floor": null,
       "floorOrigin": [
@@ -1913,12 +1962,12 @@
         -16
       ],
       "ground": false,
+      "confidence": "decoded from EA assets, untested in game",
       "source": "decoded from EA files (BPO DeepSpaceObservatory: colliders, BlockBounds, ItemCost); not tested in game",
       "description": "An advanced scanning array used to gather data from stars and planets.",
       "research": [
         "RSC_DeepSpaceObservatory"
       ],
-      "confidence": "decoded from EA assets, untested in game",
       "icon": "BPO_DeepSpaceObservatory",
       "levels": 4,
       "cost": [
@@ -1966,7 +2015,8 @@
           10
         ]
       ],
-      "note": "BlockBounds 0.9998x1.4998 cells, hull [16.0133, 23.8476]: footprint rounded up to 1x2 (in-game snapping unverified); default machines: AstronomicScannerMachine"
+      "note": "BlockBounds 0.9998x1.4998 cells, hull [16.0133, 23.8476]: footprint rounded up to 1x2 (in-game snapping unverified); default machines: AstronomicScannerMachine",
+      "hidden": true
     },
     "BPO_BiosampleCollector": {
       "add": true,
@@ -1997,7 +2047,8 @@
           5
         ]
       ],
-      "note": "BlockBounds 0.9998x1.4998 cells, hull [16.0133, 23.8476]: footprint rounded up to 1x2 (in-game snapping unverified); default machines: BiosampleCollectorMachine"
+      "note": "BlockBounds 0.9998x1.4998 cells, hull [16.0133, 23.8476]: footprint rounded up to 1x2 (in-game snapping unverified); default machines: BiosampleCollectorMachine",
+      "hidden": true
     },
     "BPO_ReactorBlock_Small": {
       "add": true,
@@ -2032,11 +2083,12 @@
           20
         ]
       ],
-      "note": "BlockBounds 0.5x0.5 cells, hull [3.866, 7.094]: footprint rounded up to 1x1 (in-game snapping unverified); default machines: Reactor_SmallBlock"
+      "note": "BlockBounds 0.5x0.5 cells, hull [3.866, 7.094]: footprint rounded up to 1x1 (in-game snapping unverified); default machines: Reactor_SmallBlock",
+      "hidden": true
     },
     "BPO_SolarPanelBlock_03": {
       "add": true,
-      "label": "Solar Panels Mk.3",
+      "label": "Solar Panels Mk. 3",
       "class": "/Game/Blueprints/BuildingBlocks/BPO_SolarPanelBlock_03.BPO_SolarPanelBlock_03_C",
       "category": "Functional Blocks",
       "w": 2,
@@ -2184,6 +2236,10 @@
     "DAT_TradeConsole": {
       "hidden": true,
       "source": "user 2026-11-08: player cannot place it; hidden from the palette only, import/export mapping as on main"
+    },
+    "DAT_DeepSpaceObservatory": {
+      "note": "Deep Space Observatory is a prop block (no machine placed inside); hidden stub kept only so old data resolves",
+      "evidence": "user 2026-11-12: prop block like Solar Panels"
     }
   }
 }

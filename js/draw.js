@@ -401,6 +401,7 @@ function paintFloorBase(s){
     else{cx.fillStyle="rgba(160,170,190,.07)";cx.fillRect(x,y,w,h);cx.strokeStyle="rgba(190,200,220,.5)";cx.lineWidth=1.5;cx.setLineDash([4,3]);cx.strokeRect(x+.5,y+.5,w-1,h-1)}   // an opening: connected or not it looks the same (grey dashed); a door is a Doorway Wall buildable
     cx.restore();
   }));
+  A.mis.forEach(r=>R(r,(x,y,w,h)=>{cx.save();cx.fillStyle="rgba(255,70,70,.9)";cx.fillRect(x,y,w,h);cx.restore();if(w>60)note("needs Station Adapter",x,y+h/2,w,"hsl(0,80%,78%)")}));   // large connector next to a normal block: no doorway
   return A;
 }
 let LKC=null,LKP=false,PK="";   // links() cache persists across paints, keyed by layer + block-set key

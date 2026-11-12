@@ -2982,7 +2982,7 @@ async function s28(br) {
   const floors = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'floors.json'), 'utf8')).blocks;
   const extra = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'extra_blocks.json'), 'utf8'));
   const names = Object.keys(srcBlocks);
-  const cat = await pg.evaluate(ns => ns.map(n => { const b = CATALOG.blocks.find(x => x.name === n); return b && {label: b.label, verified: b.verified, source: b.source, w: b.w, h: b.h, hasFloor: !!b.floor, floorV: b.floor ? b.floor.verified : null, doorV: b.door ? b.door.verified : null, nofloor: !!b.nofloor, sides: b.door ? b.door.sides || null : null, cls: b.class, cost: b.cost, research: b.research, icon: b.icon} }), names);
+  const cat = await pg.evaluate(ns => ns.map(n => { const b = CATALOG.blocks.find(x => x.name === n); return b && {label: b.label, verified: b.verified, source: b.source, w: b.w, h: b.h, hasFloor: !!b.floor, floorV: b.floor ? b.floor.verified : null, doorV: b.door ? b.door.verified : null, nofloor: !!b.nofloor, hidden: !!b.hidden, sides: b.door ? b.door.sides || null : null, cls: b.class, cost: b.cost, research: b.research, icon: b.icon} }), names);
   const shapes = await pg.evaluate(ns => ns.map(n => SHAPES[n] ? {walls: SHAPES[n].walls.length, props: SHAPES[n].props.length, ring: SHAPES[n].ring ? SHAPES[n].ring.n : 0, ports: SHAPES[n].ports} : null), names);
   const palHtml = label => pg.evaluate(l => { const b = [...document.querySelectorAll('#palList button.item')].find(x => x.querySelector('.n') && x.querySelector('.n').textContent === l); return b ? b.outerHTML : null }, label);
   const selectAt = async (cls, X, Y) => {
@@ -3009,7 +3009,8 @@ async function s28(br) {
     const want = cols.length - overhead + fill - (src.drop || []).length + (src.wallsOverride || []).length, got = sh ? sh.walls + sh.props + sh.ring : -1;   // ring: stepped boxes replaced by the fitted circle
     chk(`28 ${n}: walls+props (${got}) == colliders_raw (${cols.length}) minus overhead (${overhead}) plus fill (${fill}) = ${want}`, got === want, `walls ${sh && sh.walls} props ${sh && sh.props}`);
     const pal = await palHtml(c && c.label);
-    if (c && c.verified === false) chk(`28 ${n}: palette entry "${c && c.label}" present, shows "!?" (size unverified)`, pal !== null && pal.includes('!?'), String(pal).slice(0, 300));
+    if (c && c.hidden) chk(`28 ${n}: hidden block: not in the palette`, pal === null, String(pal).slice(0, 200));
+    else if (c && c.verified === false) chk(`28 ${n}: palette entry "${c && c.label}" present, shows "!?" (size unverified)`, pal !== null && pal.includes('!?'), String(pal).slice(0, 300));
     else chk(`28 ${n}: palette entry "${c && c.label}" present, no "!?"`, pal !== null && (!allV || !pal.includes('!?')), String(pal).slice(0, 300));
     const cls = await selectAt(n, 20, 20);
     const insp = await pg.locator('#insp').innerHTML();
@@ -3023,7 +3024,7 @@ async function s28(br) {
     chk(`28 ${n}: ${p.length} unnumbered west-edge ports at floor (0,8.5),(0,7.5) (extra_blocks ports ${extra[n].ports.length})`, p.length === 2 && extra[n].ports.length === 2 && p.every(q => q[0] === null && q[1] === 0) && JSON.stringify(p.map(q => q[2]).sort((a, b) => a - b)) === '[7.5,8.5]', JSON.stringify(p));
   }
   const mk2 = cat[names.indexOf('BPO_MiningDroneBayBlock_2')];
-  chk('28 Mk.2 catalog: label, class path, Functional Blocks, 1x1, nofloor, RSC_MiningDroneBay_2, icon, cost Servomotor 10 + BasicCircuit 10, untested source', !!mk2 && mk2.label === 'Mining Drone Bay Mk.2' && mk2.cls === `${P}BPO_MiningDroneBayBlock_2.BPO_MiningDroneBayBlock_2_C` && mk2.w === 1 && mk2.h === 1 && mk2.nofloor && JSON.stringify(mk2.research) === '["RSC_MiningDroneBay_2"]' && mk2.icon === 'BPO_MiningDroneBayBlock_2' && JSON.stringify(mk2.cost) === '[["ITEM_Servomotor",10],["ITEM_BasicCircuit",10]]' && /untested in game/.test(mk2.source), JSON.stringify(mk2));
+  chk('28 Mk.2 catalog: label, class path, Functional Blocks, 1x1, nofloor, RSC_MiningDroneBay_2, icon, cost Servomotor 10 + BasicCircuit 10, untested source', !!mk2 && mk2.label === 'Mining Drone Bay Mk. 2' && mk2.cls === `${P}BPO_MiningDroneBayBlock_2.BPO_MiningDroneBayBlock_2_C` && mk2.w === 1 && mk2.h === 1 && mk2.nofloor && JSON.stringify(mk2.research) === '["RSC_MiningDroneBay_2"]' && mk2.icon === 'BPO_MiningDroneBayBlock_2' && JSON.stringify(mk2.cost) === '[["ITEM_Servomotor",10],["ITEM_BasicCircuit",10]]' && /untested in game/.test(mk2.source), JSON.stringify(mk2));
   const iconOk = await pg.evaluate(() => !!(CATALOG.icons.BPO_MiningDroneBayBlock_2 && CATALOG.icons.BPO_MiningDroneBayBlock_2.startsWith('data:image/png')));
   chk('28 Mk.2 icon embedded in CATALOG.icons (data:image/png)', iconOk, String(iconOk));
   // Station Armour: one solid 16x16 prop, no walls, no ports
