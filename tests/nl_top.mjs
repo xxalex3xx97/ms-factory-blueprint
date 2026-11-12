@@ -59,7 +59,7 @@ for (const [name, rate] of cases) {
     }
     let lc = null;
     try { const Lc = lcTop(P, it, 1, 0, {}); lc = Lc.ok ? +(Lc.stat.belts / Lc.stat.machines).toFixed(1) : 'refused' } catch (e) { lc = 'err' }
-    return {note: L.note[0], times: L.times, ms, heap, ov: chk.ov, chkMs: Math.round(performance.now() - t1), mdiff, nOuts: outs.length, outEdges: [...new Set(outs.map(p => p.edge))].join(','), sinks: sinks.length, groups: pl.sink ? pl.sink.groups.length : 1, carryBad: bad.slice(0, 4), nCarryBad: bad.length, w: L.w, h: L.h, stat: {...L.stat, rows: undefined}, nItems: L.items.length, lc};
+    return {chosen: L.chosen, note: L.note[0], times: L.times, ms, heap, ov: chk.ov, chkMs: Math.round(performance.now() - t1), mdiff, nOuts: outs.length, outEdges: [...new Set(outs.map(p => p.edge))].join(','), sinks: sinks.length, groups: pl.sink ? pl.sink.groups.length : 1, carryBad: bad.slice(0, 4), nCarryBad: bad.length, w: L.w, h: L.h, stat: {...L.stat, rows: undefined}, nItems: L.items.length, lc};
   }, [name, rate]), LIM);
   if (a.timeout) { check(false, tag + ': nlTop exceeded ' + LIM / 1000 + ' s (page hung, remaining cases skipped)'); hung = true; continue }
   console.log(tag, JSON.stringify({note: a.note, times: a.times, ms: a.ms, heapMB: a.heap, chkMs: a.chkMs, items: a.nItems}));
@@ -129,7 +129,7 @@ for (const [name, rate] of cases) {
   check(o.ugUnpaired === 0, tag + ': UGs pair (' + o.ugUnpaired + ')');
   if (o.ex.length) console.log('  ' + o.ex.join(' | '));
   const s = a.stat;
-  rows.push({tag, blocks: b.blocks, size: a.w + 'x' + a.h, belts: s.belts, ug: s.ug, spl: s.spl, mach: s.machines, bpm: (s.belts / s.machines).toFixed(1), lc: a.lc, split: ['bCell', 'bRaw', 'bThru', 'bTap', 'bSink', 'bSpill'].map(k => k + ' ' + s[k]).join(' ')});
+  rows.push({tag, blocks: b.blocks, size: a.w + 'x' + a.h, belts: s.belts, ug: s.ug, spl: s.spl, mach: s.machines, bpm: (s.belts / s.machines).toFixed(1), lc: a.lc, chosen: a.chosen, split: ['bCell', 'bRaw', 'bThru', 'bTap', 'bSink', 'bSpill'].map(k => k + ' ' + s[k]).join(' ')});
 }
 // (after the case loop) sims (run before the first heavy case so a hung page cannot skip them)
 async function runSims() {
@@ -161,8 +161,8 @@ async function runSims() {
 }
 }
 if (!simsDone) await runSims();
-console.log('tag | blocks | w x h | belts | UG | spl | machines | belts/machine | LC belts/machine | belt split');
-for (const x of rows) console.log([x.tag, x.blocks, x.size, x.belts, x.ug, x.spl, x.mach, x.bpm, x.lc, x.split].join(' | '));
+console.log('tag | blocks | w x h | belts | UG | spl | machines | belts/machine | LC belts/machine | belt split | W');
+for (const x of rows) console.log([x.tag, x.blocks, x.size, x.belts, x.ug, x.spl, x.mach, x.bpm, x.lc, x.split, x.chosen].join(' | '));
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.slice(0, 3).join(' | ') : ''));
 await br.close();
 console.log(fails ? fails + ' FAIL' : 'ALL PASS');

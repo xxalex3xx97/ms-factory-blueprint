@@ -115,7 +115,7 @@ function nlPlan1(F,mk,hint,W){
 }
 // NL5c multi-pass: pass k docks every raw lane at the mean x of the heads it fed in pass k-1 and orders heads by their previous x; best pass by tap+lane length wins.
 function nlPlanScore(p){let s=0;for(const t of p.tracks)s+=Math.abs(t.x1-t.x0);for(const q of p.spills)s+=Math.abs(p.lanes[q.to].x-p.lanes[q.lane].x);for(const l of p.lanes)if(l.y0!==null&&l.y1!==null)s+=Math.abs(l.y1-l.y0);return s}
-function nlPlan(F,mk){
+function nlPlanOld(F,mk){
   let best=nlPlan1(F,mk,null);if(!best.ok)return best;
   let bs=nlPlanScore(best),cur=best;
   for(let k=0;k<3;k++){
@@ -133,3 +133,12 @@ function nlPlan(F,mk){
   }
   return best;
 }
+// NL6 candidates: u-axis plans at W = nlWBase*{1,1.15,1.3,1.5} plus the NL5c plan, sorted by score (lowest first). chosen = W factor or 'old'.
+function nlPlanAll(F,mk){
+  const bw=def(PLC_BOX).w,wb=nlWBase(F,bw),out=[];
+  for(const f of[1,1.15,1.3,1.5]){const p=nlPlan1(F,mk,null,Math.round(wb*f));if(p.ok){p.chosen=f;out.push(p)}}
+  const o=nlPlanOld(F,mk);if(o.ok){o.chosen='old';out.push(o)}
+  out.forEach(p=>{p.score=nlPlanScore(p)});out.sort((a,b)=>a.score-b.score);
+  return out.length?out:[o];
+}
+function nlPlan(F,mk){return nlPlanAll(F,mk)[0]}
