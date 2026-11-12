@@ -430,6 +430,31 @@ function pfFactRow(nd,T,K,mk,segs,isFin){
   for(const p of isFin?ins:[...ins,...outs])if(!pfFitX(p.x,1,true))return no('port x '+p.x+' on a wall column');
   return{ok:true,item:nd.item,items,w:TR.w,h:bodyY+TR.h+(isFin?1:0),bodyY,ins,outs,K,M:T.M,T};
 }
+// pfFact step 4a: allocation. callers pass spMk=mk; pfFactTop must use Math.max(spMk,mk). SZ = Map item->{T,M,K,nd} (K from pfFactSizeTile). Processes rows 0..n (consumers before producers). Each consumer's heads of item i (sorted by x, consumer order = row then index in Z.rows) are cut into groups with demand D <= capG; group gets t=ceil(D/tileOut) tiles; producer K = sum t. Returns Map item->{groups:[{cons,heads:[{x,tile,head,flow}],D,t}]} (non-final items only) or {ok:false,why}.
+function pfFactAlloc(Z,SZ,mk,spMk){
+  const capG=Math.min(MKS[mk][1],MKS[spMk][1]),AL=new Map(),byIt=new Map(Z.nodes.map(n=>[n.item,n]));
+  const ord=it=>{const n=byIt.get(it);return n.row*1000+Z.rows[n.row].indexOf(it)};
+  for(const nd of [...Z.nodes].sort((a,b)=>a.row-b.row)){
+    if(nd.item===Z.item)continue;
+    const S=SZ.get(nd.item),groups=[];
+    for(const c of [...new Set(nd.cons.map(q=>q.to))].sort((a,b)=>ord(a)-ord(b))){
+      const Sc=SZ.get(c),fl=byIt.get(c).flows.find(f=>f.item===nd.item).flow,heads=[];
+      for(let j=0;j<Sc.K;j++)Sc.T.ins.filter(p=>p.item===nd.item).forEach(p=>heads.push({x:p.x+j*Sc.T.w,tile:j,head:p.head,flow:Sc.T.sizes[p.head]*fl}));
+      if(heads.some(h=>h.flow>capG+1e-9))return{ok:false,why:'one head above belt/splitter cap'};
+      // scale heads to the tree demand (overbuilt tiles take only what the consumer needs from this producer)
+      const cap=heads.reduce((a,h)=>a+h.flow,0),dem=nd.cons.filter(q=>q.to===c).reduce((a,q)=>a+q.flow,0),sc=cap>1e-9?dem/cap:0;
+      if((cap<=1e-9&&dem>1e-9)||sc>1+1e-9)return{ok:false,why:'consumer '+plnNm(c)+' capacity below tree demand for '+plnNm(nd.item)};
+      heads.forEach(h=>h.flow*=Math.min(sc,1));
+      heads.sort((a,b)=>a.x-b.x);
+      let g=null;
+      for(const h of heads){
+        if(!g||g.D+h.flow>capG+1e-9){g={cons:c,heads:[],D:0,t:0};groups.push(g)}g.heads.push(h);g.D+=h.flow}
+    }
+    groups.forEach(g=>g.t=Math.max(1,Math.ceil(g.D/S.T.tileOut-1e-9)));
+    S.K=groups.reduce((a,g)=>a+g.t,0);AL.set(nd.item,{groups});
+  }
+  return AL;
+}
 // Tile-fit helpers (wall grid every PF_GRID.cw cols / PF_GRID.ch rows). x,y absolute cells.
 const pfMod=(v,c)=>((v%c)+c)%c;
 const pfFitX=(x,w,dummy)=>{const c=PF_GRID.cw,m=pfMod(x,c);return dummy?(m>=2&&m<=c-3):(m>=1&&m+w<=c-1)};
