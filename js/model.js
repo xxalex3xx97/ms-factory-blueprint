@@ -9,6 +9,10 @@ function slotIvs(b,ed){const r=floorRect(b);if(!r||SHIPEND(b)&&ed===b.rot||!side
 function passage(b,nb,ed){const o=slotIvs(nb,(ed+2)%4);return slotIvs(b,ed).some(([a,c])=>o.some(([p,q])=>a<q&&p<c))}
 // door-match rule (catalog doorMatch, Corner/Corridor only): a pair where either block has it needs a door over the same slot on both sides; every other pair is a plain door passage
 const matchRule=(b,nb)=>!!((def(b.cls)||{}).doorMatch||(def(nb.cls)||{}).doorMatch);
+// levels a block spans (catalog `levels`, EA BlockBounds height / 4; default 1): block b at level h occupies h..h+levels-1
+const lvl=b=>(def(b.cls)||{}).levels||1;
+// blocks b (at level L) and o share a level when their level spans intersect
+const lvHit=(o,b,L)=>o.h<L+lvl(b)&&L<o.h+lvl(o);
 // floor block covering cell (x,y) on level L (cell units), or undefined
 function floorAt(L,x,y){return S.blocks.find(o=>{if(o.h!==L||isM(o)||!floorRect(o))return false;const c=fcell(o);return x>=c.cx&&x<c.cx+c.cw&&y>=c.cy&&y<c.cy+c.ch})}
 // floor cell box of a block (cell units): shipEnd = the end opposite the ship direction (rot); else the whole footprint

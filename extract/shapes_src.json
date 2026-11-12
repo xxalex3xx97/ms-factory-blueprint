@@ -16,7 +16,8 @@
         "kind": "doors",
         "evidence": "doors on every hall side except the ship berth (DIR[rot], rot 0 east = shaft end): W, N, S at rot 0, slots by the station door rule (BPO_Dock_2 colliders: W gaps y-11..-5,5..11; N/S gaps x-11..-5); the ship side gets no entrance mark"
       },
-      "hatch": "interior"
+      "hatch": "interior",
+      "levels": 2
     },
     "BPO_Station_01": {
       "w": 1,
@@ -41,7 +42,8 @@
         "verified": true,
         "source": "decoded BPO_Station_01: gaps y -3..3 (W,E) and x -3..3 (N,S)"
       },
-      "note": null
+      "note": null,
+      "levels": 2
     },
     "BPO_Station_2x1": {
       "w": 2,
@@ -70,7 +72,8 @@
         ],
         "source": "decoded BPO_Station_2x1: short-end gaps y -3..3 only; long sides solid"
       },
-      "note": null
+      "note": null,
+      "levels": 2
     },
     "BPO_Station_02A": {
       "w": 2,
@@ -91,13 +94,14 @@
         "verified": true,
         "source": "decoded BPO_Station_02A: gaps x/y -11..-5 and 5..11 on all sides"
       },
-      "note": null
+      "note": null,
+      "levels": 2
     },
     "BPO_Station_02": {
       "w": 2,
       "h": 2,
       "verified": true,
-      "source": "decoded BPO_Station_02 2026-11-08: hull 32x32 = 2x2 block, ground floor 30x30, 2 doors per side; z 8..10 central slab = second floor balcony, not drawn, not buildable",
+      "source": "decoded BPO_Station_02 2026-11-08: hull 32x32 = 2x2 block, ground floor 30x30, 2 doors per side; z 8..10 central slab = second floor balcony, not drawn (buildability unknown, needs live probe)",
       "ground": true,
       "floor": {
         "w": 30,
@@ -112,7 +116,8 @@
         "verified": true,
         "source": "decoded BPO_Station_02: gaps -11..-5 and 5..11 on all sides"
       },
-      "note": null
+      "note": null,
+      "levels": 4
     },
     "BPO_ElevatorBlock_03": {
       "w": 1,
@@ -137,7 +142,8 @@
         "verified": true,
         "source": "decoded BPO_ElevatorBlock_03: gaps x -3..3 (N,S) and y -3..3 (W,E)"
       },
-      "note": null
+      "note": null,
+      "levels": 2
     },
     "BPO_SolarPanelBlock": {
       "w": 1,
@@ -151,7 +157,8 @@
         -8
       ],
       "floor": null,
-      "note": null
+      "note": null,
+      "levels": 2
     },
     "BPO_SolarPanelBlock_02": {
       "w": 1,
@@ -164,7 +171,8 @@
         -8
       ],
       "floor": null,
-      "note": null
+      "note": null,
+      "levels": 4
     },
     "BPO_StationTurretBlock_01": {
       "w": 1,
@@ -178,7 +186,8 @@
         -8
       ],
       "floor": null,
-      "note": null
+      "note": null,
+      "levels": 2
     },
     "BPO_MiningDroneBayBlock": {
       "w": 1,
@@ -201,7 +210,8 @@
         1,
         2
       ],
-      "hatch": "interior"
+      "hatch": "interior",
+      "levels": 2
     },
     "BPO_MiningDroneBayBlock_2": {
       "add": true,
@@ -211,8 +221,7 @@
       "w": 1,
       "h": 1,
       "verified": true,
-      "source": "decoded from paks, untested in game; BlockBounds 16x16 = 1x1 block (rounded); colliders overhang 3 floor cells past the block edge on +x; bLockedInDemo",
-      "lockedInDemo": true,
+      "source": "decoded from paks, untested in game; BlockBounds 16x16 = 1x1 block (rounded); colliders overhang 3 floor cells past the block edge on +x",
       "description": "An improved drone bay with longer range and faster drones.",
       "floor": null,
       "nofloor": true,
@@ -230,7 +239,7 @@
       "research": [
         "RSC_MiningDroneBay_2"
       ],
-      "confidence": "high (decoded BPO_MiningDroneBayBlock_2; locked in demo, untested in game)",
+      "confidence": "high (decoded BPO_MiningDroneBayBlock_2; untested in game)",
       "icon": "BPO_MiningDroneBayBlock_2",
       "note": "rounded: 19x8 floor cells -> 1x1 block; overhang into the +x neighbour (blocking UNK)",
       "cost": [
@@ -424,7 +433,8 @@
         "evidence": "shipyard strip: the west wall bars and the east rail end flush at the block N/S edges (no wall there, same on Side and Core), so a Side or Core attaches on those two lateral edges; with no such neighbour the edge is closed by a wall as thick as the west bars (1) between the west bar and the rail"
       },
       "hatch": "interior",
-      "clip": true
+      "clip": true,
+      "levels": 2
     },
     "BPO_ShipyardCore": {
       "w": 1,
@@ -492,7 +502,8 @@
         "evidence": "shipyard strip: the west wall bars and the east rail end flush at the block N/S edges (no wall there, same on Side and Core), so a Side or Core attaches on those two lateral edges; with no such neighbour the edge is closed by a wall as thick as the west bars (1) between the west bar and the rail"
       },
       "hatch": "interior",
-      "clip": true
+      "clip": true,
+      "levels": 2
     },
     "BPO_ShipyardCore_02": {
       "w": 1,
@@ -566,7 +577,8 @@
         "evidence": "shipyard strip: the west wall bars and the east rail end flush at the block N/S edges (no wall there, same on Side and Core), so a Side or Core attaches on those two lateral edges; with no such neighbour the edge is closed by a wall as thick as the west bars (1) between the west bar and the rail"
       },
       "hatch": "interior",
-      "clip": true
+      "clip": true,
+      "levels": 2
     },
     "BPO_BlueprintUnit": {
       "add": true,
@@ -782,7 +794,8 @@
           ]
         ]
       ],
-      "note": null
+      "note": null,
+      "levels": 2
     },
     "BPO_StationCorridor_01": {
       "w": 1,
@@ -790,8 +803,24 @@
       "verified": true,
       "floorCenter": true,
       "doorMatch": true,
-      "drop": [0, 1],
-      "wallsOverride": [[-8, -4, 8, -3], [-8, 3, 8, 4]],
+      "drop": [
+        0,
+        1
+      ],
+      "wallsOverride": [
+        [
+          -8,
+          -4,
+          8,
+          -3
+        ],
+        [
+          -8,
+          3,
+          8,
+          4
+        ]
+      ],
       "source": "decoded BPO_StationCorridor_01 (floors.json colliders): two solid slabs y -7..-3 and 3..7, x -8..8; walkable strip y -3..3 = 6 wide x 16 long, open at both x ends (E/W), centred in the 16x16 tile. Walls: user 2026-11-08 'walls THIN, 1 square': the slabs are replaced by 1-unit walls on the outer edges of the strip (y -4..-3, 3..4), strip stays 6 wide",
       "floorOrigin": [
         -8,
@@ -819,7 +848,1230 @@
         "kind": "doors",
         "evidence": "decoded BPO_StationCorridor_01: open strip ends E and W (door = full 6-wide strip)"
       },
-      "note": null
+      "note": null,
+      "levels": 2
+    },
+    "BPO_Station_03": {
+      "add": true,
+      "label": "Station 2x2 C",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_Station_03.BPO_Station_03_C",
+      "category": "Basic",
+      "w": 2,
+      "h": 2,
+      "verified": true,
+      "floor": {
+        "w": 30,
+        "h": 30,
+        "verified": true,
+        "source": "user 2026-11-12 (screenshots, internal floor 30x30) + decoded: hull 32x32, 1-thick walls, 8 corner posts 1x4, one 22-wide opening per side, no doors"
+      },
+      "floorOrigin": [
+        -15,
+        -15
+      ],
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "verified": false,
+        "source": "real opening = one 22-wide gap (-11..11) per side, no door; the model slots (6 wide, 2 per side) lie inside it"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded BPO_Station_03 colliders: 22-wide opening (-11..11) on each side, no door frames"
+      },
+      "ground": true,
+      "source": "decoded from EA files (BPO Station_03: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "A large module with a factory floor for building machines.",
+      "research": [
+        "RSC_StationModules4"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_Station_03",
+      "levels": 4,
+      "cost": [
+        [
+          "ITEM_ReinforcedPlates",
+          20
+        ]
+      ],
+      "note": "label = the user's name '2x2 C' (in-game text key not extractable); label derived from the asset id (in-game text key not extractable)"
+    },
+    "BPO_StationAdapter_01": {
+      "add": true,
+      "label": "Station Adapter",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_StationAdapter_01.BPO_StationAdapter_01_C",
+      "category": "Basic",
+      "w": 1,
+      "h": 2,
+      "verified": false,
+      "floor": {
+        "w": 14,
+        "h": 30,
+        "verified": true,
+        "source": "user 2026-11-12 (internal floor 14x30) + decoded hull 16x32"
+      },
+      "floorOrigin": [
+        -7,
+        -15
+      ],
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 4,
+        "verified": false,
+        "source": "decoded: N/S 6-wide gaps, one 22-wide gap on W, two 6-wide gaps on E (narrow-side rotation vs site axes unverified)"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded BPO_StationAdapter_01 colliders; rotation vs site axes unverified"
+      },
+      "ground": true,
+      "source": "decoded from EA files (BPO StationAdapter_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "Station Adapter",
+      "research": [
+        "RSC_Corridor2",
+        "RSC_StationModules4"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_StationAdapter_01",
+      "levels": 2,
+      "cost": [
+        [
+          "ITEM_ReinforcedPlates",
+          5
+        ]
+      ]
+    },
+    "BPO_StationCorridor_02": {
+      "add": true,
+      "label": "Corridor 2x2",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_StationCorridor_02.BPO_StationCorridor_02_C",
+      "category": "Basic",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "floor": {
+        "w": 32,
+        "h": 26,
+        "verified": false,
+        "source": "inferred from colliders: slabs y +-13..15 (2 thick), strip y -13..13 x -16..16, open W/E; not user verified"
+      },
+      "floorOrigin": [
+        -16,
+        -13
+      ],
+      "floorCenter": true,
+      "doorMatch": true,
+      "door": {
+        "w": 6,
+        "depth": 2,
+        "offset": 0,
+        "flush": true,
+        "sides": [
+          "E",
+          "W"
+        ],
+        "verified": false,
+        "source": "decoded: W/E openings 23 wide (-11.5..11.5); the model slot is 6 wide"
+      },
+      "entrance": {
+        "kind": "doors",
+        "evidence": "decoded BPO_StationCorridor_02: open ends W and E"
+      },
+      "ground": true,
+      "source": "decoded from EA files (BPO StationCorridor_02: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [
+        "RSC_Corridor2"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_StationCorridor_02",
+      "levels": 4,
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          30
+        ],
+        [
+          "ITEM_ReinforcedGlass",
+          50
+        ]
+      ]
+    },
+    "BPO_Plaza_01": {
+      "add": true,
+      "label": "Plaza",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_Plaza_01.BPO_Plaza_01_C",
+      "category": "Basic",
+      "w": 3,
+      "h": 3,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -24,
+        -24
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO Plaza_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "A large module with a factory floor for building machines.",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": null,
+      "iconNote": "EA icon property T_Station has no texture in the extracted files: placeholder",
+      "levels": 4,
+      "cost": [
+        [
+          "ITEM_ReinforcedPlates",
+          20
+        ]
+      ],
+      "note": "BlockBounds 2.0x2.0 cells, hull [48.0, 48.0]: footprint rounded up to 3x3 (in-game snapping unverified); default machines: TradeConsole_01"
+    },
+    "BPO_StationCurve_01": {
+      "add": true,
+      "label": "Station 2x2 Curve",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_StationCurve_01.BPO_StationCurve_01_C",
+      "category": "Basic",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -16
+      ],
+      "fill": [
+        -16,
+        -16,
+        16,
+        16
+      ],
+      "source": "decoded from EA files (BPO StationCurve_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "A large module with a factory floor for building machines.",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_StationCurve_01",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          30
+        ]
+      ],
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)"
+    },
+    "BPO_StationFoundation_01": {
+      "add": true,
+      "label": "Foundation",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_StationFoundation_01.BPO_StationFoundation_01_C",
+      "category": "Basic",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "fill": [
+        -8,
+        -8,
+        8,
+        8
+      ],
+      "source": "decoded from EA files (BPO StationFoundation_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_StationFoundation_01",
+      "cost": [],
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)"
+    },
+    "BPO_StationHUB_01": {
+      "add": true,
+      "label": "Station Hub",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_StationHUB_01.BPO_StationHUB_01_C",
+      "category": "Basic",
+      "w": 6,
+      "h": 6,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -48,
+        -48
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO StationHUB_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "Station Hub",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_StationHUB_01",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          5
+        ],
+        [
+          "ITEM_ReinforcedGlass",
+          5
+        ]
+      ],
+      "note": "BlockBounds 1.0x1.0 cells, hull [96.0, 96.0]: footprint rounded up to 6x6 (in-game snapping unverified); default machines: StationCommander"
+    },
+    "BPO_Penthouse_01": {
+      "add": true,
+      "label": "NPC Penthouse",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_Penthouse_01.BPO_Penthouse_01_C",
+      "category": "Basic",
+      "w": 3,
+      "h": 3,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -24,
+        -24
+      ],
+      "fill": [
+        -24,
+        -24,
+        24,
+        24
+      ],
+      "source": "decoded from EA files (BPO Penthouse_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "NPC Penthouse",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_Penthouse_01",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          10
+        ],
+        [
+          "ITEM_Servomotor",
+          5
+        ]
+      ],
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown); default machines: Elevator_03, Elevator_03, Elevator_03, Elevator_03 ..."
+    },
+    "BPO_NPC_Apartment_01": {
+      "add": true,
+      "label": "NPC Apartment 1",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_NPC_Apartment_01.BPO_NPC_Apartment_01_C",
+      "category": "Basic",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "fill": [
+        -8,
+        -8,
+        8,
+        8
+      ],
+      "source": "decoded from EA files (BPO NPC_Apartment_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "A large module with a factory floor for building machines.",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_NPC_Apartment_01",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          10
+        ]
+      ],
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)"
+    },
+    "BPO_NPC_Cafeteria_01": {
+      "add": true,
+      "label": "NPC Cafeteria",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_NPC_Cafeteria_01.BPO_NPC_Cafeteria_01_C",
+      "category": "Basic",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "fill": [
+        -8,
+        -8,
+        8,
+        8
+      ],
+      "source": "decoded from EA files (BPO NPC_Cafeteria_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "A large module with a factory floor for building machines.",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_NPC_Cafeteria_01",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          10
+        ]
+      ],
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown)"
+    },
+    "BPO_BriefingRoom": {
+      "add": true,
+      "label": "Control Room",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_BriefingRoom.BPO_BriefingRoom_C",
+      "category": "Basic",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -16
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO BriefingRoom: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "Control Room",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_BriefingRoom",
+      "levels": 2,
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          10
+        ],
+        [
+          "ITEM_BasicCircuit",
+          20
+        ]
+      ],
+      "note": "BlockBounds 1.0x1.0 cells, hull [23.913, 24.238]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: TutorialBriefingOfficer, BriefingRoomTutorialDoor"
+    },
+    "BPO_VendorCorridor_01": {
+      "add": true,
+      "label": "Corridor 2x2 (VendorCorridor_01)",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_VendorCorridor_01.BPO_VendorCorridor_01_C",
+      "category": "Basic",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -16
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO VendorCorridor_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_VendorCorridor_01",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          5
+        ],
+        [
+          "ITEM_ReinforcedGlass",
+          5
+        ]
+      ],
+      "note": "BlockBounds 1.0x1.0 cells, hull [32.0, 30.0]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: Lounge2, Lounge1, CommunicationsOfficer, BotanistVendor"
+    },
+    "BPO_VendorCorridor_02": {
+      "add": true,
+      "label": "Corridor 2x2 (VendorCorridor_02)",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_VendorCorridor_02.BPO_VendorCorridor_02_C",
+      "category": "Basic",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -16
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO VendorCorridor_02: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_VendorCorridor_02",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          5
+        ],
+        [
+          "ITEM_ReinforcedGlass",
+          5
+        ]
+      ],
+      "note": "BlockBounds 1.0x1.0 cells, hull [32.0, 30.0]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: ShipwrightVendor, Mechanic, MilitaryLiaison, Lounge1"
+    },
+    "BPO_VendorCorridor_03": {
+      "add": true,
+      "label": "Corridor 2x2 (VendorCorridor_03)",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_VendorCorridor_03.BPO_VendorCorridor_03_C",
+      "category": "Basic",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -16
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO VendorCorridor_03: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_VendorCorridor_03",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          5
+        ],
+        [
+          "ITEM_ReinforcedGlass",
+          5
+        ]
+      ],
+      "note": "BlockBounds 1.0x1.0 cells, hull [32.0, 30.0]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: RequisitionOfficer, InventorVendor, Lounge2, ArmourerVendor"
+    },
+    "BPO_WindowBlock": {
+      "add": true,
+      "label": "Window",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_WindowBlock.BPO_WindowBlock_C",
+      "category": "Basic",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO WindowBlock: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [
+        "RSC_SilicaRefining"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_WindowBlock",
+      "cost": [
+        [
+          "ITEM_LightweightFrame",
+          1
+        ],
+        [
+          "ITEM_ReinforcedGlass",
+          2
+        ]
+      ],
+      "note": "BlockBounds 0.12x0.25 cells, hull [1.945, 3.945]: footprint rounded up to 1x1 (in-game snapping unverified)"
+    },
+    "BPO_WindowBlock_02": {
+      "add": true,
+      "label": "Window 2",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_WindowBlock_02.BPO_WindowBlock_02_C",
+      "category": "Basic",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "fill": [
+        -8,
+        -8,
+        8,
+        8
+      ],
+      "source": "decoded from EA files (BPO WindowBlock_02: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_WindowBlock_02",
+      "cost": [
+        [
+          "ITEM_LightweightFrame",
+          1
+        ],
+        [
+          "ITEM_ReinforcedGlass",
+          2
+        ]
+      ],
+      "note": "BlockBounds 0.1215x0.2465 cells, hull None: footprint rounded up to 1x1 (in-game snapping unverified); no colliders decoded: footprint shown as one solid no-build tile (interior unknown)"
+    },
+    "BPO_ElevatorBlock_01": {
+      "add": true,
+      "label": "Elevator",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_ElevatorBlock_01.BPO_ElevatorBlock_01_C",
+      "category": "Vertical",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -16
+      ],
+      "ground": true,
+      "hatch": "interior",
+      "source": "decoded from EA files (BPO ElevatorBlock_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_ElevatorBlock_01",
+      "levels": 2,
+      "cost": [
+        [
+          "ITEM_ReinforcedPlates",
+          10
+        ],
+        [
+          "ITEM_MaglevCoupling",
+          10
+        ]
+      ],
+      "note": "default machines: Elevator, Elevator, Elevator, Elevator"
+    },
+    "BPO_ElevatorBlock_02": {
+      "add": true,
+      "label": "Elevator Extension",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_ElevatorBlock_02.BPO_ElevatorBlock_02_C",
+      "category": "Vertical",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -16
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO ElevatorBlock_02: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "Elevator Extension",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_ElevatorBlock_02",
+      "levels": 2,
+      "cost": [
+        [
+          "ITEM_ReinforcedPlates",
+          5
+        ],
+        [
+          "ITEM_MaglevCoupling",
+          5
+        ]
+      ],
+      "note": "default machines: ElevatorFiller, ElevatorFiller, ElevatorFiller, ElevatorFiller"
+    },
+    "BPO_ElevatorBlock_02A": {
+      "add": true,
+      "label": "Elevator 2x2",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_ElevatorBlock_02A.BPO_ElevatorBlock_02A_C",
+      "category": "Vertical",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -16
+      ],
+      "ground": true,
+      "hatch": "interior",
+      "source": "decoded from EA files (BPO ElevatorBlock_02A: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [
+        "RSC_MultiblockElevator"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_ElevatorBlock_02A",
+      "levels": 4,
+      "cost": [
+        [
+          "ITEM_ReinforcedPlates",
+          10
+        ],
+        [
+          "ITEM_MaglevCoupling",
+          10
+        ]
+      ],
+      "note": "default machines: Elevator, Elevator, Elevator, Elevator ..."
+    },
+    "BPO_ElevatorBlock_04": {
+      "add": true,
+      "label": "Elevator Block 04",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_ElevatorBlock_04.BPO_ElevatorBlock_04_C",
+      "category": "Vertical",
+      "w": 3,
+      "h": 3,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -24,
+        -24
+      ],
+      "fill": [
+        -24,
+        -24,
+        24,
+        24
+      ],
+      "source": "decoded from EA files (BPO ElevatorBlock_04: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "A stackable elevator for people and items.",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_ElevatorBlock_04",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          10
+        ],
+        [
+          "ITEM_Servomotor",
+          5
+        ]
+      ],
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown); label derived from the asset id (in-game text key not extractable); default machines: Elevator_03, Elevator_03, Elevator_03, Elevator_03"
+    },
+    "BPO_ElevatorBlock_05": {
+      "add": true,
+      "label": "Elevator Block 05",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_ElevatorBlock_05.BPO_ElevatorBlock_05_C",
+      "category": "Vertical",
+      "w": 3,
+      "h": 3,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -24,
+        -24
+      ],
+      "fill": [
+        -24,
+        -24,
+        24,
+        24
+      ],
+      "source": "decoded from EA files (BPO ElevatorBlock_05: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "A stackable elevator for people and items.",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_ElevatorBlock_05",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          10
+        ],
+        [
+          "ITEM_Servomotor",
+          5
+        ]
+      ],
+      "note": "no colliders decoded: footprint shown as one solid no-build tile (interior unknown); label derived from the asset id (in-game text key not extractable); default machines: Elevator_03, Elevator_03, Elevator_03, Elevator_03"
+    },
+    "BPO_ItemElevatorBlock_01": {
+      "add": true,
+      "label": "Item Elevator",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_ItemElevatorBlock_01.BPO_ItemElevatorBlock_01_C",
+      "category": "Vertical",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO ItemElevatorBlock_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [
+        "RSC_ItemElevator"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_ItemElevatorBlock_01",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          10
+        ],
+        [
+          "ITEM_Servomotor",
+          20
+        ]
+      ],
+      "note": "default machines: ItemElevator_1, ItemElevator_1, ItemElevator_1, ItemElevator_1 ..."
+    },
+    "BPO_StationLift_01": {
+      "add": true,
+      "label": "Lift",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_StationLift_01.BPO_StationLift_01_C",
+      "category": "Vertical",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO StationLift_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_StationLift_01",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          15
+        ],
+        [
+          "ITEM_Servomotor",
+          5
+        ]
+      ],
+      "note": "default machines: LiftMachine"
+    },
+    "BPO_LadderBlock": {
+      "add": true,
+      "label": "Ladder",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_LadderBlock.BPO_LadderBlock_C",
+      "category": "Vertical",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO LadderBlock: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [
+        "RSC_ShipLadder"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_LadderBlock",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          10
+        ],
+        [
+          "ITEM_LightweightFrame",
+          5
+        ]
+      ],
+      "note": "BlockBounds 0.5x0.5 cells, hull [7.903, 7.901]: footprint rounded up to 1x1 (in-game snapping unverified); default machines: Ladder_01"
+    },
+    "BPO_Hangar_1": {
+      "add": true,
+      "label": "Hangar",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_Hangar_1.BPO_Hangar_1_C",
+      "category": "Functional Blocks",
+      "w": 3,
+      "h": 3,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -24,
+        -24
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO Hangar_1: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_Hangar_1",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          5
+        ]
+      ],
+      "note": "BlockBounds 1.0x1.0 cells, hull [47.724, 40.059]: footprint rounded up to 3x3 (in-game snapping unverified); default machines: HangarDock"
+    },
+    "BPO_Hangar_2": {
+      "add": true,
+      "label": "Ship Hangar",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_Hangar_2.BPO_Hangar_2_C",
+      "category": "Functional Blocks",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -16
+      ],
+      "ground": false,
+      "hatch": "interior",
+      "source": "decoded from EA files (BPO Hangar_2: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "Allows small shuttles and fighters to dock.",
+      "research": [
+        "RSC_SmallHangar"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_Hangar_2",
+      "levels": 2,
+      "cost": [
+        [
+          "ITEM_SuperalloyFrame",
+          10
+        ],
+        [
+          "ITEM_ReinforcedPlates",
+          10
+        ]
+      ],
+      "note": "BlockBounds 1.4998x1.9998 cells, hull [24.5672, 31.9154]: footprint rounded up to 2x2 (in-game snapping unverified); default machines: HangarDock_02"
+    },
+    "BPO_TradeDock_01": {
+      "add": true,
+      "label": "Trading Dock",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_TradeDock_01.BPO_TradeDock_01_C",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO TradeDock_01: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "Trading ships will periodically visit to exchange items and blueprints. Selling items to traders increases global prosperity.",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_TradeDock_01",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          5
+        ]
+      ],
+      "note": "default machines: NPCDock"
+    },
+    "BPO_Dock_3": {
+      "add": true,
+      "label": "Large Dock",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_Dock_3.BPO_Dock_3_C",
+      "category": "Functional Blocks",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -16
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO Dock_3: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "Allows ships to dock with a station. Can automatically load and unload items.",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_Dock_3",
+      "cost": [
+        [
+          "ITEM_ServoPlates",
+          20
+        ],
+        [
+          "ITEM_BasicCircuit",
+          20
+        ]
+      ],
+      "note": "default machines: NPCDock"
+    },
+    "BPO_WorkstationBlock": {
+      "add": true,
+      "label": "Workstation",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_WorkstationBlock.BPO_WorkstationBlock_C",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO WorkstationBlock: colliders, BlockBounds, ItemCost); not tested in game",
+      "research": [
+        "RSC_ShipModules1"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_WorkstationBlock",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          3
+        ]
+      ],
+      "note": "BlockBounds 0.5x0.5 cells, hull [5.876, 3.568]: footprint rounded up to 1x1 (in-game snapping unverified); default machines: Workbench"
+    },
+    "BPO_ScannerModule": {
+      "add": true,
+      "label": "Scanner Module",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_ScannerModule.BPO_ScannerModule_C",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO ScannerModule: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "Can be used to gather information about distant regions of space, and reveal hidden points of interest.",
+      "research": [],
+      "researchNote": "no RSC_* unlock found in EA data (unknown)",
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_ScannerModule",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          5
+        ],
+        [
+          "ITEM_LightweightFrame",
+          5
+        ],
+        [
+          "ITEM_BasicCircuit",
+          5
+        ]
+      ]
+    },
+    "BPO_DeepSpaceObservatory": {
+      "add": true,
+      "label": "Deep Space Observatory",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_DeepSpaceObservatory.BPO_DeepSpaceObservatory_C",
+      "category": "Functional Blocks",
+      "w": 2,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -16
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO DeepSpaceObservatory: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "An advanced scanning array used to gather data from stars and planets.",
+      "research": [
+        "RSC_DeepSpaceObservatory"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_DeepSpaceObservatory",
+      "levels": 4,
+      "cost": [
+        [
+          "ITEM_ReinforcedPlates",
+          10
+        ],
+        [
+          "ITEM_EncodedSimulationMatrix",
+          30
+        ]
+      ],
+      "note": "default machines: DeepSpaceObservatoryMachine"
+    },
+    "BPO_AstronomicScanner": {
+      "add": true,
+      "label": "Astronomic Scanner",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_AstronomicScanner.BPO_AstronomicScanner_C",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -16
+      ],
+      "ground": false,
+      "hatch": "interior",
+      "source": "decoded from EA files (BPO AstronomicScanner: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "An advanced scanning array used to gather data from stars and planets.",
+      "research": [
+        "RSC_AstronomicScanning"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_AstronomicScanner",
+      "cost": [
+        [
+          "ITEM_ReinforcedPlates",
+          10
+        ],
+        [
+          "ITEM_AdvancedCircuits",
+          10
+        ]
+      ],
+      "note": "BlockBounds 0.9998x1.4998 cells, hull [16.0133, 23.8476]: footprint rounded up to 1x2 (in-game snapping unverified); default machines: AstronomicScannerMachine"
+    },
+    "BPO_BiosampleCollector": {
+      "add": true,
+      "label": "Biosample Collector",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_BiosampleCollector.BPO_BiosampleCollector_C",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 2,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -16
+      ],
+      "ground": false,
+      "hatch": "interior",
+      "source": "decoded from EA files (BPO BiosampleCollector: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "A module that can collect samples of alien life from the biospheres of nearby planets.",
+      "research": [
+        "RSC_BiosampleCollection"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_BiosampleCollector",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          5
+        ]
+      ],
+      "note": "BlockBounds 0.9998x1.4998 cells, hull [16.0133, 23.8476]: footprint rounded up to 1x2 (in-game snapping unverified); default machines: BiosampleCollectorMachine"
+    },
+    "BPO_ReactorBlock_Small": {
+      "add": true,
+      "label": "Small Reactor",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_ReactorBlock_Small.BPO_ReactorBlock_Small_C",
+      "category": "Functional Blocks",
+      "w": 1,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -8,
+        -8
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO ReactorBlock_Small: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "Small Reactor",
+      "research": [
+        "RSC_PowerGen1",
+        "RSC_ShipModules1"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_ReactorBlock_Small",
+      "cost": [
+        [
+          "ITEM_HullPlates",
+          5
+        ],
+        [
+          "ITEM_MagneticCoils",
+          20
+        ]
+      ],
+      "note": "BlockBounds 0.5x0.5 cells, hull [3.866, 7.094]: footprint rounded up to 1x1 (in-game snapping unverified); default machines: Reactor_SmallBlock"
+    },
+    "BPO_SolarPanelBlock_03": {
+      "add": true,
+      "label": "Solar Panels Mk.3",
+      "class": "/Game/Blueprints/BuildingBlocks/BPO_SolarPanelBlock_03.BPO_SolarPanelBlock_03_C",
+      "category": "Functional Blocks",
+      "w": 2,
+      "h": 1,
+      "verified": false,
+      "nofloor": true,
+      "floor": null,
+      "floorOrigin": [
+        -16,
+        -8
+      ],
+      "ground": false,
+      "source": "decoded from EA files (BPO SolarPanelBlock_03: colliders, BlockBounds, ItemCost); not tested in game",
+      "description": "An array of solar panels that generate a constant supply of power.",
+      "research": [
+        "RSC_SolarPanels3"
+      ],
+      "confidence": "decoded from EA assets, untested in game",
+      "icon": "BPO_SolarPanelBlock_03",
+      "levels": 5,
+      "cost": [
+        [
+          "ITEM_IridiumPlates",
+          20
+        ],
+        [
+          "ITEM_SuperconductorCoil",
+          5
+        ],
+        [
+          "ITEM_ReinforcedPlates",
+          5
+        ]
+      ],
+      "note": "default machines: SolarPanel_03"
     }
   },
   "buildables": {
