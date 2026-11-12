@@ -682,7 +682,7 @@ function* placerTileGen(L,ok){
   // one candidate cut: {r} on success, {fail} with the reason otherwise
   const runC=c=>{const G=c.G;
     const run1=(sep,novc)=>{PLC_NOVC=novc;let L2;try{L2=(!sep&&!novc&&pre.get(c.i+"|"+G))||lay(c.cls,G,sep)}finally{PLC_NOVC=false}
-      return L2.ok?{...placerCut(L2,c.cls),L2}:{ok:false,why:L2.why}};
+      return L2.ok?nlDockCut(L2,c.cls):{ok:false,why:L2.why}};
     // 3 inputs: variant C is preferred; when its wall rows cannot be cut, the same stage is laid out with variant A
     const run=sep=>{const r1=run1(sep,false);return !r1.ok&&L.bank&&L.three?run1(sep,true):r1};
     let r=run(false);   // legacy layout first; sep layout (B chain segmented, on the left) only when legacy fails or overlaps
@@ -714,7 +714,7 @@ function* placerTileGen(L,ok){
   return {ok:false,why:"Does not fit: "+why};
 }
 function placerPaste(){
-  const P=pasting.pl,bs=P.blocks.map(q=>({id:uid++,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:0,pid:0}));
+  const P=pasting.pl,bs=P.blocks.map(q=>({id:uid++,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:q.rot||0,pid:0}));
   const hit=bs.some(b=>{const d=dim(b);return S.blocks.some(o=>{if(isM(o)||o.h!==layer)return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})});
   if(hit){toast("Block overlaps another block");return}
   const ms=P.ms.map(m=>({...m,id:uid++,mid:0,pid:0,x:hover.x*FC+m.x,y:hover.y*FC+m.y,h:layer}));
@@ -734,9 +734,12 @@ function plcWarn(ser){
   e.textContent=got<pl.rate*0.95?"Simulation returned "+Math.round(got)+"/min, you asked for "+pl.rate+"/min ("+plnNm(pl.item)+")":"";
 }
 const placerBk=()=>["plnBk11","plnBk21","plnBk22"].map(i=>$(i).checked);
+const placerDock=()=>{const i=$("plnDkI").checked,o=$("plnDkO").checked;if(!i&&!o)return null;const t=$("plnDk").value;return{in:i?t:null,out:o?($("plnDkOT").value||t):null}};
 function placerRun(open){
   const dl=$("plnPrev");if(!open&&!dl.open)return;
-  const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false}):{ok:false,why:"Pick an item and a rate first"};
+  const bkOn=placerBk().some(Boolean),dk=bkOn?placerDock():null;
+  const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk}):{ok:false,why:"Pick an item and a rate first"};
+  if(L.ok&&!bkOn&&placerDock())L.note=[...L.note,"Docks need a block type ticked: docks ignored"];
   if(!L.ok){plcL=null;plcT=null;placerClear();$("plnPrevErr").textContent=L.why;$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
@@ -752,7 +755,7 @@ let plcV={z:1,ox:0,oy:0},plcRaf=0;
 let plcT=null;   // last tile result (placerTile) for the open preview
 let plcBig=false;   // big-factory confirm asked for the current preview
 const plcTT=()=>plcT&&plcT.ok?plcT:{blocks:[{cls:plcCls("BPO_Station_02"),x:0,y:0}],ms:plcL.items};
-const plcExt=T=>({w:Math.max(plcMmax(T.blocks,q=>(q.x+dim({cls:q.cls,rot:0}).w)*FC),plcMmax(T.ms,m=>m.x+dim(m).w)),h:Math.max(plcMmax(T.blocks,q=>(q.y+dim({cls:q.cls,rot:0}).h)*FC),plcMmax(T.ms,m=>m.y+dim(m).h))});
+const plcExt=T=>({w:Math.max(plcMmax(T.blocks,q=>(q.x+dim({cls:q.cls,rot:q.rot||0}).w)*FC),plcMmax(T.ms,m=>m.x+dim(m).w)),h:Math.max(plcMmax(T.blocks,q=>(q.y+dim({cls:q.cls,rot:q.rot||0}).h)*FC),plcMmax(T.ms,m=>m.y+dim(m).h))});
 // setting a canvas size reallocates it even when unchanged: only assign when the size really differs (per-frame realloc was the zoom lag)
 const plcSetSize=(c,w,h)=>{if(c.width!==w)c.width=w;if(c.height!==h)c.height=h};
 function placerSize(){const c=$("plnPrevMap"),v=$("plnPrevView");plcSetSize(c,Math.max(1,v.clientWidth),Math.max(1,v.clientHeight));return{w:c.width,h:c.height}}   // content box (border excluded): canvas CSS size = attribute size, no rescale
@@ -779,7 +782,7 @@ function placerShot(){
     clearTimeout(plcIdle);plcIdle=setTimeout(()=>{plcCache=null;placerShot()},160);return}
   const sv={S:S.blocks,view,layer,V,W,H,dpr,sel,active,pasting,drag,ugPend,mode,SM,OV,hoverIn,cw:cv.width,ch:cv.height};PLC_PREV=true;
   try{
-    S.blocks=[...T.blocks.map((q,i)=>({id:i+1,cls:q.cls,x:q.x,y:q.y,h:0,rot:0,pid:0})),...T.ms.map((it,i)=>({...it,id:T.blocks.length+i+1,h:0}))];
+    S.blocks=[...T.blocks.map((q,i)=>({id:i+1,cls:q.cls,x:q.x,y:q.y,h:0,rot:q.rot||0,pid:0})),...T.ms.map((it,i)=>({...it,id:T.blocks.length+i+1,h:0}))];
     view="F";layer=0;V={ox:plcV.ox,oy:plcV.oy,z:plcV.z};W=w;H=h;dpr=1;sel=new Set();active=null;pasting=null;drag=null;ugPend=null;mode=null;SM=false;OV={};hoverIn=false;SV++;
     plcSetSize(cv,w,h);
     paint();
@@ -874,5 +877,8 @@ $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;
 // Engine switch: Old = the original placer (default), New = prefab factory builder (pfFact2 > pfBands > pfChain, falls back to the old path when it refuses). Remembered once chosen.
 // No Limits is the only engine in the UI (always on). plcEngine stays for tests: ?engine=old|new|nl in the page URL pins an older engine, default nl.
 const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl")};
+const PLC_DK="msfb.docks",plcDkSave=()=>{try{localStorage.setItem(PLC_DK,JSON.stringify({i:$("plnDkI").checked,o:$("plnDkO").checked,t:$("plnDk").value,ot:$("plnDkOT").value}))}catch(_){}};
+try{const s=JSON.parse(localStorage.getItem(PLC_DK)||"{}");$("plnDkI").checked=!!s.i;$("plnDkO").checked=!!s.o;if(["ind","nrm"].includes(s.t))$("plnDk").value=s.t;if(["","ind","nrm"].includes(s.ot))$("plnDkOT").value=s.ot}catch(_){}
+["plnDkI","plnDkO","plnDk","plnDkOT"].forEach(id=>$(id).addEventListener("change",()=>{plcDkSave();placerLive()}));
 try{plcEngine(new URLSearchParams(location.search).get("engine")||"nl")}catch(_){plcEngine("nl")}
 window.addEventListener("resize",()=>{if($("plnPrev").open)requestAnimationFrame(placerFitView)});
