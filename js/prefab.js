@@ -209,7 +209,7 @@ function pfHubNode(){
 }
 // STEP 3 (pfBands graph, inert): stage graph for the band assembler. Nodes = raw hubs (layer 0, ceil(heads/8) per raw item), one group node per out group, one hub node per stage that needHub (not the final item). Edges = producer -> consumer group column head. Layers = longest path from raws; layers wider than PF_WRAP are cut into sub-layers; edges spanning >1 layer become chains of 1-wide dummies, so every edge joins layer i to i+1. Walk/sizing copied from pfChain (pfChain unchanged).
 const PF_WRAP=120;
-function pfBandSize(P,item,mk){
+function pfBandSize(P,item,mk,gr){
   const no=why=>({ok:false,why}),cap=MKS[mk][1];
   const st=new Map(),order=[];let err=null;
   const walk=(x,stack)=>{
@@ -218,9 +218,10 @@ function pfBandSize(P,item,mk){
     if(st.has(x))return;
     const T=P.nodes[x];
     if(!T||!T.rec){err='no recipe';return}
-    if(T.rec.i.some(([y])=>y===x)){err='growth not built in prefab';return}
+    const gs=T.rec.i.find(([y])=>y===x);
+    if(gs&&!(gr&&x!==item&&T.rec.o[1]>gs[1])){err='growth not built in prefab';return}   // pfFact: a growth stage (net>0) that is not the final item is allowed, its seed = a raw lane of its own item
     const ins=T.rec.i.map(([y])=>y);st.set(x,{T,ins});
-    for(const y of ins)if(P.nodes[y]&&P.nodes[y].crafter)walk(y,[...stack,x]);
+    for(const y of ins)if(y!==x&&P.nodes[y]&&P.nodes[y].crafter)walk(y,[...stack,x]);
     order.push(x);
   };
   walk(item,[]);
@@ -232,9 +233,9 @@ function pfBandSize(P,item,mk){
     const S=st.get(y),T=S.T,cb=plnCb(T.crafter),no2=why=>({why});
     let R;
     if(!cb)R=no2('No machine builds this recipe');
-    else if(S.ins.some(i=>!P.edges.some(q=>q.from===i&&q.to===y)))R=no2('no edge into '+plnNm(y));
+    else if(S.ins.some(i=>i!==y&&!P.edges.some(q=>q.from===i&&q.to===y)))R=no2('no edge into '+plnNm(y));
     else{
-      const N=T.machines,cls=def(cb.id).key,k=S.ins.length,flows=S.ins.map(i=>({item:i,flow:P.edges.find(q=>q.from===i&&q.to===y).flow/N}));
+      const N=T.machines,cls=def(cb.id).key,k=S.ins.length,flows=S.ins.map(i=>({item:i,flow:i===y?T.rec.i.find(([a])=>a===y)[1]*1800/T.rec.t:P.edges.find(q=>q.from===i&&q.to===y).flow/N}));
       if(flows.some(f=>f.flow>cap))R=no2('one machine input above one belt');
       else{
         const mcap=Math.max(1,Math.floor(Math.min(...flows.map(f=>cap/f.flow))));
@@ -331,7 +332,7 @@ function pfBandGraph(P,item,mk,o={}){
 // pfFact step 1: factory tree (DAG, one factory per item). Rows = longest path from the final item (row 0). K = copies so each copy <= MB machines and <= cap per machine output.
 const PF_MB=150;
 function pfFactTree(P,item,mk,o={}){
-  const Z=pfBandSize(P,item,mk);if(Z.ok===false)return Z;
+  const Z=pfBandSize(P,item,mk,true);if(Z.ok===false)return Z;
   const {st,order,sizing,cap}=Z,MB=o.mb||PF_MB,rows=new Map(),nodes=[];
   // order = producers before consumers; walk it in reverse so consumers are done first
   for(const y of [...order].reverse()){
@@ -647,8 +648,10 @@ function pfBusAssign(Z,F,SZ,mk,spMk){
   const ord=c=>{const n=byIt.get(c);return -n.row*1000+Z.rows[n.row].indexOf(c)};
   const hd=(c,it)=>{const n=byIt.get(c),S=SZ.get(c),s=n.N/(S.K*S.M);return F.get(c).ins.filter(p=>p.item===it).map(p=>({x:p.x,tile:p.tile,head:p.head,flow:p.flow*s})).sort((a,b)=>a.x-b.x)};
   const lanes=[];
-  for(const it of new Set(Z.nodes.flatMap(n=>n.ins.map(i=>i.item)))){
-    const cons=Z.nodes.filter(n=>n.ins.some(i=>i.item===it)).map(n=>n.item).sort((a,b)=>ord(a)-ord(b)),crafted=byIt.has(it);
+  const keys=[];   // (item, seed) pairs; a growth node's own input = a separate RAW seed lane, never the crafted lane of that item
+  for(const n of Z.nodes)for(const i of n.ins){const s=i.item===n.item;if(!keys.some(q=>q.it===i.item&&q.seed===s))keys.push({it:i.item,seed:s})}
+  for(const {it,seed} of keys){
+    const cons=Z.nodes.filter(n=>n.ins.some(i=>i.item===it)&&(seed?n.item===it:n.item!==it)).map(n=>n.item).sort((a,b)=>ord(a)-ord(b)),crafted=!seed&&byIt.has(it);
     let sup=[];if(crafted){const n=byIt.get(it),S=SZ.get(it),s=n.N/(S.K*S.M);sup=F.get(it).outs.map(o=>o.flow*s)}
     const L=[],open=()=>{const l={item:it,raw:!crafted,idx:L.length,cap:crafted?sup[L.length]:capG,taps:[],D:0};L.push(l);lanes.push(l);return l};
     let cur=open(),rem=cur.cap;
@@ -760,7 +763,7 @@ function pfFactTop2(P,item,mk,spMk,o={}){
   const L=pfFactLayout2(Z,F,A.lanes,mk,spMk);if(L.ok===false)return L;
   const T=P.nodes[item],BX=o.box||PLC_BOX;
   return{ok:true,items:L.items,lanes:1,per:[T.machines],makes:T.machines*T.pmach,pitch:L.h+1,w:L.w,h:L.h,tall:true,mod:false,box:BX,mk,ports:L.ports,
-    note:['Prefab factory: '+L.nFact+' factories, '+L.nRows+' rows, '+L.stat.lanes+' bus lanes, S out'],src:{P,item,mk,spMk,o},prefab:true,
+    note:['Prefab factory: '+L.nFact+' factories, '+L.nRows+' rows, '+L.stat.lanes+' bus lanes, S out',...(Z.nodes.some(n=>n.ins.some(i=>i.item===n.item))?['Growth stage: the seed is an infinite container of the growth item (no feedback loop); the planned machines run at the pace the consumers take']:[])],src:{P,item,mk,spMk,o},prefab:true,
     stat:L.stat,sizes:Z.nodes.map(n=>({item:n.item,N:n.N,built:SZ.get(n.item).K*SZ.get(n.item).M}))};
 }
 // STEP 5b (pfBands atom, inert: no caller). Builds one graph node at y=0, absolute x from x0, in a layer of body height B (belts run down to row B-1, the gutter starts at row B). grp: pfGrpNode with greedy column origins (each column and the last column's head box fit the wall grid), head boxes replaced by raw hubs. hub/raw: one Large container, W port belt up/over when nIn>4, S outs and E outs (reverse riser order) belted down to row B-1. Returns {ok,items,x0,x1 (exclusive),ins:[{item,head,x}],outs:[{x}]} or {ok:false,why}.
