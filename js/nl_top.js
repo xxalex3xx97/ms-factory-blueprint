@@ -17,7 +17,7 @@ function nlTop(P,item,mk,spMk,o={}){
     const ports=B.outXs.map(x=>({edge:'S',off:x,dir:'out',belts:1,slot:-1,mk}));
     const cuts=[];for(let c=PF_GRID.cw;c<w-1;c+=PF_GRID.cw)cuts.push(c);
     return{ok:true,items,cuts,lanes:1,per:[T.machines],makes:T.machines*T.pmach,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
-      note:['No Limits: '+pl.cells.length+' cells, '+pl.lanes.length+' lanes, '+pl.spills.length+' spills, '+ports.length+' out'],src:{P,item,mk,spMk,o},prefab:true,stat:B.stat,nlPlan:pl,chosen:pl.chosen,times:{flow:Math.round(t1-t0),plan:Math.round(t2-t1),build:Math.round(t3-t2)}}
+      note:['No Limits: '+pl.cells.length+' cells, '+pl.lanes.length+' lanes, '+pl.spills.length+' spills, '+ports.length+' out',...(P.nofp||[]).map(x=>plnNm(x)+' comes from the Deep Space Observatory block (not placed)')],src:{P,item,mk,spMk,o},prefab:true,stat:B.stat,nlPlan:pl,chosen:pl.chosen,times:{flow:Math.round(t1-t0),plan:Math.round(t2-t1),build:Math.round(t3-t2)}}
   }catch(e){return{ok:false,why:'NL: internal error '+e.message}}finally{PLC_BOX=prevBox}
 }
 
@@ -52,6 +52,7 @@ function nlArmoury(P,item,mk,spMk,o={}){
     for(const p of q.L.ports)ports.push({...p,off:p.off+x0});
     for(const k in q.L.stat)if(typeof q.L.stat[k]==='number')stat[k]=(stat[k]||0)+q.L.stat[k];
     note.push(plnNm(q.c)+' '+(+q.r.toFixed(2))+'/min -> '+q.L.ports.length+' container(s)');
+    for(const s of q.L.note)if(/not placed/.test(s)&&!note.includes(s))note.push(s);
     x0=Math.ceil((x0+q.L.w+1)/PF_GRID.cw)*PF_GRID.cw}   // keep the wall-column grid of each sub-factory aligned
   w=x0;const BX=o.box||PLC_BOX,cuts=[];for(let c=PF_GRID.cw;c<w-1;c+=PF_GRID.cw)cuts.push(c);
   return{ok:true,items,cuts,lanes:1,per:[0],makes:0,pitch:H+1,w,h:H,tall:true,mod:false,box:BX,mk,ports,

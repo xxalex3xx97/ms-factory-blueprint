@@ -1,6 +1,6 @@
 // B0 baseline: plan-only tap/row stats. Run: node tests/nl_tap_stat.mjs (env CASE='Exosuit 1' = one case). Gate: no throw.
 // Armoury items (Exosuit) are split like nlArmoury: one plan per leaf component at rate N x recipe amount, each measured on its own.
-// env TREE=<dir with index.html+js>: measure another tree. HEAD planner.js plnCb refuses machines with unknown footprint (Deep Space Observatory, needed by Advanced Plate), so Advanced Plate / Exosuit need a tree copy whose plnCb lacks the 'b.w!=null' check.
+// env TREE=<dir with index.html+js>: measure another tree.
 import {createRequire} from 'module';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
