@@ -4,6 +4,7 @@ function nlTop(P,item,mk,spMk,o={}){
   try{
     spMk=Math.max(spMk,mk);
     const GT=P.nodes[item];
+    if(GT&&GT.crafter&&/Armoury/i.test(GT.crafter))return nlArmoury(P,item,mk,spMk,o);   // hand-crafted by the player: build its components only
     if(GT&&GT.rec&&GT.rec.i.some(([x])=>x===item))return nlGrowth(P,item,mk,spMk,o);   // growth as the final item: verified growth lanes (plcGrowthLane), one lane per machine, one sink container per lane
     const t0=performance.now(),F=nlFlow(P,item,mk),t1=performance.now();if(F.ok===false)return{ok:false,why:'NL: '+F.why};
     if(F.nodes.some(n=>/Armoury/i.test(n.cls)))return{ok:false,why:'NL: Armoury recipes are not built yet (NL9)'};
@@ -30,4 +31,28 @@ function nlGrowth(P,item,mk,spMk,o={}){
   const cuts=[];for(let c=PF_GRID.cw;c<w-1;c+=PF_GRID.cw)cuts.push(c);
   return{ok:true,items,cuts,lanes:1,per:[T.machines],makes:T.machines*T.pmach,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports:sinks.map((s,i)=>({edge:'S',off:s.x,dir:'out',belts:2,slot:i,mk})),
     note:['No Limits: growth '+T.machines+' lanes, '+sinks.length+' out',...L.note],src:{P,item,mk,spMk,o},prefab:true,stat:{belts,ug:0,spl,blocks:T.machines,machines,lanes:T.machines,spills:0},growth:true};
+}
+
+// NL9 Armoury: the player hand-crafts Armoury items, so the factory holds NO Armoury machine. Leaf components (Armoury inputs are expanded recursively) are built by normal nlTop sub-factories at rate N x recipe amount,
+// laid out side by side bottom-aligned (sinks on the bottom edge); each component ends in its own sink container(s) (one per belt of its rate, as every NL final). Returns the nlTop result shape.
+function nlArmoury(P,item,mk,spMk,o={}){
+  const leaf=new Map(),isA=x=>{const T=P.nodes[x];return T&&T.crafter&&/Armoury/i.test(T.crafter)};
+  const walk=(x,rate)=>{const T=P.nodes[x];for(const [y,n] of T.rec.i){const r=rate*n/T.rec.o[1];if(isA(y))walk(y,r);else leaf.set(y,(leaf.get(y)||0)+r)}};
+  walk(item,P.nodes[item].rate);
+  const parts=[];let x0=0,H=0;
+  for(const [c,r] of leaf){
+    if(!(P.nodes[c]&&P.nodes[c].crafter))return{ok:false,why:'NL: Armoury input '+plnNm(c)+' is a raw item (no factory to build)'};
+    const Pc=plan(c,r,mk,{sp:null,bal:null},PLN_PICK,{proto:false,enr:false}),L=nlTop(Pc,c,mk,spMk,{...o,armoury:1});
+    if(L.ok===false)return{ok:false,why:'NL: '+plnNm(c)+': '+L.why};
+    parts.push({c,r,L});H=Math.max(H,L.h)}
+  const items=[],ports=[],stat={belts:0,ug:0,spl:0,machines:0,blocks:0,lanes:0,spills:0},note=[];let w=0;
+  for(const q of parts){const dy=H-q.L.h;q.x0=x0;
+    for(const it of q.L.items)items.push({...it,x:it.x+x0,y:it.y+dy});
+    for(const p of q.L.ports)ports.push({...p,off:p.off+x0});
+    for(const k in q.L.stat)if(typeof q.L.stat[k]==='number')stat[k]=(stat[k]||0)+q.L.stat[k];
+    note.push(plnNm(q.c)+' '+(+q.r.toFixed(2))+'/min -> '+q.L.ports.length+' container(s)');
+    x0=Math.ceil((x0+q.L.w+1)/PF_GRID.cw)*PF_GRID.cw}   // keep the wall-column grid of each sub-factory aligned
+  w=x0;const BX=o.box||PLC_BOX,cuts=[];for(let c=PF_GRID.cw;c<w-1;c+=PF_GRID.cw)cuts.push(c);
+  return{ok:true,items,cuts,lanes:1,per:[0],makes:0,pitch:H+1,w,h:H,tall:true,mod:false,box:BX,mk,ports,
+    note:['No Limits: Armoury '+plnNm(item)+' hand-crafted, factory builds '+parts.length+' components, '+ports.length+' containers',...note],src:{P,item,mk,spMk,o},prefab:true,stat,armoury:parts.map(q=>({item:q.c,rate:q.r,outs:q.L.ports.length,x0:q.x0,w:q.L.w}))};
 }

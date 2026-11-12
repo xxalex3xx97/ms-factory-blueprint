@@ -18,12 +18,13 @@ let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 const LIM = 120000, TLIM = 60000;
 const race = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r({timeout: true}), ms))]);
-let cases = [['Enzyme', 1], ['Enzyme', 10], ['Enzyme', 100], ['Xenobacteria', 10], ['Xenobacteria', 100], ['Biolattice', 10], ['Basic Motor', 60], ['Basic Circuits', 10], ['Basic Circuits', 100], ['Basic Circuits', 1000], ['Advanced Circuits', 10], ['Advanced Circuits', 50], ['Basic Circuits', 10000]];
+let cases = [['Exoskeleton Mk. 3', 1], ['Exoskeleton Mk. 3', 10], ['Backpack Mk. 3', 10], ['Exosuit', 1], ['Enzyme', 1], ['Enzyme', 10], ['Enzyme', 100], ['Xenobacteria', 10], ['Xenobacteria', 100], ['Biolattice', 10], ['Basic Motor', 60], ['Basic Circuits', 10], ['Basic Circuits', 100], ['Basic Circuits', 1000], ['Advanced Circuits', 10], ['Advanced Circuits', 50], ['Basic Circuits', 10000]];
 if (process.env.CASE) cases = cases.filter(c => process.env.CASE === c[0] + ' ' + c[1]);
 const rows = [];
 let hung = false, simsDone = false;
 for (const [name, rate] of cases) {
-  if (rate >= 10000 && !simsDone) await runSims();
+  const heavy = rate >= 10000 || name === 'Exosuit' || (name === 'Exoskeleton Mk. 3' && rate >= 10);   // Exosuit: ~12M belts at 1/min, ~120M at 10/min (not run)
+  if (heavy && !simsDone) await runSims();
   if (hung) { check(false, name + ' ' + rate + ': skipped, page hung on an earlier case'); continue }
   const tag = name + ' ' + rate;
   // stage A: build
@@ -36,15 +37,16 @@ for (const [name, rate] of cases) {
     const ms = Math.round(performance.now() - t0), heap = performance.memory ? Math.round((performance.memory.usedJSHeapSize - h0) / 1e6) : -1;
     if (!L.ok) return {refused: L.why};
     const t1 = performance.now(), chk = pfCheck({items: L.items, w: L.w, h: L.h, ports: L.ports});
-    const gr = !!L.growth, F = gr ? null : nlFlow(P, it, 1), clsN = {}, cnt = {};
+    const gr = !!L.growth, ar = !!L.armoury, F = gr || ar ? null : nlFlow(P, it, 1), clsN = {}, cnt = {};
     if (gr) clsN[def(plnCb(P.nodes[it].crafter).id).key] = P.nodes[it].machines;
+    else if (ar) { for (const q of L.armoury) { const Fc = nlFlow(plan(q.item, q.rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false}), q.item, 1); for (const n of Fc.nodes) clsN[n.cls] = (clsN[n.cls] || 0) + n.N } }
     else for (const n of F.nodes) clsN[n.cls] = (clsN[n.cls] || 0) + n.N;
     for (const q of L.items) cnt[q.cls] = (cnt[q.cls] || 0) + 1;
     const mdiff = Object.keys(clsN).reduce((a, c) => a + Math.abs((cnt[c] || 0) - clsN[c]), 0);
     const outs = L.ports.filter(p => p.dir === 'out');
-    const sinks = gr ? outs : L.items.filter(q => q.cls === PLC_BOX && q.ct && !q.ct.length && q.y + dim(q).h === L.h);
+    const sinks = gr || ar ? outs : L.items.filter(q => q.cls === PLC_BOX && q.ct && !q.ct.length && q.y + dim(q).h === L.h);
     // lane carry replay
-    const pl = L.nlPlan || {lanes: [], cells: [], spills: []}, cap = gr ? 0 : F.cap, E = 1e-6, bad = [];
+    const pl = L.nlPlan || {lanes: [], cells: [], spills: []}, cap = gr || ar ? 0 : F.cap, E = 1e-6, bad = [];
     for (const itm of new Set(pl.lanes.map(l => l.key))) {
       const La = pl.lanes.filter(l => l.key === itm);
       let carry = 0;
@@ -59,8 +61,8 @@ for (const [name, rate] of cases) {
       if (carry > E) bad.push(plnNm(itm) + ' end carry ' + carry.toFixed(2));
     }
     let lc = null;
-    try { const Lc = lcTop(P, it, 1, 0, {}); lc = Lc.ok ? +(Lc.stat.belts / Lc.stat.machines).toFixed(1) : 'refused' } catch (e) { lc = 'err' }
-    return {chosen: L.chosen, note: L.note[0], times: L.times, ms, heap, ov: chk.ov, chkMs: Math.round(performance.now() - t1), mdiff, nOuts: outs.length, outEdges: [...new Set(outs.map(p => p.edge))].join(','), sinks: sinks.length, groups: gr ? outs.length : pl.sink ? pl.sink.groups.length : 1, carryBad: bad.slice(0, 4), nCarryBad: bad.length, w: L.w, h: L.h, stat: {...L.stat, rows: undefined}, nItems: L.items.length, lc, gr};
+    if (!ar) try { const Lc = lcTop(P, it, 1, 0, {}); lc = Lc.ok ? +(Lc.stat.belts / Lc.stat.machines).toFixed(1) : 'refused' } catch (e) { lc = 'err' }
+    return {chosen: L.chosen, note: L.note[0], times: L.times, ms, heap, ov: chk.ov, chkMs: Math.round(performance.now() - t1), mdiff, nOuts: outs.length, outEdges: [...new Set(outs.map(p => p.edge))].join(','), sinks: sinks.length, groups: gr || ar ? outs.length : pl.sink ? pl.sink.groups.length : 1, carryBad: bad.slice(0, 4), nCarryBad: bad.length, w: L.w, h: L.h, stat: {...L.stat, rows: undefined}, nItems: L.items.length, lc, gr, ar, nParts: ar ? L.armoury.length : 0};
   }, [name, rate]), LIM);
   if (a.timeout) { check(false, tag + ': nlTop exceeded ' + LIM / 1000 + ' s (page hung, remaining cases skipped)'); hung = true; continue }
   console.log(tag, JSON.stringify({note: a.note, times: a.times, ms: a.ms, heapMB: a.heap, chkMs: a.chkMs, items: a.nItems}));
@@ -70,6 +72,7 @@ for (const [name, rate] of cases) {
   check(a.mdiff === 0, tag + ': machines == planner N (diff ' + a.mdiff + ')');
   check(a.nOuts >= 1 && a.outEdges === 'S', tag + ': out ports ' + a.nOuts + ' on ' + a.outEdges);
   check(a.sinks === a.nOuts && a.nOuts === a.groups, tag + ': sink containers ' + a.sinks + ' == out ports ' + a.nOuts + ' == groups ' + a.groups);
+  if (a.ar) check(a.nOuts === a.nParts, tag + ': one container per component (' + a.nOuts + ' containers, ' + a.nParts + ' components)');
   check(a.nCarryBad === 0, tag + ': lane carry replay' + (a.nCarryBad ? ' ' + a.carryBad.join(' | ') : ''));
   // stage B: tile + connectivity
   const b = await race(pg.evaluate(([name, rate]) => {
@@ -119,8 +122,8 @@ for (const [name, rate] of cases) {
       if (!q || !(isBelt(q) || isUG(q) || isSpl(q))) { out.boxNoBelt++; out.ex.push('boxNoBelt (' + b.x + ',' + b.y + ')') }
     }
     return {tileMs, gSink, gLanes: L.growth ? L.stat.lanes : 0, tileOv: T.ov, tileSpan: T.span, blocks: T.blocks.length, out: {...out, ex: out.ex.slice(0, 6)}};
-  }, [name, rate]), rate >= 10000 ? TLIM : LIM);
-  if (b.timeout && rate >= 10000) { console.log('NOTE ' + tag + ': placerTile + connectivity did not finish in ' + TLIM / 1000 + ' s (nlTop stages above); tile/connectivity not gated for rate >= 10000'); hung = true; continue }
+  }, [name, rate]), heavy ? TLIM : LIM);
+  if (b.timeout && heavy) { console.log('NOTE ' + tag + ': placerTile + connectivity did not finish in ' + TLIM / 1000 + ' s (nlTop stages above); tile/connectivity not gated for rate >= 10000'); hung = true; continue }
   if (b.timeout) { check(false, tag + ': placerTile+connectivity exceeded ' + LIM / 1000 + ' s (page hung)'); hung = true; continue }
   console.log(tag, 'tile', JSON.stringify({tileMs: b.tileMs, blocks: b.blocks}));
   if (b.tileFail) { check(false, tag + ': placerTile ok (' + b.tileFail + ')'); continue }
@@ -141,7 +144,7 @@ async function runSims() {
   simsDone = true;
   if (!process.env.NOSIM && !hung) {
   const WIN = Number(process.env.WIN || 600);
-  for (const [name, rate] of [['Basic Circuits', 1000], ['Advanced Circuits', 10], ['Enzyme', 10], ['Xenobacteria', 10], ['Biolattice', 10]]) {
+  for (const [name, rate] of [['Basic Circuits', 1000], ['Advanced Circuits', 10], ['Exoskeleton Mk. 3', 1], ['Backpack Mk. 3', 10], ['Enzyme', 10], ['Xenobacteria', 10], ['Biolattice', 10]]) {
     if (process.env.CASE && process.env.CASE !== name + ' ' + rate) continue;
     const t0 = Date.now();
     const r = await race(pg.evaluate(([name, rate, WIN]) => {
@@ -151,17 +154,21 @@ async function runSims() {
       if (!L.ok) return {refused: L.why};
       const below = q => L.items.some(b => PLC_BELT.includes(b.cls) && b.y === q.y + dim(q).h && b.x >= q.x && b.x < q.x + dim(q).w);
       const sinks = L.items.map((q, i) => ({q, id: i + 1})).filter(({q}) => q.cls === PLC_BOX && q.ct && !q.ct.length && (L.growth ? !below(q) : q.y + dim(q).h === L.h));
+      const itemStock = (id, item) => { const cn = SIM.C.get(id); const x = cn && cn.st.get(item); return x ? x.n : 0 };
       S.blocks = L.items.map((b, i) => ({id: i + 1, cls: b.cls, x: b.x, y: b.y, h: 0, rot: b.rot, pid: 0, off: b.off, ct: b.ct ? b.ct.map(q => ({...q})) : undefined, rec: b.rec}));
       try { smSet(true) } catch (e) {}
       simReset && simReset();
       const stock = () => sinks.reduce((a, {id}) => { const cn = SIM.C.get(id); const x = cn && cn.st.get(it); return a + (x ? x.n : 0) }, 0);
       let n120 = 0;
-      for (let s = 0; s < WIN; s++) { simAdvance(1, 1); if (s === 119) n120 = stock() }
+      const pb = [], partStock = q => sinks.filter(({q: b}) => b.x >= q.x0 && b.x < q.x0 + q.w).reduce((a, {id}) => a + itemStock(id, q.item), 0);
+      for (let s = 0; s < WIN; s++) { simAdvance(1, 1); if (s === 119) { n120 = stock(); if (L.armoury) L.armoury.forEach((q, i) => { pb[i] = partStock(q) }) } }
+      if (L.armoury) return {parts: L.armoury.map((q, i) => { const mine = sinks.filter(({q: b}) => b.x >= q.x0 && b.x < q.x0 + q.w); const m = (mine.reduce((a, {id}) => a + itemStock(id, q.item), 0) - pb[i]) * 60 / (WIN - 120); return {name: plnNm(q.item), rate: q.rate, n: mine.length, measured: m} }), sinks: sinks.length};
       return {measured: (stock() - n120) * 60 / (WIN - 120), target: rate, makes: L.makes, growth: !!L.growth, sinks: sinks.length};
     }, [name, rate, WIN]), 600000);
     if (r.timeout) { check(false, name + ' ' + rate + ' sim exceeded 600 s'); hung = true; break }
     console.log('SIM', name, rate, 'secs ' + ((Date.now() - t0) / 1000).toFixed(1), JSON.stringify(r));
     if (r.refused) { check(false, name + ' ' + rate + ' sim: ' + r.refused); continue }
+    if (r.parts) { for (const q of r.parts) check(Math.abs(q.measured - q.rate) <= 0.05 * q.rate, name + ' ' + rate + ': ' + q.name + ' container(s) ' + q.n + ' receive ' + q.measured.toFixed(1) + '/min vs ' + q.rate.toFixed(1) + ' (5%)'); continue }
     if (['Enzyme', 'Xenobacteria', 'Biolattice'].includes(name)) {   // machines are rounded up and run at the pace the sink takes (infinite), so the sink rate = planned capacity (makes) within 5% (growth final: at least makes, the sim sink also receives the gross output of the verified growth lane), and never below the requested rate
       check((r.growth ? r.measured >= 0.95 * r.makes : Math.abs(r.measured - r.makes) <= 0.05 * r.makes) && r.measured >= 0.95 * r.target, name + ' ' + rate + ': sim sink rate ' + r.measured.toFixed(1) + '/min vs planned capacity ' + r.makes.toFixed(1) + ' (request ' + r.target + ')');
     } else
