@@ -153,13 +153,13 @@ const pfLine=(n,box,mk,item,len,wall)=>pfPrefab('pfLine',[n,box,mk,item,len,wall
 let PLC_PREFAB=false;   // test hook: flip on in the page; off = old path only
 // COLUMNS (step 6A): sizes[] = machines per column (pfCol each), side by side (seam cols make a 2-cell gap). Each column's own sink box is removed; its collector stub goes north into one shared out row at row Rb (= the out box port row) that runs east into ONE out container. Columns sit one row lower (SH = Rb+1). Inputs stay per-column infinite source containers (not aggregated). Out total must fit one belt (out stack not built). STEP 6B: pfCompose caps machines per column so the column fits the floor height (h+SH<=30); a wider layout is cut by placerTile at the seams.
 // HUB W entry (step 7g): hubAt=true -> no sink box; a DAT_Container_2 hub at x=xo with its W port on the out row (hub.y = Rb - that port's y). Returns hub:{x,y} (after the minY shift).
-function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt,dn){
+function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt,dn,org){
   const no=why=>({ok:false,why}),bc=PLC_BELT[mk],bw=def(PLC_BOX).w,HC='DAT_Container_2';
   if(outFlow>MKS[mk][1])return no('output above belt cap: out stack not built');
   const pw=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W');if(!pw)return no('box has no W port');
   if(dn&&hubAt)return no('hub W entry with outDown not built');
-  const Rb=pw.y,SH=dn?0:Rb+1,it=[],xs=[],cols=[];let x=0;
-  for(const mc of sizes){const C=pfCol(cls,k,flows,mc,mk,dn);if(C.ok===false)return no(C.why);
+  const Rb=pw.y,SH=dn?0:Rb+1,it=[],xs=[],cols=[],xs0=[];let x=0;
+  for(const [ci,mc] of sizes.entries()){const C=pfCol(cls,k,flows,mc,mk,dn);if(C.ok===false)return no(C.why);if(org)x=org[ci];xs0.push(x);
     const xC=C.ports.find(p=>p.dir==='out').off,isB=q=>q.cls===PLC_BOX&&q.x===xC&&!(q.ct&&q.ct.length)&&(dn||q.y===0);
     C.items.forEach(q=>{if(isB(q))return;it.push({...q,x:q.x+x,y:q.y+SH})});
     if(dn)cols.push({xc:xC+x,bY:C.items.find(isB).y,h:C.h});   // outDown: stub south from the collector into the shared row below
@@ -181,8 +181,34 @@ function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt,dn){
   else it.push({cls:PLC_BOX,x:xo,y:Rs-pw.y,rot:0,ct:[]});
   const minY=Math.min(...it.map(q=>q.y));
   const items=it.map(q=>({...q,y:q.y-Math.min(0,minY)}));
-  return{ok:true,items,w:xo+(hubAt?def(HC).w:bw),h:Math.max(...items.map(q=>q.y+dim(q).h)),ports:[],hub:hubAt?{x:xo,y:hubY-Math.min(0,minY)}:null};
+  return{ok:true,items,w:xo+(hubAt?def(HC).w:bw),h:Math.max(...items.map(q=>q.y+dim(q).h)),ports:[],hub:hubAt?{x:xo,y:hubY-Math.min(0,minY)}:null,cx:xs0,ob:{x:xo,y:Rs-pw.y-Math.min(0,minY)}};
 }
+// STEP 2 (pfBands node builders, inert until step 5). PF_BANDS gates the assembler (default off).
+let PF_BANDS=false;
+// GROUP node: a pfColumns group (outDown) as a graph node. ins = one top terminal per input head of every column (item, edge 'N', x, y 0). out = the out box S port (edge 'S').
+function pfGrpNode(cls,k,flows,sizes,mk,outFlow,org){
+  const A=pfColumns(cls,k,flows,sizes,mk,outFlow,false,true,org);
+  if(A.ok===false)return A;
+  const a=pfAssign(cls,k,flows),its=[...a.W,...a.E,...a.N].map(p=>p.item),ins=[];
+  sizes.forEach((mc,i)=>{const C=pfCol(cls,k,flows,mc,mk,true);C.ports.filter(p=>p.dir==='in').forEach((p,j)=>ins.push({item:its[j],edge:'N',x:A.cx[i]+p.off,y:0}))});
+  const sp=portsOf({cls:PLC_BOX,x:A.ob.x,y:A.ob.y,rot:0,off:[]}).find(p=>p.f==='S');
+  if(!sp)return{ok:false,why:'out box has no S port'};
+  return{ok:true,items:A.items,w:A.w,h:A.h,ins,out:{edge:'S',x:sp.x,y:A.ob.y+dim({cls:PLC_BOX,rot:0}).h},cx:A.cx};
+}
+// HUB node: one Large container (DAT_Container_2). ins = its N ports (by x) then its first W port; outs = S ports (by x) then E ports (by y), named S0.. / E0.. in that order.
+function pfHubNode(){
+  const hc='DAT_Container_2',pts=portsOf({cls:hc,x:0,y:0,rot:0,off:[]}),d=dim({cls:hc,rot:0});
+  const N=pts.filter(p=>p.f==='N').sort((a,b)=>a.x-b.x),W=pts.filter(p=>p.f==='W').sort((a,b)=>a.y-b.y).slice(0,1);
+  const S=pts.filter(p=>p.f==='S').sort((a,b)=>a.x-b.x),E=pts.filter(p=>p.f==='E').sort((a,b)=>a.y-b.y);
+  return{ok:true,items:[{cls:hc,x:0,y:0,rot:0,ct:[]}],w:d.w,h:d.h,
+    ins:[...N.map(p=>({edge:'N',x:p.x,y:0})),...W.map(p=>({edge:'W',x:0,y:p.y}))],
+    outs:[...S.map((p,i)=>({name:'S'+i,edge:'S',x:p.x,y:d.h})),...E.map((p,i)=>({name:'E'+i,edge:'E',x:d.w,y:p.y}))]};
+}
+// Tile-fit helpers (wall grid every PF_GRID.cw cols / PF_GRID.ch rows). x,y absolute cells.
+const pfMod=(v,c)=>((v%c)+c)%c;
+const pfFitX=(x,w,dummy)=>{const c=PF_GRID.cw,m=pfMod(x,c);return dummy?(m>=2&&m<=c-3):(m>=1&&m+w<=c-1)};
+const pfFitY=(y,h)=>{const c=PF_GRID.ch,m=pfMod(y,c);return m>=1&&m+h<=c-1};
+const pfTrackOk=(t,y0)=>{const m=pfMod(t,PF_GRID.ch);return t>=y0+2&&m>=2&&m<=PF_GRID.ch-3};
 // SEAMS (step 6C): placerCut cuts a layout into floor tiles, each cut column c with c-s in [LO,FW] (LO = the 2x2 block's wall minimum, FW = its floor width). When no free column exists there, insert k blank columns (plcBlank: crossing east belts stretched, UG pair across the seam) and cut at a free column of the new layout. Greedy, same search order as placerCut, so the cut it finds is the one checked here. Only inserts when no free column exists (layouts that already cut are unchanged). Ports on N/S edges shift with the columns.
 function pfSeams(A,mk){
   const big=plcCls(PL_STD[PL_STD.length-1]),FW=floorRect({cls:big,x:0,y:0,h:0,rot:0}).w,LO=Math.max(2,dim({cls:big,rot:0}).w*FC+2-def(PLC_UG[mk]).maxApart),mx=def(PLC_UG[mk]).maxApart;
