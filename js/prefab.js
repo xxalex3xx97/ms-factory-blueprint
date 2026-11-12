@@ -448,6 +448,7 @@ function pfBandsBuild(P,item,mk){
   const ports=G.layers[nL-1].map(id=>({edge:'S',off:atom.get(id).outs[0].x,dir:'out',belts:1,slot:-1,mk}));
   return{ok:true,items,w:wMax+1,h:Tb[nL-1]+Hl[nL-1],ports,nLayers:nL};
 }
+function pfBands(P,item,mk,spMk,o={}){const T=P.nodes[item],BX=o.box||PLC_BOX;const R=pfBandsBuild(P,item,mk);if(R.ok===false)return R;return{ok:true,items:R.items.map(q=>({h:0,pid:0,...q})),lanes:1,per:[T.machines],makes:T.machines*T.pmach,pitch:R.h+1,w:R.w,h:R.h,tall:true,mod:false,box:BX,mk,ports:R.ports,note:['Prefab bands: '+R.nLayers+' layers, S out'],src:{P,item,mk,spMk,o},prefab:true};}
 // SEAMS (step 6C): placerCut cuts a layout into floor tiles, each cut column c with c-s in [LO,FW] (LO = the 2x2 block's wall minimum, FW = its floor width). When no free column exists there, insert k blank columns (plcBlank: crossing east belts stretched, UG pair across the seam) and cut at a free column of the new layout. Greedy, same search order as placerCut, so the cut it finds is the one checked here. Only inserts when no free column exists (layouts that already cut are unchanged). Ports on N/S edges shift with the columns.
 function pfSeams(A,mk){
   const big=plcCls(PL_STD[PL_STD.length-1]),FW=floorRect({cls:big,x:0,y:0,h:0,rot:0}).w,LO=Math.max(2,dim({cls:big,rot:0}).w*FC+2-def(PLC_UG[mk]).maxApart),mx=def(PLC_UG[mk]).maxApart;
@@ -722,7 +723,7 @@ function pfCompose(P,item,mk,spMk,o={}){
   const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
   if(!T||!T.rec)return no('no recipe');
   if(T.rec.i.some(([x])=>x===item))return no('growth not built in prefab');
-  if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter)))return(PF_DOWN2?pfChainDown:pfChain)(P,item,mk,spMk,o);   // a machine upstream: chain (step 7)
+  if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter)))return(PF_BANDS?pfBands:PF_DOWN2?pfChainDown:pfChain)(P,item,mk,spMk,o);   // a machine upstream: chain (step 7)
   const cb=plnCb(T.crafter);if(!cb)return no('No machine builds this recipe');
   const N=T.machines,cls=def(cb.id).key,k=T.rec.i.length,cap=MKS[mk][1];
   const edge=x=>P.edges.find(e=>e.from===x&&e.to===item);
