@@ -180,6 +180,23 @@ OVERRIDES = {
     "ITEM_BackpackMk1": "T_Backpack_1", "ITEM_BackpackMk2": "T_Backpack_1", "ITEM_BackpackMk3": "T_Backpack_1",
     "ITEM_ExoskeletonMk1": "T_Exoskeleton_1", "ITEM_ExoskeletonMk2": "T_Exoskeleton_1", "ITEM_ExoskeletonMk3": "T_Exoskeleton_1",
 }
+# EA station blocks (shapes_src.json add:true): texture = decoded BPO Icon property (extract/rea/blocks_raw.json icon[0])
+def _ea_block_icons():
+    try:
+        src = json.load(open(os.path.join(HERE, 'shapes_src.json'), encoding='utf-8'))['blocks']
+        raw = json.load(open(os.path.join(HERE, 'rea', 'blocks_raw.json'), encoding='utf-8'))
+    except (OSError, ValueError, KeyError):
+        return
+    # Solar Panels Mk.3: BPO Icon property is T_SolarPanels, the same name as Mk.1 (whose file is T_SolarPanels_2)
+    OVERRIDES.setdefault('BPO_SolarPanelBlock_03', 'T_SolarPanels_2')
+    for n, e in src.items():
+        ic = (raw.get(n) or {}).get('icon') or []
+        if e.get('add') and ic and e.get('icon') == n:
+            OVERRIDES.setdefault(n, ic[0])
+
+
+_ea_block_icons()
+
 BLOCK_PX, ITEM_PX = 256, 128
 
 
