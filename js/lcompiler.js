@@ -27,6 +27,18 @@ function lcCellGen(cls,k,flows,K,mk){
   }
   return best||{ok:false,why};
 }
+// LC step 3: cell lookup from offline library LC_CELLS (js/lc_cells.js, built by tools/lc_gen.mjs). Missing key -> lcCellGen fallback (needs cls,k,flows).
+// Returns {w,h,ins,out,nb,items} with items shifted by (ox,oy), item objects in original form.
+function lcCell(rec,K,mk,ox,oy,cls,k,flows){
+  const e=typeof LC_CELLS!=='undefined'&&LC_CELLS[rec+'|'+K+'|'+mk];
+  let c;
+  if(e)c={w:e.w,h:e.h,ins:e.ins,out:e.out,nb:e.nb,items:e.items.map(a=>Object.assign({cls:a[0],x:a[1],y:a[2],rot:a[3]},a[4]&&JSON.parse(JSON.stringify(a[4]))))};
+  else{
+    c=lcCellGen(cls,k,flows,K,mk);
+    if(c.ok===false)return c;
+  }
+  return{w:c.w,h:c.h,ins:c.ins.map(q=>({item:q.item,x:q.x})),out:{x:c.out.x},nb:c.nb,items:c.items.map(b=>Object.assign({},b,{x:b.x+ox,y:b.y+oy}))};
+}
 // Flow solve for one item at machine tier mk. Returns {ok,nodes,raws} or {ok:false,why}.
 function lcFlow(P,item,mk){
   const Z=pfFactTree(P,item,mk);
