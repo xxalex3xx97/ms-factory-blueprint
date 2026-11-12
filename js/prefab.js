@@ -204,6 +204,121 @@ function pfHubNode(){
     ins:[...N.map(p=>({edge:'N',x:p.x,y:0})),...W.map(p=>({edge:'W',x:0,y:p.y}))],
     outs:[...S.map((p,i)=>({name:'S'+i,edge:'S',x:p.x,y:d.h})),...E.map((p,i)=>({name:'E'+i,edge:'E',x:d.w,y:p.y}))]};
 }
+// STEP 3 (pfBands graph, inert): stage graph for the band assembler. Nodes = raw hubs (layer 0, ceil(heads/8) per raw item), one group node per out group, one hub node per stage that needHub (not the final item). Edges = producer -> consumer group column head. Layers = longest path from raws; layers wider than PF_WRAP are cut into sub-layers; edges spanning >1 layer become chains of 1-wide dummies, so every edge joins layer i to i+1. Walk/sizing copied from pfChain (pfChain unchanged).
+const PF_WRAP=120;
+function pfBandGraph(P,item,mk,o={}){
+  const no=why=>({ok:false,why}),cap=MKS[mk][1];
+  const st=new Map(),order=[];let err=null;
+  const walk=(x,stack)=>{
+    if(err)return;
+    if(stack.includes(x)){err='cycle in plan';return}
+    if(st.has(x))return;
+    const T=P.nodes[x];
+    if(!T||!T.rec){err='no recipe';return}
+    if(T.rec.i.some(([y])=>y===x)){err='growth not built in prefab';return}
+    const ins=T.rec.i.map(([y])=>y);st.set(x,{T,ins});
+    for(const y of ins)if(P.nodes[y]&&P.nodes[y].crafter)walk(y,[...stack,x]);
+    order.push(x);
+  };
+  walk(item,[]);
+  if(err)return no(err);
+  const Fh=floorRect({cls:plcCls(PL_STD[PL_STD.length-1]),x:0,y:0,h:0,rot:0}).h,pwb=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W'),SH=pwb?pwb.y+1:0;
+  const sz=new Map();
+  const sizing=y=>{
+    if(sz.has(y))return sz.get(y);
+    const S=st.get(y),T=S.T,cb=plnCb(T.crafter),no2=why=>({why});
+    let R;
+    if(!cb)R=no2('No machine builds this recipe');
+    else if(S.ins.some(i=>!P.edges.some(q=>q.from===i&&q.to===y)))R=no2('no edge into '+plnNm(y));
+    else{
+      const N=T.machines,cls=def(cb.id).key,k=S.ins.length,flows=S.ins.map(i=>({item:i,flow:P.edges.find(q=>q.from===i&&q.to===y).flow/N}));
+      if(flows.some(f=>f.flow>cap))R=no2('one machine input above one belt');
+      else{
+        const mcap=Math.max(1,Math.floor(Math.min(...flows.map(f=>cap/f.flow))));
+        let mh=Math.min(N,mcap);while(mh>1){const C=pfCol(cls,k,flows,mh,mk);if(C.ok===false||C.h+SH<=Fh-PF_CORR)break;mh--}
+        const sizes=[];for(let r=N;r>0;r-=mh)sizes.push(Math.min(mh,r));
+        const outF=P.edges.filter(e=>e.from===y).reduce((a,e)=>a+e.flow,0),fo=outF/N;
+        const mxC=Math.floor(cap/fo+1e-9);
+        if(sizes.some(s=>s>mxC))R=no2('column of '+Math.max(...sizes)+' machines above belt cap (max '+mxC+')');
+        else{
+          const groups=[];for(const s of [...sizes].sort((a,b)=>b-a)){const g=groups.find(g=>(g.reduce((a,b)=>a+b,0)+s)*fo<=cap+1e-9);if(g)g.push(s);else groups.push([s])}
+          R={cls,k,N,flows,sizes,groups,fo,outF};
+        }
+      }
+    }
+    sz.set(y,R);return R;
+  };
+  for(const y of order)if(sizing(y).why)return no(sizing(y).why);
+  // needHub: same rule as pfChain (gN>1 || heads>2, never the final item); heads = one per column of each consumer stage
+  const needHub=new Map();
+  for(const i of order){
+    let hd=0;
+    for(const c of order)if(st.get(c).ins.includes(i))hd+=sizing(c).sizes.length;
+    const gN=sizing(i).groups.length,nh=i!==item&&(gN>1||hd>2);
+    if(nh&&(gN>5||hd>8))return no('more than one hub needed for '+plnNm(i)+' (groups '+gN+', heads '+hd+')');
+    needHub.set(i,nh);
+  }
+  const nodes=[],edges=[],lay=new Map(),rawN=new Map(),byId=new Map();
+  const add=n=>{nodes.push(n);byId.set(n.id,n);return n};
+  const hubW=pfHubNode().w,boxW=def(PLC_BOX).w;
+  // producer node id for one head of input item i (raw: next raw hub, 8 heads each)
+  const prod=i=>{
+    if(P.nodes[i]&&P.nodes[i].crafter)return needHub.get(i)?'H:'+i:'G:'+i+':0';
+    const n=rawN.get(i)||0;rawN.set(i,n+1);
+    const id='R:'+i+':'+Math.floor(n/8);
+    if(!byId.has(id)){add({id,kind:'raw',item:i,w:boxW});lay.set(id,0)}
+    return id;
+  };
+  for(const y of order){
+    const r=sizing(y);
+    r.groups.forEach((g,gi)=>{
+      const G=pfGrpNode(r.cls,r.k,r.flows,g,mk,g.reduce((a,b)=>a+b,0)*r.fo);
+      if(G.ok===false)return void(err=G.why);
+      add({id:'G:'+y+':'+gi,kind:'grp',item:y,sizes:g,w:G.w,h:G.h});
+    });
+    if(err)return no(err);
+    let L=0;
+    r.groups.forEach((g,gi)=>g.forEach((s,ci)=>r.flows.forEach(f=>{
+      const p=prod(f.item);
+      edges.push({from:p,to:'G:'+y+':'+gi,item:f.item,flow:s*f.flow,head:ci});
+      L=Math.max(L,lay.get(p)+1);
+    })));
+    r.groups.forEach((g,gi)=>lay.set('G:'+y+':'+gi,L));
+    if(needHub.get(y)){
+      add({id:'H:'+y,kind:'hub',item:y,w:hubW});lay.set('H:'+y,L+1);
+      r.groups.forEach((g,gi)=>edges.push({from:'G:'+y+':'+gi,to:'H:'+y,item:y,flow:g.reduce((a,b)=>a+b,0)*r.fo,head:0}));
+    }
+  }
+  // wrap: each original layer packed greedily into rows <= PF_WRAP; every row is one final layer
+  const byL=[];nodes.forEach(n=>(byL[lay.get(n.id)]=byL[lay.get(n.id)]||[]).push(n));
+  const rows=[];
+  for(const col of byL){
+    if(!col)continue;
+    let cur=[],w=0;
+    for(const n of col){
+      const nw=cur.length?w+PF_GAP+n.w:n.w;
+      if(cur.length&&nw>PF_WRAP){rows.push(cur);cur=[];w=0}
+      w=cur.length?w+PF_GAP+n.w:n.w;cur.push(n);
+    }
+    rows.push(cur);
+  }
+  rows.forEach((r,i)=>r.forEach(n=>n.layer=i));
+  const layers=rows.map(r=>r.map(n=>n.id)),dummies=[],out=[];
+  const oedges=edges.map(e=>({...e,span:byId.get(e.to).layer-byId.get(e.from).layer}));
+  oedges.forEach((e,ei)=>{
+    if(e.span<1)return void(err='internal: edge not increasing '+e.from+'>'+e.to);
+    let prev=e.from;
+    for(let j=1;j<e.span;j++){
+      const d={id:'D'+ei+'.'+j,kind:'dummy',item:e.item,flow:e.flow,w:1,layer:byId.get(e.from).layer+j};
+      dummies.push(d);byId.set(d.id,d);layers[d.layer].push(d.id);
+      out.push({from:prev,to:d.id,item:e.item,flow:e.flow,head:e.head,oe:ei});prev=d.id;
+    }
+    out.push({from:prev,to:e.to,item:e.item,flow:e.flow,head:e.head,oe:ei});
+  });
+  if(err)return no(err);
+  if(PF_DEBUG)console.table(layers.map((ids,i)=>({layer:i,nodes:ids.filter(d=>byId.get(d).kind!=='dummy').join(' '),dummies:ids.filter(d=>byId.get(d).kind==='dummy').length,width:ids.reduce((a,d)=>a+byId.get(d).w,0)+PF_GAP*(ids.length-1)})));
+  return{ok:true,nodes,dummies,edges:out,oedges,layers};
+}
 // Tile-fit helpers (wall grid every PF_GRID.cw cols / PF_GRID.ch rows). x,y absolute cells.
 const pfMod=(v,c)=>((v%c)+c)%c;
 const pfFitX=(x,w,dummy)=>{const c=PF_GRID.cw,m=pfMod(x,c);return dummy?(m>=2&&m<=c-3):(m>=1&&m+w<=c-1)};
