@@ -18,7 +18,7 @@ let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 const LIM = 120000, TLIM = 60000;
 const race = (p, ms) => Promise.race([p, new Promise(r => setTimeout(() => r({timeout: true}), ms))]);
-let cases = [['Basic Motor', 60], ['Basic Circuits', 10], ['Basic Circuits', 100], ['Basic Circuits', 1000], ['Advanced Circuits', 10], ['Advanced Circuits', 50], ['Basic Circuits', 10000]];
+let cases = [['Enzyme', 1], ['Enzyme', 10], ['Enzyme', 100], ['Xenobacteria', 10], ['Xenobacteria', 100], ['Biolattice', 10], ['Basic Motor', 60], ['Basic Circuits', 10], ['Basic Circuits', 100], ['Basic Circuits', 1000], ['Advanced Circuits', 10], ['Advanced Circuits', 50], ['Basic Circuits', 10000]];
 if (process.env.CASE) cases = cases.filter(c => process.env.CASE === c[0] + ' ' + c[1]);
 const rows = [];
 let hung = false, simsDone = false;
@@ -36,16 +36,17 @@ for (const [name, rate] of cases) {
     const ms = Math.round(performance.now() - t0), heap = performance.memory ? Math.round((performance.memory.usedJSHeapSize - h0) / 1e6) : -1;
     if (!L.ok) return {refused: L.why};
     const t1 = performance.now(), chk = pfCheck({items: L.items, w: L.w, h: L.h, ports: L.ports});
-    const F = nlFlow(P, it, 1), clsN = {}, cnt = {};
-    for (const n of F.nodes) clsN[n.cls] = (clsN[n.cls] || 0) + n.N;
+    const gr = !!L.growth, F = gr ? null : nlFlow(P, it, 1), clsN = {}, cnt = {};
+    if (gr) clsN[def(plnCb(P.nodes[it].crafter).id).key] = P.nodes[it].machines;
+    else for (const n of F.nodes) clsN[n.cls] = (clsN[n.cls] || 0) + n.N;
     for (const q of L.items) cnt[q.cls] = (cnt[q.cls] || 0) + 1;
     const mdiff = Object.keys(clsN).reduce((a, c) => a + Math.abs((cnt[c] || 0) - clsN[c]), 0);
     const outs = L.ports.filter(p => p.dir === 'out');
-    const sinks = L.items.filter(q => q.cls === PLC_BOX && q.ct && !q.ct.length && q.y + dim(q).h === L.h);
+    const sinks = gr ? outs : L.items.filter(q => q.cls === PLC_BOX && q.ct && !q.ct.length && q.y + dim(q).h === L.h);
     // lane carry replay
-    const pl = L.nlPlan, cap = F.cap, E = 1e-6, bad = [];
-    for (const itm of new Set(pl.lanes.map(l => l.item))) {
-      const La = pl.lanes.filter(l => l.item === itm);
+    const pl = L.nlPlan || {lanes: [], cells: [], spills: []}, cap = gr ? 0 : F.cap, E = 1e-6, bad = [];
+    for (const itm of new Set(pl.lanes.map(l => l.key))) {
+      const La = pl.lanes.filter(l => l.key === itm);
       let carry = 0;
       La.forEach((l, j) => {
         let load = l.s + carry;
@@ -59,7 +60,7 @@ for (const [name, rate] of cases) {
     }
     let lc = null;
     try { const Lc = lcTop(P, it, 1, 0, {}); lc = Lc.ok ? +(Lc.stat.belts / Lc.stat.machines).toFixed(1) : 'refused' } catch (e) { lc = 'err' }
-    return {chosen: L.chosen, note: L.note[0], times: L.times, ms, heap, ov: chk.ov, chkMs: Math.round(performance.now() - t1), mdiff, nOuts: outs.length, outEdges: [...new Set(outs.map(p => p.edge))].join(','), sinks: sinks.length, groups: pl.sink ? pl.sink.groups.length : 1, carryBad: bad.slice(0, 4), nCarryBad: bad.length, w: L.w, h: L.h, stat: {...L.stat, rows: undefined}, nItems: L.items.length, lc};
+    return {chosen: L.chosen, note: L.note[0], times: L.times, ms, heap, ov: chk.ov, chkMs: Math.round(performance.now() - t1), mdiff, nOuts: outs.length, outEdges: [...new Set(outs.map(p => p.edge))].join(','), sinks: sinks.length, groups: gr ? outs.length : pl.sink ? pl.sink.groups.length : 1, carryBad: bad.slice(0, 4), nCarryBad: bad.length, w: L.w, h: L.h, stat: {...L.stat, rows: undefined}, nItems: L.items.length, lc, gr};
   }, [name, rate]), LIM);
   if (a.timeout) { check(false, tag + ': nlTop exceeded ' + LIM / 1000 + ' s (page hung, remaining cases skipped)'); hung = true; continue }
   console.log(tag, JSON.stringify({note: a.note, times: a.times, ms: a.ms, heapMB: a.heap, chkMs: a.chkMs, items: a.nItems}));
@@ -108,13 +109,16 @@ for (const [name, rate] of cases) {
     }
     const emp = items.filter(b => isBox(b) && b.y > 1 && !(b.ct && b.ct[0]));
     const sinkY = Math.max(...emp.map(b => b.y));
+    // growth: each lane's sink container has no S belt (its top is fed); allowed count = out ports
+    let gSink = 0;
     for (const b of emp) {
       if (b.y === sinkY) continue;
+      if (L.growth) { const s0 = pm.get(b).find(p => p.f === 'S'); const q0 = s0 && occ.get((s0.x + s0.nx) + ',' + (s0.y + s0.ny)); if (!q0 && gSink++ < L.ports.length - 1) continue }
       const s = pm.get(b).find(p => p.f === 'S');
       const q = s && occ.get((s.x + s.nx) + ',' + (s.y + s.ny));
       if (!q || !(isBelt(q) || isUG(q) || isSpl(q))) { out.boxNoBelt++; out.ex.push('boxNoBelt (' + b.x + ',' + b.y + ')') }
     }
-    return {tileMs, tileOv: T.ov, tileSpan: T.span, blocks: T.blocks.length, out: {...out, ex: out.ex.slice(0, 6)}};
+    return {tileMs, gSink, gLanes: L.growth ? L.stat.lanes : 0, tileOv: T.ov, tileSpan: T.span, blocks: T.blocks.length, out: {...out, ex: out.ex.slice(0, 6)}};
   }, [name, rate]), rate >= 10000 ? TLIM : LIM);
   if (b.timeout && rate >= 10000) { console.log('NOTE ' + tag + ': placerTile + connectivity did not finish in ' + TLIM / 1000 + ' s (nlTop stages above); tile/connectivity not gated for rate >= 10000'); hung = true; continue }
   if (b.timeout) { check(false, tag + ': placerTile+connectivity exceeded ' + LIM / 1000 + ' s (page hung)'); hung = true; continue }
@@ -125,7 +129,8 @@ for (const [name, rate] of cases) {
   const o = b.out;
   check(o.boxNoBelt === 0, tag + ': every producer container has an S belt (' + o.boxNoBelt + ')');
   check(o.dangEnd === 0, tag + ': every belt end lands on belt/UG/port (' + o.dangEnd + ')');
-  check(o.noSrc === 0, tag + ': every belt has a source (' + o.noSrc + ')');
+  // growth lanes: the seed return belt starts at the machine's disabled N port (verified plcGrowthLane layout, seed container is infinite): exactly one source-less belt per lane
+  check(o.noSrc === b.gLanes, tag + ': every belt has a source (' + o.noSrc + (b.gLanes ? ', expected ' + b.gLanes + ' growth return stubs' : '') + ')');
   check(o.ugUnpaired === 0, tag + ': UGs pair (' + o.ugUnpaired + ')');
   if (o.ex.length) console.log('  ' + o.ex.join(' | '));
   const s = a.stat;
@@ -136,7 +141,7 @@ async function runSims() {
   simsDone = true;
   if (!process.env.NOSIM && !hung) {
   const WIN = Number(process.env.WIN || 600);
-  for (const [name, rate] of [['Basic Circuits', 1000], ['Advanced Circuits', 10]]) {
+  for (const [name, rate] of [['Basic Circuits', 1000], ['Advanced Circuits', 10], ['Enzyme', 10], ['Xenobacteria', 10], ['Biolattice', 10]]) {
     if (process.env.CASE && process.env.CASE !== name + ' ' + rate) continue;
     const t0 = Date.now();
     const r = await race(pg.evaluate(([name, rate, WIN]) => {
@@ -144,19 +149,23 @@ async function runSims() {
       const P = plan(it, rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
       const L = nlTop(P, it, 1, 0, {});
       if (!L.ok) return {refused: L.why};
-      const sinks = L.items.map((q, i) => ({q, id: i + 1})).filter(({q}) => q.cls === PLC_BOX && q.ct && !q.ct.length && q.y + dim(q).h === L.h);
+      const below = q => L.items.some(b => PLC_BELT.includes(b.cls) && b.y === q.y + dim(q).h && b.x >= q.x && b.x < q.x + dim(q).w);
+      const sinks = L.items.map((q, i) => ({q, id: i + 1})).filter(({q}) => q.cls === PLC_BOX && q.ct && !q.ct.length && (L.growth ? !below(q) : q.y + dim(q).h === L.h));
       S.blocks = L.items.map((b, i) => ({id: i + 1, cls: b.cls, x: b.x, y: b.y, h: 0, rot: b.rot, pid: 0, off: b.off, ct: b.ct ? b.ct.map(q => ({...q})) : undefined, rec: b.rec}));
       try { smSet(true) } catch (e) {}
       simReset && simReset();
       const stock = () => sinks.reduce((a, {id}) => { const cn = SIM.C.get(id); const x = cn && cn.st.get(it); return a + (x ? x.n : 0) }, 0);
       let n120 = 0;
       for (let s = 0; s < WIN; s++) { simAdvance(1, 1); if (s === 119) n120 = stock() }
-      return {measured: (stock() - n120) * 60 / (WIN - 120), target: rate, sinks: sinks.length};
+      return {measured: (stock() - n120) * 60 / (WIN - 120), target: rate, makes: L.makes, growth: !!L.growth, sinks: sinks.length};
     }, [name, rate, WIN]), 600000);
     if (r.timeout) { check(false, name + ' ' + rate + ' sim exceeded 600 s'); hung = true; break }
     console.log('SIM', name, rate, 'secs ' + ((Date.now() - t0) / 1000).toFixed(1), JSON.stringify(r));
     if (r.refused) { check(false, name + ' ' + rate + ' sim: ' + r.refused); continue }
-    check(Math.abs(r.measured - r.target) <= 0.15 * r.target, name + ' ' + rate + ': sim sink rate ' + r.measured.toFixed(1) + '/min vs ' + r.target + ' (' + (100 * r.measured / r.target).toFixed(1) + '%), 15% tolerance');
+    if (['Enzyme', 'Xenobacteria', 'Biolattice'].includes(name)) {   // machines are rounded up and run at the pace the sink takes (infinite), so the sink rate = planned capacity (makes) within 5% (growth final: at least makes, the sim sink also receives the gross output of the verified growth lane), and never below the requested rate
+      check((r.growth ? r.measured >= 0.95 * r.makes : Math.abs(r.measured - r.makes) <= 0.05 * r.makes) && r.measured >= 0.95 * r.target, name + ' ' + rate + ': sim sink rate ' + r.measured.toFixed(1) + '/min vs planned capacity ' + r.makes.toFixed(1) + ' (request ' + r.target + ')');
+    } else
+    check(Math.abs(r.measured - r.target) <= (['Enzyme', 'Xenobacteria', 'Biolattice'].includes(name) ? 0.05 : 0.15) * r.target, name + ' ' + rate + ': sim sink rate ' + r.measured.toFixed(1) + '/min vs ' + r.target + ' (' + (100 * r.measured / r.target).toFixed(1) + '%), 15% tolerance');
   }
 }
 }

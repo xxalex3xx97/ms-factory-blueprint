@@ -1135,8 +1135,8 @@ let PF_DOWN=false;   // step 1: single-stage pfCompose builds outDown (test hook
 function pfCompose(P,item,mk,spMk,o={}){
   const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
   if(!T||!T.rec)return no('no recipe');
+  if(typeof NL_ENGINE!=='undefined'&&NL_ENGINE)return nlTop(P,item,mk,spMk,o);   // NL builds growth itself
   if(T.rec.i.some(([x])=>x===item))return no('growth not built in prefab');
-  if(typeof NL_ENGINE!=='undefined'&&NL_ENGINE)return nlTop(P,item,mk,spMk,o);
   if(typeof LC_ENGINE!=='undefined'&&LC_ENGINE){const R=lcTop(P,item,mk,spMk,o);if(R&&R.ok!==false)return R}
   if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter))){   // a machine upstream: chain (step 7)
     if(PF_FACT){const R=pfFactTop2(P,item,mk,spMk,o);if(R.ok!==false)return R}   // pfFact2 first, refusal falls through

@@ -19,26 +19,26 @@ function nlPlan1(F,mk,hint,W,cu){
   const sp=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).filter(p=>p.f==='S').sort((a,b)=>a.x-b.x)[0];
   const nodes=F.nodes,nr=Math.max(...nodes.map(n=>n.row))+1,cells=[],lanes=[],dock=[],spills=[];
   for(const n of nodes){n.cs=[];for(const g of n.cells){
-    const c={id:cells.length,item:n.item,node:n,K:g.K,w:g.w,h:g.h,g,heads:g.heads.map((h,i)=>({...h,id:cells.length+':'+i})),out:g.out,row:n.row,ox:0,oy:0,feed:{}};cells.push(c);n.cs.push(c)}
+    const c={id:cells.length,item:n.item,node:n,K:g.K,w:g.w,h:g.h,g,heads:g.heads.map((h,i)=>({...h,id:cells.length+':'+i,k:h.item===n.item?h.item+'#s':h.item})),out:g.out,row:n.row,ox:0,oy:0,feed:{}};cells.push(c);n.cs.push(c)}
     if(W)nlCellU(n).forEach((u,i)=>{n.cs[i].u=u})}
   // NL7: producer cells take u from their consumers (demand quantile of the consumer heads sorted by u), top-down from the root; machine-count u stays for the root and for nodes without consumer heads
-  const qu=(it,f)=>{const H=[];for(const c of cells)for(const h of c.heads)if(h.item===it)H.push(h);if(!H.length)return null;H.sort((a,b)=>a.cu-b.cu);let t=0;for(const h of H)t+=h.d;let q=f*t,a=0;for(const h of H){a+=h.d;if(a>=q-1e-9)return h.cu}return H[H.length-1].cu};
+  const qu=(it,f)=>{const H=[];for(const c of cells)for(const h of c.heads)if(h.k===it)H.push(h);if(!H.length)return null;H.sort((a,b)=>a.cu-b.cu);let t=0;for(const h of H)t+=h.d;let q=f*t,a=0;for(const h of H){a+=h.d;if(a>=q-1e-9)return h.cu}return H[H.length-1].cu};
   if(W)for(let r=0;r<nr;r++)for(const n of nodes)if(n.row===r){
     if(cu&&r>0){let cum=0;n.cs.forEach(c=>{const q=qu(n.item,(cum+c.K/2)/n.N);cum+=c.K;if(q!==null)c.u=q})}
     for(const c of n.cs)for(const h of c.heads)h.cu=c.u}
   let dx=1;
-  const dl=[];for(const q of F.raws){const nb=Math.max(q.belts,Math.ceil(q.rate/(cap/2)-1e-9));for(let b=0;b<nb;b++)dl.push({q,nb,b,t:W?((cu?qu(q.item,(b+0.5)/nb):null)??(b+0.5)/nb)*W:hint?hint.dock.get(q.item+':'+b):undefined,ord:dl.length})}
+  const dl=[];for(const q0 of F.raws){const q={...q0,key:q0.seed?q0.item+'#s':q0.item};const nb=Math.max(q.belts,Math.ceil(q.rate/(cap/2)-1e-9));for(let b=0;b<nb;b++)dl.push({q,nb,b,t:W?((cu?qu(q.key,(b+0.5)/nb):null)??(b+0.5)/nb)*W:hint?hint.dock.get(q.item+':'+b):undefined,ord:dl.length})}
   if(hint||W)dl.sort((a,b)=>(a.t===undefined)-(b.t===undefined)||(a.t!==undefined&&a.t-b.t)||a.ord-b.ord);
   let prevItem=null;
   for(const {q,nb,t} of dl){
     if(hint&&!W){if(prevItem!==null&&prevItem!==q.item)dx++;prevItem=q.item}
     let bx=t!==undefined?Math.max(dx,Math.round(t-sp.x)):dx;for(let k=0;k<99999;k++,bx++)if(pfFitX(bx,bw)&&pfFitX(bx+sp.x,1,true))break;
-    dock.push({item:q.item,x:bx,lx:bx+sp.x});lanes.push({id:lanes.length,item:q.item,raw:true,s:q.rate/nb,x:bx+sp.x,y0:1+bh,y1:null,srcRow:nr,lastRow:nr,cons:[],kind:'through'});dx=bx+bw+1;if(!hint&&!W&&lanes.filter(l=>l.item===q.item).length===nb)dx++}
-  for(const c of cells)if(c.node.cons.length){c.lane=lanes.length;lanes.push({id:lanes.length,item:c.item,src:c.id,s:c.g.s,x:null,y0:null,y1:null,srcRow:c.row,lastRow:c.row,cons:[],kind:'through'})}
+    dock.push({item:q.item,x:bx,lx:bx+sp.x});lanes.push({id:lanes.length,item:q.item,key:q.key,raw:true,s:q.rate/nb,x:bx+sp.x,y0:1+bh,y1:null,srcRow:nr,lastRow:nr,cons:[],kind:'through'});dx=bx+bw+1;if(!hint&&!W&&lanes.filter(l=>l.item===q.item).length===nb)dx++}
+  for(const c of cells)if(c.node.cons.length){c.lane=lanes.length;lanes.push({id:lanes.length,item:c.item,key:c.item,src:c.id,s:c.g.s,x:null,y0:null,y1:null,srcRow:c.row,lastRow:c.row,cons:[],kind:'through'})}
   const byRowDesc=[...nodes].sort((a,b)=>b.row-a.row);
-  for(const it of new Set(lanes.map(l=>l.item))){
-    const L=lanes.filter(l=>l.item===it),heads=[];
-    for(const n of byRowDesc)for(const c of n.cs)for(const h of c.heads)if(h.item===it)heads.push({id:h.id,d:h.d,c,r:c.row});
+  for(const it of new Set(lanes.map(l=>l.key))){
+    const L=lanes.filter(l=>l.key===it),heads=[];
+    for(const n of byRowDesc)for(const c of n.cs)for(const h of c.heads)if(h.k===it)heads.push({id:h.id,d:h.d,c,r:c.row});
     if(W)heads.sort((a,b)=>a.c.u-b.c.u||b.r-a.r);
     else if(hint)heads.sort((a,b)=>b.r-a.r||(hint.head.get(a.id)||0)-(hint.head.get(b.id)||0));
     const r=nlAssign(L.map(l=>({id:l.id,s:l.s})),heads.map(h=>({id:h.id,d:h.d})),cap);
@@ -115,7 +115,7 @@ function nlPlan1(F,mk,hint,W,cu){
   for(const s of spills){const a=lanes[s.lane],b=lanes[s.to];for(const l of lanes)if(l.id!==a.id&&l.x>a.x&&l.x<b.x&&l.y0<s.y&&l.y1>s.y)ug++}
   const w=Math.max(plcMmax(cells,c=>c.ox+c.w),plcMmax(dock,d=>d.x+bw))+1;
   return{ok:true,cells:cells.map(c=>({g:c.g,id:c.id,item:c.item,ox:c.ox,oy:c.oy,K:c.K,w:c.w,h:c.h,heads:c.heads,out:c.out,row:c.row,feed:c.feed})),
-    lanes:lanes.map(l=>({id:l.id,item:l.item,x:l.x,y0:l.y0,y1:l.y1,kind:l.kind,src:l.src,raw:!!l.raw,s:l.s,spill:l.spill,spillTo:l.spillTo,srcRow:l.srcRow,lastRow:l.lastRow,n:l.cons.length})),
+    lanes:lanes.map(l=>({id:l.id,item:l.item,key:l.key,x:l.x,y0:l.y0,y1:l.y1,kind:l.kind,src:l.src,raw:!!l.raw,s:l.s,spill:l.spill,spillTo:l.spillTo,srcRow:l.srcRow,lastRow:l.lastRow,n:l.cons.length})),
     taps,tracks,routes,spills,dock,ug,sink,w,h:hh,rowStat:{rowW,rowH,cellsPerRow,tracksPerRow,spillsPerRow}};
 }
 // NL5c multi-pass: pass k docks every raw lane at the mean x of the heads it fed in pass k-1 and orders heads by their previous x; best pass by tap+lane length wins.
