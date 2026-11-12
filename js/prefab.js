@@ -185,7 +185,7 @@ function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt,dn,org){
 }
 // STEP 2 (pfBands node builders, inert until step 5). PF_BANDS gates the assembler (default on, step 8; a pfBands refusal falls back to pfChain).
 let PF_BANDS=true;
-let PF_FACT=false;   // pfFact (inert until pfFactTop + dispatch PF_FACT>PF_BANDS>pfChain, step 5)
+let PF_FACT=false;   // pfFact2 dispatch: PF_FACT > PF_BANDS > pfChain (default off)
 // GROUP node: a pfColumns group (outDown) as a graph node. ins = one top terminal per input head of every column (item, edge 'N', x, y 0). out = the out box S port (edge 'S').
 function pfGrpNode(cls,k,flows,sizes,mk,outFlow,org){
   const A=pfColumns(cls,k,flows,sizes,mk,outFlow,false,true,org);
@@ -1126,6 +1126,7 @@ function pfCompose(P,item,mk,spMk,o={}){
   if(!T||!T.rec)return no('no recipe');
   if(T.rec.i.some(([x])=>x===item))return no('growth not built in prefab');
   if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter))){   // a machine upstream: chain (step 7)
+    if(PF_FACT){const R=pfFactTop2(P,item,mk,spMk,o);if(R.ok!==false)return R}   // pfFact2 first, refusal falls through
     if(PF_BANDS){const R=pfBands(P,item,mk,spMk,o);if(R.ok!==false)return R}   // step 8: bands first, refusal falls back to the old chain
     return(PF_DOWN2?pfChainDown:pfChain)(P,item,mk,spMk,o);
   }
