@@ -614,6 +614,23 @@ function pfFactTop(P,item,mk,spMk,o={}){
   return{ok:true,items:L.items.map(q=>({h:0,pid:0,...q})),lanes:1,per:[T.machines],makes:T.machines*T.pmach,pitch:L.h+1,w:L.w,h:L.h,tall:true,mod:false,box:BX,mk,ports:L.ports,
     note:['Prefab factory: '+L.nFact+' factories, '+L.nRows+' rows, S out'],src:{P,item,mk,spMk,o},prefab:true,links:L.links};
 }
+// pfFact2 S1: exact tile sizing. Prefer K*M==N (M a divisor of N in [ceil(maxM/2),maxM]); else try N+1. Non-straddling tile wins; else smallest total width.
+function pfFactSize2(nd,mk){
+  const maxM=Math.max(1,Math.min(nd.N,nd.mxC,PF_MB));
+  for(const N of [nd.N,nd.N+1]){
+    const hi=Math.min(maxM,N),lo=Math.min(hi,Math.ceil(maxM/2));
+    let best=null;
+    for(let M=hi;M>=lo;M--){
+      if(N%M)continue;
+      const T=pfTileFact(nd,mk,M);if(T.ok===false)continue;
+      const K=N/M;
+      if(!T.straddle)return{ok:true,T,M,K,N,straddle:false};
+      if(!best||K*T.w<best.K*best.T.w)best={ok:true,T,M,K,N,straddle:true};
+    }
+    if(best)return best;
+  }
+  return{ok:false,why:'no exact tile for '+plnNm(nd.item)};
+}
 // STEP 5b (pfBands atom, inert: no caller). Builds one graph node at y=0, absolute x from x0, in a layer of body height B (belts run down to row B-1, the gutter starts at row B). grp: pfGrpNode with greedy column origins (each column and the last column's head box fit the wall grid), head boxes replaced by raw hubs. hub/raw: one Large container, W port belt up/over when nIn>4, S outs and E outs (reverse riser order) belted down to row B-1. Returns {ok,items,x0,x1 (exclusive),ins:[{item,head,x}],outs:[{x}]} or {ok:false,why}.
 function pfBandAtom(n,x0,B,nOut,nIn,mk){
   const bc=PLC_BELT[mk],bw=def(PLC_BOX).w,HC='DAT_Container_2',items=[],ins=[],outs=[];
