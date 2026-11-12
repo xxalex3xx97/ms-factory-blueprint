@@ -350,6 +350,45 @@ function pfFactTree(P,item,mk,o={}){
   nodes.forEach(n=>byRow[n.row].push(n.item));
   return{ok:true,item,mb:MB,nodes,rows:byRow};
 }
+const PF_TILE_MEMO=new Map();
+// ONE tile of a factory: machine columns + bottom collector, relative coords, x0=0,y0=0. Inputs = belt stubs at the N edge (ins[].y=0: a producer belt flows south into cell (x,0)); raw input container row = step 3/5. Output terminal out={x,y:h} = cell below the collector's first S port. w rounded up to the wall grid + 1 col so pfCheck seam stays clean.
+function pfTileFact(nd,mk,M){
+  const no=why=>({ok:false,why}),cap=MKS[mk][1];
+  if(!(M>=1))return no('empty tile');
+  if(M*nd.fo>cap+1e-9)return no('tile output above belt cap');
+  const key=[nd.item,mk,M,JSON.stringify(nd.flows.map(f=>[f.item,+f.flow.toFixed(6)])),+nd.fo.toFixed(6)].join('|');
+  if(PF_TILE_MEMO.has(key))return PF_TILE_MEMO.get(key);
+  let R=no('tile taller than a wall cell');
+  for(let mh=nd.mh;mh>=1;mh--){
+    const sizes=[];for(let r=M;r>0;r-=mh)sizes.push(Math.min(mh,r));
+    const G=pfGrpNode(nd.cls,nd.k,nd.flows,sizes,mk,M*nd.fo);
+    if(G.ok===false){R=G;continue}
+    if(G.h+2>PF_GRID.ch-2)continue;
+    const n={kind:'grp',item:nd.item,sizes,cls:nd.cls,k:nd.k,flows:nd.flows,fo:nd.fo,rec:nd.rec};
+    const A=pfBandAtom(n,0,G.h,1,0,mk);
+    if(A.ok===false){R=A;continue}
+    R={ok:true,item:nd.item,M,sizes,items:A.items,w:Math.ceil((A.x1+1)/PF_GRID.cw)*PF_GRID.cw,h:G.h,
+      ins:A.ins.map(p=>({item:p.item,head:p.head,x:p.x,y:0})),out:{x:A.outs[0].x,y:G.h},tileOut:M*nd.fo};
+    break;
+  }
+  PF_TILE_MEMO.set(key,R);return R;
+}
+// K copies side by side at pitch T.w; out row at y=T.h; segments of g=floor(cap/tileOut) tiles chained east, each ending in one L-bend (cell (xb,T.h) rot 1) with segment port at (xb,T.h+1). No S-curves, wall crossings = plain rot-0 east belts. Returns {ok,items,w:K*T.w,h:T.h+1,K,g,ins,outs:[{x,y,tiles}]}.
+function pfTileRow(T,K,mk){
+  const no=why=>({ok:false,why}),bc=PLC_BELT[mk],cap=MKS[mk][1];
+  if(!T||T.ok===false)return T||no('no tile');
+  if(!(K>=1))return no('K<1');
+  if(T.h+1>PF_GRID.ch-2)return no('tile row taller than a wall cell');
+  const g=Math.max(1,Math.floor(cap/T.tileOut+1e-9)),items=[],ins=[],outs=[];
+  for(let j=0;j<K;j++){const ox=j*T.w;T.items.forEach(q=>items.push({...q,x:q.x+ox}));T.ins.forEach(p=>ins.push({...p,x:p.x+ox,tile:j}))}
+  for(let s=0;s<K;s+=g){
+    const e=Math.min(K,s+g)-1,xa=T.out.x+s*T.w,xb=T.out.x+e*T.w;
+    for(let x=xa;x<xb;x++)items.push({cls:bc,x,y:T.h,rot:0});
+    items.push({cls:bc,x:xb,y:T.h,rot:1});
+    outs.push({x:xb,y:T.h+1,tiles:e-s+1});
+  }
+  return{ok:true,items,w:K*T.w,h:T.h+1,K,g,ins,outs};
+}
 // Tile-fit helpers (wall grid every PF_GRID.cw cols / PF_GRID.ch rows). x,y absolute cells.
 const pfMod=(v,c)=>((v%c)+c)%c;
 const pfFitX=(x,w,dummy)=>{const c=PF_GRID.cw,m=pfMod(x,c);return dummy?(m>=2&&m<=c-3):(m>=1&&m+w<=c-1)};
