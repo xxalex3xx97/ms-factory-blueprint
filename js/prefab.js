@@ -179,9 +179,9 @@ function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt,dn,org){
   for(let c=Math.min(...xs);c<=xEnd;c++)it.push({cls:bc,x:c,y:Rs,rot:0});   // shared out row, east into the out container's W port (or the hub's W face)
   if(hubAt)it.push({cls:HC,x:xo,y:hubY,rot:0,ct:[]});
   else it.push({cls:PLC_BOX,x:xo,y:Rs-pw.y,rot:0,ct:[]});
-  const minY=Math.min(...it.map(q=>q.y));
+  const minY=plcMmin(it,q=>q.y);
   const items=it.map(q=>({...q,y:q.y-Math.min(0,minY)}));
-  return{ok:true,items,w:xo+(hubAt?def(HC).w:bw),h:Math.max(...items.map(q=>q.y+dim(q).h)),ports:[],hub:hubAt?{x:xo,y:hubY-Math.min(0,minY)}:null,cx:xs0,ob:{x:xo,y:Rs-pw.y-Math.min(0,minY)}};
+  return{ok:true,items,w:xo+(hubAt?def(HC).w:bw),h:plcMmax(items,q=>q.y+dim(q).h),ports:[],hub:hubAt?{x:xo,y:hubY-Math.min(0,minY)}:null,cx:xs0,ob:{x:xo,y:Rs-pw.y-Math.min(0,minY)}};
 }
 // STEP 2 (pfBands node builders, inert until step 5). PF_BANDS gates the assembler (default on, step 8; a pfBands refusal falls back to pfChain).
 let PF_BANDS=true;
@@ -602,11 +602,11 @@ function pfFactLayout(Z,F,AL,PL,mk,spMk){
   const items=[];
   for(const [it,f] of F){const {x0}=PL.pos.get(it),y=Y[rowOf.get(it)];
     f.items.forEach(q=>items.push({h:0,pid:0,...q,x:q.x+x0,y:q.y+y,ct:q.ct&&q.ct.map(c=>({...c}))}))}
-  items.push(...R.items);
+  for(const q of R.items)items.push(q);
   const fin=F.get(Z.item),fx=PL.pos.get(Z.item).x0,fy=Y[0];
   const ports=fin.outs.map(o=>({edge:'S',off:o.x+fx,dir:'out',belts:1,slot:-1,mk}));
   fin.outs.forEach(o=>items.push({cls:PLC_BOX,x:o.x+fx,y:fy+fin.h,rot:0,ct:[]}));
-  const w=Math.max(...items.map(q=>q.x+dim(q).w))+1,h=Math.max(...items.map(q=>q.y+dim(q).h));
+  const w=plcMmax(items,q=>q.x+dim(q).w)+1,h=plcMmax(items,q=>q.y+dim(q).h);
   return{ok:true,items,w,h,ports,nRows:nr,nFact:F.size,links};
 }
 function pfFactTop(P,item,mk,spMk,o={}){
@@ -731,11 +731,11 @@ function pfFactLayout2(Z,F,LN,mk,spMk){
   for(const [it,f] of F){const {x0}=pos.get(it),y=Y[rowOf.get(it)];
     f.items.forEach(q=>{items.push({h:0,pid:0,...q,x:q.x+x0,y:q.y+y,ct:q.ct&&q.ct.map(c=>({...c}))});if(PLC_BELT.includes(q.cls)||PLC_UG.includes(q.cls))tile++})}
   for(const l of raws)items.push({h:0,pid:0,cls:PLC_BOX,x:l.bx,y:dockY,rot:0,ct:[{item:l.item,n:0,inf:true}]});
-  items.push(...R.items);
+  for(const q of R.items)items.push(q);
   const fin=F.get(Z.item),fx=pos.get(Z.item).x0,fy=Y[0];
   const ports=fin.outs.map(o=>({edge:'S',off:o.x+fx,dir:'out',belts:1,slot:-1,mk}));
   fin.outs.forEach(o=>items.push({h:0,pid:0,cls:PLC_BOX,x:o.x+fx,y:fy+fin.h,rot:0,ct:[]}));
-  const w=Math.max(...items.map(q=>q.x+dim(q).w))+1,h=Math.max(...items.map(q=>q.y+dim(q).h));
+  const w=plcMmax(items,q=>q.x+dim(q).w)+1,h=plcMmax(items,q=>q.y+dim(q).h);
   const route=R.items.filter(q=>PLC_BELT.includes(q.cls)||PLC_UG.includes(q.cls)).length;
   return{ok:true,items,w,h,ports,nRows:nr,nFact:F.size,stat:{tile,route,spl:R.items.filter(q=>PLC_SPL.includes(q.cls)).length,ug:R.items.filter(q=>PLC_UG.includes(q.cls)).length,dock:raws.length,lanes:LN.length,tracks:nTrack}};
 }
@@ -817,7 +817,7 @@ function pfBandsBuild(P,item,mk){
       }else{
         A=pfBandAtom(n,cur,Hl[i],isFin(n)?Math.max(1,ne):ne,nIn,mk);
         if(A.ok===false){bad=A;return}
-        cur=A.x1+PF_GAP;its.push(...A.items);
+        cur=A.x1+PF_GAP;for(const q of A.items)its.push(q);
       }
       atom.set(id,A);wMax=Math.max(wMax,A.x1);
     }
@@ -839,14 +839,14 @@ function pfBandsBuild(P,item,mk){
     for(let T=y0+1;T<=y0+150&&!done;T++){
       if(!pfFitY(T,Hl[i]))continue;
       const r=pfGutter(links,y0,T,mk);
-      if(r.ok){Tb[i]=T;gut.push(...r.items);done=true}
+      if(r.ok){Tb[i]=T;for(const q of r.items)gut.push(q);done=true}
       else if(r.why!=='gutter too short')return no(r.why+' (layer '+i+')');
     }
     if(!done)return no('gutter search failed layer '+i);
   }
   const items=[];
   aItems.forEach((its,i)=>its.forEach(q=>items.push({...q,y:q.y+Tb[i]})));
-  items.push(...gut);
+  for(const q of gut)items.push(q);
   const ports=G.layers[nL-1].map(id=>({edge:'S',off:atom.get(id).outs[0].x,dir:'out',belts:1,slot:-1,mk}));
   return{ok:true,items,w:wMax+1,h:Tb[nL-1]+Hl[nL-1],ports,nLayers:nL};
 }
@@ -1065,9 +1065,9 @@ function pfChain(P,item,mk,spMk,o={}){
     }
     for(const s of seg)if(s.t!=='skip')cells.push({cls:s.t==='b'?bc:ug,x:s.x,y:R,rot:0});
   }
-  const all=[...items,...cells],minY=Math.min(...all.map(q=>q.y)),sh=minY<0?-minY:0;
+  const all=[...items,...cells],minY=plcMmin(all,q=>q.y),sh=minY<0?-minY:0;
   const out=all.map(q=>({...q,y:q.y+sh}));
-  const H=Math.max(...out.map(q=>q.y+dim(q).h)),W=Math.max(...out.map(q=>q.x+dim(q).w));
+  const H=plcMmax(out,q=>q.y+dim(q).h),W=plcMmax(out,q=>q.x+dim(q).w);
   const SM=pfSeams({items:out,w:W,h:H,ports},mk);if(!SM)return no('no free wall column for the block tile (seam search failed) h'+H+' w'+W+' floor'+Fh);
   return{ok:true,items:SM.items.map(q=>({h:0,pid:0,...q})),lanes:1,per,makes,pitch:H+1,w:SM.w,h:H,mod:false,box:BX,mk,ports:SM.ports,note:['Prefab chain: '+order.length+' stages, corridors above; crafted inputs fed from upstream sink boxes'],src:{P,item,mk,spMk,o},prefab:true};
 }
@@ -1113,8 +1113,8 @@ function pfChainDown(P,item,mk,spMk,o={}){
   put(B,dxB,yB,q=>!(q.cls===PLC_BOX&&q.ct&&q.ct.length));   // B's head removed: fed by the belt column below
   for(let y=yS;y<=yB+1;y++)items.push({cls:bc,x:X,y,rot:1});
   const ports=[...A.C.ports.filter(p=>p.dir==='in'),{edge:'S',off:spB.x,dir:'out',belts:1,slot:-1,mk}];
-  const H=Math.max(...items.map(q=>q.y+dim(q).h)),W=Math.max(...items.map(q=>q.x+dim(q).w));
-  if(Math.min(...items.map(q=>q.x))<0||Math.min(...items.map(q=>q.y))<0)return no('two-row chain: negative coordinates');
+  const H=plcMmax(items,q=>q.y+dim(q).h),W=plcMmax(items,q=>q.x+dim(q).w);
+  if(plcMmin(items,q=>q.x)<0||plcMmin(items,q=>q.y)<0)return no('two-row chain: negative coordinates');
   if(H>Fh)return no('two-row chain taller than the floor ('+H+' > '+Fh+')');
   const SM=pfSeams({items,w:W,h:H,ports},mk);if(!SM)return no('no free wall column for the block tile (seam search failed)');
   return{ok:true,items:SM.items.map(q=>({h:0,pid:0,...q})),lanes:1,per:[A.N,B.N],makes:B.N*T.pmach,pitch:H+1,w:SM.w,h:H,mod:false,box:BX,mk,ports:SM.ports,
