@@ -9,19 +9,23 @@ const plnCico=c=>{const b=plnCb(c),d=b&&def(b.id),u=d&&iurl(d.icon);return u?`<i
 // mk: 0..2 index into MKS (belt). ovr={sp,bal}: splitter/balancer Mk index or null (follow belt). pick={item:recipeKey}.
 // opts.proto (default false): false ignores the Protomatter chain (see plnBy). opts.enr (default false): false picks plain-ore recipes by default, true picks the recipe that consumes enriched ores when there is one; an explicit pick always wins.
 const PLN_ENR=/^ITEM_Enriched\w*Ore$/;
-function plan(item,rate,mk,ovr,pick,opts){
+// a recipe loop is retried once with recipes that do not feed back into the stack; the loop plan is kept only when every choice loops
+function plan(item,rate,mk,ovr,pick,opts){const P=planOnce(item,rate,mk,ovr,pick,opts,false);if(!P.cycle)return P;const Q=planOnce(item,rate,mk,ovr,pick,opts,true);return Q.cycle?P:Q}
+function planOnce(item,rate,mk,ovr,pick,opts,avoid){
   ovr=ovr||{};pick=pick||{};opts=opts||{};
   const by=plnBy(!!opts.proto),nodes={},edges=[],st={cycle:false},cap=i=>MKS[i][1];
   const find=it=>{const l=by.get(it)||[];return l.find(x=>rk(x.r)===pick[it])||l.find(x=>x.r.i.some(([y])=>PLN_ENR.test(y))===!!opts.enr)||l[0]||null};
   const ex=(it,rt,stack)=>{
-    if(stack.has(it)){st.cycle=true;return}
+    if(stack.has(it)){st.cycle=true;if(!st.loop){const a=[...stack];st.loop=a.slice(a.indexOf(it)).concat([it])}return}
     const n=nodes[it]||(nodes[it]={item:it,rate:0,rec:null,crafter:null,alts:(by.get(it)||[]).length,pmach:null,machines:0,util:null,in:[]});
     n.rate+=rt;
-    const c=find(it);if(!c)return;
+    const pref=[find(it),...(by.get(it)||[])].filter(Boolean),c=(avoid&&stack.size?pref.find(x=>!x.r.i.some(([y])=>stack.has(y))):null)||find(it);if(!c)return;
     n.rec=c.r;n.crafter=c.c;stack.add(it);
-    c.r.i.forEach(([x,q])=>{const f=q*rt/c.r.o[1];edges.push({from:x,to:it,flow:f});ex(x,f,stack)});
+    // growth recipe (the item is one of its own inputs and the output is bigger): net output per cycle = out - in; the growth input is fed back from the output (no edge); other inputs scale with the cycles
+    const gr=c.r.i.find(([x])=>x===it),net=gr?c.r.o[1]-gr[1]:0,G=net>0;
+    c.r.i.forEach(([x,q])=>{if(G&&x===it)return;const f=G?q*rt/net:q*rt/c.r.o[1];edges.push({from:x,to:it,flow:f});ex(x,f,stack)});
     stack.delete(it);
-    n.pmach=c.r.o[1]*1800/c.r.t;   // items/min per machine (raw, rounded only in display)
+    n.pmach=(G?net:c.r.o[1])*1800/c.r.t;   // items/min per machine (raw, rounded only in display)
     n.machines=n.rate>0?Math.ceil(n.rate/n.pmach-1e-9):0;
     n.util=n.machines?n.rate/(n.machines*n.pmach):0;
   };
@@ -39,7 +43,7 @@ function plan(item,rate,mk,ovr,pick,opts){
     return {from:e.from,to:e.to,flow:e.flow,m,belts,fits,split,warn,note,label:plnR2(e.flow)+" items/min, "+belts+" belts ("+MKS[mk][0]+")"};
   });
   E.forEach(e=>{if(e.to!=null)nodes[e.to].in.push(e)});
-  return {nodes,edges:E,raw:Object.values(nodes).filter(n=>!n.rec),cycle:st.cycle};
+  return {nodes,edges:E,raw:Object.values(nodes).filter(n=>!n.rec),cycle:st.cycle,loop:st.loop};
 }
 function plnDraw(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0;
@@ -72,6 +76,12 @@ function plnDraw(){
   plnArrows(P.edges);
 }
 // Draw arrows + labels over the box grid (layout only). A node's anchor = union box of its boxes.
+function plnRoute(E){
+  if(PLN_SEL===null||!E.some(e=>e.from===PLN_SEL||e.to===PLN_SEL))return null;
+  const R=new Set([PLN_SEL]),q=[PLN_SEL];
+  while(q.length){const n=q.pop();E.forEach(e=>{if(e.to===n&&!R.has(e.from)){R.add(e.from);q.push(e.from)}})}
+  return R;
+}
 function plnArrows(E){
   const g=document.querySelector("#plnOut .plnGrid");if(!g)return;
   g.querySelectorAll(".plnSvg,.plnLbl").forEach(n=>n.remove());
@@ -81,12 +91,14 @@ function plnArrows(E){
     if(u){u.l=Math.min(u.l,L);u.r=Math.max(u.r,R);u.t=Math.min(u.t,T);u.b=Math.max(u.b,B)}else bx[b.dataset.item]={l:L,r:R,t:T,b:B}});
   const out={},inn={};E.forEach(e=>{(out[e.from]=out[e.from]||[]).push(e);if(e.to!=null)(inn[e.to]=inn[e.to]||[]).push(e)});
   const ys=(b,l,e)=>b.t+(b.b-b.t)*(l.indexOf(e)+1)/(l.length+1);
+  const RT=plnRoute(E);
+  g.querySelectorAll(".plnBox").forEach(b=>{b.classList.toggle("plnDim",!!RT&&!RT.has(b.dataset.item));b.classList.toggle("plnOn",!!RT&&b.dataset.item===PLN_SEL)});
   let sv="",lb=[];
   E.forEach(e=>{
     const a=bx[e.from];if(!a)return;
     const x1=a.r,y1=ys(a,out[e.from],e);let x2,y2;
     if(e.to==null){x2=x1+110;y2=y1}else{const b=bx[e.to];x2=b.l;y2=ys(b,inn[e.to],e)}
-    const c=(x2-x1)/2,cl=e.warn?"warn":"";
+    const c=(x2-x1)/2,cl=(e.warn?"warn":"")+(RT?(RT.has(e.from)&&RT.has(e.to)?" on":" dim"):"");
     sv+=`<path class="plnArr ${cl}" d="M${x1} ${y1}C${x1+c} ${y1} ${x2-c} ${y2} ${x2-7} ${y2}"/><path class="plnHead ${cl}" d="M${x2} ${y2}l-8 -4.5v9z"/>`;
     const lx=e.to==null?x1+55:x2-95;let ly=y1,bd=1e9;
     for(let t=0;t<=1;t+=.02){const s=1-t,X=s*s*s*x1+3*s*s*t*(x1+c)+3*s*t*t*(x2-c)+t*t*t*x2,d=Math.abs(X-lx);if(d<bd){bd=d;ly=s*s*s*y1+3*s*s*t*y1+3*s*t*t*y2+t*t*t*y2}}
@@ -98,6 +110,7 @@ function plnArrows(E){
   const ls=[...g.querySelectorAll(".plnLbl")];
   ls.forEach((d,i)=>{const o=lb[i];let y=o.y;for(let j=0;j<i;j++)if(lb[j].x===o.x&&Math.abs(lb[j].y-y)<ls[j].offsetHeight/2+d.offsetHeight/2+4)y=lb[j].y+ls[j].offsetHeight/2+d.offsetHeight/2+4;o.y=y;d.style.left=o.x+"px";d.style.top=y+"px"});
 }
+let PLN_SEL=null;   // clicked item: its whole route (every upstream item + the arrows between them) is highlighted, the rest dims
 let PLN_PICK={},PLN_OFF=new Map(),PLN_EX=false,PLN_E=[],PLN_DRAG=null,PLN_Z=1,PLN_PX=0,PLN_PY=0,PLN_PAN=null;   // PLN_Z: diagram zoom; PLN_OFF: key (item, or item#machine in expanded) -> {dx,dy}
 // Drag any box (not its recipe select). Offset clamped so the box stays inside the grid (left/top >= 0).
 const plnKey=b=>b.dataset.item+(b.classList.contains("plnM")?"#"+b.dataset.i:"");
@@ -115,7 +128,10 @@ $("plnOut").addEventListener("pointermove",ev=>{
   const dx=Math.max(d.minX,d.ox+(ev.clientX-d.x)/PLN_Z),dy=Math.max(d.minY,d.oy+(ev.clientY-d.y)/PLN_Z);
   PLN_OFF.set(d.k,{dx,dy});d.b.style.transform=`translate(${dx}px,${dy}px)`;plnArrows(PLN_E);
 });
-const plnUp=ev=>{if(PLN_PAN&&ev.pointerId===PLN_PAN.id)PLN_PAN=null;if(PLN_DRAG&&ev.pointerId===PLN_DRAG.id){PLN_DRAG.b.classList.remove("plnDrag");PLN_DRAG=null}};
+const plnUp=ev=>{
+  if(PLN_PAN&&ev.pointerId===PLN_PAN.id){const click=Math.hypot(ev.clientX-PLN_PAN.x,ev.clientY-PLN_PAN.y)<4;PLN_PAN=null;if(click&&PLN_SEL!==null){PLN_SEL=null;plnArrows(PLN_E)}}
+  if(PLN_DRAG&&ev.pointerId===PLN_DRAG.id){const d=PLN_DRAG,click=ev.type==="pointerup"&&Math.hypot(ev.clientX-d.x,ev.clientY-d.y)<4;d.b.classList.remove("plnDrag");PLN_DRAG=null;if(click){PLN_SEL=PLN_SEL===d.b.dataset.item?null:d.b.dataset.item;plnArrows(PLN_E)}}
+};
 $("plnOut").addEventListener("pointerup",plnUp);$("plnOut").addEventListener("pointercancel",plnUp);
 // Wheel over the diagram = zoom around the cursor; double-click empty space = reset zoom.
 $("plnOut").addEventListener("wheel",ev=>{
@@ -142,7 +158,7 @@ const plnDefRate=()=>{const it=$("plnItem").value;if(!it)return;const P=plan(it,
 $("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDefRate();plnDraw();plnFit()};
 $("plnEnr").onchange=plnDraw;
 $("plnProto").onchange=()=>{plnFillItems();plnDraw()};   // PLN_OFF kept: drag offsets survive
-$("plnRate").oninput=plnDraw;$("plnRate").onchange=()=>{if(!(+$("plnRate").value>=1)){$("plnRate").value=1;plnDraw()}};   // redraw only when clamped: a plain blur must not re-render the diagram under a pointer press
+$("plnRate").oninput=plnDraw;$("plnRate").onchange=()=>{if(!(+$("plnRate").value>0)){$("plnRate").value=1;plnDraw()}};   // redraw only when clamped: a plain blur must not re-render the diagram under a pointer press
 $("plnMk").onchange=$("plnSp").onchange=$("plnBal").onchange=plnDraw;
 $("plnOut").onchange=ev=>{const t=ev.target;if(t.classList.contains("plnAlt")){PLN_PICK[t.dataset.item]=t.value;plnDraw()}};
 const sgn=v=>(v>0?"+":"")+v,

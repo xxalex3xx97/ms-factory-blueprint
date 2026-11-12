@@ -8,7 +8,17 @@ const ugOk=g=>{const d=def(ugPend.cls);if(g.n<2)return false;const q={id:-1,cls:
   return !S.blocks.some(o=>o.h===layer&&isM(o)&&o.x===q.x&&o.y===q.y)&&!noBuild([mItem(q)])};
 function ugCancel(){if(!ugPend)return false;const i=ugPend.id;ugPend=null;if(S.blocks.some(b=>b.id===i)){S.blocks=S.blocks.filter(b=>b.id!==i);sel=new Set();undoS.pop();all()}return true}
 const pt=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
-const hit=c=>{const l=S.blocks.filter(b=>b.h===layer&&inView(b));for(let i=l.length-1;i>=0;i--){const b=l[i],d=dim(b);if(c.x>=b.x&&c.x<b.x+d.w&&c.y>=b.y&&c.y<b.y+d.h)return b}return null};
+// hit-test index: cell -> blocks covering it (in S.blocks order), rebuilt when the blocks or layer/view change; topmost in-view block wins, as before
+let HIX=null;const HK=(x,y)=>(x+524288)*1048576+(y+524288);
+const hit=c=>{const k=PK+"|"+layer+"|"+view;
+  if(!HIX||HIX.k!==k){HIX={k,m:new Map()};for(const b of S.blocks){if(b.h!==layer)continue;const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const q=HK(b.x+i,b.y+j);let a=HIX.m.get(q);if(!a)HIX.m.set(q,a=[]);a.push(b)}}}
+  const a=HIX.m.get(HK(c.x,c.y));if(!a)return null;
+  for(let i=a.length-1;i>=0;i--)if(inView(a[i]))return a[i];return null};
+// hover memo: areas and the link graph are built once per paint (PK) instead of on every mouse move (both are full scans of all blocks)
+let HARC={k:null,v:null},HLKC={k:null,v:null};
+const HAR=L=>{const k=PK+"|"+L+"|"+S.blocks.length;if(HARC.k!==k){HARC.k=k;HARC.v=areas(L)}return HARC.v};
+const HLK=L=>{const k=PK+"|"+L+"|"+LK+"|"+S.blocks.length;if(HLKC.k!==k){HLKC.k=k;HLKC.v=links(L)}return HLKC.v};
+let HLC="";   // hovered cell + view/layer/paint: the hover work (tooltip, warnings, port links) runs only when this changes
 cv.addEventListener("contextmenu",e=>e.preventDefault());
 cv.addEventListener("pointerdown",e=>{
   cv.focus();const p=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
@@ -60,15 +70,15 @@ function btip(b,pl,ev,w){
 cv.addEventListener("pointermove",e=>{
   const p=pt(e),c=toCell(p.x,p.y);hover=c;hoverIn=true;if(ugPend){ugPend.cur=c;const en=S.blocks.find(b=>b.id===ugPend.id),g=ugDrag(ugPend);if(en&&g.n>1)en.rot=g.rot}
   $("read").textContent=view==="F"?`floor x ${c.x}  y ${c.y}  block ${Math.floor(c.x/FC)},${Math.floor(c.y/FC)}  h ${layer}  zoom ${Math.round(V.z*100)}%`:`x ${c.x}  y ${c.y}  h ${layer}  zoom ${Math.round(V.z*100)}%`;
-  if(!drag){
+  if(!drag&&HLC!==(HLC=c.x+","+c.y+","+view+","+layer+","+PK)){
     let w=false;
     if(view==="F"){
-      const R=areas(layer).rects;
+      const R=HAR(layer).rects;
       if(active){const d=def(active);if(d.kind==="m"){const dd=dimOf(d,placeRot);w=!onArea(c.x,c.y,dd.w,dd.h,R)}}
       else{const b=hit(c);w=!!(b&&outside(b,R))}
     }
     cv.title=w?WARN:"";
-    {const b=view==="F"&&!active?hit(c):null,belt=b&&isBelt(b),pl=b&&LK&&(links(layer).nb.get(b.id)||[]).some(e=>e.k==="port");
+    {const b=view==="F"&&!active?hit(c):null,belt=b&&isBelt(b),pl=b&&LK&&(HLK(layer).nb.get(b.id)||[]).some(e=>e.k==="port");
       if(belt)btip(b,pl,e,w);else{btip(null);if(pl&&!w)cv.title=PORTLINK}}
     if(view==="F"&&!active){const q=portAt(p);if(q){btip(null);cv.title=`Port ${q.p.key} (faces ${FN[q.p.wf]}): ${q.p.en?"enabled":"disabled"}. Click to toggle.`}}
   }
@@ -87,7 +97,7 @@ cv.addEventListener("pointermove",e=>{
       S.blocks.forEach(b=>{if(b.h!==layer||!inView(b))return;const d=dim(b);if(b.x<=z.x&&b.x+d.w-1>=a.x&&b.y<=z.y&&b.y+d.h-1>=a.y)sel.add(b.id)});
     }
   }
-  draw();
+  if(drag||active||pasting||ugPend)draw();   // a plain hover changes no painted pixel (tooltip only): no full repaint per mouse move
 });
 cv.addEventListener("pointerleave",()=>{hoverIn=false;btip(null);draw()});
 const end=e=>{
@@ -103,11 +113,13 @@ const end=e=>{
   if(rc){if(pasting){pasting=null;all();return}const b=hit(toCell(rc.x,rc.y));if(b){sel=new Set([b.id]);del();return}if(active){active=null;all();return}ctxOpen(e.clientX,e.clientY);return}
   if(k!=="pan")all();else draw();
 };
-cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end);
+cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end);cv.addEventListener("lostpointercapture",()=>{if(drag)end({type:"pointercancel"})});
+// release outside the canvas (or over the modal/chrome) ends the gesture too; end() is a no-op when no drag is active
+addEventListener("pointerup",e=>{if(drag)end(e)});addEventListener("pointercancel",e=>{if(drag)end(e)});addEventListener("blur",()=>{if(drag)end({type:"pointercancel"})});
 cv.addEventListener("wheel",e=>{
   // wide zoom range: the Layout<->Factory floor sync maps a Layout zoom to a 10x smaller floor zoom
   e.preventDefault();const p=pt(e),z0=V.z,z=Math.min(60,Math.max(.01,z0*(e.deltaY<0?1.12:1/1.12)));
-  V.ox=p.x-(p.x-V.ox)*(z/z0);V.oy=p.y-(p.y-V.oy)*(z/z0);V.z=z;draw();
+  V.ox=p.x-(p.x-V.ox)*(z/z0);V.oy=p.y-(p.y-V.oy)*(z/z0);V.z=z;draw(true);
 },{passive:false});
 cv.addEventListener("dblclick",e=>{
   if(view!=="L"||active)return;

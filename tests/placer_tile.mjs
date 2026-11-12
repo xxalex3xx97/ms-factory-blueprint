@@ -94,7 +94,7 @@ try {
   chk('A) modal open after Build', A.open === true, JSON.stringify(A));
   chk('A) #pvBlk matches "<n> x BPO_Station_01", n >= 2', !!m && +m[1] >= 2, String(A.bl));
   chk('A) #pvUg nonzero', A.ug !== null && parseInt(A.ug, 10) > 0, String(A.ug));
-  chk('A) #plnPrevNote contains "Spread over"', /Spread over/.test(A.note), A.note);
+  chk('A) #plnPrevNote contains "Chose C x R blocks" (wording changed from "Spread over")', /Chose \d+ x \d+ blocks/.test(A.note), A.note);
   const right = await pg.evaluate(() => {
     const cv = $('plnPrevMap'), g = cv.getContext('2d'), hw = Math.floor(cv.width / 2), w = cv.width - hw;
     const u = new Uint32Array(g.getImageData(hw, 0, w, cv.height).data.buffer);
@@ -184,22 +184,24 @@ try {
   await pg.fill('#plnRate', String(rate));
   const F0 = await pg.evaluate(() => S.blocks.length);
   const fo = await openBuild(pg, ['plnBk11']);
-  await pg.click('#plnPlace');
+  chk('F) Place disabled while the error shows (fix: preview Place disabled on error)', await pg.evaluate(() => $('plnPlace').disabled) === true);
+  if (!(await pg.evaluate(() => $('plnPlace').disabled))) await pg.click('#plnPlace');
   const fp = await pg.evaluate(() => ({open: $('plnPrev').open, err: $('plnPrevErr').textContent, n: S.blocks.length, pl: !!(pasting && pasting.pl)}));
   await pg.evaluate(() => { def(PLC_UG[0]).maxApart = window.__mxa; });
   chk('F) maxApart 3: modal open, #plnPrevErr non-empty after Place, nothing added, no ghost',
     fo.open === true && fp.open === true && /\S/.test(fp.err) && fp.n === F0 && !fp.pl, JSON.stringify({fo: fo.open, fp, F0}));
   await closeIfOpen(pg);
 
-  // ---- G) Exosuit refused cleanly (one-click refusal, no preview, nothing placed)
+  // ---- G) Exosuit: modal opens with the error inside, Place disabled, nothing placed; Cancel closes
   await reset(pg); await openPlanner(pg);
   await pg.selectOption('#plnItem', 'ITEM_Exosuit'); await pg.fill('#plnRate', '1');
   await pg.evaluate(() => ['plnBk11', 'plnBk21', 'plnBk22'].forEach(i => { document.getElementById(i).checked = true; }));   // modal closed here: plain state set
-  await pg.evaluate(() => { $('toast').textContent = ''; });
   await pg.click('#plnBuild');
-  await pg.waitForFunction(() => /\S/.test($('toast').textContent), null, {timeout: 20000}).catch(() => {});
-  const G = await pg.evaluate(() => ({open: $('plnPrev').open, toast: $('toast').textContent, n: S.blocks.length}));
-  chk('G) Exosuit: no preview, toast "single-input single-recipe", nothing placed', G.open === false && /single-input single-recipe/.test(G.toast) && G.n === 0, JSON.stringify(G));
+  const G = await pg.evaluate(() => ({open: $('plnPrev').open, err: $('plnPrevErr').textContent, placeOff: $('plnPlace').disabled, n: S.blocks.length}));
+  chk('G) Exosuit: #plnPrev open, #plnPrevErr matches "single-input single-recipe", #plnPlace disabled, nothing placed', G.open === true && /single-input single-recipe/.test(G.err) && G.placeOff === true && G.n === 0, JSON.stringify(G));
+  await pg.click('#plnCancel');
+  const Gc = await pg.evaluate(() => !$('plnPrev').open);
+  chk('G) Exosuit: Cancel closes the modal', Gc === true, String(Gc));
 
   await pg.screenshot({path: path.join(SHOTS, 'pt-1400-final.png')}).catch(() => {});
   await ctx.close();

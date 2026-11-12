@@ -70,6 +70,7 @@ async function newPage(ctx, tag) {
   const pg = await ctx.newPage();
   wire(pg, tag);
   await pg.goto(PAGE);
+  await pg.evaluate(() => { const m = document.getElementById('plnMk'), b = document.getElementById('plnBuf'); if (m) m.value = '0'; if (b) b.value = 'DAT_Container'; });   // these checks pin the old defaults (Mk1, Container); the planner now starts at Mk2, Large Container
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
   return pg;
 }
@@ -326,7 +327,7 @@ try {
   // (p12) real Exosuit 1/min Mk1: recipe loop flagged; multi-belt flows are not errors (no warn, '(+ balancer)' note)
   const EX12 = await PL(1, 0, {}, {}, 'ITEM_Exosuit');
   const exMulti = EX12.edges.filter(e => e.belts > 1 && e.fits == null);
-  chk('(p12) Exosuit 1/min: recipe loop flagged', EX12.cycle === true);
+  chk('(p12) Exosuit 1/min: growth recipe, not a loop (cycle false; the synthetic loop below still flags)', EX12.cycle === false);
   chk('(p12) Exosuit 1/min: some edge needs >1 belt, no single belt', exMulti.length > 0, String(exMulti.length));
   chk('(p12) Exosuit 1/min: no edge warns', EX12.edges.every(e => e.warn === ''), JSON.stringify(EX12.edges.filter(e => e.warn)));
   chk('(p12) Exosuit 1/min: multi-belt notes say (+ balancer)', exMulti.every(e => /\(\+ balancer\)/.test(e.note)), JSON.stringify(exMulti.map(e => e.note)).slice(0, 200));

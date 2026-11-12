@@ -184,3 +184,5 @@ header .mnl .hbt{flex-direction:row;min-height:34px;gap:6px;width:100%;justify-c
 #pvSet{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px 12px;margin-bottom:8px}#pvSet>label{display:flex;flex-direction:column;gap:3px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}#pvSet select{text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}#pvSet label.chk{flex-direction:row;align-items:center;gap:6px;white-space:nowrap;min-height:32px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}#pvSet label.chk input{width:auto;flex:none;margin:0}
 @media (max-width:480px){#pvSet>label:not(.chk){flex:1 1 40%}#pvSet select{width:100%}#plnPrev .pvHd{margin-bottom:6px}#pvSet{gap:6px 10px;margin-bottom:6px}}
 @media (max-width:480px){#plnForm{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}#plnBuild{grid-column:1/-1}}
+
+.plnBox.plnDim{opacity:.28}.plnBox.plnOn{outline:2px solid var(--accent,#22d3ee);outline-offset:1px}.plnArr.dim{opacity:.18}.plnHead.dim{opacity:.18}.plnLbl.dim{opacity:.25}.plnArr.on{stroke:var(--accent,#22d3ee);stroke-width:2.4}.plnHead.on{fill:var(--accent,#22d3ee)}

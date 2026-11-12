@@ -160,7 +160,12 @@ let PF=0,DIRTY=true,USEB=false;
 const MODE_TXT={del:"Delete mode: click or drag a box to delete - X or Esc to exit",copy:"Copy: drag a box, then click to place",cfgcopy:"Copy config: click one building",cfgpaste:"Paste config: drag a box over buildings of the same type - Esc to exit",paste:"Paste: click to place - R rotate - V flip - Esc cancel"};
 let modeKey="";
 function syncMode(){const m=pasting?"paste":mode||"";if(m===modeKey)return;modeKey=m;document.body.dataset.mode=m;let el=$("modeb");if(!el){el=document.createElement("div");el.id="modeb";document.body.appendChild(el)}el.textContent=MODE_TXT[m]||""}
-let raf=0;const draw=()=>{syncMode();DIRTY=true;asv();if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()})};
+let raf=0;
+// zoom with the wheel: the last full paint (a copy) is drawn scaled on each wheel frame; a full paint follows when the wheel pauses. Any other draw drops the copy.
+const WHEEL_BLIT=false;   // scaled blit of the last paint on wheel frames: OFF (ghosting); every wheel frame is a full paint
+let ZS=null,ZW=false,ZT=0,ZC=null,OVC=null;
+const zsKey=()=>view+"|"+layer+"|"+W+"|"+H+"|"+dpr;
+const draw=(zw,quiet)=>{if(!zw)ZS=null;ZW=!!zw;syncMode();DIRTY=true;if(!zw&&!quiet)asv();/* wheel frames and the idle repaint skip the autosave timer (its save of a big factory is slow): the next edit saves the view too */if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()});if(zw&&WHEEL_BLIT){clearTimeout(ZT);ZT=setTimeout(()=>draw(0,1),160)}};
 
 const SPR=new Map();
 function spr(key,w,h,fn){const k=key+"|"+dpr;let c=SPR.get(k);if(!c){if(SPR.size>800)SPR.clear();c=document.createElement("canvas");c.width=Math.ceil(w*dpr);c.height=Math.ceil(h*dpr);const g=c.getContext("2d");g.scale(dpr,dpr);g.imageSmoothingQuality="high";fn(g);SPR.set(k,c)}return c}
@@ -171,11 +176,18 @@ function drawIcon(d,x,y,w,h,alpha){
   cx.save();cx.globalAlpha=alpha;cx.imageSmoothingQuality="high";cx.drawImage(i,x+(w-z)/2,y+(h-z)/2,z,z);cx.restore();
 }
 const ARROW_MIN_S=10;   // zoom (px per unit, sc()) below which belt direction arrows and underground links are hidden
+// arrow sprites: one canvas per (size, rotation, alpha), drawn with drawImage (no save/rotate/path per arrow; the lag came from per-arrow state changes)
+const ARS=new Map();
 function arrow(x,y,w,h,rot,alpha){
   const r=Math.min(w,h)*.3;if(r<3)return;
-  cx.save();cx.translate(x+w/2,y+h/2);cx.rotate(rot*Math.PI/2);
-  cx.fillStyle=`rgba(255,255,255,${alpha})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.7})`;cx.lineWidth=1;
-  cx.beginPath();cx.moveTo(r,0);cx.lineTo(-r*.7,-r*.75);cx.lineTo(-r*.3,0);cx.lineTo(-r*.7,r*.75);cx.closePath();cx.fill();cx.stroke();cx.restore();
+  const q=Math.round(r),S=2*q+4,key=q+"|"+(rot&3)+"|"+Math.round(alpha*100);
+  let sp=ARS.get(key);
+  if(!sp){sp=document.createElement("canvas");sp.width=sp.height=S;const g=sp.getContext("2d");
+    g.translate(S/2,S/2);g.rotate((rot&3)*Math.PI/2);
+    g.fillStyle=`rgba(255,255,255,${alpha})`;g.strokeStyle=`rgba(0,0,0,${alpha*.7})`;g.lineWidth=1;
+    g.beginPath();g.moveTo(q,0);g.lineTo(-q*.7,-q*.75);g.lineTo(-q*.3,0);g.lineTo(-q*.7,q*.75);g.closePath();g.fill();g.stroke();
+    if(ARS.size>400)ARS.clear();ARS.set(key,sp)}
+  cx.drawImage(sp,Math.round(x+w/2-S/2),Math.round(y+h/2-S/2));
 }
 // entrance marks (Layout, model.js entrances()): door slot = light bar on the edge + white chevron pointing INTO the block; ports side (no doors) = mint bar + chevron pointing out to the ports. Rotates with the block
 const ENT_DOOR_S=44;
@@ -426,7 +438,15 @@ function cached(name,fn){
   RCT=o.st.RCT;CUR=o.st.CUR;
   cx.setTransform(1,0,0,1,0,0);cx.drawImage(o.c,0,0);cx.setTransform(dpr,0,0,dpr,0,0);
 }
-function paint(pk){if(!USEB)DIRTY=true;LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}}
+function paint(pk){
+  if(WHEEL_BLIT&&ZW&&ZS&&!USEB&&!smOn()&&ZS.k===zsKey()){   // no blit while the simulation draws (its overlays would be scaled with the base)   // wheel frame: scaled copy of the last full paint (blocks unchanged: any other draw cleared ZS)
+    const f=V.z/ZS.z;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.drawImage(ZS.c,dpr*(V.ox-f*ZS.ox),dpr*(V.oy-f*ZS.oy),cv.width*f,cv.height*f);return}
+  if(!USEB)DIRTY=true;LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}
+  if(view==="F"&&typeof HAR==="function")setTimeout(()=>{try{HAR(layer);HLK(layer);hit({x:-1e9,y:-1e9})}catch(e){}},50);   // hover tables are built right after a paint, not on the first mouse move
+  if(WHEEL_BLIT&&!USEB&&!smOn()&&(!ZS||ZS.k!==zsKey())){   // the base is a clean paint: never a simulation frame (moving flow dots would be baked in and smear on zoom)
+    if(!ZC||ZC.width!==cv.width||ZC.height!==cv.height){ZC=document.createElement("canvas");ZC.width=cv.width;ZC.height=cv.height}
+    ZC.getContext("2d").drawImage(cv,0,0);ZS={c:ZC,z:V.z,ox:V.ox,oy:V.oy,k:zsKey()}}
+}
 let FLAT_S=5;   // let: tests set FLAT_S=0 for exact block pixels. below this zoom (px per cell) blocks are batched as flat rects (no icon/arrow/label/door marks are drawn there anyway)
 function drawBlocks(list,alpha,useSel){
   const s=sc(),flat=s<FLAT_S,fl=new Map(),st=new Map(),full=[];
@@ -456,9 +476,11 @@ function paint0(){
   const cur=lyBlocks().v;CUR=cur;
   drawBlocks(cur,.92,true);   // viewport cull inside drawBlocks
   cx.fillStyle="rgba(255,60,60,.5)";
-  const occ=new Set();   // overlap marks: cell hash instead of all-pairs (was O(n^2) dim() calls)
-  cur.forEach(a=>{const d=dim(a);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const k=(a.x+i+32768)*65536+(a.y+j+32768);
-    if(occ.has(k)){const X=V.ox+(a.x+i)*s,Y=V.oy+(a.y+j)*s;if(X<W&&Y<H&&X+s>0&&Y+s>0)cx.fillRect(X,Y,s,s)}else occ.add(k)}});
+  // overlap marks: the duplicate cells of this layer, found once per paint key (all blocks; only the ones on screen are drawn, same pixels as before)
+  const OVK=PK+"|"+layer+"|"+S.blocks.length;
+  if(!OVC||OVC.k!==OVK){const occ=new Set(),ov=[];S.blocks.forEach(a=>{if(a.h!==layer)return;const d=dim(a);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const k=(a.x+i+32768)*65536+(a.y+j+32768);
+    if(occ.has(k))ov.push(a.x+i,a.y+j);else occ.add(k)}});OVC={k:OVK,ov}}
+  for(let t=0;t<OVC.ov.length;t+=2){const X=V.ox+OVC.ov[t]*s,Y=V.oy+OVC.ov[t+1]*s;if(X<W&&Y<H&&X+s>0&&Y+s>0)cx.fillRect(X,Y,s,s)}
   return{RCT,CUR};
   });
   if(F&&smOn())drawSimMach(s);

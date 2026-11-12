@@ -85,13 +85,13 @@
       <div id="plnBody">
       <div id="plnForm">
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
-      <label>Rate (items/min) <input id="plnRate" type="number" min="1" step="any" value="1" aria-label="Target rate in items per minute"></label>
+      <label>Rate (items/min) <input id="plnRate" type="number" min="0.001" step="any" value="1" aria-label="Target rate in items per minute"></label>
       <button id="plnBuild" type="button" title="Preview and place machines, belts and source containers for this plan">Build factory</button>
       </div>
       <div id="plnMain">
       <div id="plnOut" tabindex="0" role="region" aria-label="Planner flow diagram"></div>
       <div id="plnOpt"><button id="plnOptT" class="edge" type="button" aria-expanded="true" aria-controls="plnOptB" aria-label="Hide options" title="Hide options"><span class="ar" aria-hidden="true">&raquo;</span><span class="lb">Options</span></button><div id="plnOptB">
-      <label>Belt <select id="plnMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+      <label>Belt <select id="plnMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1" selected>Mk2</option><option value="2">Mk3</option></select></label>
       <label>Splitter <select id="plnSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
       <label>Balancer <select id="plnBal" aria-label="Balancer tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
       <div class="plnGxW"><span>View</span><button id="plnGx" type="button" aria-pressed="false" title="Grouped: one box per node. Expanded: one box per machine">Grouped</button></div>
@@ -248,6 +248,7 @@
 <script defer src="js/palette.js"></script>
 <script defer src="js/inspector.js"></script>
 <script defer src="js/planner.js"></script>
+<script defer src="js/prefab.js"></script>
 <script defer src="js/placer.js"></script>
 <script defer src="js/panel.js"></script>
 <script defer src="js/io.js"></script>
@@ -265,15 +266,18 @@
       <label class="chk"><input type="checkbox" id="plnBk21" value="BPO_Station_2x1" checked> 2x1</label>
       <label class="chk"><input type="checkbox" id="plnBk22" value="BPO_Station_02" checked> 2x2</label>
     </fieldset>
-    <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2">Large Container</option></select></label>
+    <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2" selected>Large Container</option></select></label>
     <label>Belt <select id="pvMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
     <label>Splitter <select id="pvSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+    <label>Rate (items/min) <input id="pvRate" type="number" min="0.001" step="any" aria-label="Target rate in items per minute"></label>
+    <label>Engine <select id="pvEngine" aria-label="Layout engine"><option value="old">Old (stable)</option><option value="new">New (experimental)</option></select></label>
     <label class="chk" title="Open-ended chainable module: input on west edge, output on east edge, no source/sink containers"><input type="checkbox" id="plnMod"> Modular build</label>
   </div>
   <div id="plnPrevView"><canvas id="plnPrevMap" width="300" height="180" aria-label="Factory layout preview"></canvas></div>
   <dl id="plnPrevCnt"><dt>Machines</dt><dd id="pvMach"></dd><dt>Belts</dt><dd id="pvBelt"></dd><dt>Splitters</dt><dd id="pvSpl"></dd><dt>Containers</dt><dd id="pvBox"></dd><dt>Undergrounds</dt><dd id="pvUg"></dd><dt>Blocks</dt><dd id="pvBlk"></dd><dt>Cells</dt><dd id="pvCell"></dd><dt>In/Out</dt><dd id="pvIO"></dd></dl>
   <div id="plnPrevNote"></div>
   <p id="plnPrevErr" role="alert"></p>
+  <p id="plnPrevBig" role="status"></p>
   <div class="btns"><button id="plnPlace" type="button">Place</button><button id="plnCancel" type="button">Cancel</button></div>
 </dialog>
 </body>
