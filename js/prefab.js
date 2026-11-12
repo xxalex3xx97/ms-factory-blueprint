@@ -564,6 +564,56 @@ function pfFactPlace(Z,F,AL){
   }
   return{ok:true,pos,lanes};
 }
+// pfFact step 4d+5: y placement (zones sized to need) + route + assemble. Returns the pfBands layout shape.
+// ponytail: y rows bump to the first wall-fitting row (pfFitY); final collector box placed under each final out (the S sink, like pfBands).
+function pfFactLayout(Z,F,AL,PL,mk,spMk){
+  const no=why=>({ok:false,why}),cw=PF_GRID.cw,nr=Z.rows.length,Y=[],H=[],links=[],rowOf=new Map(Z.nodes.map(n=>[n.item,n.row]));
+  for(let r=0;r<nr;r++)H[r]=Math.max(...Z.rows[r].map(i=>F.get(i).h));
+  for(const [p,al] of AL)al.groups.forEach((g,gi)=>links.push({p,gi,c:g.cons,rp:rowOf.get(p),rc:rowOf.get(g.cons),
+    xp:PL.pos.get(p).x0+F.get(p).outs[gi].x,heads:g.heads.map(h=>PL.pos.get(g.cons).x0+h.x),t:-1}));
+  for(const l of links)l.straight=l.heads.length===1&&l.xp===l.heads[0];
+  const firstFit=(v,r)=>{for(let k=0;k<60;k++,v++)if(pfFitY(v,H[r]))return v;return -1};
+  Y[nr-1]=firstFit(0,nr-1);
+  if(Y[nr-1]<0)return no('row '+(nr-1)+' does not fit a wall cell');
+  for(let r=nr-2;r>=0;r--){
+    const y0=Y[r+1]+H[r+1],tr=links.filter(l=>l.rc===r&&!l.straight);
+    tr.forEach(l=>{l.lo=l.xp;l.hi=l.heads[l.heads.length-1];l.ti=-1});
+    const occ=[];
+    for(const l of [...tr].sort((a,b)=>a.lo-b.lo||a.hi-b.hi)){let i=0;while(occ[i]&&occ[i].some(m=>m.lo<=l.hi&&l.lo<=m.hi))i++;(occ[i]=occ[i]||[]).push(l);l.ti=i}
+    let done=false;
+    for(let Yc=y0;Yc<=y0+300&&!done;Yc++){
+      if(!pfFitY(Yc,H[r]))continue;
+      const rows=[];for(let t=y0+2,last=-Infinity;t<=Yc-2;t++)if(pfTrackOk(t,y0)&&t-last>=3){rows.push(t);last=t}
+      if(rows.length>=occ.length){tr.forEach(l=>l.t=rows[l.ti]);Y[r]=Yc;done=true}
+    }
+    if(!done)return no('zone '+r+' needs more than 300 rows');
+  }
+  for(const l of links){l.yp=Y[l.rp]+F.get(l.p).outs[l.gi].y;l.y1=Y[l.rc]}
+  const R=pfFactRoute(links,mk,spMk);if(R.ok===false)return R;
+  const items=[];
+  for(const [it,f] of F){const {x0}=PL.pos.get(it),y=Y[rowOf.get(it)];
+    f.items.forEach(q=>items.push({h:0,pid:0,...q,x:q.x+x0,y:q.y+y,ct:q.ct&&q.ct.map(c=>({...c}))}))}
+  items.push(...R.items);
+  const fin=F.get(Z.item),fx=PL.pos.get(Z.item).x0,fy=Y[0];
+  const ports=fin.outs.map(o=>({edge:'S',off:o.x+fx,dir:'out',belts:1,slot:-1,mk}));
+  fin.outs.forEach(o=>items.push({cls:PLC_BOX,x:o.x+fx,y:fy+fin.h,rot:0,ct:[]}));
+  const w=Math.max(...items.map(q=>q.x+dim(q).w))+1,h=Math.max(...items.map(q=>q.y+dim(q).h));
+  return{ok:true,items,w,h,ports,nRows:nr,nFact:F.size,links};
+}
+function pfFactTop(P,item,mk,spMk,o={}){
+  spMk=Math.max(spMk,mk);
+  const Z=pfFactTree(P,item,mk);if(Z.ok===false)return Z;
+  const SZ=new Map();
+  for(const nd of Z.nodes){const s=pfFactSizeTile(nd,mk);if(s.ok===false)return s;SZ.set(nd.item,{T:s.T,M:s.M,K:s.K,nd})}
+  const AL=pfFactAlloc(Z,SZ,mk,spMk);if(AL.ok===false)return AL;
+  const F=new Map();
+  for(const nd of Z.nodes){const S=SZ.get(nd.item),al=AL.get(nd.item),fin=nd.item===item;
+    const R=pfFactRow(nd,S.T,S.K,mk,fin?null:al.groups.map(g=>g.t),fin);if(R.ok===false)return R;F.set(nd.item,R)}
+  const PL=pfFactPlace(Z,F,AL),L=pfFactLayout(Z,F,AL,PL,mk,spMk);if(L.ok===false)return L;
+  const T=P.nodes[item],BX=o.box||PLC_BOX;
+  return{ok:true,items:L.items.map(q=>({h:0,pid:0,...q})),lanes:1,per:[T.machines],makes:T.machines*T.pmach,pitch:L.h+1,w:L.w,h:L.h,tall:true,mod:false,box:BX,mk,ports:L.ports,
+    note:['Prefab factory: '+L.nFact+' factories, '+L.nRows+' rows, S out'],src:{P,item,mk,spMk,o},prefab:true,links:L.links};
+}
 // STEP 5b (pfBands atom, inert: no caller). Builds one graph node at y=0, absolute x from x0, in a layer of body height B (belts run down to row B-1, the gutter starts at row B). grp: pfGrpNode with greedy column origins (each column and the last column's head box fit the wall grid), head boxes replaced by raw hubs. hub/raw: one Large container, W port belt up/over when nIn>4, S outs and E outs (reverse riser order) belted down to row B-1. Returns {ok,items,x0,x1 (exclusive),ins:[{item,head,x}],outs:[{x}]} or {ok:false,why}.
 function pfBandAtom(n,x0,B,nOut,nIn,mk){
   const bc=PLC_BELT[mk],bw=def(PLC_BOX).w,HC='DAT_Container_2',items=[],ins=[],outs=[];
