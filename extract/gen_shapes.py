@@ -136,7 +136,7 @@ def build():
         if p.get('polys'):
             entry['polys'] = [[[r3(x - ox), r3((-y if p.get('flipY') else y) - oy)] for x, y in poly] for poly in p['polys']]
         if p.get('entrance'):   # entrance: {kind: 'doors'|'ports', evidence}; Layout marks door slots (catalog door data) or the side of the output ports
-            if p['entrance'].get('kind') not in ('doors', 'ports') or not p['entrance'].get('evidence'):
+            if p['entrance'].get('kind') not in ('doors', 'ports', 'open') or not p['entrance'].get('evidence'):
                 sys.exit('bad entrance for ' + name)
             entry['entrance'] = p['entrance']
             if p['entrance'].get('gaps'):   # no-floor doors: [side, x0, y0, x1, y1] gap rects on the block edge, shape frame (Layout marks)

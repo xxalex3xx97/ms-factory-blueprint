@@ -879,11 +879,21 @@
         "depth": 2,
         "offset": 4,
         "verified": false,
-        "source": "real opening = one 22-wide gap (-11..11) per side, no door; the model slots (6 wide, 2 per side) lie inside it"
+        "open": {
+          "sides": [
+            "E",
+            "S",
+            "W",
+            "N"
+          ],
+          "from": 4,
+          "to": 26
+        },
+        "source": "no doors: one 22-wide open gap (-11..11) per side; the 1-thick strip in the wall line is buildable (user 2026-11-12)"
       },
       "entrance": {
-        "kind": "doors",
-        "evidence": "decoded BPO_Station_03 colliders: 22-wide opening (-11..11) on each side, no door frames"
+        "kind": "open",
+        "evidence": "decoded BPO_Station_03 colliders: 22-wide opening (-11..11) on each side, no door frames/lintels"
       },
       "ground": true,
       "source": "decoded from EA files (BPO Station_03: colliders, BlockBounds, ItemCost); not tested in game",
@@ -931,7 +941,14 @@
         "depth": 2,
         "offset": 4,
         "verified": false,
-        "source": "decoded: N/S 6-wide gaps, one 22-wide gap on W, two 6-wide gaps on E (narrow-side rotation vs site axes unverified)"
+        "open": {
+          "sides": [
+            "W"
+          ],
+          "from": 4,
+          "to": 26
+        },
+        "source": "W (XLarge side) = open 22-wide gap, no door, strip buildable (user 2026-11-12); decoded: N/S 6-wide gaps, one 22-wide gap on W, two 6-wide gaps on E (narrow-side rotation vs site axes unverified)"
       },
       "entrance": {
         "kind": "doors",

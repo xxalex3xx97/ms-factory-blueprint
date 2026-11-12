@@ -29,5 +29,13 @@ try {
   chk('Station 2x2 C + Adapter + Station 1x1: both joints connected, no hint', d.n === 3 && d.paired >= 2 && d.mis === 0, JSON.stringify(d));
   const e = await run([['BPO_Station_03', 0, 0, 0], ['BPO_StationAdapter_01', 4, 0, 2], ['BPO_Station_01', 6, 0, 0]]);
   chk('Adapter turned round: its XLarge side faces the 1x1, hint shown', e.mis > 0, JSON.stringify(e));
+  const f = await pg.evaluate(() => {
+    const bl = [['BPO_Station_03', 0, 0, 0], ['BPO_StationAdapter_01', 4, 0, 0]].map(([n, x, y, rot], i) => ({Class: CATALOG.blocks.find(b => b.name === n).class, GridLocation: {X: x, Y: y}, Height: 0, GridRotation: rot, BlockID: i + 1, PaletteID: 0}));
+    __fb.importJson(JSON.stringify({Version: 1, DisplayName: 't', Blocks: bl, DefaultMachines: []}));
+    const a = areas(0), s = a.strips[0], t = id => noBuild([{id, x: s.x, y: s.y, w: 1, h: 1, l: 0}]), o = noBuild([{id: 9, x: s.x, y: s.y - 3, w: 1, h: 1, l: 0}]);
+    const out = a.strips.some(q => q.w === 1 || q.h === 1), none = a.doors.filter(d => d.bx === 0 && d.by === 0).length;
+    return {n: a.strips.length, in: !t(9), out: o, one: out, none, title: doorTxt(S.blocks[0]), t2: doorTxt(S.blocks[1])};
+  });
+  chk('Station 2x2 C open strips: buildable under STRICT, refused outside, no door objects, title open sides', f.n >= 4 && f.in && f.out && f.none === 0 && f.title === 'open sides' && f.t2 === 'open side', JSON.stringify(f));
 } finally { await br.close(); }
 console.log(bad ? bad + ' FAILED' : 'ALL PASS'); process.exit(bad ? 1 : 0);

@@ -3049,7 +3049,7 @@ async function s28(br) {
   chk('28 entrance: dock + Command Module + Blueprint Unit + 3 shipyards + Corner + Corridor + Adapter + Corridor 2x2 + 2x2 C (doors), Mk.1 + Mk.2 drone bays (ports); no other block', JSON.stringify(ents.sort()) === '["BPO_BlueprintUnit","BPO_CommandModule","BPO_Dock_2","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ShipyardSide","BPO_StationAdapter_01","BPO_StationCorner_01","BPO_StationCorridor_01","BPO_StationCorridor_02","BPO_Station_03"]', JSON.stringify(ents));
   for (const n of names) {
     const f = srcBlocks[n].entrance, g = await pg.evaluate(k => SHAPES[k].entrance, n);
-    if (f) chk(`28 entrance ${n}: SHAPES.entrance kind "${f.kind}" + evidence carried`, ['doors', 'ports'].includes(f.kind) && g && g.kind === f.kind && g.evidence === f.evidence && f.evidence.length > 20, JSON.stringify(g));
+    if (f) chk(`28 entrance ${n}: SHAPES.entrance kind "${f.kind}" + evidence carried`, ['doors', 'ports', 'open'].includes(f.kind) && g && g.kind === f.kind && g.evidence === f.evidence && f.evidence.length > 20, JSON.stringify(g));
     else chk(`28 entrance ${n}: none in the source = none in SHAPES`, g === undefined, JSON.stringify(g));
   }
   chk('28 entrance: drone bays marked inferred, dock not', /^inferred/.test(srcBlocks.BPO_MiningDroneBayBlock.entrance.evidence) && !/inferred/.test(srcBlocks.BPO_Dock_2.entrance.evidence), '');
