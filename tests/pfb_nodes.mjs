@@ -40,7 +40,7 @@ for (const c of cases) {
       const G2 = pfGrpNode(cls, k, flows, sizes, mk, outF, G.cx.map((x, i) => x + 2 * i));
       shifted = G2.ok === false ? G2.why : {ov: pfCheck({items: G2.items, w: G2.w, h: G2.h, ports: []}).ov, dw: G2.w - G.w, want: 2 * (sizes.length - 1)};
     }
-    return {name: c.name, sizes, w: G.w, h: G.h, ov: chk.ov, nIns: G.ins.length, want: sizes.length * k, outEdge: G.out.edge, outX: G.out.x, same, shifted};
+    return {name: c.name, sizes, w: G.w, h: G.h, ov: chk.ov, nIns: G.ins.length, want: sizes.length * k, outEdge: G.out.edge, outX: G.out.x, same, shifted, nOuts: G.outs.length, outsX0: G.outs[0].x};
   }, c);
   console.log(c.name, c.rate, JSON.stringify(r));
   if (r.refused) { check(false, c.name + ' ' + c.rate + ' refused: ' + r.refused); continue }
@@ -48,6 +48,7 @@ for (const c of cases) {
   check(r.nIns === r.want, c.name + ' ' + c.rate + ': input terminals ' + r.nIns + ' = columns x inputs ' + r.want);
   check(r.outEdge === 'S' && r.outX >= 0 && r.outX < r.w, c.name + ' ' + c.rate + ': out on S edge inside width (x ' + r.outX + ')');
   check(r.same === true, c.name + ' ' + c.rate + ': org = cx reproduces items');
+  check(r.nOuts >= 1 && r.outsX0 === r.outX, c.name + ' ' + c.rate + ': outs[] present, out = outs[0] (outs ' + r.nOuts + ')');
   if (r.shifted !== null) {
     check(typeof r.shifted === 'object' && r.shifted.ov === 0, c.name + ' ' + c.rate + ': shifted columns no overlap');
     check(typeof r.shifted === 'object' && r.shifted.dw === r.shifted.want, c.name + ' ' + c.rate + ': shifted width grows by ' + (r.shifted.want) + ' (dw ' + (r.shifted.dw) + ')');

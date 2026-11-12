@@ -31,7 +31,10 @@ for (const c of cases) {
     const fin = G.nodes.filter(n => n.kind === 'grp' && n.item === it);
     const finHub = hubs.some(h => h.item === it);
     const wide = G.layers.map(l => l.reduce((a, d) => a + [...G.nodes, ...G.dummies].find(n => n.id === d).w, 0) + PF_GAP * (l.length - 1));
-    return {name: c.name, nodes: G.nodes.length, dummies: G.dummies.length, edges: G.edges.length, oedges: G.oedges.length, bad, want, inLayers, nLayers: G.layers.length, raws: raws.length, hubs: hubs.length, fin: fin.length, finHub, rawLayer0: raws.every(n => n.layer === 0), maxW: Math.max(...wide)};
+    const H0 = pfHubNode().h;
+    const grpBad = G.nodes.filter(n => n.kind === 'grp' && (n.cls === undefined || n.k === undefined || !n.flows || !n.rec || n.h === undefined)).length;
+    const hubBad = G.nodes.filter(n => (n.kind === 'hub' || n.kind === 'raw') && n.h !== H0).length;
+    return {grpBad, hubBad, name: c.name, nodes: G.nodes.length, dummies: G.dummies.length, edges: G.edges.length, oedges: G.oedges.length, bad, want, inLayers, nLayers: G.layers.length, raws: raws.length, hubs: hubs.length, fin: fin.length, finHub, rawLayer0: raws.every(n => n.layer === 0), maxW: Math.max(...wide)};
   }, c);
   console.log(c.name, c.rate, JSON.stringify(r));
   if (r.refused) { check(false, c.name + ' refused: ' + r.refused); continue }
@@ -42,6 +45,8 @@ for (const c of cases) {
   check(r.raws >= 1 && r.rawLayer0, c.name + ': raw hubs exist, all layer 0');
   check(r.fin >= 1 && !r.finHub, c.name + ': final item has group node(s), no hub');
   check(r.nLayers >= 2, c.name + ': at least 2 layers (' + r.nLayers + ')');
+  check(r.grpBad === 0, c.name + ': every grp node has cls/k/flows/rec/h (bad ' + r.grpBad + ')');
+  check(r.hubBad === 0, c.name + ': every hub and raw node has h = pfHubNode().h (bad ' + r.hubBad + ')');
 }
 check(await pg.evaluate(() => PF_WRAP) === 120, 'PF_WRAP = 120');
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));

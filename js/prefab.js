@@ -191,9 +191,10 @@ function pfGrpNode(cls,k,flows,sizes,mk,outFlow,org){
   if(A.ok===false)return A;
   const a=pfAssign(cls,k,flows),its=[...a.W,...a.E,...a.N].map(p=>p.item),ins=[];
   sizes.forEach((mc,i)=>{const C=pfCol(cls,k,flows,mc,mk,true);C.ports.filter(p=>p.dir==='in').forEach((p,j)=>ins.push({item:its[j],edge:'N',x:A.cx[i]+p.off,y:0}))});
-  const sp=portsOf({cls:PLC_BOX,x:A.ob.x,y:A.ob.y,rot:0,off:[]}).find(p=>p.f==='S');
-  if(!sp)return{ok:false,why:'out box has no S port'};
-  return{ok:true,items:A.items,w:A.w,h:A.h,ins,out:{edge:'S',x:sp.x,y:A.ob.y+dim({cls:PLC_BOX,rot:0}).h},cx:A.cx};
+  const sps=portsOf({cls:PLC_BOX,x:A.ob.x,y:A.ob.y,rot:0,off:[]}).filter(p=>p.f==='S').sort((a,b)=>a.x-b.x);
+  if(!sps.length)return{ok:false,why:'out box has no S port'};
+  const outs=sps.map(sp=>({edge:'S',x:sp.x,y:A.ob.y+dim({cls:PLC_BOX,rot:0}).h}));
+  return{ok:true,items:A.items,w:A.w,h:A.h,ins,out:outs[0],outs,cx:A.cx};
 }
 // HUB node: one Large container (DAT_Container_2). ins = its N ports (by x) then its first W port; outs = S ports (by x) then E ports (by y), named S0.. / E0.. in that order.
 function pfHubNode(){
@@ -260,13 +261,13 @@ function pfBandGraph(P,item,mk,o={}){
   }
   const nodes=[],edges=[],lay=new Map(),rawN=new Map(),byId=new Map();
   const add=n=>{nodes.push(n);byId.set(n.id,n);return n};
-  const hubW=pfHubNode().w,boxW=def(PLC_BOX).w;
+  const hubW=pfHubNode().w,hubH=pfHubNode().h,boxW=def(PLC_BOX).w;
   // producer node id for one head of input item i (raw: next raw hub, 8 heads each)
   const prod=i=>{
     if(P.nodes[i]&&P.nodes[i].crafter)return needHub.get(i)?'H:'+i:'G:'+i+':0';
     const n=rawN.get(i)||0;rawN.set(i,n+1);
     const id='R:'+i+':'+Math.floor(n/8);
-    if(!byId.has(id)){add({id,kind:'raw',item:i,w:boxW});lay.set(id,0)}
+    if(!byId.has(id)){add({id,kind:'raw',item:i,w:boxW,h:hubH});lay.set(id,0)}
     return id;
   };
   for(const y of order){
@@ -274,7 +275,7 @@ function pfBandGraph(P,item,mk,o={}){
     r.groups.forEach((g,gi)=>{
       const G=pfGrpNode(r.cls,r.k,r.flows,g,mk,g.reduce((a,b)=>a+b,0)*r.fo);
       if(G.ok===false)return void(err=G.why);
-      add({id:'G:'+y+':'+gi,kind:'grp',item:y,sizes:g,w:G.w,h:G.h});
+      add({id:'G:'+y+':'+gi,kind:'grp',item:y,sizes:g,w:G.w,h:G.h,cls:r.cls,k:r.k,flows:r.flows,fo:r.fo,rec:rk(st.get(y).T.rec)});
     });
     if(err)return no(err);
     let L=0;
@@ -285,7 +286,7 @@ function pfBandGraph(P,item,mk,o={}){
     })));
     r.groups.forEach((g,gi)=>lay.set('G:'+y+':'+gi,L));
     if(needHub.get(y)){
-      add({id:'H:'+y,kind:'hub',item:y,w:hubW});lay.set('H:'+y,L+1);
+      add({id:'H:'+y,kind:'hub',item:y,w:hubW,h:hubH});lay.set('H:'+y,L+1);
       r.groups.forEach((g,gi)=>edges.push({from:'G:'+y+':'+gi,to:'H:'+y,item:y,flow:g.reduce((a,b)=>a+b,0)*r.fo,head:0}));
     }
   }
