@@ -1,0 +1,79 @@
+{
+ "DAT_AlienTechnology": {
+  "input_items": [
+   "ITEM_RelicShard"
+  ],
+  "strings": [
+   "RelicTechnology"
+  ],
+  "icon": [
+   "T_RelicTechIcon"
+  ]
+ },
+ "DAT_AstronomyScience": {
+  "input_items": [
+   "ITEM_EncodedSimulationMatrix"
+  ],
+  "strings": [
+   "AstronomicScience"
+  ],
+  "icon": [
+   "T_AstronomicScience"
+  ]
+ },
+ "DAT_ComputationScience": {
+  "input_items": [
+   "ITEM_BasicCircuit"
+  ],
+  "strings": [
+   "ComputationScience"
+  ],
+  "icon": [
+   "T_CompSciIcon"
+  ]
+ },
+ "DAT_ElectromagneticScience": {
+  "input_items": [
+   "ITEM_DetectorArray"
+  ],
+  "strings": [
+   "ElectromagneticScience"
+  ],
+  "icon": [
+   "T_ElectromagenticScience"
+  ]
+ },
+ "DAT_MaterialScience": {
+  "input_items": [
+   "ITEM_HullPlates"
+  ],
+  "strings": [
+   "MaterialScience"
+  ],
+  "icon": [
+   "T_MatSciIcon"
+  ]
+ },
+ "DAT_QuantumScience": {
+  "input_items": [
+   "ITEM_SuperconductorCoil"
+  ],
+  "strings": [
+   "QuantumScience"
+  ],
+  "icon": [
+   "T_QuantumSciIcon"
+  ]
+ },
+ "DAT_XenobiologyScience": {
+  "input_items": [
+   "ITEM_Biolattice"
+  ],
+  "strings": [
+   "XenobiologicScience"
+  ],
+  "icon": [
+   "T_XenobiologicScience"
+  ]
+ }
+}

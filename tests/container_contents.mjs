@@ -32,5 +32,19 @@ try {
   chk('re-import + export: DefaultMachines identical', r.same);
   chk('infinite source goes to SiteOnly, not Contents', JSON.stringify(r.ent.SiteOnly) === JSON.stringify({Infinite: [{Item: 'warpfuel', Count: 0}]}) && !JSON.stringify(r.ent.Contents).includes('warpfuel'), JSON.stringify(r.ent));
   chk('non-containers never get Contents', r.others === 0);
+  // port toggle round-trip (generic Ports export/import). Forces portsLayout.toggleable on in-page: the catalog flag itself comes from the regenerated catalog (see ms-tools/catalog_todo_AD.md).
+  const t = await pg.evaluate(() => {
+    const st = CATALOG.blocks.find(b => b.name === 'BPO_Station_01'), cd = CATALOG.buildables.find(m => m.machineClass === 'BP_ContainerObject');
+    cd.portsLayout.toggleable = true;
+    const blk = {Class: st.class, GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0};
+    const m = {Class: cd.machineClass, Transform: {GridLocation: {X: -8, Y: 0}, Height: 0, GridRotation: 0}, MachineID: 1, PaletteID: 0, Ports: [{Face: 'N', Index: 0, Enabled: false}]};
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [blk], DefaultMachines: [m]}));
+    const a = JSON.parse(JSON.stringify(build()));
+    __fb.importJson(JSON.stringify(a));
+    const b = JSON.parse(JSON.stringify(build()));
+    return {pa: a.DefaultMachines[0].Ports, pb: b.DefaultMachines[0].Ports};
+  });
+  chk('container port toggle exported', Array.isArray(t.pa) && t.pa.some(p => p.Face === 'N' && p.Index === 0 && p.Enabled === false), JSON.stringify(t.pa));
+  chk('container port toggle round-trips', isDeepStrictEqual(t.pa, t.pb), JSON.stringify([t.pa, t.pb]));
 } finally { await br.close(); }
 process.exit(bad ? 1 : 0);
