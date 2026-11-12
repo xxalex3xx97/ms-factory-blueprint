@@ -14,10 +14,11 @@ function nlAssign(lanes,heads,cap){
 function nlCellU(n){let cum=0;return n.cells.map(g=>{const u=(cum+g.K/2)/n.N;cum+=g.K;return u})}
 function nlWBase(F,bw){let m=0;const rs=[];for(const n of F.nodes){rs[n.row]=(rs[n.row]||0)+n.cells.reduce((a,g)=>a+g.w+1,0)}
   for(const v of rs)if(v>m)m=v;let d=0;for(const q of F.raws)d+=Math.max(q.belts,Math.ceil(q.rate/(F.cap/2)-1e-9))*(bw+1);return Math.max(m,d)+2}
-function nlPlan1(F,mk,hint,W,cu){
+function nlPlan1(F,mk,hint,W,cu,pods){
   const no=why=>({ok:false,why}),bw=def(PLC_BOX).w,bh=def(PLC_BOX).h,cap=F.cap;
   const sp=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).filter(p=>p.f==='S').sort((a,b)=>a.x-b.x)[0];
   const nodes=F.nodes,nr=Math.max(...nodes.map(n=>n.row))+1,cells=[],lanes=[],dock=[],spills=[];
+  const px=u=>{if(!pods)return u*W;const p=Math.min(pods.P-1,Math.max(0,Math.floor(u*pods.P)));return pods.PO[p]+(u*pods.P-p)*pods.PW[p]};
   for(const n of nodes){n.cs=[];for(const g of n.cells){
     const c={id:cells.length,item:n.item,node:n,K:g.K,w:g.w,h:g.h,g,heads:g.heads.map((h,i)=>({...h,id:cells.length+':'+i,k:h.item===n.item?h.item+'#s':h.item})),out:g.out,row:n.row,ox:0,oy:0,feed:{}};cells.push(c);n.cs.push(c)}
     if(W)nlCellU(n).forEach((u,i)=>{n.cs[i].u=u})}
@@ -27,14 +28,14 @@ function nlPlan1(F,mk,hint,W,cu){
     if(cu&&r>0){let cum=0;n.cs.forEach(c=>{const q=qu(n.item,(cum+c.K/2)/n.N);cum+=c.K;if(q!==null)c.u=q})}
     for(const c of n.cs)for(const h of c.heads)h.cu=c.u}
   let dx=1;
-  const dl=[];for(const q0 of F.raws){const q={...q0,key:q0.seed?q0.item+'#s':q0.item};const nb=Math.max(q.belts,Math.ceil(q.rate/(cap/2)-1e-9));for(let b=0;b<nb;b++)dl.push({q,nb,b,t:W?((cu?qu(q.key,(b+0.5)/nb):null)??(b+0.5)/nb)*W:hint?hint.dock.get(q.item+':'+b):undefined,ord:dl.length})}
+  const dl=[];for(const q0 of F.raws){const q={...q0,key:q0.seed?q0.item+'#s':q0.item};const nb=Math.max(q.belts,Math.ceil(q.rate/(cap/2)-1e-9));for(let b=0;b<nb;b++){const uq=W?((cu?qu(q.key,(b+0.5)/nb):null)??(b+0.5)/nb):undefined;dl.push({q,nb,b,uq,t:W?px(uq):hint?hint.dock.get(q.item+':'+b):undefined,ord:dl.length})}}
   if(hint||W)dl.sort((a,b)=>(a.t===undefined)-(b.t===undefined)||(a.t!==undefined&&a.t-b.t)||a.ord-b.ord);
   let prevItem=null;
-  for(const {q,nb,t} of dl){
+  for(const {q,nb,t,uq} of dl){
     if(hint&&!W){if(prevItem!==null&&prevItem!==q.item)dx++;prevItem=q.item}
     let bx=t!==undefined?Math.max(dx,Math.round(t-sp.x)):dx;for(let k=0;k<99999;k++,bx++)if(pfFitX(bx,bw)&&pfFitX(bx+sp.x,1,true))break;
-    dock.push({item:q.item,x:bx,lx:bx+sp.x});lanes.push({id:lanes.length,item:q.item,key:q.key,raw:true,s:q.rate/nb,x:bx+sp.x,y0:1+bh,y1:null,srcRow:nr,lastRow:nr,cons:[],kind:'through'});dx=bx+bw+1;if(!hint&&!W&&lanes.filter(l=>l.item===q.item).length===nb)dx++}
-  for(const c of cells)if(c.node.cons.length){c.lane=lanes.length;lanes.push({id:lanes.length,item:c.item,key:c.item,src:c.id,s:c.g.s,x:null,y0:null,y1:null,srcRow:c.row,lastRow:c.row,cons:[],kind:'through'})}
+    dock.push({item:q.item,x:bx,lx:bx+sp.x,u:uq});lanes.push({id:lanes.length,item:q.item,key:q.key,raw:true,u:uq,s:q.rate/nb,x:bx+sp.x,y0:1+bh,y1:null,srcRow:nr,lastRow:nr,cons:[],kind:'through'});dx=bx+bw+1;if(!hint&&!W&&lanes.filter(l=>l.item===q.item).length===nb)dx++}
+  for(const c of cells)if(c.node.cons.length){c.lane=lanes.length;lanes.push({id:lanes.length,item:c.item,key:c.item,src:c.id,u:c.u,s:c.g.s,x:null,y0:null,y1:null,srcRow:c.row,lastRow:c.row,cons:[],kind:'through'})}
   const byRowDesc=[...nodes].sort((a,b)=>b.row-a.row);
   for(const it of new Set(lanes.map(l=>l.key))){
     const L=lanes.filter(l=>l.key===it),heads=[];
@@ -72,7 +73,7 @@ function nlPlan1(F,mk,hint,W,cu){
       cl=cl.map((c,i)=>({c,i})).sort((a,b)=>key.get(a.c)-key.get(b.c)||a.i-b.i).map(q=>q.c)}
     let cur=1;
     for(const c of cl){
-      let x=cur;const pf=hint?pref(c):null;if(pf!==null&&pf>x)x=pf;if(W)x=Math.max(x,Math.round(c.u*W-c.w/2));
+      let x=cur;const pf=hint?pref(c):null;if(pf!==null&&pf>x)x=pf;if(W)x=Math.max(x,Math.round(px(c.u)-c.w/2));
       for(const h of c.heads){const l=lanes[c.feed[h.id]];if(l.kind==='jog'&&l.x!==null){const p=l.x-h.x;if(p>x)x=p;break}}
       for(let t=0;t<99999;t++){
         let bad=-1;for(let q=x;q<x+c.w;q++)if(res.has(q))bad=q;
@@ -114,8 +115,8 @@ function nlPlan1(F,mk,hint,W,cu){
     for(const u of tracks)if(u!==t&&u.y<t.y&&u.hx>lo&&u.hx<hi&&t.y-u.y<60)ug++}
   for(const s of spills){const a=lanes[s.lane],b=lanes[s.to];for(const l of lanes)if(l.id!==a.id&&l.x>a.x&&l.x<b.x&&l.y0<s.y&&l.y1>s.y)ug++}
   const w=Math.max(plcMmax(cells,c=>c.ox+c.w),plcMmax(dock,d=>d.x+bw))+1;
-  return{ok:true,cells:cells.map(c=>({g:c.g,id:c.id,item:c.item,ox:c.ox,oy:c.oy,K:c.K,w:c.w,h:c.h,heads:c.heads,out:c.out,row:c.row,feed:c.feed})),
-    lanes:lanes.map(l=>({id:l.id,item:l.item,key:l.key,x:l.x,y0:l.y0,y1:l.y1,kind:l.kind,src:l.src,raw:!!l.raw,s:l.s,spill:l.spill,spillTo:l.spillTo,srcRow:l.srcRow,lastRow:l.lastRow,n:l.cons.length})),
+  return{ok:true,cells:cells.map(c=>({u:c.u,g:c.g,id:c.id,item:c.item,ox:c.ox,oy:c.oy,K:c.K,w:c.w,h:c.h,heads:c.heads,out:c.out,row:c.row,feed:c.feed})),
+    lanes:lanes.map(l=>({u:l.u,id:l.id,item:l.item,key:l.key,x:l.x,y0:l.y0,y1:l.y1,kind:l.kind,src:l.src,raw:!!l.raw,s:l.s,spill:l.spill,spillTo:l.spillTo,srcRow:l.srcRow,lastRow:l.lastRow,n:l.cons.length})),
     taps,tracks,routes,spills,dock,ug,sink,w,h:hh,rowStat:{rowW,rowH,cellsPerRow,tracksPerRow,spillsPerRow}};
 }
 // NL5c multi-pass: pass k docks every raw lane at the mean x of the heads it fed in pass k-1 and orders heads by their previous x; best pass by tap+lane length wins.
@@ -139,9 +140,29 @@ function nlPlanOld(F,mk){
   return best;
 }
 // NL6 candidates: u-axis plans at W = nlWBase*{1,1.15,1.3,1.5} plus the NL5c plan, sorted by score (lowest first). chosen = W factor or 'old'.
+// NL8 pods: the x axis is cut into P pods of ~NL_PODW tiles, each sized to the real occupancy of its rows (cells + through lanes), then widened until no cell ends outside its pod; bounds tap length.
+let NL_PODW=1200;let NL_PODMIN=1200;
+function nlPlanPods(F,mk,cu,wb){
+  const bw=def(PLC_BOX).w,P=Math.max(2,Math.round(wb/NL_PODW)),pod=u=>Math.min(P-1,Math.max(0,Math.floor(u*P)));
+  const mkP=PW=>{const PO=[];let o=0;for(const w of PW){PO.push(o);o+=w}return{P,PO,PW,W:Math.round(o)}};
+  let PW=Array(P).fill(wb),pd=mkP(PW),pl=nlPlan1(F,mk,null,pd.W,cu,pd);
+  if(!pl.ok)return pl;
+  const nr=plcMmax(pl.cells,c=>c.row)+1,occ=[];for(let r=0;r<=nr;r++)occ.push(Array(P).fill(0));
+  for(const c of pl.cells)occ[c.row][pod(c.u)]+=c.w+1;
+  for(const d of pl.dock)occ[nr][pod(d.u)]+=bw+1;
+  for(const l of pl.lanes)for(let r=l.lastRow+1;r<l.srcRow&&r<nr;r++)occ[r][pod(l.u)]++;
+  PW=PW.map((_,p)=>{let m=0;for(const o of occ)m=Math.max(m,o[p]);return Math.max(30,Math.ceil(m*1.15)+2)});
+  for(let it=0;it<6;it++){
+    pd=mkP(PW);pl=nlPlan1(F,mk,null,pd.W,cu,pd);if(!pl.ok)return pl;
+    const ov=Array(P).fill(0),chk=(u,e)=>{const p=pod(u),v=e-(pd.PO[p]+PW[p]);if(v>ov[p])ov[p]=v};
+    for(const c of pl.cells)chk(c.u,c.ox+c.w);for(const d of pl.dock)chk(d.u,d.x+bw);
+    if(ov.every(v=>v<=0))break;
+    for(let p=0;p<P;p++)if(ov[p]>0)PW[p]+=ov[p]+1}
+  return pl}
 function nlPlanAll(F,mk){
   const bw=def(PLC_BOX).w,wb=nlWBase(F,bw),out=[];
-  for(const cu of[false,true])for(const f of[1,1.15,1.3,1.5]){const p=nlPlan1(F,mk,null,Math.round(wb*f),cu);if(p.ok){p.chosen=(cu?'c':'')+f;out.push(p)}}
+  if(wb>NL_PODMIN){for(const cu of[false,true]){const p=nlPlanPods(F,mk,cu,wb);if(p.ok){p.chosen=(cu?'c':'')+'pods';out.push(p)}}}
+  else for(const cu of[false,true])for(const f of[1,1.15,1.3,1.5]){const p=nlPlan1(F,mk,null,Math.round(wb*f),cu);if(p.ok){p.chosen=(cu?'c':'')+f;out.push(p)}}
   const o=nlPlanOld(F,mk);if(o.ok){o.chosen='old';out.push(o)}
   out.forEach(p=>{p.score=nlPlanScore(p)});out.sort((a,b)=>a.score-b.score);
   return out.length?out:[o];
