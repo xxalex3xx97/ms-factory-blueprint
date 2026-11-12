@@ -9,6 +9,24 @@ function lcSplitN(N,Kmax){
   if(r)out.push(r);
   return out;
 }
+// LC step 2: one station tile (cell) of K machines = pfGrpNode(outDown). Tries size variants, keeps overlap-free <=30x30, picks min belts then min area.
+// ins = first-column head x per input item (relative to cell origin); out.x relative; items translated to origin. rec = cls|k|flows signature.
+function lcCellGen(cls,k,flows,K,mk){
+  const V=[[K]];if(K>1)V.push([Math.ceil(K/2),Math.floor(K/2)]);
+  let best=null,why='no variant';
+  for(const sizes of V){
+    const G=pfGrpNode(cls,k,flows,sizes,mk,0);
+    if(G.ok===false){why=G.why;continue}
+    const c=pfCheck({items:G.items,w:G.w,h:G.h,ports:[]});
+    if(c.ov!==0){why='overlap '+c.ov;continue}
+    if(G.w>30||G.h>30){why='size '+G.w+'x'+G.h;continue}
+    const nb=G.items.filter(b=>PLC_BELT.includes(b.cls)).length,ar=G.w*G.h;
+    if(best&&(nb>best.nb||(nb===best.nb&&ar>=best.w*best.h)))continue;
+    const hx=new Map();for(const q of G.ins)if(!hx.has(q.item))hx.set(q.item,q.x);
+    best={rec:cls+'|'+k+'|'+flows.map(f=>f.item).join(','),K,mk,w:G.w,h:G.h,ins:[...hx].map(([item,x])=>({item,x})),out:{x:G.out.x},nb,items:G.items,sizes};
+  }
+  return best||{ok:false,why};
+}
 // Flow solve for one item at machine tier mk. Returns {ok,nodes,raws} or {ok:false,why}.
 function lcFlow(P,item,mk){
   const Z=pfFactTree(P,item,mk);
