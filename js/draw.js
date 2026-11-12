@@ -248,16 +248,17 @@ function note(t,x,y,w,c){
   cx.save();cx.beginPath();cx.rect(x+2,y+2,w-4,40);cx.clip();
   cx.fillStyle=c||"rgba(255,255,255,.75)";cx.font="11px system-ui,sans-serif";cx.textBaseline="top";cx.fillText(t,x+5,y+4);cx.restore();
 }
-function grid(major){
+const GRIDOFF=1;   // Factory floor: floor model puts a floor at its tile origin and the 1-thick hull 1 unit outside it, so the grid lines (cell borders) sit 1 unit before the model origin: hulls land exactly on the cell lines
+function grid(major,off=0){
   const s=sc(),x0=Math.floor(-V.ox/s),x1=Math.ceil((W-V.ox)/s),y0=Math.floor(-V.oy/s),y1=Math.ceil((H-V.oy)/s);
   cx.lineWidth=1;
   const st=i=>i===0?"rgba(120,220,240,.5)":i%major===0?"rgba(140,160,200,.26)":"rgba(140,160,200,.09)";
   if(s>=7){
-    for(let i=x0;i<=x1;i++){cx.strokeStyle=st(i);const X=Math.round(V.ox+i*s)+.5;cx.beginPath();cx.moveTo(X,0);cx.lineTo(X,H);cx.stroke()}
-    for(let j=y0;j<=y1;j++){cx.strokeStyle=st(j);const Y=Math.round(V.oy+j*s)+.5;cx.beginPath();cx.moveTo(0,Y);cx.lineTo(W,Y);cx.stroke()}
+    for(let i=x0;i<=x1;i++){cx.strokeStyle=st(i);const X=Math.round(V.ox+(i-off)*s)+.5;cx.beginPath();cx.moveTo(X,0);cx.lineTo(X,H);cx.stroke()}
+    for(let j=y0;j<=y1;j++){cx.strokeStyle=st(j);const Y=Math.round(V.oy+(j-off)*s)+.5;cx.beginPath();cx.moveTo(0,Y);cx.lineTo(W,Y);cx.stroke()}
   }else{
     cx.strokeStyle="rgba(120,220,240,.5)";
-    cx.beginPath();cx.moveTo(Math.round(V.ox)+.5,0);cx.lineTo(Math.round(V.ox)+.5,H);cx.moveTo(0,Math.round(V.oy)+.5);cx.lineTo(W,Math.round(V.oy)+.5);cx.stroke();
+    const ox=Math.round(V.ox-off*s)+.5,oy=Math.round(V.oy-off*s)+.5;cx.beginPath();cx.moveTo(ox,0);cx.lineTo(ox,H);cx.moveTo(0,oy);cx.lineTo(W,oy);cx.stroke();
   }
 }
 function pieces(a,b,cuts){const o=[];let p=a;cuts.slice().sort((u,v)=>u[0]-v[0]).forEach(c=>{if(c[0]>p)o.push([p,c[0]]);p=Math.max(p,c[1])});if(p<b)o.push([p,b]);return o}
@@ -306,7 +307,7 @@ function interiorRects(sh,dock){
 }
 // grey no-build hatch of a shaped block, clipped to its enclosed interior (Industrial Dock: minus the buildable floor box; Command Module / Blueprint Unit: inside the ring circle)
 // hatch rects (shape frame): interior; a ports block (dock, drone bay) hatches its wall gap on the port side out to the port edge (u=0), the buildable strip in front of the ports stays outside
-function hatchRects(sh,dock){return interiorRects(sh,dock).map(r=>{const q=r.slice();if(sh.entrance&&sh.entrance.kind==="ports"){if(q[0]>0&&q[0]<=.5)q[0]=0;if(q[2]>0&&q[2]<=.5)q[2]=0}return q})}
+function hatchRects(sh,dock){return interiorRects(sh,dock).concat(sh.hatchAdd||[]).map(r=>{const q=r.slice();if(sh.entrance&&sh.entrance.kind==="ports"){if(q[0]>0&&q[0]<=.5)q[0]=0;if(q[2]>0&&q[2]<=.5)q[2]=0}return q})}
 function hatchShape(b,t,s){
   const sh=t.sh,P=(u,v)=>t.f(u,v).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.save();cx.beginPath();
   if(sh.hatch==="ring"){const[a,c]=P(sh.ring.c[0],sh.ring.c[1]);cx.arc(a,c,sh.ring.ri*s,0,2*Math.PI)}
@@ -320,7 +321,7 @@ function drawShapeFloor(A,s){
   A.floors.forEach(r=>{const b=r.b,t=shapeTf(b);if(!t)return;
     const sh=t.sh,dock=SHIPEND(b),tr=(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
     const rc=(q,f,g=0)=>{cx.fillStyle=f;const x0=X(q.x),y0=Y(q.y);cx.fillRect(x0-g,y0-g,X(q.x+q.w)-x0+2*g,Y(q.y+q.h)-y0+2*g)};
-    if(dock&&sh.hatch)hatchShape(b,t,s);   // Industrial Dock: grey hatch inside the walls, minus the buildable floor box, behind everything
+    if((dock||r.w!=null)&&sh.hatch)hatchShape(b,t,s);   // floored blocks (dock, elevator): hatch behind the shape   // Industrial Dock: grey hatch inside the walls, minus the buildable floor box, behind everything
     const d=def(b.cls),R0=floorRect(b),hall=dock?tr(0,0,Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0])),d.fh):R0&&{x:R0.x,y:R0.y,w:R0.w,h:R0.h};   // dock: hall up to the partition (shaft beyond); other blocks: whole floor; no-floor blocks: no tint
     if(hall&&!sh.polys)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
     // pods (dock only): one per decoded port cell (1 cell, contiguous), x extent from the arm mesh rows of that cell
@@ -344,6 +345,8 @@ function drawShapeFloor(A,s){
     // ports (display only): green bar on each port's edge (dock: pod floor-facing edge), bay number only on numbered ports
     if(s>=6){const Ln=Math.min(.6*s,18),Tk=Math.min(5,Math.max(3,.2*s)),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
       marks.forEach(p=>{const[ex,ey]=t.f(p.x,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),w=odd?Ln:Tk,h=odd?Tk:Ln;
+        cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
+      (sh.iports||[]).forEach(([sd,x,y])=>{const[ex,ey]=t.f(x,y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),v=("EW".includes(sd))!==!!odd,w=v?Tk:Ln,h=v?Ln:Tk;   // info ports (elevator): same bar, vertical on E/W sides, display only
         cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
       if(s>=10){cx.font="600 "+Math.min(13,Math.max(9,s*.6))+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillStyle="rgba(255,255,255,.9)";
         marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(p.bay),tx,ty)})}
@@ -378,14 +381,14 @@ function paintFloorBase(s){
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
       });
     }
-    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(dv(r.b)?"":" · doors !?"),x,y,w)}
+    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(doorTxt(r.b)?" · "+doorTxt(r.b):""),x,y,w)}
   });
   drawShapeFloor(A,s);
   const NF=lyBlocks().all.filter(b=>!isM(b)&&nfRect(b));
-  NF.forEach(b=>{const r=nfRect(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
+  NF.forEach(b=>{const r=nfOut(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
   NF.forEach(b=>{const t=shapeTf(b);if(t&&t.sh.hatch)return hatchShape(b,t,s);const r=nfRect(b);nbHatch(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s,true)});   // grey no-build hatch on the whole tile, behind the shape
   drawShapeFloor({floors:NF.map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
-  NF.forEach(b=>{const r=nfRect(b),w=r.w*s;if(w>70)note(`${lab(def(b.cls))}  ${r.w}×${r.h}`,V.ox+r.x*s,V.oy+r.y*s,w)});   // label like floor blocks: name + tile size, top-left
+  NF.forEach(b=>{const r=nfOut(b),w=r.w*s;if(w>70)note(`${lab(def(b.cls))}  ${r.w}×${r.h}`,V.ox+r.x*s,V.oy+r.y*s,w)});   // label like floor blocks: name + tile size, top-left
   A.floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;   // elevator: ring cells inside the door slot are open buildable floor
     cx.fillStyle="rgba(150,190,230,.08)";
     for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>{const v=ed%2===0,ring=ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q};R(ring,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))});
@@ -401,6 +404,7 @@ function paintFloorBase(s){
     else{cx.fillStyle="rgba(160,170,190,.07)";cx.fillRect(x,y,w,h);cx.strokeStyle="rgba(190,200,220,.5)";cx.lineWidth=1.5;cx.setLineDash([4,3]);cx.strokeRect(x+.5,y+.5,w-1,h-1)}   // an opening: connected or not it looks the same (grey dashed); a door is a Doorway Wall buildable
     cx.restore();
   }));
+  A.mis.forEach(r=>R(r,(x,y,w,h)=>{cx.save();cx.fillStyle="rgba(255,70,70,.9)";cx.fillRect(x,y,w,h);cx.restore();if(w>60)note("needs Station Adapter",x,y+h/2,w,"hsl(0,80%,78%)")}));   // large connector next to a normal block: no doorway
   return A;
 }
 let LKC=null,LKP=false,PK="";   // links() cache persists across paints, keyed by layer + block-set key
@@ -471,7 +475,7 @@ function paint0(){
   cached("base",()=>{
   RCT=null;
   if(F)RCT=paintFloorBase(s).rects;
-  grid(F?16:8);
+  grid(F?16:8,F?GRIDOFF:0);
   if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*Math.abs(b.h-layer));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
   const cur=lyBlocks().v;CUR=cur;
   drawBlocks(cur,.92,true);   // viewport cull inside drawBlocks
@@ -519,7 +523,7 @@ function paint0(){
     bs.forEach(b=>{const d=dim(b);drawBlock(b,.45,false);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)});
     cx.save();cx.fillStyle="hsla(45,95%,62%,.8)";
     pasting.pl.ms.forEach(m=>{const e=dim(m);cx.fillRect(V.ox+(hover.x+m.x/FC)*s,V.oy+(hover.y+m.y/FC)*s,e.w/FC*s,e.h/FC*s)});cx.restore();
-    bs.forEach(b=>{const d=dim(b);if(S.blocks.some(o=>{if(isM(o)||o.h!==layer)return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)}});
+    bs.forEach(b=>{const d=dim(b);if(S.blocks.some(o=>{if(isM(o)||!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)}});
   }else if(pasting&&!drag&&hoverIn){
     const g=clipT(pasting.rot,pasting.fl).map(b=>({...b,x:b.x+hover.x,y:b.y+hover.y,h:layer}));
     g.forEach(b=>{drawBlock(b,.45,false);if(!isM(b)){const d=dim(b);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)}});

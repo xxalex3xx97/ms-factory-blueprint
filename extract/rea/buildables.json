@@ -1,0 +1,4403 @@
+{
+ "DAT_AdvancedAssembler": {
+  "label": "AdvancedAssembler",
+  "strings": [
+   "AdvancedAssembler",
+   "AdvancedAssemblerDesc",
+   "ConsumePower",
+   "MegawattsStat",
+   "18",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_AdvancedAssembler_C",
+  "mesh": [
+   "SM2_AdvancedAssembler"
+  ],
+  "icon": [
+   "T_AdvancedAssembler1"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_MaglevCoupling",
+    "count": 2
+   }
+  ],
+  "details": {
+   "AdvancedAssemblerDesc": NaN,
+   "ConsumePower": 18.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_AdvancedAssembler.uasset",
+   "parent_native": "Default__AssemblerObject",
+   "actor_bp": "BP_AdvancedAssembler_C",
+   "found": true,
+   "cdo_len": 327,
+   "research_type": [],
+   "port_components": [
+    "Port10_GEN_VARIABLE",
+    "Port11_GEN_VARIABLE",
+    "Port12_GEN_VARIABLE",
+    "Port1_GEN_VARIABLE",
+    "Port2_GEN_VARIABLE",
+    "Port3_GEN_VARIABLE",
+    "Port4_GEN_VARIABLE",
+    "Port5_GEN_VARIABLE",
+    "Port6_GEN_VARIABLE",
+    "Port7_GEN_VARIABLE",
+    "Port8_GEN_VARIABLE",
+    "Port9_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    9,
+    9
+   ],
+   "port_boundary_cells": [
+    9,
+    9
+   ],
+   "port_count": 12,
+   "ports_doubled_xy": [
+    [
+     9,
+     0
+    ],
+    [
+     9,
+     -4
+    ],
+    [
+     9,
+     4
+    ],
+    [
+     0,
+     9
+    ],
+    [
+     -4,
+     9
+    ],
+    [
+     4,
+     9
+    ],
+    [
+     -9,
+     0
+    ],
+    [
+     -9,
+     -4
+    ],
+    [
+     -9,
+     4
+    ],
+    [
+     0,
+     -9
+    ],
+    [
+     -4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     3,
+     5,
+     7
+    ],
+    "W": [
+     3,
+     5,
+     7
+    ],
+    "N": [
+     3,
+     5,
+     7
+    ],
+    "S": [
+     3,
+     5,
+     7
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     9,
+     0
+    ],
+    [
+     9,
+     -4
+    ],
+    [
+     9,
+     4
+    ],
+    [
+     0,
+     9
+    ],
+    [
+     -4,
+     9
+    ],
+    [
+     4,
+     9
+    ],
+    [
+     -9,
+     0
+    ],
+    [
+     -9,
+     -4
+    ],
+    [
+     -9,
+     4
+    ],
+    [
+     0,
+     -9
+    ],
+    [
+     -4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     3,
+     5,
+     7
+    ],
+    "W": [
+     3,
+     5,
+     7
+    ],
+    "N": [
+     3,
+     5,
+     7
+    ],
+    "S": [
+     3,
+     5,
+     7
+    ]
+   },
+   "second_list": "identical",
+   "blob_offset": 69
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_Armoury": {
+  "label": "Armoury",
+  "strings": [
+   "Armoury",
+   "ArmouryDesc",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_Armoury_C",
+  "mesh": [
+   "SM2_Armoury"
+  ],
+  "icon": [
+   "T_Armoury"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 5
+   },
+   {
+    "item": "ITEM_Capacitor",
+    "count": 5
+   }
+  ],
+  "details": {
+   "ArmouryDesc": NaN,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_Armoury.uasset",
+   "parent_native": "Default__WorkbenchObject",
+   "actor_bp": "BP_Armoury_C",
+   "found": false,
+   "cdo_len": 181,
+   "research_type": [],
+   "port_components": []
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C"
+  ]
+ },
+ "DAT_Assembler": {
+  "label": "Assembler",
+  "strings": [
+   "Assembler",
+   "A machine used to automate the manufacturing of basic items.",
+   "ConsumePower",
+   "MegawattsStat",
+   "6",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_AssemblerObject_C",
+  "mesh": [
+   "S_Assembler_03"
+  ],
+  "icon": [
+   "T_Assembler"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 3
+   },
+   {
+    "item": "ITEM_Capacitor",
+    "count": 2
+   },
+   {
+    "item": "ITEM_BasicMotor",
+    "count": 2
+   }
+  ],
+  "details": {
+   "Assembler": 0.0,
+   "ConsumePower": 6.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_AssemblerObject.uasset",
+   "parent_native": "Default__AssemblerObject",
+   "actor_bp": "BP_Assembler_C",
+   "found": true,
+   "cdo_len": 255,
+   "research_type": [],
+   "port_components": [
+    "Port0_GEN_VARIABLE",
+    "Port1_GEN_VARIABLE",
+    "Port2_GEN_VARIABLE",
+    "Port3_GEN_VARIABLE",
+    "Port4_GEN_VARIABLE",
+    "Port5_GEN_VARIABLE",
+    "Port6_GEN_VARIABLE",
+    "Port7_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    5,
+    5
+   ],
+   "port_boundary_cells": [
+    5,
+    5
+   ],
+   "port_count": 8,
+   "ports_doubled_xy": [
+    [
+     5,
+     -2
+    ],
+    [
+     5,
+     2
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     -2,
+     5
+    ],
+    [
+     -5,
+     2
+    ],
+    [
+     -5,
+     -2
+    ],
+    [
+     -2,
+     -5
+    ],
+    [
+     2,
+     -5
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     2,
+     4
+    ],
+    "W": [
+     2,
+     4
+    ],
+    "N": [
+     2,
+     4
+    ],
+    "S": [
+     2,
+     4
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     5,
+     -2
+    ],
+    [
+     5,
+     2
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     -2,
+     5
+    ],
+    [
+     -5,
+     2
+    ],
+    [
+     -5,
+     -2
+    ],
+    [
+     -2,
+     -5
+    ],
+    [
+     2,
+     -5
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     2,
+     4
+    ],
+    "W": [
+     2,
+     4
+    ],
+    "N": [
+     2,
+     4
+    ],
+    "S": [
+     2,
+     4
+    ]
+   },
+   "second_list": "identical",
+   "blob_offset": 61
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_AstroSciLab": {
+  "label": "AstronomicScienceLab",
+  "strings": [
+   "AstronomicScienceLab",
+   "ScienceLabDesc",
+   "ConsumePower",
+   "MegawattsStat",
+   "12",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_AstroSciLab_C",
+  "mesh": [
+   "SM2_AstronomicScienceLab"
+  ],
+  "icon": [
+   "T_AstroSciLab"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_IridiumPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_EncodedSimulationMatrix",
+    "count": 3
+   }
+  ],
+  "details": {
+   "AstronomicScienceLab": 0.0,
+   "ScienceLabDesc": NaN,
+   "ConsumePower": 12.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_AstroSciLab.uasset",
+   "parent_native": "Default__ResearcherObject",
+   "actor_bp": "BP_AstroSciLab_C",
+   "found": true,
+   "cdo_len": 110,
+   "research_type": [
+    "DAT_AstronomyScience"
+   ],
+   "port_components": [],
+   "size_cells": [
+    5,
+    5
+   ],
+   "port_boundary_cells": [
+    5,
+    5
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     5,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     3
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [],
+   "outputs_by_side_1based": null,
+   "second_list": null,
+   "blob_offset": 40
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_BeltBalancer_01": {
+  "label": "BeltBalancer1",
+  "strings": [
+   "BeltBalancer1",
+   "BeltBalancerDesc",
+   "Speed",
+   "ItemsPerMinute",
+   "60",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_BeltBalancer_01_C",
+  "mesh": [
+   "SM_Preview_Balancer"
+  ],
+  "icon": [
+   "T_Balancer_01"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "ITEM_BasicMotor",
+    "count": 2
+   }
+  ],
+  "details": {
+   "BeltBalancerDesc": NaN,
+   "Speed": 60.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_BeltBalancer_01.uasset",
+   "parent_native": "Default__SplitterObject",
+   "actor_bp": "BP_BeltBalancer_01_C",
+   "found": true,
+   "cdo_len": 123,
+   "research_type": [],
+   "port_components": [],
+   "size_cells": [
+    1,
+    2
+   ],
+   "port_boundary_cells": [
+    1,
+    2
+   ],
+   "port_count": 2,
+   "ports_doubled_xy": [
+    [
+     -1,
+     1
+    ],
+    [
+     -1,
+     -1
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1,
+     2
+    ],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     -1
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     1,
+     2
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "second_list": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     -1
+    ]
+   ],
+   "blob_offset": 24
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_BeltBalancer_02": {
+  "label": "BeltBalancer2",
+  "strings": [
+   "BeltBalancer2",
+   "BeltBalancerDesc",
+   "Speed",
+   "ItemsPerMinute",
+   "60",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_BeltBalancer_02_C",
+  "mesh": [
+   "SM_Preview_Balancer"
+  ],
+  "icon": [
+   "T_Balancer_02"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 2
+   }
+  ],
+  "details": {
+   "BeltBalancerDesc": NaN,
+   "Speed": 120.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_BeltBalancer_02.uasset",
+   "parent_native": "Default__SplitterObject",
+   "actor_bp": "BP_BeltBalancer_02_C",
+   "found": true,
+   "cdo_len": 123,
+   "research_type": [],
+   "port_components": [],
+   "size_cells": [
+    1,
+    2
+   ],
+   "port_boundary_cells": [
+    1,
+    2
+   ],
+   "port_count": 2,
+   "ports_doubled_xy": [
+    [
+     -1,
+     1
+    ],
+    [
+     -1,
+     -1
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1,
+     2
+    ],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     -1
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     1,
+     2
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "second_list": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     -1
+    ]
+   ],
+   "blob_offset": 24
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_BeltBalancer_03": {
+  "label": "BeltBalancer3",
+  "strings": [
+   "BeltBalancer3",
+   "BeltBalancerDesc",
+   "Speed",
+   "ItemsPerMinute",
+   "60",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_BeltBalancer_03_C",
+  "mesh": [
+   "SM_Preview_Balancer"
+  ],
+  "icon": [
+   "T_Balancer_03"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "ITEM_MaglevCoupling",
+    "count": 2
+   }
+  ],
+  "details": {
+   "BeltBalancerDesc": NaN,
+   "Speed": 180.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_BeltBalancer_03.uasset",
+   "parent_native": "Default__SplitterObject",
+   "actor_bp": "BP_BeltBalancer_03_C",
+   "found": true,
+   "cdo_len": 123,
+   "research_type": [],
+   "port_components": [],
+   "size_cells": [
+    1,
+    2
+   ],
+   "port_boundary_cells": [
+    1,
+    2
+   ],
+   "port_count": 2,
+   "ports_doubled_xy": [
+    [
+     -1,
+     1
+    ],
+    [
+     -1,
+     -1
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1,
+     2
+    ],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     -1
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     1,
+     2
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "second_list": [
+    [
+     1,
+     1
+    ],
+    [
+     1,
+     -1
+    ]
+   ],
+   "blob_offset": 24
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_CompSciLab": {
+  "label": "ComputationScienceLab",
+  "strings": [
+   "ComputationScienceLab",
+   "ScienceLabDesc",
+   "ConsumePower",
+   "MegawattsStat",
+   "12",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_CompSciLabObject_C",
+  "mesh": [
+   "S_Science_Lab_01"
+  ],
+  "icon": [
+   "T_CompSciLab"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "ITEM_BasicCircuit",
+    "count": 5
+   }
+  ],
+  "details": {
+   "ComputationScienceLab": 0.0,
+   "ScienceLabDesc": NaN,
+   "ConsumePower": 6.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_CompSciLabObject.uasset",
+   "parent_native": "Default__ResearcherObject",
+   "actor_bp": "BP_CompSciLab_C",
+   "found": true,
+   "cdo_len": 110,
+   "research_type": [
+    "DAT_ComputationScience"
+   ],
+   "port_components": [],
+   "size_cells": [
+    3,
+    3
+   ],
+   "port_boundary_cells": [
+    3,
+    3
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     3,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     2
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [],
+   "outputs_by_side_1based": null,
+   "second_list": null,
+   "blob_offset": 40
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_Container": {
+  "label": "Container",
+  "strings": [
+   "Container",
+   "A small storage for items that conveyor belts can insert and withdraw from.",
+   "StoresItems",
+   "InventorySlotCount",
+   "16",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_ContainerObject_C",
+  "mesh": [],
+  "icon": [
+   "T_Container_1"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   }
+  ],
+  "details": {
+   "Container": 0.0,
+   "StoresItems": 16.0,
+   "InventorySlotCount": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_ContainerObject.uasset",
+   "parent_native": "Default__ContainerObject",
+   "actor_bp": "BP_Container_C",
+   "found": true,
+   "cdo_len": 214,
+   "research_type": [],
+   "port_components": [
+    "BPC_MachinePortInteraction1_GEN_VARIABLE",
+    "BPC_MachinePortInteraction2_GEN_VARIABLE",
+    "BPC_MachinePortInteraction3_GEN_VARIABLE",
+    "BPC_MachinePortInteraction4_GEN_VARIABLE",
+    "BPC_MachinePortInteraction5_GEN_VARIABLE",
+    "BPC_MachinePortInteraction6_GEN_VARIABLE",
+    "BPC_MachinePortInteraction7_GEN_VARIABLE",
+    "BPC_MachinePortInteraction_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    2,
+    2
+   ],
+   "port_boundary_cells": [
+    2,
+    2
+   ],
+   "port_count": 8,
+   "ports_doubled_xy": [
+    [
+     2,
+     -1
+    ],
+    [
+     2,
+     1
+    ],
+    [
+     -2,
+     -1
+    ],
+    [
+     -2,
+     1
+    ],
+    [
+     -1,
+     2
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     -1,
+     -2
+    ],
+    [
+     1,
+     -2
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     1,
+     2
+    ],
+    "W": [
+     1,
+     2
+    ],
+    "N": [
+     1,
+     2
+    ],
+    "S": [
+     1,
+     2
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     2,
+     -1
+    ],
+    [
+     2,
+     1
+    ],
+    [
+     -2,
+     -1
+    ],
+    [
+     -2,
+     1
+    ],
+    [
+     -1,
+     2
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     -1,
+     -2
+    ],
+    [
+     1,
+     -2
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     1,
+     2
+    ],
+    "W": [
+     1,
+     2
+    ],
+    "N": [
+     1,
+     2
+    ],
+    "S": [
+     1,
+     2
+    ]
+   },
+   "second_list": "identical",
+   "blob_offset": 20
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemStorage_C"
+  ]
+ },
+ "DAT_Container_2": {
+  "label": "LargeContainer",
+  "strings": [
+   "LargeContainer",
+   "A large storage for items that conveyor belts can insert and withdraw from.",
+   "StoresItems",
+   "InventorySlotCount",
+   "32",
+   "StackSize",
+   "+500%",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_ContainerObject_2_C",
+  "mesh": [
+   "SM_Container_02"
+  ],
+  "icon": [
+   "T_LargeContainer"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_Servomotor",
+    "count": 10
+   }
+  ],
+  "details": {
+   "LargeContainer": 0.0,
+   "StoresItems": 32.0,
+   "InventorySlotCount": 2.350988701644575e-38,
+   "StackSize": 500.0,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_ContainerObject_2.uasset",
+   "parent_native": "Default__ContainerObject",
+   "actor_bp": "BP_Container_2_C",
+   "found": true,
+   "cdo_len": 346,
+   "research_type": [],
+   "port_components": [
+    "BPC_MachinePortInteraction10_GEN_VARIABLE",
+    "BPC_MachinePortInteraction11_GEN_VARIABLE",
+    "BPC_MachinePortInteraction12_GEN_VARIABLE",
+    "BPC_MachinePortInteraction13_GEN_VARIABLE",
+    "BPC_MachinePortInteraction14_GEN_VARIABLE",
+    "BPC_MachinePortInteraction15_GEN_VARIABLE",
+    "BPC_MachinePortInteraction1_GEN_VARIABLE",
+    "BPC_MachinePortInteraction2_GEN_VARIABLE",
+    "BPC_MachinePortInteraction3_GEN_VARIABLE",
+    "BPC_MachinePortInteraction4_GEN_VARIABLE",
+    "BPC_MachinePortInteraction5_GEN_VARIABLE",
+    "BPC_MachinePortInteraction6_GEN_VARIABLE",
+    "BPC_MachinePortInteraction7_GEN_VARIABLE",
+    "BPC_MachinePortInteraction8_GEN_VARIABLE",
+    "BPC_MachinePortInteraction9_GEN_VARIABLE",
+    "BPC_MachinePortInteraction_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    4,
+    4
+   ],
+   "port_boundary_cells": [
+    4,
+    4
+   ],
+   "port_count": 16,
+   "ports_doubled_xy": [
+    [
+     4,
+     3
+    ],
+    [
+     4,
+     1
+    ],
+    [
+     4,
+     -1
+    ],
+    [
+     4,
+     -3
+    ],
+    [
+     -4,
+     -3
+    ],
+    [
+     -4,
+     -1
+    ],
+    [
+     -4,
+     1
+    ],
+    [
+     -4,
+     3
+    ],
+    [
+     3,
+     4
+    ],
+    [
+     1,
+     4
+    ],
+    [
+     -1,
+     4
+    ],
+    [
+     -3,
+     4
+    ],
+    [
+     3,
+     -4
+    ],
+    [
+     1,
+     -4
+    ],
+    [
+     -1,
+     -4
+    ],
+    [
+     -3,
+     -4
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     1,
+     2,
+     3,
+     4
+    ],
+    "W": [
+     1,
+     2,
+     3,
+     4
+    ],
+    "N": [
+     1,
+     2,
+     3,
+     4
+    ],
+    "S": [
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     4,
+     3
+    ],
+    [
+     4,
+     1
+    ],
+    [
+     4,
+     -1
+    ],
+    [
+     4,
+     -3
+    ],
+    [
+     -4,
+     -3
+    ],
+    [
+     -4,
+     -1
+    ],
+    [
+     -4,
+     1
+    ],
+    [
+     -4,
+     3
+    ],
+    [
+     3,
+     4
+    ],
+    [
+     1,
+     4
+    ],
+    [
+     -1,
+     4
+    ],
+    [
+     -3,
+     4
+    ],
+    [
+     3,
+     -4
+    ],
+    [
+     1,
+     -4
+    ],
+    [
+     -1,
+     -4
+    ],
+    [
+     -3,
+     -4
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     1,
+     2,
+     3,
+     4
+    ],
+    "W": [
+     1,
+     2,
+     3,
+     4
+    ],
+    "N": [
+     1,
+     2,
+     3,
+     4
+    ],
+    "S": [
+     1,
+     2,
+     3,
+     4
+    ]
+   },
+   "second_list": "identical",
+   "blob_offset": 24
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemStacking_C",
+   "WBP_Detail_ItemStorage_C"
+  ]
+ },
+ "DAT_ConveyorBelt": {
+  "label": "Conveyor Belt Mk. 1",
+  "strings": [
+   "Conveyor Belt Mk. 1",
+   "ConveyorBeltDesc",
+   "Speed",
+   "ItemsPerMinute",
+   "60",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_ConveyorBeltObject_C",
+  "mesh": [],
+  "icon": [
+   "T_Conveyor_01-1"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_BasicMotor",
+    "count": 1
+   }
+  ],
+  "details": {
+   "ConveyorBeltDesc": NaN,
+   "Speed": 60.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_ConveyorBeltObject.uasset",
+   "parent_native": "Default__ConveyorBeltObject",
+   "actor_bp": "BP_ConveyorBelt_C",
+   "found": true,
+   "cdo_len": 116,
+   "research_type": [],
+   "port_components": [],
+   "size_cells": [
+    1,
+    1
+   ],
+   "port_boundary_cells": [
+    1,
+    1
+   ],
+   "port_count": 3,
+   "ports_doubled_xy": [
+    [
+     0,
+     -1
+    ],
+    [
+     -1,
+     0
+    ],
+    [
+     0,
+     1
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1
+    ],
+    "N": [
+     1
+    ],
+    "S": [
+     1
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     1,
+     0
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     1
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "second_list": [
+    [
+     1,
+     0
+    ]
+   ],
+   "blob_offset": 18
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_ConveyorBelt2": {
+  "label": "Conveyor Belt Mk. 2",
+  "strings": [
+   "Conveyor Belt Mk. 2",
+   "ConveyorBeltDesc",
+   "Speed",
+   "ItemsPerMinute",
+   "120",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_ConveyorBelt2Object_C",
+  "mesh": [],
+  "icon": [
+   "T_Conveyor_02"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_Servomotor",
+    "count": 1
+   }
+  ],
+  "details": {
+   "ConveyorBeltDesc": NaN,
+   "Speed": 120.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_ConveyorBelt2Object.uasset",
+   "parent_native": "Default__ConveyorBeltObject",
+   "actor_bp": "BP_ConveyorBelt2_C",
+   "found": true,
+   "cdo_len": 116,
+   "research_type": [],
+   "port_components": [],
+   "size_cells": [
+    1,
+    1
+   ],
+   "port_boundary_cells": [
+    1,
+    1
+   ],
+   "port_count": 3,
+   "ports_doubled_xy": [
+    [
+     0,
+     -1
+    ],
+    [
+     -1,
+     0
+    ],
+    [
+     0,
+     1
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1
+    ],
+    "N": [
+     1
+    ],
+    "S": [
+     1
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     1,
+     0
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     1
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "second_list": [
+    [
+     1,
+     0
+    ]
+   ],
+   "blob_offset": 18
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_ConveyorBelt3": {
+  "label": "Conveyor Belt Mk. 3",
+  "strings": [
+   "Conveyor Belt Mk. 3",
+   "ConveyorBeltDesc",
+   "Speed",
+   "ItemsPerMinute",
+   "120",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_ConveyorBeltObject_3_C",
+  "mesh": [],
+  "icon": [
+   "T_Conveyor_03-1"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_MaglevCoupling",
+    "count": 1
+   }
+  ],
+  "details": {
+   "ConveyorBeltDesc": NaN,
+   "Speed": 180.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_ConveyorBeltObject_3.uasset",
+   "parent_native": "Default__ConveyorBeltObject",
+   "actor_bp": "BP_ConveyorBelt_3_C",
+   "found": true,
+   "cdo_len": 116,
+   "research_type": [],
+   "port_components": [],
+   "size_cells": [
+    1,
+    1
+   ],
+   "port_boundary_cells": [
+    1,
+    1
+   ],
+   "port_count": 3,
+   "ports_doubled_xy": [
+    [
+     0,
+     -1
+    ],
+    [
+     -1,
+     0
+    ],
+    [
+     0,
+     1
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1
+    ],
+    "N": [
+     1
+    ],
+    "S": [
+     1
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     1,
+     0
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     1
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "second_list": [
+    [
+     1,
+     0
+    ]
+   ],
+   "blob_offset": 18
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_ElectroSciLab": {
+  "label": "ElectromagneticScienceLab",
+  "strings": [
+   "ElectromagneticScienceLab",
+   "ScienceLabDesc",
+   "ConsumePower",
+   "MegawattsStat",
+   "12",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_ElectroSciLab_C",
+  "mesh": [
+   "SM2_ElectromagneticScienceLab_Prev"
+  ],
+  "icon": [
+   "T_ElectroSciLab"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "ITEM_DetectorArray",
+    "count": 5
+   }
+  ],
+  "details": {
+   "ElectromagneticScienceLab": 0.0,
+   "ScienceLabDesc": NaN,
+   "ConsumePower": 12.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_ElectroSciLab.uasset",
+   "parent_native": "Default__ResearcherObject",
+   "actor_bp": "BP_ElectroSciLab_C",
+   "found": true,
+   "cdo_len": 110,
+   "research_type": [
+    "DAT_ElectromagneticScience"
+   ],
+   "port_components": [],
+   "size_cells": [
+    5,
+    5
+   ],
+   "port_boundary_cells": [
+    5,
+    5
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     5,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     3
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [],
+   "outputs_by_side_1based": null,
+   "second_list": null,
+   "blob_offset": 40
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_EnrichmentChamber": {
+  "label": "EnrichmentChamber",
+  "strings": [
+   "EnrichmentChamber",
+   "A machine used to further refine resources into more potent forms.",
+   "ConsumePower",
+   "MegawattsStat",
+   "18",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_EnrichmentChamberObject_C",
+  "mesh": [
+   "SM_EnrichmentChamber"
+  ],
+  "icon": [
+   "T_EnrichmentChamber2"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ContainmentCoil",
+    "count": 5
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 10
+   }
+  ],
+  "details": {
+   "EnrichmentChamber": 0.0,
+   "ConsumePower": 18.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_EnrichmentChamberObject.uasset",
+   "parent_native": "Default__AssemblerObject",
+   "actor_bp": "BP_EnrichmentChamber_C",
+   "found": true,
+   "cdo_len": 327,
+   "research_type": [],
+   "port_components": [
+    "Port10_GEN_VARIABLE",
+    "Port11_GEN_VARIABLE",
+    "Port12_GEN_VARIABLE",
+    "Port1_GEN_VARIABLE",
+    "Port2_GEN_VARIABLE",
+    "Port3_GEN_VARIABLE",
+    "Port4_GEN_VARIABLE",
+    "Port5_GEN_VARIABLE",
+    "Port6_GEN_VARIABLE",
+    "Port7_GEN_VARIABLE",
+    "Port8_GEN_VARIABLE",
+    "Port9_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    9,
+    9
+   ],
+   "port_boundary_cells": [
+    9,
+    9
+   ],
+   "port_count": 12,
+   "ports_doubled_xy": [
+    [
+     9,
+     0
+    ],
+    [
+     9,
+     -4
+    ],
+    [
+     9,
+     4
+    ],
+    [
+     0,
+     9
+    ],
+    [
+     -4,
+     9
+    ],
+    [
+     4,
+     9
+    ],
+    [
+     -9,
+     0
+    ],
+    [
+     -9,
+     -4
+    ],
+    [
+     -9,
+     4
+    ],
+    [
+     0,
+     -9
+    ],
+    [
+     -4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     3,
+     5,
+     7
+    ],
+    "W": [
+     3,
+     5,
+     7
+    ],
+    "N": [
+     3,
+     5,
+     7
+    ],
+    "S": [
+     3,
+     5,
+     7
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     9,
+     0
+    ],
+    [
+     9,
+     -4
+    ],
+    [
+     9,
+     4
+    ],
+    [
+     0,
+     9
+    ],
+    [
+     -4,
+     9
+    ],
+    [
+     4,
+     9
+    ],
+    [
+     -9,
+     0
+    ],
+    [
+     -9,
+     -4
+    ],
+    [
+     -9,
+     4
+    ],
+    [
+     0,
+     -9
+    ],
+    [
+     -4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     3,
+     5,
+     7
+    ],
+    "W": [
+     3,
+     5,
+     7
+    ],
+    "N": [
+     3,
+     5,
+     7
+    ],
+    "S": [
+     3,
+     5,
+     7
+    ]
+   },
+   "second_list": "identical",
+   "blob_offset": 69
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_GasExtractor": {
+  "label": "GasExtractor",
+  "strings": [
+   "GasExtractor",
+   "Extracts resources from nodes found on large asteroids.",
+   "BuiltOnGasVent",
+   "ExtractsGas",
+   "ItemsPerMinute",
+   "60"
+  ],
+  "object_class": "BPO_GasExtractor_C",
+  "mesh": [
+   "SM_Miner_01"
+  ],
+  "icon": [
+   "T_T1Miner"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_ContainmentCoil",
+    "count": 10
+   }
+  ],
+  "details": {
+   "GasExtractor": 0.0,
+   "BuiltOnGasVent": 1.811224638387443e-27,
+   "ExtractsGas": 4.2170859835749564e-37,
+   "ItemsPerMinute": 2.350988701644575e-38
+  },
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_GrowthChamber": {
+  "label": "GrowthChamber",
+  "strings": [
+   "GrowthChamber",
+   "GrowthChamberDesc",
+   "ConsumePower",
+   "MegawattsStat",
+   "6",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_GrowthChamber_C",
+  "mesh": [
+   "SM2_GrowthChamber"
+  ],
+  "icon": [
+   "T_GrowthChamber1"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_IridiumPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_AdvancedCircuits",
+    "count": 10
+   }
+  ],
+  "details": {
+   "GrowthChamberDesc": NaN,
+   "ConsumePower": 6.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_GrowthChamber.uasset",
+   "parent_native": "Default__AssemblerObject",
+   "actor_bp": "BP_GrowthChamber_C",
+   "found": true,
+   "cdo_len": 259,
+   "research_type": [],
+   "port_components": [
+    "Port0_GEN_VARIABLE",
+    "Port1_GEN_VARIABLE",
+    "Port2_GEN_VARIABLE",
+    "Port3_GEN_VARIABLE",
+    "Port4_GEN_VARIABLE",
+    "Port5_GEN_VARIABLE",
+    "Port6_GEN_VARIABLE",
+    "Port7_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    5,
+    5
+   ],
+   "port_boundary_cells": [
+    7,
+    7
+   ],
+   "port_count": 8,
+   "ports_doubled_xy": [
+    [
+     7,
+     -2
+    ],
+    [
+     7,
+     2
+    ],
+    [
+     2,
+     7
+    ],
+    [
+     -2,
+     7
+    ],
+    [
+     -7,
+     2
+    ],
+    [
+     -7,
+     -2
+    ],
+    [
+     -2,
+     -7
+    ],
+    [
+     2,
+     -7
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     3,
+     5
+    ],
+    "W": [
+     3,
+     5
+    ],
+    "N": [
+     3,
+     5
+    ],
+    "S": [
+     3,
+     5
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     7,
+     -2
+    ],
+    [
+     7,
+     2
+    ],
+    [
+     2,
+     7
+    ],
+    [
+     -2,
+     7
+    ],
+    [
+     -7,
+     2
+    ],
+    [
+     -7,
+     -2
+    ],
+    [
+     -2,
+     -7
+    ],
+    [
+     2,
+     -7
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     3,
+     5
+    ],
+    "W": [
+     3,
+     5
+    ],
+    "N": [
+     3,
+     5
+    ],
+    "S": [
+     3,
+     5
+    ]
+   },
+   "second_list": "identical",
+   "blob_offset": 65
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_LargeConveyorBelt": {
+  "label": "Large Transport Block",
+  "strings": [
+   "Large Transport Block",
+   "ConveyorBeltDesc",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_LargeConveyorBeltObject_C",
+  "mesh": [
+   "SM_LargeConveyor"
+  ],
+  "icon": [
+   "T_Conveyor_01-1"
+  ],
+  "cost": [],
+  "details": {
+   "ConveyorBeltDesc": NaN,
+   "BuiltOnStation": 1.811224638387443e-27
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_LargeConveyorBeltObject.uasset",
+   "parent_native": "Default__ConveyorBeltObject",
+   "actor_bp": "BP_LargeConveyorBelt_C",
+   "found": true,
+   "cdo_len": 116,
+   "research_type": [],
+   "port_components": [],
+   "size_cells": [
+    3,
+    3
+   ],
+   "port_boundary_cells": [
+    3,
+    3
+   ],
+   "port_count": 3,
+   "ports_doubled_xy": [
+    [
+     0,
+     -3
+    ],
+    [
+     -3,
+     0
+    ],
+    [
+     0,
+     3
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     2
+    ],
+    "N": [
+     2
+    ],
+    "S": [
+     2
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     3,
+     0
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     2
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "second_list": [
+    [
+     3,
+     0
+    ]
+   ],
+   "blob_offset": 18
+  },
+  "detail_widgets": []
+ },
+ "DAT_MatSciLab": {
+  "label": "MaterialScienceLab",
+  "strings": [
+   "MaterialScienceLab",
+   "ScienceLabDesc",
+   "ConsumePower",
+   "MegawattsStat",
+   "12",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_MatSciLabObject_C",
+  "mesh": [
+   "S_Materials_Lab_01"
+  ],
+  "icon": [
+   "T_MatSciLab"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "ITEM_Capacitor",
+    "count": 2
+   }
+  ],
+  "details": {
+   "MaterialScienceLab": 0.0,
+   "ScienceLabDesc": NaN,
+   "ConsumePower": 6.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_MatSciLabObject.uasset",
+   "parent_native": "Default__ResearcherObject",
+   "actor_bp": "BP_MatSciLab_C",
+   "found": true,
+   "cdo_len": 114,
+   "research_type": [
+    "DAT_MaterialScience"
+   ],
+   "port_components": [],
+   "size_cells": [
+    3,
+    3
+   ],
+   "port_boundary_cells": [
+    3,
+    3
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     3,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     2
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [],
+   "outputs_by_side_1based": null,
+   "second_list": null,
+   "blob_offset": 44
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_MiningBeacon": {
+  "label": "Mining Beacon",
+  "strings": [
+   "Mining Beacon",
+   "A beacon that allows ships to automatically mine asteroids."
+  ],
+  "object_class": "BP_MiningBeaconObject_C",
+  "mesh": [
+   "SM_MiningBeacon"
+  ],
+  "icon": [
+   "T_MiningBeacon"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 10
+   },
+   {
+    "item": "ITEM_NickelPlates",
+    "count": 10
+   }
+  ],
+  "details": {},
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_QuantumSciLab": {
+  "label": "QuantumScienceLab",
+  "strings": [
+   "QuantumScienceLab",
+   "ScienceLabDesc",
+   "ConsumePower",
+   "MegawattsStat",
+   "12",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_QuantumSciLab_C",
+  "mesh": [
+   "SM2_QuantumSciLab"
+  ],
+  "icon": [
+   "T_QuantumSciLab"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_SuperconductorCoil",
+    "count": 10
+   },
+   {
+    "item": "ITEM_DetectorArray",
+    "count": 10
+   }
+  ],
+  "details": {
+   "QuantumScienceLab": 0.0,
+   "ScienceLabDesc": NaN,
+   "ConsumePower": 12.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_QuantumSciLab.uasset",
+   "parent_native": "Default__ResearcherObject",
+   "actor_bp": "BP_QuantumSciLab_C",
+   "found": true,
+   "cdo_len": 118,
+   "research_type": [
+    "DAT_QuantumScience"
+   ],
+   "port_components": [],
+   "size_cells": [
+    9,
+    9
+   ],
+   "port_boundary_cells": [
+    9,
+    9
+   ],
+   "port_count": 2,
+   "ports_doubled_xy": [
+    [
+     9,
+     -6
+    ],
+    [
+     6,
+     -9
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     2
+    ],
+    "W": [],
+    "N": [],
+    "S": [
+     8
+    ]
+   },
+   "outputs_doubled_xy": [],
+   "outputs_by_side_1based": null,
+   "second_list": null,
+   "blob_offset": 40
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_ReactorMachine": {
+  "label": "Reactor",
+  "strings": [
+   "Reactor",
+   "Consumes fuel to produce power.",
+   "GeneratesPower",
+   "MegawattsStat",
+   "48",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_ReactorMachine_C",
+  "mesh": [
+   "SM_ReactorMachine"
+  ],
+  "icon": [
+   "T_ReactorMachine"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 10
+   }
+  ],
+  "details": {
+   "GeneratesPower": 48.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_ReactorMachine.uasset",
+   "parent_native": "Default__ReactorObject",
+   "actor_bp": "BP_ReactorMachine_C",
+   "found": true,
+   "cdo_len": 152,
+   "research_type": [],
+   "port_components": [],
+   "size_cells": [
+    6,
+    6
+   ],
+   "port_boundary_cells": [
+    6,
+    6
+   ],
+   "port_count": 8,
+   "ports_doubled_xy": [
+    [
+     6,
+     1
+    ],
+    [
+     6,
+     -1
+    ],
+    [
+     1,
+     6
+    ],
+    [
+     -1,
+     6
+    ],
+    [
+     -6,
+     1
+    ],
+    [
+     -6,
+     -1
+    ],
+    [
+     1,
+     -6
+    ],
+    [
+     -1,
+     -6
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     3,
+     4
+    ],
+    "W": [
+     3,
+     4
+    ],
+    "N": [
+     3,
+     4
+    ],
+    "S": [
+     3,
+     4
+    ]
+   },
+   "outputs_doubled_xy": [],
+   "outputs_by_side_1based": null,
+   "second_list": null,
+   "blob_offset": 26
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerProducer_C"
+  ]
+ },
+ "DAT_Refinery": {
+  "label": "Refinery",
+  "strings": [
+   "Refinery",
+   "A machine used to automate the refining of raw resources into crafting materials.",
+   "ConsumePower",
+   "MegawattsStat",
+   "4.5",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_RefineryObject_C",
+  "mesh": [
+   "S_Refinery_01"
+  ],
+  "icon": [
+   "T_Refinery"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "ITEM_MagneticCoils",
+    "count": 5
+   }
+  ],
+  "details": {
+   "Refinery": 0.0,
+   "ConsumePower": 4.5,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_RefineryObject.uasset",
+   "parent_native": "Default__AssemblerObject",
+   "actor_bp": "BP_Refinery_C",
+   "found": true,
+   "cdo_len": 194,
+   "research_type": [],
+   "port_components": [
+    "Port0_GEN_VARIABLE",
+    "Port1_GEN_VARIABLE",
+    "Port2_GEN_VARIABLE",
+    "Port3_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    3,
+    3
+   ],
+   "port_boundary_cells": [
+    3,
+    3
+   ],
+   "port_count": 4,
+   "ports_doubled_xy": [
+    [
+     3,
+     0
+    ],
+    [
+     0,
+     3
+    ],
+    [
+     -3,
+     0
+    ],
+    [
+     0,
+     -3
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     2
+    ],
+    "W": [
+     2
+    ],
+    "N": [
+     2
+    ],
+    "S": [
+     2
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     3,
+     0
+    ],
+    [
+     0,
+     3
+    ],
+    [
+     -3,
+     0
+    ],
+    [
+     0,
+     -3
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     2
+    ],
+    "W": [
+     2
+    ],
+    "N": [
+     2
+    ],
+    "S": [
+     2
+    ]
+   },
+   "second_list": "identical",
+   "blob_offset": 64
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_RelicAnalyzer": {
+  "label": "RelicAnalyzer",
+  "strings": [
+   "RelicAnalyzer",
+   "ScienceLabDesc",
+   "ConsumePower",
+   "MegawattsStat",
+   "12",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_RelicAnalyzer_C",
+  "mesh": [
+   "SM2_RelicSciLab"
+  ],
+  "icon": [
+   "T_RelicSciLab"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "ITEM_RelicShard",
+    "count": 5
+   }
+  ],
+  "details": {
+   "RelicAnalyzer": 0.0,
+   "ScienceLabDesc": NaN,
+   "ConsumePower": 6.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_RelicAnalyzer.uasset",
+   "parent_native": "Default__ResearcherObject",
+   "actor_bp": "BP_RelicAnalyzer_C",
+   "found": true,
+   "cdo_len": 110,
+   "research_type": [
+    "DAT_AlienTechnology"
+   ],
+   "port_components": [],
+   "size_cells": [
+    3,
+    3
+   ],
+   "port_boundary_cells": [
+    3,
+    3
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     3,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     2
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [],
+   "outputs_by_side_1based": null,
+   "second_list": null,
+   "blob_offset": 40
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_RelicSynthesizer": {
+  "label": "RelicSynthesizer",
+  "strings": [
+   "RelicSynthesizer",
+   "RelicSynthesizerDesc",
+   "ConsumePower",
+   "MegawattsStat",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_RelicSynthesizer_C",
+  "mesh": [
+   "SM2_RelicSynthesizer"
+  ],
+  "icon": [
+   "T_RelicSynthesizer"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_RelicCore",
+    "count": 1
+   },
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_SuperconductorCoil",
+    "count": 5
+   }
+  ],
+  "details": {
+   "RelicSynthesizerDesc": NaN,
+   "ConsumePower": 54.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_RelicSynthesizer.uasset",
+   "parent_native": "Default__AssemblerObject",
+   "actor_bp": "BP_RelicSynthesizer_C",
+   "found": true,
+   "cdo_len": 329,
+   "research_type": [],
+   "port_components": [
+    "Port10_GEN_VARIABLE",
+    "Port11_GEN_VARIABLE",
+    "Port12_GEN_VARIABLE",
+    "Port1_GEN_VARIABLE",
+    "Port2_GEN_VARIABLE",
+    "Port3_GEN_VARIABLE",
+    "Port4_GEN_VARIABLE",
+    "Port5_GEN_VARIABLE",
+    "Port6_GEN_VARIABLE",
+    "Port7_GEN_VARIABLE",
+    "Port8_GEN_VARIABLE",
+    "Port9_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    9,
+    9
+   ],
+   "port_boundary_cells": [
+    9,
+    9
+   ],
+   "port_count": 12,
+   "ports_doubled_xy": [
+    [
+     9,
+     0
+    ],
+    [
+     9,
+     -4
+    ],
+    [
+     9,
+     4
+    ],
+    [
+     0,
+     9
+    ],
+    [
+     -4,
+     9
+    ],
+    [
+     4,
+     9
+    ],
+    [
+     -9,
+     0
+    ],
+    [
+     -9,
+     -4
+    ],
+    [
+     -9,
+     4
+    ],
+    [
+     0,
+     -9
+    ],
+    [
+     -4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     3,
+     5,
+     7
+    ],
+    "W": [
+     3,
+     5,
+     7
+    ],
+    "N": [
+     3,
+     5,
+     7
+    ],
+    "S": [
+     3,
+     5,
+     7
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     9,
+     0
+    ],
+    [
+     9,
+     -4
+    ],
+    [
+     9,
+     4
+    ],
+    [
+     0,
+     9
+    ],
+    [
+     -4,
+     9
+    ],
+    [
+     4,
+     9
+    ],
+    [
+     -9,
+     0
+    ],
+    [
+     -9,
+     -4
+    ],
+    [
+     -9,
+     4
+    ],
+    [
+     0,
+     -9
+    ],
+    [
+     -4,
+     -9
+    ],
+    [
+     4,
+     -9
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     3,
+     5,
+     7
+    ],
+    "W": [
+     3,
+     5,
+     7
+    ],
+    "N": [
+     3,
+     5,
+     7
+    ],
+    "S": [
+     3,
+     5,
+     7
+    ]
+   },
+   "second_list": "identical",
+   "blob_offset": 71
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_SignWall": {
+  "label": "Doorway Wall",
+  "strings": [
+   "Doorway Wall",
+   "A dividing wall with a doorway.",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_SignWall_C",
+  "mesh": [
+   "SM_SignWall"
+  ],
+  "icon": [
+   "T_SignWall"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_TitaniumPlates",
+    "count": 12
+   }
+  ],
+  "details": {
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_SignWall.uasset",
+   "parent_native": "Default__SignpostObject",
+   "actor_bp": "BP_SignWall_C",
+   "found": false,
+   "cdo_len": 154,
+   "research_type": [],
+   "port_components": []
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C"
+  ]
+ },
+ "DAT_SmartContainerResearch": {
+  "label": "SmartContainers",
+  "strings": [
+   "SmartContainers",
+   "SmartContainersDesc"
+  ],
+  "object_class": null,
+  "mesh": [
+   "SM2_AdvancedAssembler"
+  ],
+  "icon": [
+   "T_Container_1"
+  ],
+  "cost": [],
+  "details": {
+   "SmartContainers": 0.0,
+   "SmartContainersDesc": NaN
+  },
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_Splitter": {
+  "label": "Splitter Mk. 1",
+  "strings": [
+   "Splitter Mk. 1",
+   "Evenly divides 1 conveyor belt input into 3 outputs.",
+   "Speed",
+   "ItemsPerMinute",
+   "60",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_SplitterObject_C",
+  "mesh": [
+   "SM_SplitterHologram"
+  ],
+  "icon": [
+   "T_Splitter_1"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 1
+   },
+   {
+    "item": "ITEM_BasicMotor",
+    "count": 2
+   }
+  ],
+  "details": {
+   "Speed": 60.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_SplitterObject.uasset",
+   "parent_native": "Default__SplitterObject",
+   "actor_bp": "BP_Splitter_C",
+   "found": true,
+   "cdo_len": 123,
+   "research_type": [],
+   "port_components": [
+    "BPC_MachinePortInteraction1_GEN_VARIABLE",
+    "BPC_MachinePortInteraction2_GEN_VARIABLE",
+    "BPC_MachinePortInteraction_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    1,
+    1
+   ],
+   "port_boundary_cells": [
+    1,
+    1
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     -1,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1
+    ],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     0,
+     -1
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     1
+    ],
+    "W": [],
+    "N": [
+     1
+    ],
+    "S": [
+     1
+    ]
+   },
+   "second_list": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     0,
+     -1
+    ]
+   ],
+   "blob_offset": 24
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_Splitter_2": {
+  "label": "Splitter Mk. 2",
+  "strings": [
+   "Splitter Mk. 2",
+   "SplitterDesc",
+   "Speed",
+   "ItemsPerMinute",
+   "60",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_SplitterObject_2_C",
+  "mesh": [
+   "SM_SplitterHologram"
+  ],
+  "icon": [
+   "T_Splitter_2"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 2
+   },
+   {
+    "item": "ITEM_BasicCircuit",
+    "count": 2
+   }
+  ],
+  "details": {
+   "SplitterDesc": NaN,
+   "Speed": 120.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_SplitterObject_2.uasset",
+   "parent_native": "Default__SplitterObject",
+   "actor_bp": "BP_Splitter_2_C",
+   "found": true,
+   "cdo_len": 123,
+   "research_type": [],
+   "port_components": [
+    "BPC_MachinePortInteraction1_GEN_VARIABLE",
+    "BPC_MachinePortInteraction2_GEN_VARIABLE",
+    "BPC_MachinePortInteraction_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    1,
+    1
+   ],
+   "port_boundary_cells": [
+    1,
+    1
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     -1,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1
+    ],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     0,
+     -1
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     1
+    ],
+    "W": [],
+    "N": [
+     1
+    ],
+    "S": [
+     1
+    ]
+   },
+   "second_list": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     0,
+     -1
+    ]
+   ],
+   "blob_offset": 24
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_Splitter_3": {
+  "label": "Splitter Mk. 3",
+  "strings": [
+   "Splitter Mk. 3",
+   "SplitterDesc",
+   "Speed",
+   "ItemsPerMinute",
+   "60",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_SplitterObject_3_C",
+  "mesh": [
+   "SM_SplitterHologram"
+  ],
+  "icon": [
+   "T_Splitter_3"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_MaglevCoupling",
+    "count": 2
+   },
+   {
+    "item": "ITEM_BasicCircuit",
+    "count": 5
+   }
+  ],
+  "details": {
+   "SplitterDesc": NaN,
+   "Speed": 180.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_SplitterObject_3.uasset",
+   "parent_native": "Default__SplitterObject",
+   "actor_bp": "BP_Splitter_3_C",
+   "found": true,
+   "cdo_len": 123,
+   "research_type": [],
+   "port_components": [
+    "BPC_MachinePortInteraction1_GEN_VARIABLE",
+    "BPC_MachinePortInteraction2_GEN_VARIABLE",
+    "BPC_MachinePortInteraction_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    1,
+    1
+   ],
+   "port_boundary_cells": [
+    1,
+    1
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     -1,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1
+    ],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     0,
+     -1
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     1
+    ],
+    "W": [],
+    "N": [
+     1
+    ],
+    "S": [
+     1
+    ]
+   },
+   "second_list": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     0
+    ],
+    [
+     0,
+     -1
+    ]
+   ],
+   "blob_offset": 24
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_StarterStationBlock": {
+  "label": "Starter Station",
+  "strings": [
+   "Starter Station",
+   "A basic station module that ships can dock with that provides power and stability."
+  ],
+  "object_class": "BPO_CommandModule_C",
+  "mesh": [
+   "SM_StarterStation_Hologram"
+  ],
+  "icon": [
+   "T_StarterStation"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 20
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "details": {},
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_Supercomputer": {
+  "label": "Supercomputer",
+  "strings": [
+   "Supercomputer",
+   "SupercomputerDesc",
+   "ConsumePower",
+   "MegawattsStat",
+   "6",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_Supercomputer_C",
+  "mesh": [
+   "SM2_Supercomputer"
+  ],
+  "icon": [
+   "T_Supercomputer"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_IridiumPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_AdvancedCircuits",
+    "count": 10
+   }
+  ],
+  "details": {
+   "SupercomputerDesc": NaN,
+   "ConsumePower": 18.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_Supercomputer.uasset",
+   "parent_native": "Default__AssemblerObject",
+   "actor_bp": "BP_Supercomputer_C",
+   "found": true,
+   "cdo_len": 259,
+   "research_type": [],
+   "port_components": [
+    "Port0_GEN_VARIABLE",
+    "Port1_GEN_VARIABLE",
+    "Port2_GEN_VARIABLE",
+    "Port3_GEN_VARIABLE",
+    "Port4_GEN_VARIABLE",
+    "Port5_GEN_VARIABLE",
+    "Port6_GEN_VARIABLE",
+    "Port7_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    5,
+    5
+   ],
+   "port_boundary_cells": [
+    7,
+    7
+   ],
+   "port_count": 8,
+   "ports_doubled_xy": [
+    [
+     7,
+     -2
+    ],
+    [
+     7,
+     2
+    ],
+    [
+     2,
+     7
+    ],
+    [
+     -2,
+     7
+    ],
+    [
+     -7,
+     2
+    ],
+    [
+     -7,
+     -2
+    ],
+    [
+     -2,
+     -7
+    ],
+    [
+     2,
+     -7
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     3,
+     5
+    ],
+    "W": [
+     3,
+     5
+    ],
+    "N": [
+     3,
+     5
+    ],
+    "S": [
+     3,
+     5
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     7,
+     -2
+    ],
+    [
+     7,
+     2
+    ],
+    [
+     2,
+     7
+    ],
+    [
+     -2,
+     7
+    ],
+    [
+     -7,
+     2
+    ],
+    [
+     -7,
+     -2
+    ],
+    [
+     -2,
+     -7
+    ],
+    [
+     2,
+     -7
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     3,
+     5
+    ],
+    "W": [
+     3,
+     5
+    ],
+    "N": [
+     3,
+     5
+    ],
+    "S": [
+     3,
+     5
+    ]
+   },
+   "second_list": "identical",
+   "blob_offset": 65
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_T0Core": {
+  "label": "Basic Core",
+  "strings": [
+   "Basic Core",
+   "A basic station module that ships can dock with that provides power and stability."
+  ],
+  "object_class": "BP_StationBuildProgressObject_C",
+  "mesh": [
+   "SM_T0Core_Hologram"
+  ],
+  "icon": [
+   "T_T0Core"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "details": {},
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_T1Core": {
+  "label": "Tier 1 Core",
+  "strings": [
+   "Tier 1 Core",
+   "A station module that provides power and stability."
+  ],
+  "object_class": "BP_StationBuildProgressObject_C",
+  "mesh": [
+   "SM_T1Core_Hologram"
+  ],
+  "icon": [
+   "T_T1Core"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 60
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 30
+   }
+  ],
+  "details": {},
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_T1Factory": {
+  "label": "Factory Tier 1",
+  "strings": [
+   "Factory Tier 1",
+   "A station module with a large interior for building machines."
+  ],
+  "object_class": "BP_StationBuildProgressObject_C",
+  "mesh": [
+   "SM_T1Factory_Hologram"
+  ],
+  "icon": [
+   "T_T1Factory"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 10
+   }
+  ],
+  "details": {},
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_T1Junction": {
+  "label": "Tier 1 Junction",
+  "strings": [
+   "Tier 1 Junction",
+   "A 4-way connector module."
+  ],
+  "object_class": "BP_StationBuildProgressObject_C",
+  "mesh": [
+   "SM_T1Junction_Hologram"
+  ],
+  "icon": [
+   "T_T1Junction"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   }
+  ],
+  "details": {},
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_T1Miner": {
+  "label": "Miner Mk. 1",
+  "strings": [
+   "Miner Mk. 1",
+   "Extracts resources from nodes found on large asteroids."
+  ],
+  "object_class": "BP_MinerBuildProgressObject_C",
+  "mesh": [
+   "SM_Miner_01"
+  ],
+  "icon": [
+   "T_T1Miner"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 2
+   }
+  ],
+  "details": {},
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_T1Observatory": {
+  "label": "Observatory",
+  "strings": [
+   "Observatory",
+   "For when you need to observe."
+  ],
+  "object_class": "BP_StationBuildProgressObject_C",
+  "mesh": [
+   "SM_T1Observatory_Hologram"
+  ],
+  "icon": [
+   "T_T1Observatory"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_Silica",
+    "count": 10
+   }
+  ],
+  "details": {},
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_T1Shipyard": {
+  "label": "Shipyard Tier 1",
+  "strings": [
+   "Shipyard Tier 1",
+   "A station module used to construct tier 1 ships."
+  ],
+  "object_class": "BP_StationBuildProgressObject_C",
+  "mesh": [
+   "SM_T1Shipyard_Hologram"
+  ],
+  "icon": [
+   "T_T1Shipyard"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 10
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 10
+   }
+  ],
+  "details": {},
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_T2CoreShort": {
+  "label": "Tier 2 Core",
+  "strings": [
+   "Tier 2 Core",
+   "A station module that provides power and stability."
+  ],
+  "object_class": "BP_T2CoreObject_C",
+  "mesh": [
+   "SM_T2Core_Hologram"
+  ],
+  "icon": [
+   "T_T1Core"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 60
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 30
+   }
+  ],
+  "details": {},
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_T2Shipyard": {
+  "label": "Shipyard Tier 2",
+  "strings": [
+   "Shipyard Tier 2",
+   "A station module used to construct tier 2 ships."
+  ],
+  "object_class": "BP_T2ShipyardObject_C",
+  "mesh": [
+   "SM_T2Shipyard_Hologram"
+  ],
+  "icon": [
+   "T_T1Shipyard"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_HullPlates",
+    "count": 16
+   },
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 30
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 20
+   }
+  ],
+  "details": {},
+  "built_on_station": false,
+  "cdo": null,
+  "detail_widgets": []
+ },
+ "DAT_Teleporter": {
+  "label": "ShortRangeTeleporter",
+  "strings": [
+   "ShortRangeTeleporter",
+   "Allows you to instantly travel to another teleporter pad on the same station.",
+   "ConsumePower",
+   "MegawattsStat",
+   "12",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_Teleporter_C",
+  "mesh": [
+   "SM_TeleporterPad"
+  ],
+  "icon": [
+   "T_Teleporter"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_SuperconductorCoil",
+    "count": 1
+   },
+   {
+    "item": "ITEM_ReinforcedPlates",
+    "count": 2
+   }
+  ],
+  "details": {
+   "ShortRangeTeleporter": 0.0,
+   "ConsumePower": 12.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_Teleporter.uasset",
+   "parent_native": "Default__TeleporterObject",
+   "actor_bp": "BP_Teleporter_C",
+   "found": false,
+   "cdo_len": 259,
+   "research_type": [],
+   "port_components": []
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_TradeConsole": {
+  "label": "TradeConsole",
+  "strings": [
+   "TradeConsole",
+   "ConsumePower",
+   "MegawattsStat",
+   "6",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_AssemblerObject_C",
+  "mesh": [
+   "S_Assembler_03"
+  ],
+  "icon": [
+   "T_Assembler"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 3
+   },
+   {
+    "item": "ITEM_Capacitor",
+    "count": 2
+   },
+   {
+    "item": "ITEM_BasicMotor",
+    "count": 2
+   }
+  ],
+  "details": {
+   "TradeConsole": 0.0,
+   "ConsumePower": 6.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_AssemblerObject.uasset",
+   "parent_native": "Default__AssemblerObject",
+   "actor_bp": "BP_Assembler_C",
+   "found": true,
+   "cdo_len": 255,
+   "research_type": [
+    "DAT_Assembler"
+   ],
+   "port_components": [
+    "Port0_GEN_VARIABLE",
+    "Port1_GEN_VARIABLE",
+    "Port2_GEN_VARIABLE",
+    "Port3_GEN_VARIABLE",
+    "Port4_GEN_VARIABLE",
+    "Port5_GEN_VARIABLE",
+    "Port6_GEN_VARIABLE",
+    "Port7_GEN_VARIABLE"
+   ],
+   "size_cells": [
+    5,
+    5
+   ],
+   "port_boundary_cells": [
+    5,
+    5
+   ],
+   "port_count": 8,
+   "ports_doubled_xy": [
+    [
+     5,
+     -2
+    ],
+    [
+     5,
+     2
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     -2,
+     5
+    ],
+    [
+     -5,
+     2
+    ],
+    [
+     -5,
+     -2
+    ],
+    [
+     -2,
+     -5
+    ],
+    [
+     2,
+     -5
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     2,
+     4
+    ],
+    "W": [
+     2,
+     4
+    ],
+    "N": [
+     2,
+     4
+    ],
+    "S": [
+     2,
+     4
+    ]
+   },
+   "outputs_doubled_xy": [
+    [
+     5,
+     -2
+    ],
+    [
+     5,
+     2
+    ],
+    [
+     2,
+     5
+    ],
+    [
+     -2,
+     5
+    ],
+    [
+     -5,
+     2
+    ],
+    [
+     -5,
+     -2
+    ],
+    [
+     -2,
+     -5
+    ],
+    [
+     2,
+     -5
+    ]
+   ],
+   "outputs_by_side_1based": {
+    "E": [
+     2,
+     4
+    ],
+    "W": [
+     2,
+     4
+    ],
+    "N": [
+     2,
+     4
+    ],
+    "S": [
+     2,
+     4
+    ]
+   },
+   "second_list": "identical",
+   "blob_offset": 61
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ },
+ "DAT_UndergroundBelt": {
+  "label": "Underground Belt Mk. 1",
+  "strings": [
+   "Underground Belt Mk. 1",
+   "UndergroundDesc",
+   "Speed",
+   "ItemsPerMinute",
+   "60",
+   "MaxLength",
+   "8",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_UndergroundBeltObject_C",
+  "mesh": [
+   "S_Underground_Belt_02"
+  ],
+  "icon": [
+   "T_Underground_1"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "ITEM_BasicMotor",
+    "count": 8
+   }
+  ],
+  "details": {
+   "UndergroundDesc": NaN,
+   "Speed": 60.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "MaxLength": 8.0,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_UndergroundBeltObject.uasset",
+   "parent_native": "Default__UndergroundBeltObject",
+   "actor_bp": "BP_UndergroundBeltActor_C",
+   "found": true,
+   "cdo_len": 110,
+   "research_type": [],
+   "port_components": [],
+   "size_cells": [
+    1,
+    1
+   ],
+   "port_boundary_cells": [
+    1,
+    1
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     -1,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1
+    ],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [],
+   "outputs_by_side_1based": null,
+   "second_list": null,
+   "blob_offset": 28
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildLength_C",
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_UndergroundBelt_2": {
+  "label": "Underground Belt Mk. 2",
+  "strings": [
+   "Underground Belt Mk. 2",
+   "UndergroundDesc",
+   "Speed",
+   "ItemsPerMinute",
+   "60",
+   "MaxLength",
+   "10",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_UndergroundBeltObject_2_C",
+  "mesh": [
+   "SM_Underground_04"
+  ],
+  "icon": [
+   "T_Underground_2"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "ITEM_Servomotor",
+    "count": 10
+   }
+  ],
+  "details": {
+   "UndergroundDesc": NaN,
+   "Speed": 120.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "MaxLength": 10.0,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_UndergroundBeltObject_2.uasset",
+   "parent_native": "Default__UndergroundBeltObject",
+   "actor_bp": "BP_UndergroundBeltActor_2_C",
+   "found": true,
+   "cdo_len": 110,
+   "research_type": [],
+   "port_components": [],
+   "size_cells": [
+    1,
+    1
+   ],
+   "port_boundary_cells": [
+    1,
+    1
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     -1,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1
+    ],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [],
+   "outputs_by_side_1based": null,
+   "second_list": null,
+   "blob_offset": 28
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildLength_C",
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_UndergroundBelt_3": {
+  "label": "Underground Belt Mk. 3",
+  "strings": [
+   "Underground Belt Mk. 3",
+   "UndergroundDesc",
+   "Speed",
+   "ItemsPerMinute",
+   "180",
+   "MaxLength",
+   "8",
+   "BuiltOnStation"
+  ],
+  "object_class": "BP_UndergroundBeltObject_3_C",
+  "mesh": [
+   "SM_Underground_06"
+  ],
+  "icon": [
+   "T_Underground_3"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 2
+   },
+   {
+    "item": "ITEM_MaglevCoupling",
+    "count": 12
+   }
+  ],
+  "details": {
+   "UndergroundDesc": NaN,
+   "Speed": 180.0,
+   "ItemsPerMinute": 2.350988701644575e-38,
+   "MaxLength": 12.0,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BP_UndergroundBeltObject_3.uasset",
+   "parent_native": "Default__UndergroundBeltObject",
+   "actor_bp": "BP_UndergroundBeltActor_3_C",
+   "found": true,
+   "cdo_len": 110,
+   "research_type": [],
+   "port_components": [],
+   "size_cells": [
+    1,
+    1
+   ],
+   "port_boundary_cells": [
+    1,
+    1
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     -1,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [],
+    "W": [
+     1
+    ],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [],
+   "outputs_by_side_1based": null,
+   "second_list": null,
+   "blob_offset": 28
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildLength_C",
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_ItemSpeed_C"
+  ]
+ },
+ "DAT_WorkbenchMachine": {
+  "label": "Workstation",
+  "strings": [
+   "Workstation",
+   "WorkstationDesc",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_WorkbenchMachine_C",
+  "mesh": [
+   "SM2_WorkbenchMachine"
+  ],
+  "icon": [
+   "T_WorkbenchMachine1"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_LightweightFrame",
+    "count": 5
+   },
+   {
+    "item": "ITEM_Capacitor",
+    "count": 5
+   }
+  ],
+  "details": {
+   "WorkstationDesc": NaN,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_WorkbenchMachine.uasset",
+   "parent_native": "Default__WorkbenchObject",
+   "actor_bp": "BP_WorkbenchMachine_C",
+   "found": false,
+   "cdo_len": 100,
+   "research_type": [],
+   "port_components": []
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C"
+  ]
+ },
+ "DAT_XenoSciLab": {
+  "label": "XenobiologicScienceLab",
+  "strings": [
+   "XenobiologicScienceLab",
+   "ScienceLabDesc",
+   "ConsumePower",
+   "MegawattsStat",
+   "12",
+   "BuiltOnStation"
+  ],
+  "object_class": "BPO_XenoSciLab_C",
+  "mesh": [
+   "SM2_XenobiologicScienceLab"
+  ],
+  "icon": [
+   "T_XenoSciLab"
+  ],
+  "cost": [
+   {
+    "item": "ITEM_IridiumPlates",
+    "count": 5
+   },
+   {
+    "item": "ITEM_Biolattice",
+    "count": 3
+   }
+  ],
+  "details": {
+   "XenobiologicScienceLab": 0.0,
+   "ScienceLabDesc": NaN,
+   "ConsumePower": 12.0,
+   "MegawattsStat": 2.350988701644575e-38,
+   "BuiltOnStation": NaN
+  },
+  "built_on_station": true,
+  "cdo": {
+   "file": "Blueprints/Machines/BPO_XenoSciLab.uasset",
+   "parent_native": "Default__ResearcherObject",
+   "actor_bp": "BP_XenoSciLab_C",
+   "found": true,
+   "cdo_len": 110,
+   "research_type": [
+    "DAT_XenobiologyScience"
+   ],
+   "port_components": [],
+   "size_cells": [
+    5,
+    5
+   ],
+   "port_boundary_cells": [
+    5,
+    5
+   ],
+   "port_count": 1,
+   "ports_doubled_xy": [
+    [
+     5,
+     0
+    ]
+   ],
+   "ports_by_side_1based": {
+    "E": [
+     3
+    ],
+    "W": [],
+    "N": [],
+    "S": []
+   },
+   "outputs_doubled_xy": [],
+   "outputs_by_side_1based": null,
+   "second_list": null,
+   "blob_offset": 40
+  },
+  "detail_widgets": [
+   "WBP_Detail_BuildOnStation_C",
+   "WBP_Detail_PowerConsumer_C"
+  ]
+ }
+}

@@ -714,7 +714,7 @@ function* placerTileGen(L,ok){
 }
 function placerPaste(){
   const P=pasting.pl,bs=P.blocks.map(q=>({id:uid++,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:0,pid:0}));
-  const hit=bs.some(b=>{const d=dim(b);return S.blocks.some(o=>{if(isM(o)||o.h!==layer)return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})});
+  const hit=bs.some(b=>{const d=dim(b);return S.blocks.some(o=>{if(isM(o)||!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})});
   if(hit){toast("Block overlaps another block");return}
   const ms=P.ms.map(m=>({...m,id:uid++,mid:0,pid:0,x:hover.x*FC+m.x,y:hover.y*FC+m.y,h:layer}));
   const n0=S.blocks.length;S.blocks.push(...bs);const bad=noBuild(ms.map(mItem));S.blocks.length=n0;

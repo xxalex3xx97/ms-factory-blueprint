@@ -117,7 +117,8 @@ async function s1(C) {
   for (const [id, v] of [['DAT_UndergroundBelt', 8], ['DAT_UndergroundBelt_2', 10], ['DAT_UndergroundBelt_3', 12]]) {
     chk(`maxApart ${id} = ${v}`, bm[id]?.maxApart === v, `catalog ${bm[id]?.maxApart}`);
   }
-  chk('20 station blocks in catalog (18 + Mining Drone Bay Mk.2 + Blueprint Unit add:true)', C.blocks.length === 20, `have ${C.blocks.length}`);
+  const addN0 = Object.values(JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'shapes_src.json'), 'utf8')).blocks).filter(b => b.add).length;   // EA: every station block is an add:true entry (shapes_src.json)
+  chk(`20 station blocks in catalog (18 base + ${addN0} add:true entries)`, C.blocks.length === 18 + addN0, `have ${C.blocks.length}`);
   for (const g of G.blocks) {
     const c = C.blocks.find(b => b.name === g.name);
     const gf = g.floor, cf = c?.floor;
@@ -151,8 +152,8 @@ async function s2(pg, C) {
     P('DAT_Refinery').length === 4 && pset('DAT_Refinery') === '[2]' && faces4('DAT_Refinery', 1) && P('DAT_Refinery').every(p => p.tg));
   chk('Enrichment Chamber: 12 ports, pos 3,5,7 each side, toggleable',
     P('DAT_EnrichmentChamber').length === 12 && pset('DAT_EnrichmentChamber') === '[3,5,7]' && faces4('DAT_EnrichmentChamber', 3) && P('DAT_EnrichmentChamber').every(p => p.tg));
-  chk('Large Container (DAT_Container_2): 16 ports, 4 per side, NOT toggleable',
-    P('DAT_Container_2').length === 16 && faces4('DAT_Container_2', 4) && P('DAT_Container_2').every(p => !p.tg));
+  chk('Large Container (DAT_Container_2): 16 ports, 4 per side, toggleable (EA)',
+    P('DAT_Container_2').length === 16 && faces4('DAT_Container_2', 4) && P('DAT_Container_2').every(p => p.tg));
   chk('Reactor: 8 ports, pos 3,4 each side, NOT toggleable',
     P('DAT_ReactorMachine').length === 8 && pset('DAT_ReactorMachine') === '[3,4]' && faces4('DAT_ReactorMachine', 2) && P('DAT_ReactorMachine').every(p => !p.tg));
   const sp = P('DAT_Splitter');
@@ -163,7 +164,7 @@ async function s2(pg, C) {
     chk(`lab ${id}: 1 port (brief: labs 1 port)`, P(id).length === 1, `page has ${P(id).length} ports: ${P(id).map(p => p.f + p.pos).join(' ')}`);
   }
   chk('lab DAT_QuantumSciLab: 2 ports E2 + S8 (REA)', JSON.stringify(P('DAT_QuantumSciLab').map(p => p.f + p.pos).sort()) === '["E2","S8"]', P('DAT_QuantumSciLab').map(p => p.f + p.pos).join(' '));
-  chk('Container (DAT_Container) 2x2: 8 ports E1 E2 N1 N2 S1 S2 W1 W2, NOT toggleable (REA)', JSON.stringify(P('DAT_Container').map(p => p.f + p.pos).sort()) === '["E1","E2","N1","N2","S1","S2","W1","W2"]' && P('DAT_Container').every(p => !p.tg), P('DAT_Container').map(p => p.f + p.pos).join(' '));
+  chk('Container (DAT_Container) 2x2: 8 ports E1 E2 N1 N2 S1 S2 W1 W2, toggleable (EA)', JSON.stringify(P('DAT_Container').map(p => p.f + p.pos).sort()) === '["E1","E2","N1","N2","S1","S2","W1","W2"]' && P('DAT_Container').every(p => p.tg), P('DAT_Container').map(p => p.f + p.pos).join(' '));
   chk('Armoury: 0 ports', P('DAT_Armoury').length === 0);
   chk('Workbench (WorkbenchMachine): 0 ports', P('DAT_WorkbenchMachine').length === 0);
 
@@ -199,10 +200,10 @@ async function s2(pg, C) {
 
 // ================= 3. recipes / items / icons
 async function s3(pg, C) {
-  chk('recipes CRAFT_Assembler = 17', C.recipes.CRAFT_Assembler?.length === 17, `have ${C.recipes.CRAFT_Assembler?.length}`);
+  chk('recipes CRAFT_Assembler = 19 (EA: +MagneticCoilsAlt1, Thruster)', C.recipes.CRAFT_Assembler?.length === 19, `have ${C.recipes.CRAFT_Assembler?.length}`);
   chk('recipes CRAFT_Refinery = 11', C.recipes.CRAFT_Refinery?.length === 11, `have ${C.recipes.CRAFT_Refinery?.length}`);
-  chk('recipes Enrichment Chamber = 10 (key is CRAFT_Enrichment in page; name adapted from brief CRAFT_EnrichmentChamber)',
-    C.recipes.CRAFT_Enrichment?.length === 10, `have ${C.recipes.CRAFT_Enrichment?.length}`);
+  chk('recipes Enrichment Chamber = 16 (EA: +Cobalt/Graphite/Silica/WaterIce synthesis, UpgradesShipSpeed_1/_2; key CRAFT_Enrichment)',
+    C.recipes.CRAFT_Enrichment?.length === 16, `have ${C.recipes.CRAFT_Enrichment?.length}`);
   const badItems = [], noIcon = new Set();
   for (const [k, rs] of Object.entries(C.recipes)) for (const r of rs) {
     for (const [id] of r.i) { if (!C.items[id]) badItems.push(k + ':' + id); if (!C.icons[id]) noIcon.add(id); }
@@ -220,7 +221,7 @@ async function s3(pg, C) {
   await imp(pg, bp([], [mac('DAT_Assembler', 3, 3, {mid: 1})]));
   await pg.evaluate(() => { __fb.setView('F'); __fb.click(5, 5); });
   const txt = await pg.locator('#insp').textContent();
-  chk('Assembler selected -> #insp contains "Recipes (17)"', txt.includes('Recipes (17)'), txt.slice(0, 200));
+  chk('Assembler selected -> #insp contains "Recipes (19)"', txt.includes('Recipes (19)'), txt.slice(0, 200));
   const nIc = await pg.locator('#insp .rtile img.ic').count();
   chk('#insp .rtile img.ic count > 0', nIc > 0, `count ${nIc}`);
 }
@@ -507,7 +508,7 @@ async function s6b(pg, C) {
   chk('config: splitter filters imported and re-exported byte-exact', !!SP.fl && SP.fl[0] === 'waterice' && SP.hex === SH && SP.f[0] === 'waterice', JSON.stringify(SP));
   const NMS = await pg.evaluate(() => [Object.keys(RECNAMES).length, 0, Object.values(CATALOG.recipes).flat().filter(r => RECNAMES[r.i.map(x => x[0]).join('+') + '>' + r.o[0]] === undefined).length]);
   chk('config: REC_AdvancedCircuits/AlphaProtein/BackpackMk1 names verbatim from the game table', (await pg.evaluate(() => [RECNAMES['ITEM_DetectorArray+ITEM_BasicCircuit+ITEM_Superalloy+ITEM_Coolant>ITEM_AdvancedCircuits'], RECNAMES['ITEM_Biomass>ITEM_AlphaProtein'] || null])).slice(0, 1)[0] === 'advancedcircuits');
-  chk('config: recipe name table covers every catalog recipe key (RECNAMES = authoritative game names)', NMS[0] > 0 && NMS[2] === 0, JSON.stringify(NMS));
+  chk('config: recipe name table covers every catalog recipe key except the 11 EA-new recipes whose Recipe.Name is unknown (ConfigUnverified fallback)', NMS[0] > 0 && NMS[2] === 11, JSON.stringify(NMS));
   // ---- game port order (js/port_order.js; config byte g = game cell g). Verified: Refinery, Assembler. Rotation rule unverified for rot!=0.
   const PH = '0100' + '00000000';
   const EX = async (cls, rot, ports) => { await reset(pg); await imp(pg, bp([], [{...mac(cls, 10, 10, {mid: 1, rot}), Ports: ports}])); return pg.evaluate(() => __fb.build().DefaultMachines[0].ConfigHex); };
@@ -2914,7 +2915,8 @@ async function s29(br) {
     const px = k => (CATALOG.icons[k] ? w(CATALOG.icons[k]) : 0);
     return {blocks: CATALOG.blocks.map(b => [b.name, b.icon || null, b.icon ? px(b.icon) : 0]), items: Object.keys(CATALOG.items).map(k => [k, px(k)]), dat: Object.keys(CATALOG.icons).filter(k => k.startsWith('DAT_')).map(k => [k, px(k)])};
   });
-  const blkBad = ic.blocks.filter(([, k, p]) => !k || p < 256).map(x => x[0]);
+  const noIcon = new Set(Object.entries(JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'shapes_src.json'), 'utf8')).blocks).filter(([, e]) => e.add && e.icon === null).map(([n]) => n));   // EA texture missing in the extract: placeholder
+  const blkBad = ic.blocks.filter(([n, k, p]) => !noIcon.has(n) && (!k || p < 256)).map(x => x[0]);
   chk(`29 every catalog block has an embedded icon >= 256 px (${ic.blocks.length} blocks)`, blkBad.length === 0, blkBad.join(', '));
   const itBad = ic.items.filter(([, p]) => p < 128).map(x => x[0]);
   chk(`29 every item has an embedded icon >= 128 px (${ic.items.length} items)`, itBad.length === 0, itBad.join(', '));
@@ -2980,12 +2982,12 @@ async function s28(br) {
   const floors = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'floors.json'), 'utf8')).blocks;
   const extra = JSON.parse(fs.readFileSync(path.join(ROOT, 'extract', 'extra_blocks.json'), 'utf8'));
   const names = Object.keys(srcBlocks);
-  const cat = await pg.evaluate(ns => ns.map(n => { const b = CATALOG.blocks.find(x => x.name === n); return b && {label: b.label, verified: b.verified, source: b.source, w: b.w, h: b.h, hasFloor: !!b.floor, floorV: b.floor ? b.floor.verified : null, doorV: b.door ? b.door.verified : null, nofloor: !!b.nofloor, sides: b.door ? b.door.sides || null : null, cls: b.class, cost: b.cost, research: b.research, icon: b.icon} }), names);
+  const cat = await pg.evaluate(ns => ns.map(n => { const b = CATALOG.blocks.find(x => x.name === n); return b && {label: b.label, verified: b.verified, source: b.source, w: b.w, h: b.h, hasFloor: !!b.floor, floorV: b.floor ? b.floor.verified : null, doorV: b.door ? b.door.verified : null, nofloor: !!b.nofloor, hidden: !!b.hidden, sides: b.door ? b.door.sides || null : null, cls: b.class, cost: b.cost, research: b.research, icon: b.icon} }), names);
   const shapes = await pg.evaluate(ns => ns.map(n => SHAPES[n] ? {walls: SHAPES[n].walls.length, props: SHAPES[n].props.length, ring: SHAPES[n].ring ? SHAPES[n].ring.n : 0, ports: SHAPES[n].ports} : null), names);
   const palHtml = label => pg.evaluate(l => { const b = [...document.querySelectorAll('#palList button.item')].find(x => x.querySelector('.n') && x.querySelector('.n').textContent === l); return b ? b.outerHTML : null }, label);
   const selectAt = async (cls, X, Y) => {
     await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: `${P}${cls}.${cls}_C`, GridLocation: {X, Y}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
-    await pg.evaluate(() => { __fb.setView('L'); const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
+    await pg.evaluate(() => { __fb.setView('L'); __fb.fit(); __fb.paint(); const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
     return pg.evaluate(() => { const b = __fb.S.blocks.find(q => __fb.sel.has(q.id)); return b ? b.cls : null });
   };
   // catalog count: 18 base blocks + one per add:true entry (Mk.2)
@@ -2999,17 +3001,20 @@ async function s28(br) {
       chk(`28 ${n}: mirror of ${src.mirrorOf}: SHAPES identical, no catalog entry`, same && !c, JSON.stringify(c));
       continue;
     }
-    chk(`28 ${n}: catalog verified===true, ${c && c.w}x${c && c.h} block, source string set`, !!c && c.verified === true && typeof c.source === 'string' && c.source.length > 0, JSON.stringify(c));
-    if (c && c.hasFloor) chk(`28 ${n}: floor.verified and door.verified`, c.floorV === true && c.doorV === true, JSON.stringify(c));
+    chk(`28 ${n}: catalog verified===${src.verified}, ${c && c.w}x${c && c.h} block, source string set`, !!c && c.verified === src.verified && typeof c.source === 'string' && c.source.length > 0, JSON.stringify(c));
+    if (c && c.hasFloor) chk(`28 ${n}: floor.verified and door.verified as in the source`, c.floorV === (src.floor ? src.floor.verified : true) && c.doorV === (src.door && src.door.verified !== undefined ? src.door.verified : true), JSON.stringify(c));
+    const allV = !!c && c.verified === true && (!c.hasFloor || (c.floorV === true && c.doorV === true));   // '!?' is shown for any unverified size/floor/door
     if (c && c.nofloor) chk(`28 ${n}: nofloor (no floor, no buildable area)`, !c.hasFloor, JSON.stringify(c));
     const cols = floors[src.shapeOf || n].colliders_raw || [], overhead = src.ground ? cols.filter(q => q[0][2] >= 1).length : 0, fill = src.fill ? 1 : 0;
     const want = cols.length - overhead + fill - (src.drop || []).length + (src.wallsOverride || []).length, got = sh ? sh.walls + sh.props + sh.ring : -1;   // ring: stepped boxes replaced by the fitted circle
     chk(`28 ${n}: walls+props (${got}) == colliders_raw (${cols.length}) minus overhead (${overhead}) plus fill (${fill}) = ${want}`, got === want, `walls ${sh && sh.walls} props ${sh && sh.props}`);
     const pal = await palHtml(c && c.label);
-    chk(`28 ${n}: palette entry "${c && c.label}" present, no "!?"`, pal !== null && !pal.includes('!?'), String(pal).slice(0, 300));
+    if (c && c.hidden) chk(`28 ${n}: hidden block: not in the palette`, pal === null, String(pal).slice(0, 200));
+    else if (c && c.verified === false) chk(`28 ${n}: palette entry "${c && c.label}" present, shows "!?" (size unverified)`, pal !== null && pal.includes('!?'), String(pal).slice(0, 300));
+    else chk(`28 ${n}: palette entry "${c && c.label}" present, no "!?"`, pal !== null && (!allV || !pal.includes('!?')), String(pal).slice(0, 300));
     const cls = await selectAt(n, 20, 20);
     const insp = await pg.locator('#insp').innerHTML();
-    chk(`28 ${n}: selected in Layout (${cls ? 'ok' : 'none'}), inspector has no "!?"`, !!cls && !insp.includes('!?'), insp.slice(0, 200));
+    chk(`28 ${n}: selected in Layout (${cls ? 'ok' : 'none'}), inspector "!?" only when unverified`, !!cls && (allV ? !insp.includes('!?') : (c.verified === false ? insp.includes('!?') : true)), insp.slice(0, 200));
   }
   const st2 = cat[names.indexOf('BPO_Station_2x1')];
   chk('28 BPO_Station_2x1: door.sides === [E,W] (short ends only)', JSON.stringify(st2 && st2.sides) === '["E","W"]', JSON.stringify(st2 && st2.sides));
@@ -3019,7 +3024,7 @@ async function s28(br) {
     chk(`28 ${n}: ${p.length} unnumbered west-edge ports at floor (0,8.5),(0,7.5) (extra_blocks ports ${extra[n].ports.length})`, p.length === 2 && extra[n].ports.length === 2 && p.every(q => q[0] === null && q[1] === 0) && JSON.stringify(p.map(q => q[2]).sort((a, b) => a - b)) === '[7.5,8.5]', JSON.stringify(p));
   }
   const mk2 = cat[names.indexOf('BPO_MiningDroneBayBlock_2')];
-  chk('28 Mk.2 catalog: label, class path, Functional Blocks, 1x1, nofloor, RSC_MiningDroneBay_2, icon, cost Servomotor 10 + BasicCircuit 10, untested source', !!mk2 && mk2.label === 'Mining Drone Bay Mk.2' && mk2.cls === `${P}BPO_MiningDroneBayBlock_2.BPO_MiningDroneBayBlock_2_C` && mk2.w === 1 && mk2.h === 1 && mk2.nofloor && JSON.stringify(mk2.research) === '["RSC_MiningDroneBay_2"]' && mk2.icon === 'BPO_MiningDroneBayBlock_2' && JSON.stringify(mk2.cost) === '[["ITEM_Servomotor",10],["ITEM_BasicCircuit",10]]' && /untested in game/.test(mk2.source), JSON.stringify(mk2));
+  chk('28 Mk.2 catalog: label, class path, Functional Blocks, 1x1, nofloor, RSC_MiningDroneBay_2, icon, cost Servomotor 10 + BasicCircuit 10, untested source', !!mk2 && mk2.label === 'Mining Drone Bay Mk. 2' && mk2.cls === `${P}BPO_MiningDroneBayBlock_2.BPO_MiningDroneBayBlock_2_C` && mk2.w === 1 && mk2.h === 1 && mk2.nofloor && JSON.stringify(mk2.research) === '["RSC_MiningDroneBay_2"]' && mk2.icon === 'BPO_MiningDroneBayBlock_2' && JSON.stringify(mk2.cost) === '[["ITEM_Servomotor",10],["ITEM_BasicCircuit",10]]' && /untested in game/.test(mk2.source), JSON.stringify(mk2));
   const iconOk = await pg.evaluate(() => !!(CATALOG.icons.BPO_MiningDroneBayBlock_2 && CATALOG.icons.BPO_MiningDroneBayBlock_2.startsWith('data:image/png')));
   chk('28 Mk.2 icon embedded in CATALOG.icons (data:image/png)', iconOk, String(iconOk));
   // Station Armour: one solid 16x16 prop, no walls, no ports
@@ -3041,10 +3046,10 @@ async function s28(br) {
   chk('28 machines BPO_MiningDroneBay_2 and BPO_MiningDroneBay both kept in "other machines" (no buildable maps them, like Mk.1)', rt.dm === 2, `dm ${rt.dm}`);
   // entrance key: shapes_src.json entrance {kind, evidence} on dock (doors) + drone bays (ports), carried to SHAPES; Layout arrows from entrances()
   const ents = names.filter(n => srcBlocks[n].entrance);
-  chk('28 entrance: dock + Command Module + Blueprint Unit + 3 shipyards + Corner + Corridor (doors), Mk.1 + Mk.2 drone bays (ports); no other block', JSON.stringify(ents.sort()) === '["BPO_BlueprintUnit","BPO_CommandModule","BPO_Dock_2","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ShipyardSide","BPO_StationCorner_01","BPO_StationCorridor_01"]', JSON.stringify(ents));
+  chk('28 entrance: dock + Command Module + Blueprint Unit + 3 shipyards + Corner + Corridor + Adapter + Corridor 2x2 + 2x2 C (doors), Mk.1 + Mk.2 drone bays (ports); no other block', JSON.stringify(ents.sort()) === '["BPO_BlueprintUnit","BPO_CommandModule","BPO_Dock_2","BPO_ElevatorBlock_02A","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ShipyardSide","BPO_StationAdapter_01","BPO_StationCorner_01","BPO_StationCorridor_01","BPO_StationCorridor_02","BPO_Station_03"]', JSON.stringify(ents));
   for (const n of names) {
     const f = srcBlocks[n].entrance, g = await pg.evaluate(k => SHAPES[k].entrance, n);
-    if (f) chk(`28 entrance ${n}: SHAPES.entrance kind "${f.kind}" + evidence carried`, ['doors', 'ports'].includes(f.kind) && g && g.kind === f.kind && g.evidence === f.evidence && f.evidence.length > 20, JSON.stringify(g));
+    if (f) chk(`28 entrance ${n}: SHAPES.entrance kind "${f.kind}" + evidence carried`, ['doors', 'ports', 'open'].includes(f.kind) && g && g.kind === f.kind && g.evidence === f.evidence && f.evidence.length > 20, JSON.stringify(g));
     else chk(`28 entrance ${n}: none in the source = none in SHAPES`, g === undefined, JSON.stringify(g));
   }
   chk('28 entrance: drone bays marked inferred, dock not', /^inferred/.test(srcBlocks.BPO_MiningDroneBayBlock.entrance.evidence) && !/inferred/.test(srcBlocks.BPO_Dock_2.entrance.evidence), '');

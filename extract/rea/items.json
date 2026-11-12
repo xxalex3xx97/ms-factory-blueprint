@@ -1,0 +1,1175 @@
+{
+ "ITEM_AdvancedCircuits": {
+  "label": "AdvancedCircuits",
+  "strings": [
+   "AdvancedCircuits",
+   "AdvancedCircuitDesc"
+  ],
+  "recipe": [
+   "REC_AdvancedCircuits"
+  ],
+  "icon": [
+   "T_AdvancedCircuit"
+  ],
+  "research_type": []
+ },
+ "ITEM_AdvancedPlates": {
+  "label": "AdvancedPlates",
+  "strings": [
+   "AdvancedPlates",
+   "0445370A4283D91D4BEA509675DDF577",
+   "A versatile plating material."
+  ],
+  "recipe": [
+   "REC_AdvancedPlates"
+  ],
+  "icon": [
+   "T_AdvancedPlate"
+  ],
+  "research_type": []
+ },
+ "ITEM_AlphaProtein": {
+  "label": "AlphaProtein",
+  "strings": [
+   "AlphaProtein",
+   "AlphaProteinDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_AlphaProtein"
+  ],
+  "research_type": []
+ },
+ "ITEM_AnyItemFilter": {
+  "label": "NoItem",
+  "strings": [
+   "NoItem"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_UI_X"
+  ],
+  "research_type": []
+ },
+ "ITEM_ArgonGas": {
+  "label": "ArgonGas",
+  "strings": [
+   "ArgonGas",
+   "ArgonGasDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_NitrogenGas"
+  ],
+  "research_type": []
+ },
+ "ITEM_BackpackMk1": {
+  "label": "Backpack1",
+  "strings": [
+   "Backpack1",
+   "BackpackDesc"
+  ],
+  "recipe": [
+   "REC_BackpackMk1"
+  ],
+  "icon": [
+   "T_Backpack"
+  ],
+  "research_type": []
+ },
+ "ITEM_BackpackMk2": {
+  "label": "Backpack2",
+  "strings": [
+   "Backpack2",
+   "BackpackDesc"
+  ],
+  "recipe": [
+   "REC_BackpackMk2"
+  ],
+  "icon": [
+   "T_Backpack"
+  ],
+  "research_type": []
+ },
+ "ITEM_BackpackMk3": {
+  "label": "Backpack3",
+  "strings": [
+   "Backpack3",
+   "BackpackDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Backpack"
+  ],
+  "research_type": []
+ },
+ "ITEM_BasicCircuit": {
+  "label": "BasicCircuits",
+  "strings": [
+   "BasicCircuits",
+   "EFA66F754C64D22401C796A0870F16F7",
+   "A primitive processing unit",
+   "ResearchItem"
+  ],
+  "recipe": [
+   "REC_BasicCircuit"
+  ],
+  "icon": [
+   "T_BasicCircuit"
+  ],
+  "research_type": [
+   "DAT_ComputationScience"
+  ]
+ },
+ "ITEM_BasicMotor": {
+  "label": "BasicMotor",
+  "strings": [
+   "BasicMotor",
+   "BasicMotorDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_BasicMotor"
+  ],
+  "research_type": []
+ },
+ "ITEM_BetaProtein": {
+  "label": "BetaProtein",
+  "strings": [
+   "BetaProtein",
+   "BetaProteinDesc"
+  ],
+  "recipe": [
+   "REC_EmptySimulationMatrix"
+  ],
+  "icon": [
+   "T_BetaProtein"
+  ],
+  "research_type": []
+ },
+ "ITEM_Biolattice": {
+  "label": "Biolattice",
+  "strings": [
+   "Biolattice",
+   "BiolatticeDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Biolattice"
+  ],
+  "research_type": [
+   "DAT_XenobiologyScience"
+  ]
+ },
+ "ITEM_Biomass": {
+  "label": "Biomass",
+  "strings": [
+   "Biomass",
+   "BiomassDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_LeavesIcon"
+  ],
+  "research_type": []
+ },
+ "ITEM_BoostFuel": {
+  "label": "Boost Fuel",
+  "strings": [
+   "Boost Fuel"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_HydrogenFuel"
+  ],
+  "research_type": []
+ },
+ "ITEM_Capacitor": {
+  "label": "Capacitor",
+  "strings": [
+   "24102C794DB5626FD71D5894E54B1F16",
+   "Capacitor",
+   "8B9680814DF05EA8205842B8F15D6FB6",
+   "A basic power component."
+  ],
+  "recipe": [
+   "REC_Capacitor"
+  ],
+  "icon": [
+   "T_Capacitor1"
+  ],
+  "research_type": []
+ },
+ "ITEM_ChitinComposite": {
+  "label": "ChitinComposite",
+  "strings": [
+   "ChitinComposite",
+   "ChitinCompositeDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_ChitinComposite"
+  ],
+  "research_type": []
+ },
+ "ITEM_ChromaticAlloy": {
+  "label": "ChromaticAlloy",
+  "strings": [
+   "ChromaticAlloy",
+   "ChromaticAlloyDesc"
+  ],
+  "recipe": [
+   "REC_ChromaticAlloy"
+  ],
+  "icon": [
+   "T_ChromaticAlloy"
+  ],
+  "research_type": []
+ },
+ "ITEM_CobaltOre": {
+  "label": "Cobalt Ore",
+  "strings": [
+   "88D9023D45994F26104EAF88447F8CB6",
+   "Cobalt Ore",
+   "70B8D8414D8B03BB808D318592E2250F",
+   "A rare mineral with specialized applications."
+  ],
+  "recipe": [],
+  "icon": [
+   "T_CobaltOre"
+  ],
+  "research_type": []
+ },
+ "ITEM_CobaltPlates": {
+  "label": "Cobalt Plates",
+  "strings": [
+   "82F5C84A4B884E4D0E11208F8E3E1B80",
+   "Cobalt Plates",
+   "DBCEB56E462D1913BC671F9E5F4309A0",
+   "An specialized crafting material."
+  ],
+  "recipe": [],
+  "icon": [
+   "T_CobaltPlates"
+  ],
+  "research_type": []
+ },
+ "ITEM_ContainmentCoil": {
+  "label": "ContainmentCoil",
+  "strings": [
+   "ContainmentCoil",
+   "075CA0C6427D7A901DA6589059CDC192",
+   "A simple particle containment device."
+  ],
+  "recipe": [
+   "REC_ContainmentCoil"
+  ],
+  "icon": [
+   "T_ContainmentCoil1"
+  ],
+  "research_type": []
+ },
+ "ITEM_Coolant": {
+  "label": "Coolant",
+  "strings": [
+   "Coolant",
+   "EA6D20114A5261284385D287C081C292",
+   "A simple heat regulator."
+  ],
+  "recipe": [
+   "REC_Coolant"
+  ],
+  "icon": [
+   "T_Coolant"
+  ],
+  "research_type": []
+ },
+ "ITEM_DetectorArray": {
+  "label": "DetectorArray",
+  "strings": [
+   "DetectorArray",
+   "DetectorArrayDesc"
+  ],
+  "recipe": [
+   "REC_DetectorArray"
+  ],
+  "icon": [
+   "T_DetectorArray"
+  ],
+  "research_type": [
+   "DAT_ElectromagneticScience"
+  ]
+ },
+ "ITEM_EmptySimulationMatrix": {
+  "label": "EmptySimulationMatrix",
+  "strings": [
+   "EmptySimulationMatrix",
+   "EmptySimulationMatrixDesc"
+  ],
+  "recipe": [
+   "REC_EmptySimulationMatrix"
+  ],
+  "icon": [
+   "T_EmptySimulationMatrix"
+  ],
+  "research_type": []
+ },
+ "ITEM_EncodedSimulationMatrix": {
+  "label": "EncodedSimulationMatrix",
+  "strings": [
+   "EncodedSimulationMatrix",
+   "EncodedSimulationMatrixDesc"
+  ],
+  "recipe": [
+   "REC_EncodedSimulationMatrix"
+  ],
+  "icon": [
+   "T_EncodedSimulationMatrix"
+  ],
+  "research_type": [
+   "DAT_AstronomyScience"
+  ]
+ },
+ "ITEM_EnrichedCobaltOre": {
+  "label": "EnrichedCobaltOre",
+  "strings": [
+   "EnrichedCobaltOre",
+   "EnrichedCobaltOreDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_EnrichedCobalt"
+  ],
+  "research_type": []
+ },
+ "ITEM_EnrichedFuel": {
+  "label": "Deuterium Fuel",
+  "strings": [
+   "AA0BE5C44079C56E2DB525B4732179D8",
+   "Deuterium Fuel",
+   "EnrichedFuelDesc",
+   "Fuel",
+   "MegajouleStat",
+   "1152"
+  ],
+  "recipe": [
+   "REC_EnrichedFuel"
+  ],
+  "icon": [
+   "T_DeuteriumFuel1"
+  ],
+  "research_type": []
+ },
+ "ITEM_EnrichedNickelOre": {
+  "label": "EnrichedNickelOre",
+  "strings": [
+   "EnrichedNickelOre",
+   "507B447C4C1F05C99ABB849DA495DAFB",
+   "A conductive resource. Enriched to have a higher yield."
+  ],
+  "recipe": [],
+  "icon": [
+   "T_EnrichedNickel"
+  ],
+  "research_type": []
+ },
+ "ITEM_EnrichedTitaniumOre": {
+  "label": "EnrichedTitaniumOre",
+  "strings": [
+   "EnrichedTitaniumOre",
+   "006A40554205BD5E3EDCC19B095D0068",
+   "A basic but versatile resource. Enriched to have a higher yield."
+  ],
+  "recipe": [],
+  "icon": [
+   "T_EnrichedTitanium"
+  ],
+  "research_type": []
+ },
+ "ITEM_Enzyme": {
+  "label": "Enzyme",
+  "strings": [
+   "Enzyme",
+   "EnzymeDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Enzyme"
+  ],
+  "research_type": []
+ },
+ "ITEM_ExoskeletonMk1": {
+  "label": "Exoskeleton1",
+  "strings": [
+   "Exoskeleton1",
+   "ExoskeletonDesc"
+  ],
+  "recipe": [
+   "REC_ExoskeletonMk1"
+  ],
+  "icon": [
+   "T_Exoskeleton"
+  ],
+  "research_type": []
+ },
+ "ITEM_ExoskeletonMk2": {
+  "label": "Exoskeleton2",
+  "strings": [
+   "Exoskeleton2",
+   "ExoskeletonDesc"
+  ],
+  "recipe": [
+   "REC_ExoskeletonMk2"
+  ],
+  "icon": [
+   "T_Exoskeleton"
+  ],
+  "research_type": []
+ },
+ "ITEM_ExoskeletonMk3": {
+  "label": "Exoskeleton3",
+  "strings": [
+   "Exoskeleton3",
+   "ExoskeletonDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Exoskeleton"
+  ],
+  "research_type": []
+ },
+ "ITEM_Exosuit": {
+  "label": "Exosuit",
+  "strings": [
+   "Exosuit",
+   "ExosuitDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Exosuit"
+  ],
+  "research_type": []
+ },
+ "ITEM_FilterDeleteItem": {
+  "label": "Delete",
+  "strings": [
+   "Delete"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_UI_Delete"
+  ],
+  "research_type": []
+ },
+ "ITEM_FrontierCredit": {
+  "label": "ArgonGas",
+  "strings": [
+   "ArgonGas",
+   "ArgonGasDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_NitrogenGas"
+  ],
+  "research_type": []
+ },
+ "ITEM_Graphene": {
+  "label": "Graphene",
+  "strings": [
+   "Graphene",
+   "GrapheneDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Graphene"
+  ],
+  "research_type": []
+ },
+ "ITEM_Graphite": {
+  "label": "Graphite",
+  "strings": [
+   "8C3248484152319B9966A496B7E18531",
+   "Graphite",
+   "F790D544432104859FF200873E4525AC",
+   "An unprocessed carbon resource.",
+   "Fuel",
+   "MegajouleStat",
+   "576"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Graphite"
+  ],
+  "research_type": []
+ },
+ "ITEM_HullPlates": {
+  "label": "Hull Plate",
+  "strings": [
+   "3DA5E43741A11002814C36B6A31601F0",
+   "Hull Plate",
+   "3B2A845F4F7F359DBA647FB0CAAD0A1A",
+   "A durable plating material.",
+   "ResearchItem"
+  ],
+  "recipe": [
+   "REC_HullPlates"
+  ],
+  "icon": [
+   "T_HullPlate"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ]
+ },
+ "ITEM_HydrogenFuel": {
+  "label": "Hydrogen Fuel",
+  "strings": [
+   "834E80644555EA2066AEE6B180F882BE",
+   "Hydrogen Fuel",
+   "F3BF06A84F3D2DBF86C1D7BBB8626EC4",
+   "A refined fuel source.",
+   "Fuel",
+   "MegajouleStat",
+   "288"
+  ],
+  "recipe": [
+   "REC_HydrogenFuel"
+  ],
+  "icon": [
+   "T_HydrogenFuel"
+  ],
+  "research_type": []
+ },
+ "ITEM_IridiumOre": {
+  "label": "IridiumOre",
+  "strings": [
+   "IridiumOre",
+   "IridiumOreDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_IridiumOre"
+  ],
+  "research_type": []
+ },
+ "ITEM_IridiumPlates": {
+  "label": "IridiumPlates",
+  "strings": [
+   "IridiumPlates",
+   "IridiumPlatesDesc"
+  ],
+  "recipe": [
+   "REC_IridiumPlates"
+  ],
+  "icon": [
+   "T_IridiumPlates2"
+  ],
+  "research_type": []
+ },
+ "ITEM_LargeThruster": {
+  "label": "LargeThruster",
+  "strings": [],
+  "recipe": [],
+  "icon": [
+   "T_Servomotor"
+  ],
+  "research_type": []
+ },
+ "ITEM_LightweightFrame": {
+  "label": "Lightweight Frames",
+  "strings": [
+   "9E56572E4C1151C76140E4BD7F07B875",
+   "Lightweight Frames",
+   "8BE1F0FF49ADA24A5320C2966B4CBE3B",
+   "A basic construction component."
+  ],
+  "recipe": [
+   "REC_LightweightFrame"
+  ],
+  "icon": [
+   "T_LightweightFrame1"
+  ],
+  "research_type": []
+ },
+ "ITEM_Lonsdaleite": {
+  "label": "Lonsdaleite",
+  "strings": [
+   "Lonsdaleite",
+   "LonsdaleiteDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Lonsdaleite"
+  ],
+  "research_type": []
+ },
+ "ITEM_MaglevCoupling": {
+  "label": "MaglevCoupling",
+  "strings": [
+   "MaglevCoupling",
+   "MaglevCouplingDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_MaglevCoupling"
+  ],
+  "research_type": []
+ },
+ "ITEM_MagneticCoils": {
+  "label": "Magnetic Coils",
+  "strings": [
+   "1F66ED5D4112AB83C96DA8B525AACAF0",
+   "Magnetic Coils",
+   "14A3485F4DE6E0551F26A89EF5C8E22D",
+   "A basic mechanical component."
+  ],
+  "recipe": [
+   "REC_MageticCoils"
+  ],
+  "icon": [
+   "T_MagneticCoil1"
+  ],
+  "research_type": []
+ },
+ "ITEM_Missile": {
+  "label": "Missile",
+  "strings": [
+   "182B44B24B42D6563366CD9382B2C5EB",
+   "Missile",
+   "7224A3DE468C4C5F203032BC337B4D37",
+   "An auto-tracking explosive projectile.",
+   "ExplosionRadius",
+   "MetersStat",
+   "50",
+   "Damage",
+   "20"
+  ],
+  "recipe": [
+   "REC_Missile"
+  ],
+  "icon": [
+   "T_MissileItem"
+  ],
+  "research_type": []
+ },
+ "ITEM_Multisensor": {
+  "label": "Multisensor",
+  "strings": [
+   "Multisensor",
+   "MultisensorDesc"
+  ],
+  "recipe": [
+   "REC_AdvancedPlates"
+  ],
+  "icon": [
+   "T_Multisensor"
+  ],
+  "research_type": []
+ },
+ "ITEM_NickelOre": {
+  "label": "Nickel Ore",
+  "strings": [
+   "9B49F6A646D801B8D84476B3E9AA0B47",
+   "Nickel Ore",
+   "C27EA75446D1C0424342C69555BCE00C",
+   "A conductive resource."
+  ],
+  "recipe": [],
+  "icon": [
+   "T_NickelOre"
+  ],
+  "research_type": []
+ },
+ "ITEM_NickelPlates": {
+  "label": "Nickel Plates",
+  "strings": [
+   "6F1853F44788C18919E7A78D2D67DDD6",
+   "Nickel Plates",
+   "6FC38BC646333565B291D2B625CD067F",
+   "A conductive metal plate."
+  ],
+  "recipe": [
+   "REC_NickelPlates"
+  ],
+  "icon": [
+   "T_NickelPlates1"
+  ],
+  "research_type": []
+ },
+ "ITEM_NitrogenGas": {
+  "label": "Nitrogen Gas",
+  "strings": [
+   "94DC31ED417660657E49FFA7D62BDC79",
+   "Nitrogen Gas",
+   "E198978E49A1B0F4DFF6E18F8E9D0440",
+   "A stable and abundant gas."
+  ],
+  "recipe": [],
+  "icon": [
+   "T_NitrogenGas"
+  ],
+  "research_type": []
+ },
+ "ITEM_NucleosynthesisInsight": {
+  "label": "AdvancedPlates",
+  "strings": [
+   "AdvancedPlates",
+   "E30A27E64A5689E903ED4C9770A04989",
+   "A versatile plating material."
+  ],
+  "recipe": [
+   "REC_AdvancedPlates"
+  ],
+  "icon": [
+   "T_AdvancedPlate"
+  ],
+  "research_type": []
+ },
+ "ITEM_Nutrients": {
+  "label": "Nutrients",
+  "strings": [
+   "Nutrients",
+   "NutrientsDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Nutrients"
+  ],
+  "research_type": []
+ },
+ "ITEM_ParticleControlPlates": {
+  "label": "ParticleControlPlates",
+  "strings": [],
+  "recipe": [],
+  "icon": [
+   "T_HullPlate"
+  ],
+  "research_type": [
+   "DAT_MaterialScience"
+  ]
+ },
+ "ITEM_PlasmaAmmo": {
+  "label": "PlasmaAmmo",
+  "strings": [],
+  "recipe": [],
+  "icon": [
+   "T_HydrogenFuel"
+  ],
+  "research_type": []
+ },
+ "ITEM_Protomatter": {
+  "label": "Protomatter",
+  "strings": [
+   "Protomatter",
+   "ProtomatterDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Protomatter"
+  ],
+  "research_type": []
+ },
+ "ITEM_ReinforcedGlass": {
+  "label": "Reinforced Glass",
+  "strings": [
+   "D9CEF5D240EFA476E5E2AC909F876C60",
+   "Reinforced Glass",
+   "7EC6F59C4D88EA72E7F165A16F7D8F90",
+   "An optical and structural material."
+  ],
+  "recipe": [
+   "REC_ReinforcedGlass"
+  ],
+  "icon": [
+   "T_ReinforcedGlass1"
+  ],
+  "research_type": []
+ },
+ "ITEM_ReinforcedPlates": {
+  "label": "ReinforcedPlate",
+  "strings": [
+   "ReinforcedPlate",
+   "ReinforcedPlateDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_ReinforcedPlate"
+  ],
+  "research_type": []
+ },
+ "ITEM_RelicCapacitor": {
+  "label": "RelicCapacitor",
+  "strings": [
+   "RelicCapacitor",
+   "F0CDA6F04D367689125FA8AB06B33F5A",
+   "An augmented power regulation component."
+  ],
+  "recipe": [
+   "REC_RelicCapacitor"
+  ],
+  "icon": [
+   "T_RelicCapacitor"
+  ],
+  "research_type": []
+ },
+ "ITEM_RelicCore": {
+  "label": "RelicCore",
+  "strings": [
+   "RelicCore",
+   "450BBAEA47FF906B5CCD84B658806F56",
+   "The salvaged core of an autonomous alien production facility."
+  ],
+  "recipe": [],
+  "icon": [
+   "T_RelicCore"
+  ],
+  "research_type": []
+ },
+ "ITEM_RelicShard": {
+  "label": "RelicShard",
+  "strings": [
+   "RelicShard",
+   "F46F334148A38E60A71F77933444880F",
+   "Fragments of an alien ship.",
+   "ResearchItem"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_RelicShard"
+  ],
+  "research_type": [
+   "DAT_AlienTechnology"
+  ]
+ },
+ "ITEM_RepairKit": {
+  "label": "Repair Kit",
+  "strings": [
+   "E04169994445DFC9A82615A7CE72DB17",
+   "Repair Kit",
+   "RepairKit1Desc",
+   "Effect",
+   "RepairHitPoints",
+   "10"
+  ],
+  "recipe": [
+   "REC_RepairKit"
+  ],
+  "icon": [
+   "T_RepairKit"
+  ],
+  "research_type": []
+ },
+ "ITEM_RepairKitElectric": {
+  "label": "ElectricalRepairKit",
+  "strings": [
+   "ElectricalRepairKit",
+   "ElectricalRepairKitDesc"
+  ],
+  "recipe": [
+   "REC_RepairKitElectric"
+  ],
+  "icon": [
+   "T_RepairKit"
+  ],
+  "research_type": []
+ },
+ "ITEM_RepairKitHull": {
+  "label": "HullRepairKit",
+  "strings": [
+   "HullRepairKit",
+   "HullRepairKitDesc",
+   "Effect",
+   "RepairHitPoints",
+   "10"
+  ],
+  "recipe": [
+   "REC_RepairKitHull"
+  ],
+  "icon": [
+   "T_RepairKit"
+  ],
+  "research_type": []
+ },
+ "ITEM_ServoPlates": {
+  "label": "Servo Plate",
+  "strings": [
+   "C84CBFFA4F311CE11F3B708A8D02A109",
+   "Servo Plate",
+   "1B6B2D0745CA4FD08DFB74BBD94648E9",
+   "A mechanical plate."
+  ],
+  "recipe": [
+   "REC_ServoPlates"
+  ],
+  "icon": [
+   "T_ServoPlate"
+  ],
+  "research_type": []
+ },
+ "ITEM_Servomotor": {
+  "label": "Servomotors",
+  "strings": [
+   "Servomotors",
+   "695921344AA2ACDE7E0757A39959CF29",
+   "A precise mechanical component."
+  ],
+  "recipe": [
+   "REC_Servomotor"
+  ],
+  "icon": [
+   "T_Servomotor"
+  ],
+  "research_type": []
+ },
+ "ITEM_Silica": {
+  "label": "Silica",
+  "strings": [
+   "Silica",
+   "872972EE43989C593D816684251610B4",
+   "A crystalline resource."
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Silica"
+  ],
+  "research_type": []
+ },
+ "ITEM_SiliconWafers": {
+  "label": "Silicon Wafers",
+  "strings": [
+   "649709BE4FE67A5269C13AA01DD049E4",
+   "Silicon Wafers",
+   "FF1A338C42A253E2FD665FAAD85E070E",
+   "A basic electronic component."
+  ],
+  "recipe": [
+   "REC_SiliconWafers"
+  ],
+  "icon": [
+   "T_SiliconWafer2"
+  ],
+  "research_type": []
+ },
+ "ITEM_StellarSurveyData": {
+  "label": "StellarSurveyData",
+  "strings": [
+   "StellarSurveyData",
+   "StellarSurveyDataDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_StellarSurveyData"
+  ],
+  "research_type": []
+ },
+ "ITEM_StrangeMatterCrystal": {
+  "label": "StrangegMatterCrystal",
+  "strings": [
+   "StrangegMatterCrystal",
+   "StrangeMatterCrystalDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_StrangeMatterCrystal"
+  ],
+  "research_type": []
+ },
+ "ITEM_Superalloy": {
+  "label": "Superalloy",
+  "strings": [
+   "Superalloy",
+   "152097954503A63FEE9579A73C8AFF56",
+   "A high strength alloy."
+  ],
+  "recipe": [
+   "REC_Superalloy"
+  ],
+  "icon": [
+   "T_Superalloy"
+  ],
+  "research_type": []
+ },
+ "ITEM_SuperalloyFrame": {
+  "label": "SuperalloyFrame",
+  "strings": [
+   "SuperalloyFrame",
+   "SuperalloyFrameDesc"
+  ],
+  "recipe": [
+   "REC_SuperalloyFrame"
+  ],
+  "icon": [
+   "T_SuperalloyFrame"
+  ],
+  "research_type": []
+ },
+ "ITEM_SuperconductorCoil": {
+  "label": "SuperconductorCoil",
+  "strings": [
+   "SuperconductorCoil",
+   "E1892B144B1FE60066EBDD8E6EE3E210",
+   "An advanced particle containment device.",
+   "ResearchItem"
+  ],
+  "recipe": [
+   "REC_SuperconductorCoil"
+  ],
+  "icon": [
+   "T_SuperconductorCoil1"
+  ],
+  "research_type": [
+   "DAT_QuantumScience"
+  ]
+ },
+ "ITEM_Thruster": {
+  "label": "Thruster",
+  "strings": [],
+  "recipe": [],
+  "icon": [
+   "T_MissileItem"
+  ],
+  "research_type": []
+ },
+ "ITEM_TitaniumOre": {
+  "label": "Titanium Ore",
+  "strings": [
+   "F768C0A948E4FD3E25674CB7D4E105BF",
+   "Titanium Ore",
+   "B80D33884AB7C1C6B7B847A3745212F8",
+   "A basic but versatile resource."
+  ],
+  "recipe": [],
+  "icon": [
+   "T_TitaniumOre"
+  ],
+  "research_type": []
+ },
+ "ITEM_TitaniumPlates": {
+  "label": "Titanium Plates",
+  "strings": [
+   "F99AD1634C64C76A39CE169F4BA1612E",
+   "Titanium Plates",
+   "F44E32FA42E14F4BA12D62B0C6ACC0D2",
+   "A versatile construction material."
+  ],
+  "recipe": [
+   "REC_TitaniumPlates"
+  ],
+  "icon": [
+   "T_TitaniumPlates1"
+  ],
+  "research_type": []
+ },
+ "ITEM_UpgradeShipSpeed_1": {
+  "label": "UpgradeShipSpeed_1",
+  "strings": [],
+  "recipe": [],
+  "icon": [
+   "T_UI_Boost"
+  ],
+  "research_type": []
+ },
+ "ITEM_UpgradeShipSpeed_2": {
+  "label": "UpgradeShipSpeed_2",
+  "strings": [],
+  "recipe": [],
+  "icon": [
+   "T_UI_Boost"
+  ],
+  "research_type": []
+ },
+ "ITEM_WarpFuel": {
+  "label": "WarpFuel",
+  "strings": [
+   "WarpFuel",
+   "CC7E35C6486CD0EFE97C8BB0472159CB",
+   "Consumed by warp drives to allow ships to travel at high speeds.",
+   "WarpFuelItem"
+  ],
+  "recipe": [
+   "REC_WarpFuel"
+  ],
+  "icon": [
+   "T_WarpFuel1"
+  ],
+  "research_type": []
+ },
+ "ITEM_WaterIce": {
+  "label": "WaterIce",
+  "strings": [
+   "WaterIce",
+   "2E73B3184698D79335075CB3E172694E",
+   "A frozen source of hydrogen and oxygen.",
+   "Fuel",
+   "MegajouleStat",
+   "48"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_WaterIce1"
+  ],
+  "research_type": []
+ },
+ "ITEM_Xenoarchaea": {
+  "label": "Xenoarchaea",
+  "strings": [
+   "Xenoarchaea",
+   "XenoarchaeaDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Xenoarchaea"
+  ],
+  "research_type": []
+ },
+ "ITEM_Xenobacteria": {
+  "label": "Xenobacteria",
+  "strings": [
+   "Xenobacteria",
+   "XenobacteriaDesc"
+  ],
+  "recipe": [
+   "REC_EmptySimulationMatrix"
+  ],
+  "icon": [
+   "T_Xenobacteria"
+  ],
+  "research_type": []
+ },
+ "ITEM_Xenoeukarya": {
+  "label": "Xenoeukarya",
+  "strings": [
+   "Xenoeukarya",
+   "XenoeukaryaDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_Xenoeukarya"
+  ],
+  "research_type": []
+ },
+ "ITEM_YttriumOre": {
+  "label": "YttriumOre",
+  "strings": [
+   "YttriumOre",
+   "YttriumOreDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_IridiumOre"
+  ],
+  "research_type": []
+ },
+ "ITEM_YttriumPlates": {
+  "label": "IridiumOre",
+  "strings": [
+   "IridiumOre",
+   "IridiumOreDesc"
+  ],
+  "recipe": [],
+  "icon": [
+   "T_IridiumOre"
+  ],
+  "research_type": []
+ }
+}
