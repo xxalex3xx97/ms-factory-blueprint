@@ -3,6 +3,7 @@ const plcMmax=(a,f=x=>x)=>{let m=-Infinity;for(const x of a){const v=f(x);if(v>m
 const PLC_BELT=["DAT_ConveyorBelt","DAT_ConveyorBelt2","DAT_ConveyorBelt3"],PLC_SPL=["DAT_Splitter","DAT_Splitter_2","DAT_Splitter_3"];
 let PLC_BOX="DAT_Container";   // NL swaps it for the duration of nlTop (Buffer container choice), everything else reads it as a constant
 const PL_STD=["BPO_Station_01","BPO_Station_2x1","BPO_Station_02"];   // smallest first; floors 14x14, 30x14, 30x30
+const PL_ALL=[...PL_STD,"BPO_Station_03"];   // + 2x2 C (floor 30x30); not in PL_STD: prefab.js uses its last entry as the biggest block
 const PLC_UG=["DAT_UndergroundBelt","DAT_UndergroundBelt_2","DAT_UndergroundBelt_3"];const plcCls=nm=>Object.keys(BASE).find(k=>BASE[k].kind==="b"&&BASE[k].name===nm);
 const PLC_SRC=480;
 let PLC_BANK=false;   // test hook only (slice 1): bank layout instead of the lane layout
@@ -671,8 +672,8 @@ function placerTileX(L,ok){const g=placerTileGen(L,ok);for(;;){const s=g.next();
 function* placerTileGen(L,ok){
   const Gs=PLC_G?[PLC_G]:Array.from({length:L.bank?L.t0:1},(_,i)=>i+1),pre=new Map(),cands=[];
   const lay=(cls,G,sep)=>L.bank?placerLayout(L.src.P,L.src.item,L.src.mk,L.src.spMk,{...L.src.o,fit:plcFit(cls,L.mk),G,sep}):L;
-  for(let i=0;i<PL_STD.length;i++){if(!ok[i])continue;const cls=plcCls(PL_STD[i]),f=floorRect({cls,x:0,y:0,h:0,rot:0});
-    for(const G of Gs){yield {phase:1,n:cands.length+1,total:PL_STD.length*Gs.length,G,cls};
+  for(let i=0;i<PL_ALL.length;i++){if(!ok[i])continue;const cls=plcCls(PL_ALL[i]),f=floorRect({cls,x:0,y:0,h:0,rot:0});
+    for(const G of Gs){yield {phase:1,n:cands.length+1,total:PL_ALL.length*Gs.length,G,cls};
       const L2=lay(cls,G,false);pre.set(i+"|"+G,L2);
       cands.push({i,cls,G,ord:cands.length,est:L2.ok?Math.ceil(L2.w/f.w)*Math.ceil(L2.h/f.h):Infinity})}}
   const bad=q=>Math.max(q.cols,q.rows)>3*Math.max(1,Math.min(q.cols,q.rows));   // grid worse than 3:1 (long thin factory): a squarer candidate wins
@@ -733,7 +734,7 @@ function plcWarn(ser){
   const got=ser.slice(-12).reduce((a,s)=>a+(s.it[pl.item]||0),0)/12;
   e.textContent=got<pl.rate*0.95?"Simulation returned "+Math.round(got)+"/min, you asked for "+pl.rate+"/min ("+plnNm(pl.item)+")":"";
 }
-const PLC_BKV=PL_STD;
+const PLC_BKV=PL_ALL;
 const placerBk=()=>PLC_BKV.map(c=>c===$("plnBk").value);
 const placerDock=()=>{const i=$("plnDkI").checked,o=$("plnDkO").checked;if(!i&&!o)return null;const t=$("plnDk").value;return{in:i?t:null,out:o?($("plnDkOT").value||t):null}};
 function placerRun(open){
@@ -810,7 +811,7 @@ function placerPreview(L){
 // progress bar + text while the block search runs; shown only after 150 ms, hidden when done or cancelled
 function plcProg(v,show){let e=document.getElementById("plcProg");
   if(!e){e=document.createElement("div");e.id="plcProg";e.innerHTML='<progress max="100" value="0" style="width:100%;height:6px"></progress><div style="font-size:12px"></div>';e.style.display="none";$("plnPrevErr").before(e)}
-  const pct=v.phase===1?v.n/v.total*30:30+70*v.n/v.total,sz=["1x1","2x1","2x2"][PL_STD.map(plcCls).indexOf(v.cls)]||"";
+  const pct=v.phase===1?v.n/v.total*30:30+70*v.n/v.total,sz=["1x1","2x1","2x2","2x2 C"][PL_ALL.map(plcCls).indexOf(v.cls)]||"";
   e.querySelector("progress").value=pct;e.lastChild.textContent="Trying "+sz+", "+v.G+" band(s) ("+v.n+" of "+v.total+") - "+Math.round(pct)+"%";
   if(show)e.style.display="block"}
 function plcProgHide(){const e=document.getElementById("plcProg");if(e)e.style.display="none"}
@@ -878,6 +879,7 @@ $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;
 // Engine switch: Old = the original placer (default), New = prefab factory builder (pfFact2 > pfBands > pfChain, falls back to the old path when it refuses). Remembered once chosen.
 // No Limits is the only engine in the UI (always on). plcEngine stays for tests: ?engine=old|new|nl in the page URL pins an older engine, default nl.
 const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl")};
+if(!plcCls("BPO_Station_03"))$("plnBk").querySelector('option[value="BPO_Station_03"]')?.remove();
 try{const v=localStorage.getItem("msfb.block");if(PLC_BKV.includes(v))$("plnBk").value=v}catch(_){}
 $("plnBk").addEventListener("change",()=>{try{localStorage.setItem("msfb.block",$("plnBk").value)}catch(_){}});
 const PLC_DK="msfb.docks",plcDkSave=()=>{try{localStorage.setItem(PLC_DK,JSON.stringify({i:$("plnDkI").checked,o:$("plnDkO").checked,t:$("plnDk").value,ot:$("plnDkOT").value}))}catch(_){}};
