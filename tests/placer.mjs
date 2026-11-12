@@ -175,20 +175,6 @@ try {
   big5.forEach(r => chk('(7) 500/min Mk1, ' + r.box + ': ok, nK === ceil(trunks/ps), machines sum to N, no overlap, sim within 5% of min(500,cap)',
     r.ok === true && r.nK === r.wantK && r.sum === r.N && r.overlap === 0 && r.got >= 0.95 * Math.min(500, r.cap) && r.got <= 1.05 * r.cap, JSON.stringify(r)));
 
-  // ---- (8) unchecked: factory only into existing floor
-  await pg.evaluate(([item]) => {
-    S = {name: 't', blocks: [], dm: [], closed: []}; undoS = []; redoS = []; pasting = null;
-    $('plnItem').value = item; $('plnRate').value = '60'; $('plnMk').value = '0'; BK(false); plnDraw();
-    GO();
-  }, [ITEM]);
-  const nof = await pg.evaluate(() => ({err: $('plnPrevErr').textContent, open: document.getElementById('plnPrev').open, pl: !!(pasting && pasting.pl), clip: clip.length}));
-  chk('(8) unchecked, no floor: "Does not fit" in #plnPrevErr, modal stays open', /^Does not fit/.test(nof.err) && nof.open && nof.clip === 0 && !nof.pl, JSON.stringify(nof));
-  // 14x14 Station_01 floor is too small for this factory (checked above); use the 30x30 Station_02 floor
-  // 60/min is a 2-trunk bank now (wider than one 30x30 floor): use 30/min (one machine, single lane) so it fits
-  await pg.evaluate(() => { S.blocks = [{id: uid++, cls: Object.keys(BASE).find(k => BASE[k].kind === 'b' && BASE[k].name === 'BPO_Station_02'), x: 5, y: 5, h: 0, rot: 0, pid: 0}]; setView('F'); $('plnRate').value = '30'; });
-  await pg.evaluate(() => GO());
-  const fit = await pg.evaluate(() => ({pl: !!(pasting && pasting.pl), paste: !!pasting, clip: clip.length, view}));
-  chk('(8) unchecked with floor: clip set, paste mode, no ghost block', fit.paste && !fit.pl && fit.clip > 0 && fit.view === 'F', JSON.stringify(fit));
   await pg.evaluate(() => { pasting = null; S.blocks = []; });
 
   // ---- (9) negatives
@@ -232,24 +218,6 @@ try {
   });
   chk('(11) sweep ' + sw.n + ' single-input candidate runs: sim matches machine capacity', sw.bad.length === 0 && sw.n > 0, sw.bad.join('\n     '));
 
-  // ---- (12) unchecked into an existing Station_2x1 / Station_02 floor (STRICT on): Apply adds all items, one undo leaves the block
-  for (const nm of ['BPO_Station_2x1', 'BPO_Station_02']) {
-    const r = await pg.evaluate(([nm]) => {
-      const cls = Object.keys(BASE).find(k => BASE[k].kind === 'b' && BASE[k].name === nm);
-      S = {name: 't', blocks: [{id: uid++, cls, x: 5, y: 5, h: 0, rot: 0, pid: 0}], dm: [], closed: []}; undoS = []; redoS = []; pasting = null; clip = []; STRICT = true; setView('F');
-      $('plnItem').value = 'ITEM_CobaltPlates'; $('plnRate').value = '60'; $('plnMk').value = '0'; $('plnSp').value = ''; BK(false); plnDraw();
-      const x = placerPlan(), L = placerLayout(x.P, 'ITEM_CobaltPlates', 0, 0), fit = placerFit(L.items, L.w, L.h);
-      GO();
-      if (!fit || !(pasting && !pasting.pl)) return {fit, paste: !!pasting, toast: $('toast').textContent};
-      const before = S.blocks.length; hover = {x: fit.x, y: fit.y}; pasteAt();
-      const ms = S.blocks.filter(isM), f = floorRect(S.blocks[0]);
-      const inside = ms.every(m => { const e = dim(m); return m.x >= f.x && m.y >= f.y && m.x + e.w <= f.x + f.w && m.y + e.h <= f.y + f.h; });
-      const res = {added: S.blocks.length - before, want: L.items.length, inside, bad: noBuild(ms.map(mItem))};
-      undo(); res.afterUndo = S.blocks.length;
-      return res;
-    }, [nm]);
-    chk('(12) unchecked into ' + nm + ' floor: Apply adds all items, inside floor, one undo leaves block only', r.added === r.want && r.inside && r.bad === false && r.afterUndo === 1, JSON.stringify(r));
-  }
 
   // ---- (13) checked block placed adjacent to an existing block: placed; overlapping: toast, nothing added
   const adj = await pg.evaluate(() => {

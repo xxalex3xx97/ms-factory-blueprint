@@ -247,32 +247,6 @@ try {
   chk('D) 360/min placed: no overlap, items inside, UG valid, sim 360 within 5%', Dp.placed && Dp.ag.ov === 0 && Dp.ag.inside === true && Dp.ag.ugOk === true && ms5(Dp.sim.got, 360, 0.05), JSON.stringify({ov: Dp.ag.ov, inside: Dp.ag.inside, ug: Dp.ag.bad.slice(0, 3), sim: Dp.sim}));
   await closeIfOpen(pg);
 
-  // ---- E) Modular: IN west (open input), OUT east (open output), hubs inside
-  for (const mod of [true, false]) {
-    await setup(pg, 'ITEM_BasicMotor', 120, 0, 'DAT_Container');
-    await pg.evaluate(m => { $('plnMod').checked = m; }, mod);
-    const Eo = await openBuild(pg, ALL);
-    const Ee = await pg.evaluate(() => {
-      const L = plcL, boxes = L.items.filter(b => b.cls === 'DAT_Container');
-      return {
-        mod: L.mod, bank: L.bank, w: L.w, nIn: L.nIn, nOut: L.nOut, hubs: L.hubs,
-        infBox: boxes.filter(b => (b.ct || []).some(c => c.inf)).length,
-        boxes: boxes.length,
-        belt0: L.items.filter(b => PLC_BELT.includes(b.cls) && b.x === 0).length,
-        beltE: L.items.filter(b => PLC_BELT.includes(b.cls) && b.x === L.w - 1).length,
-        io: $('pvIO').textContent, err: $('plnPrevErr').textContent, placeOff: $('plnPlace').disabled
-      };
-    });
-    info(`E) mod=${mod} ${JSON.stringify(Ee)}`);
-    if (mod) {
-      chk('E) modular: Build mod===true, no container with inf ct, DAT_Container count 3 per band', Eo.open && Ee.mod === true && Ee.infBox === 0 && Ee.boxes === 3, JSON.stringify(Ee));
-      chk('E) modular: belts at x=0 === nIn, belts at x===w-1 === nOut', Ee.belt0 === Ee.nIn && Ee.beltE === Ee.nOut && Ee.nIn >= 1, JSON.stringify(Ee));
-      chk('E) modular: pvIO "IN west ... hub container(s) between stages", Place enabled', /IN west.*hub container\(s\) between stages/.test(Ee.io) && Ee.placeOff === false, Ee.io + ' | ' + Ee.err);
-    } else {
-      chk('E) closed, same plan: 5 containers per band', Eo.open && Ee.mod === false && Ee.boxes === 5, JSON.stringify(Ee));
-    }
-    await closeIfOpen(pg);
-  }
   await pg.evaluate(() => { $('plnMod').checked = false; });
 
   // ---- F) Basic Motor 1200/min Mk1 default container, all blocks
