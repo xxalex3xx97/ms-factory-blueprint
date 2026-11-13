@@ -29,6 +29,21 @@
    "bpm": 20.684,
    "area": 3965,
    "sim": null
+  },
+  "Nickel Plates 480 (zone)": {
+   "bpm": 7.833,
+   "area": 1800,
+   "sim": null
+  },
+  "Nickel Plates 720 (zone)": {
+   "bpm": 8.667,
+   "area": 1800,
+   "sim": null
+  },
+  "Basic Motor 120 (zone)": {
+   "bpm": 10.286,
+   "area": 2700,
+   "sim": null
   }
  }
 }
