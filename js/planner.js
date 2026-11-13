@@ -207,7 +207,7 @@ const plnSnap=async()=>{
     cl.style.transform="none";
     await Promise.all([...cl.querySelectorAll("img")].map(async im=>{try{const b=await (await fetch(im.src)).blob();im.src=await new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)})}catch(e){}}));
     const W=Math.ceil(x1-x0)+2*pad,H=Math.ceil(y1-y0)+2*pad,bg=getComputedStyle($("pln")).backgroundColor,o=document.getElementById("plnOut");
-    const body=new XMLSerializer().serializeToString(cl).replace(/^<(\w+)/,'<$1 xmlns="http://www.w3.org/1999/xhtml"');
+    const body=new XMLSerializer().serializeToString(cl).replace(/^<(\w+)(?![^>]*\sxmlns=)/,'<$1 xmlns="http://www.w3.org/1999/xhtml"');   // some browsers already emit it: a duplicate makes the XML invalid
     const x=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${x0-pad} ${y0-pad} ${W} ${H}"><rect x="${x0-pad}" y="${y0-pad}" width="${W}" height="${H}" fill="${bg}"/><foreignObject x="0" y="0" width="${Math.ceil(x1)}" height="${Math.ceil(y1)}" overflow="visible">${body}</foreignObject></svg>`;
     return {x,W,H};
   }finally{g.style.transform=sv}
@@ -217,8 +217,12 @@ const plnSave=(blob,ext)=>{const a=document.createElement("a");a.href=URL.create
 $("plnSv").onclick=async()=>{const r=await plnSnap();if(r)plnSave(new Blob([r.x],{type:"image/svg+xml"}),"svg")};
 // PNG: the same snapshot rasterised at 2x
 $("plnPng").onclick=async()=>{const r=await plnSnap();if(!r)return;
-  const svgFallback=()=>{plnSave(new Blob([r.x],{type:"image/svg+xml"}),"svg");toast("PNG too large/blocked in this browser: saved SVG instead")};
+  const svgFallback=why=>{
+    const pe=new DOMParser().parseFromString(r.x,"image/svg+xml").querySelector("parsererror"),
+      lg=["planner PNG export failed: "+why,"size "+r.W+"x"+r.H+" svg chars "+r.x.length,"dpr "+devicePixelRatio+" zoom/viewport "+innerWidth+"x"+innerHeight,"ua "+navigator.userAgent,"url "+location.href,"svg xml parse: "+(pe?"ERROR "+pe.textContent.slice(0,400):"ok"),"external refs in svg: "+((r.x.match(/(?:src|href)="(?!data:|#)[^"]{0,80}/g)||[]).slice(0,5).join(" | ")||"none")].join("\n");
+    console.error(lg);const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([lg],{type:"text/plain"}));a.download="planner-png-log.txt";a.click();
+    plnSave(new Blob([r.x],{type:"image/svg+xml"}),"svg");toast("PNG failed ("+why+"): saved SVG instead")};
   const tryPng=(im,s)=>{try{const c=document.createElement("canvas");c.width=Math.floor(r.W*s);c.height=Math.floor(r.H*s);const k=c.getContext("2d");k.scale(s,s);k.drawImage(im,0,0,r.W,r.H);
-    c.toBlob(b=>b?plnSave(b,"png"):s>1?tryPng(im,1):svgFallback(),"image/png")}catch(e){s>1?tryPng(im,1):svgFallback()}};   // big canvas / tainted canvas: retry 1x, then SVG
+    c.toBlob(b=>b?plnSave(b,"png"):s>1?tryPng(im,1):svgFallback("toBlob null"),"image/png")}catch(e){s>1?tryPng(im,1):svgFallback(e.name+": "+e.message)}};   // big canvas / tainted canvas: retry 1x, then SVG
   const im=new Image();im.onload=()=>tryPng(im,Math.max(1,Math.min(2,8192/Math.max(r.W,r.H),Math.sqrt(16e6/(r.W*r.H)))));
-  im.onerror=svgFallback;im.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(r.x)};   // data: URL, a blob: URL taints the canvas (foreignObject)
+  im.onerror=()=>svgFallback("image would not load");im.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(r.x)};   // data: URL, a blob: URL taints the canvas (foreignObject)
