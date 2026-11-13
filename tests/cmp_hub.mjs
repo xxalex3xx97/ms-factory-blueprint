@@ -47,6 +47,7 @@ await pg.evaluate(() => {
         const k = x + ',' + y; if (seen.has(k)) return {dead: 1}; seen.add(k);
         const it = occ.get(k); if (!it) return {dead: 1};
         if (it.cls.startsWith('DAT_Container')) return {box: it};
+        if (PLC_UG.includes(it.cls) && it.rot === 0) { let nx = x + 1; while (nx < W && !(occ.get(nx + ',' + y) && PLC_UG.includes(occ.get(nx + ',' + y).cls))) nx++; if (nx >= W) return {dead: 1}; x = nx; seen.add(x + ',' + y); x += 1; if (x >= W) return {edge: y, x: W}; continue }   // SHAPE: UG hop = entrance jumps to the next UG of the row (exit), then one cell on
         if (!PLC_BELT.includes(it.cls)) return {dead: 1};
         const [dx, dy] = DIR[it.rot]; x += dx; y += dy;
         if (x < 0 || x >= W) return {edge: y, x: x < 0 ? -1 : W};

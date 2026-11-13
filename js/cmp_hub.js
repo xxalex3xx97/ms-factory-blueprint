@@ -2,6 +2,16 @@
 // Reuses blHA (bl_geom.js) and the blHIZ/blHFB/blHIN loops with W/H/rows as parameters. Needs page globals: blHA, PLC_BELT. Lane rows at x=0 / x=W-1 are plain rot-0 belts (the assembler turns wall crossings into UG pairs).
 const cmpBt=(bc,x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});
 const cmpNo=why=>({ok:false,why,items:[]});
+// SHAPE: straight lane run xa..xb on row y, rot 0. Endpoints stay belts (f tags them); the interior is UG hops of up to maxApart-1 cells (the cells between stay free), ~2 items per 10 cells instead of 10.
+function cmpRun(items,mk,y,xa,xb,f){
+  const bc=PLC_BELT[mk],ug=PLC_UG[mk],D=def(ug).maxApart-1,mkb=(c,x)=>({cls:c,x,y,rot:0,h:0,pid:0}),put=x=>items.push(f?f(mkb(bc,x),x):mkb(bc,x));
+  if(xb<xa)return;
+  put(xa);if(xb===xa)return;
+  let cur=xa+1;
+  while(xb-1-cur>=2){const x=Math.min(cur+D,xb-1);items.push(mkb(ug,cur),mkb(ug,x));cur=x+1}
+  for(;cur<xb;cur++)items.push(mkb(bc,cur));
+  put(xb);
+}
 // largest group of rows that share a flow direction (= columns blHA needs)
 const cmpNg=A=>Math.max(0,...[-1,1].map(d=>A.dir.filter(v=>v===d).length));
 // cmpPool(S): S={W,H,mk,bx,item,raw,inRows,outRows,ind?,ca?,pyOut?,pyIn?,dock?,dkx?}. dock (cmp_dock.js cmpDockHub): ca = container rows (one per dock cell), SRC container flush x=0, OZ container flush east, dk tags. Container(s) 4x4 at (cx,ya+4j); west ports x=cx-1, east ports x=cx+4. raw=true: infinite source container(s).
@@ -22,26 +32,26 @@ function cmpPool(S){
     const A=blHA(inRows,c,ya,'out',cx-1,S.pyIn),xe=S.ind&&!Ro?W-1:cx-1,tl=(b,x)=>{if(S.ind&&!Ro&&x===xe){b.dk='oe';b.dx=S.dkx}return b};
     for(let j=0;j<Ri;j++){
       const y=inRows[j],py=A.py[j],d=A.dir[j];
-      if(!d){for(let x=0;x<=xe;x++)items.push(tl(bt(x,y,0),x));continue}
+      if(!d){cmpRun(items,mk,y,0,xe,tl);continue}
       const xc=A.col[j];
-      for(let x=0;x<xc;x++)items.push(bt(x,y,0));
+      cmpRun(items,mk,y,0,xc-1);
       items.push(bt(xc,y,d<0?3:1));
       for(let yy=y+d;yy!==py;yy+=d)items.push(bt(xc,yy,d<0?3:1));
       items.push(bt(xc,py,0));
-      for(let x=xc+1;x<=xe;x++)items.push(tl(bt(x,py,0),x));
+      cmpRun(items,mk,py,xc+1,xe,tl);
     }
   }
   if(Ro){   // blHIN loop: from the container E face (or x=0 for industrial input) to x=W-1
     const A=AE,xp=cx+4,x0=S.ind?0:xp,tag=(b,f)=>{if(f&&S.ind){b.dk='ie';b.di=item;b.yb=0;b.dx=S.dkx}return b};
     for(let j=0;j<Ro;j++){
       const yI=outRows[j],py=A.py[j],d=A.dir[j];
-      if(!d){for(let x=x0;x<=W-1;x++)items.push(tag(bt(x,yI,0),x===x0));continue}
+      if(!d){cmpRun(items,mk,yI,x0,W-1,(b,x)=>tag(b,x===x0));continue}
       const xc=A.col[j];
-      for(let x=x0;x<xc;x++)items.push(tag(bt(x,py,0),x===x0));
+      cmpRun(items,mk,py,x0,xc-1,(b,x)=>tag(b,x===x0));
       items.push(bt(xc,py,d<0?3:1));
       for(let yy=py+d;yy!==yI;yy+=d)items.push(bt(xc,yy,d<0?3:1));
       items.push(bt(xc,yI,0));
-      for(let x=xc+1;x<=W-1;x++)items.push(bt(x,yI,0));
+      cmpRun(items,mk,yI,xc+1,W-1);
     }
   }
   return{ok:true,why:'',items,cx,ya,c};

@@ -38,7 +38,7 @@ for (const b in BK) for (const dk in DK) {
 }
 for (const c of cases) {
   const tag = c.name + ' ' + c.b + ' Mk' + (c.mk + 1) + ' ' + c.dk, dock = DK[c.dk];
-  const r = await checkCompose(pg, c.key, c.rate, c.mk, BK[c.b], {strict: true, mutate: true, dock});
+  const r = await checkCompose(pg, c.key, c.rate, c.mk, BK[c.b], {strict: true, mutate: 'any', dock});
   if (r.refused) { check(false, tag + ' refused: ' + r.refused); continue }
   const a = await pg.evaluate(info, {key: c.key, rate: c.rate, mk: c.mk, bk: BK[c.b], dock});
   if (a.err) { check(false, tag + ' ' + a.err); continue }
