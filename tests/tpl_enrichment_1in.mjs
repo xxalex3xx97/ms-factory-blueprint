@@ -6,6 +6,8 @@ import fs from 'fs';
 import {createRequire} from 'module';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
+import {checkIface, checkChain} from './tpl_iface.mjs';
+import {checkPlan} from './tpl_plan.mjs';
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -15,6 +17,7 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof placerTile === 'function' && typeof pfSplOff === 'function');
+await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/enrichment_1in.js'});
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
@@ -26,7 +29,7 @@ async function one(block, n, mk, rec, shot) {
     const spec = {block, cls: 'DAT_EnrichmentChamber', rec, n, mk, spMk: mk};
     const T = tplBuild(spec);
     if (!T.ok) return {refused: T.why, nMax: tplMax(spec)};
-    const out = {nMax: T.nMax, w: T.w, h: T.h, stats: T.stats};
+    const out = {T: {items: T.items, ports: T.ports, w: T.w, h: T.h, iface: T.iface, nMax: T.nMax}, nMax: T.nMax, w: T.w, h: T.h, stats: T.stats};
     const IT = T.items, occ = new Map(), isB = b => PLC_BELT.includes(b.cls), isS = b => PLC_SPL.includes(b.cls), isU = b => PLC_UG.includes(b.cls), isMach = b => b.cls === 'DAT_EnrichmentChamber';
     let ov = 0, outside = 0;
     for (const b of IT) { const d = dim(b); if (b.x < 0 || b.y < 0 || b.x + d.w > T.w || b.y + d.h > T.h) outside++;
@@ -88,9 +91,10 @@ async function one(block, n, mk, rec, shot) {
     // declared in/out port per machine: enabled ports; in = the one reached from a lane, out = the other; we need exactly 2 enabled and in-reach count n
     const inReach = new Map(); lanes.forEach((r, li) => r.machIn.forEach(s => { inReach.set(s, li) }));
     out.laneLoadN = T.ports.in.map((_, li) => [...inReach.values()].filter(v => v === li).length);
+    out.fill = T.iface.sets.map(s => s.n);
     out.inMachines = new Set([...inReach.keys()].map(s => s.split(':')[0])).size;
     out.inPortsPerMachine = Math.max(...[...mach.map(q => [...inReach.keys()].filter(s => s.startsWith(q.i + ':')).length)]);
-    out.laneDead = lanes.map((r, li) => r.dead.filter(d => !(li === 1 && out.laneLoadN[1] === 0)).slice(0, 4));
+    out.laneDead = lanes.map((r, li) => r.dead.filter(d => !(out.laneLoadN[li] === 0)).slice(0, 4));
     // machine outputs: for each machine, the enabled port not used as in port
     let outsOk = 0, outBad = [], toIn = 0;
     const outEast = new Set(), mixed = [];
@@ -107,17 +111,15 @@ async function one(block, n, mk, rec, shot) {
     out.outsOk = outsOk; out.outBad = outBad; out.outEast = [...outEast]; out.outToMachine = toIn;
     // rates
     out.rate = tplEnrRate(spec); out.rateMax = tplRateMax(spec);
-    out.outLane = T.ports.out[0];
-    out.lastOutBelt = (() => { const b = at(T.w - 1, T.ports.out[0].y); return b && isB(b) && b.rot === 0 })();
+    out.outYs = T.ports.out.map(p => p.y);
+    out.lastOutBelt = T.ports.out.every(p => { const b = at(T.w - 1, p.y); return b && isB(b) && b.rot === 0 });
+    out.prioOk = IT.filter(isS).every(b => b.pr && b.pr[0] === 0 && b.pr[1] === -1) && IT.filter(isS).every(b => portsOf(b).filter(p => p.dir === 'out' && p.en).length === 2 && portsOf(b).some(p => p.pr && p.nx === 0 && p.ny === 1));
     out.inLaneBelts = T.ports.in.map(l => { const b = at(l.x, l.y); return !!b && b.rot === 0 && (isB(b) || isS(b)) });
-    // wall columns: only lane cells (rot-0 belts at the lane rows) on x=0 and x=W-1 (a neighbour block pastes next to them)
-    const lanesY = new Set(T.ports.in.map(l => l.y)), edgeBad = [];
-    for (const b of IT) { if (isMach(b)) continue; if (b.x === 0 && !lanesY.has(b.y)) edgeBad.push('W' + b.y); if (b.x === T.w - 1 && b.y !== T.ports.out[0].y) edgeBad.push('E' + b.y) }
-    out.edgeBad = edgeBad; out.nIn = T.ports.in.length;
+    out.nIn = T.ports.in.length;
     // wall crossings with straight belt stubs of a neighbour zone on the lane rows (placer bank rules: plcTryCut at column 0 = west wall, column W = east wall): lane belts must convert to UG pairs
     const st = (x, y) => ({cls: PLC_BELT[mk], x, y, rot: 0, h: 0, pid: 0});
     const ITw = IT.concat(T.ports.in.map(l => st(-1, l.y))), cw = plcTryCut(ITw, plcOcc(ITw), T.h, true, 0);
-    const ITe = IT.concat([st(T.w, T.ports.out[0].y)]), ce = plcTryCut(ITe, plcOcc(ITe), T.h, true, T.w);
+    const ITe = IT.concat(T.ports.out.map(p => st(T.w, p.y))), ce = plcTryCut(ITe, plcOcc(ITe), T.h, true, T.w);
     out.cutW = cw ? cw.length : null; out.cutE = ce ? ce.length : null;
     out.items = IT.map(b => ({cls: b.cls, x: b.x, y: b.y, rot: b.rot, w: dim(b).w, h: dim(b).h}));
     return out;
@@ -139,53 +141,92 @@ async function shot(block, n, r) {
     }, [r.items, W, H, S]);
     await shotPage.screenshot({path: path.join(ROOT, `tests/shots/tpl_enrichment_1in_${block}_n${n}.png`), clip: {x: 0, y: 0, width: Math.min(1280, W * S + 2), height: Math.min(800, H * S + 2)}});
 }
-const tests = [];
+const TPL = {build: 'tplBuild', max: 'tplMax', cls: 'DAT_EnrichmentChamber'};
+const nMaxOf = (block, rec, mk) => pg.evaluate(([b, r, m]) => tplMax({block: b, rec: r, mk: m}), [block, rec, mk]);
+const tabIface = [];
 for (const block of BLK) {
-    const nMax = await pg.evaluate(b => tplMax({block: b}), block);
-    console.log(`== ${block}: nMax ${nMax}`);
+    const nMax = await nMaxOf(block, REC.fuel, 2), nMaxG = await pg.evaluate(b => tplMax({block: b}), block);
+    console.log(`== ${block}: nMax ${nMax} (geometric ${nMaxG}, before Edge v1: ${{'1x1': 1, '1x2': 3, '2x2': 9, '2x2c': 9}[block]})`);
+    check(nMax === nMaxG, `${block} nMax with fuel recipe at Mk3 equals geometric`);
     const ns = [...new Set([1, 2, nMax - 1, nMax].filter(n => n >= 1 && n <= nMax))];
+    let ref = null;
     for (const n of ns) {
         for (const [mk, rec] of [[2, REC.fuel]]) {
             const r = await one(block, n, mk, rec);
             const tag = `${block} n=${n} Mk${mk + 1}`;
             if (r.refused) { check(false, tag + ' refused ' + r.refused); continue }
+            if (n === 1) ref = r.T;
+            const ci = await checkIface(pg, r.T, block, ref);
+            check(ci.ok, tag + ' checkIface ' + ci.errs.join('; '));
             check(r.ov === 0, tag + ' no overlap'); check(r.outside === 0, tag + ' inside floor');
             check(r.tile.ok && r.tile.ov === 0 && r.tile.span === 0 && r.tile.blocks === 1 && r.tile.cls === r.tile.want, tag + ' placerTile ' + JSON.stringify(r.tile));
             check(r.portsEn.every(v => v === 2), tag + ' every machine has exactly 2 enabled ports');
-            check(r.inMachines === n && r.inPortsPerMachine === 1, tag + ` input reaches ${r.inMachines}/${n} machines (1 port each)`);
-            check(r.outsOk === n && !r.outBad.length && r.outEast.length === 1 && r.outEast[0] === r.outLane.y, tag + ` outputs reach the east out lane ${r.outsOk}/${n} ${r.outBad.join(';')}`);
+            check(r.inMachines === n && r.inPortsPerMachine === 1, tag + ` input reaches ${r.inMachines}/${n} machines (1 port each), per set ${r.laneLoadN}`);
+            check(JSON.stringify(r.laneLoadN) === JSON.stringify(r.fill), tag + ' each set lane feeds exactly its own machines ' + r.fill);
+            const wantEast = r.outYs.filter((y, s) => r.fill[s] > 0);
+            check(r.outsOk === n && !r.outBad.length && JSON.stringify([...r.outEast].sort((a, b) => a - b)) === JSON.stringify(wantEast), tag + ` outputs reach the east out lanes ${r.outsOk}/${n} ${r.outBad.join(';')}`);
             check(r.outToMachine === 0, tag + ' no output reaches a machine port');
             check(r.laneDead.every(d => d.every(x => !/headon|ugNoExit|unk|splSide|ugSide|splNoOut|machwall/.test(x))), tag + ' no broken belt hops ' + JSON.stringify(r.laneDead));
-            check(r.edgeBad.length === 0, tag + ' wall columns clean ' + r.edgeBad.join(','));
-            check(r.cutW === 2 * (r.nIn) && r.cutE === 2, tag + ` wall crossings (plcTryCut bank): west ${r.cutW} cells (${r.nIn} lanes), east ${r.cutE} cells -> UG pairs`);
+            check(r.prioOk, tag + ' every manifold splitter has priority on its machine output (b.pr=[0,-1])');
+            check(r.cutW === 2 * r.nIn && r.cutE === 2 * r.nIn, tag + ` wall crossings (plcTryCut bank): west ${r.cutW} cells (${r.nIn} lanes), east ${r.cutE} cells -> UG pairs`);
             check(r.lastOutBelt && r.inLaneBelts.every(Boolean), tag + ' lane port cells are rot-0 belts (in ' + r.inLaneBelts + ', out ' + r.lastOutBelt + ')');
-            check(r.rate.ok && r.rate.capOk, tag + ` rate within raw cap (in ${r.rate.inLoads.map(v => v.toFixed(0))}/min out ${r.rate.outLoad.toFixed(0)}/min, cap ${r.rate.cap}) derate ${r.rate.derOk ? 'OK' : 'EXCEEDED'} (n<=${r.rateMax} fits derate)`);
+            check(r.rate.ok && r.rate.capOk && r.rate.derOk, tag + ` rate (in ${r.rate.inLoads.map(v => v.toFixed(0))}/min out ${r.rate.outLoads.map(v => v.toFixed(0))}/min, cap ${r.rate.cap}) derate ${r.rate.derOk ? 'OK' : 'EXCEEDED'} (n<=${r.rateMax} fits derate)`);
             rows.push([block, n, r.stats.machines, r.stats.belts, r.stats.ug, r.stats.spl, r.w * r.h, (r.stats.belts + r.stats.ug + r.stats.spl) / n]);
+            if (n === nMax) tabIface.push(block + ' S=' + r.T.iface.S + ' sets ' + JSON.stringify(r.T.iface.sets.map(s => s.o)) + ' in rows ' + JSON.stringify(r.T.ports.in.map(p => p.y)) + ' out rows ' + JSON.stringify(r.T.ports.out.map(p => p.y)));
             if (process.env.SHOTS !== '0' && (n === 1 || n === nMax)) await shot(block, n, r);
         }
     }
-    // negative: nMax+1 refused; machine count nMax is truly the max (geometric check: a 10th placement overlaps)
-    const neg = await pg.evaluate(([b, n]) => tplBuild({block: b, cls: 'DAT_EnrichmentChamber', rec: 'x', n, mk: 2, spMk: 2}), [block, nMax + 1]);
+    // nMax+1 must stay refused and fail checkIface (no build is produced)
+    const neg = await pg.evaluate(([b, n]) => tplBuild({block: b, cls: 'DAT_EnrichmentChamber', rec: 'ITEM_HydrogenFuel>ITEM_EnrichedFuel', n, mk: 2, spMk: 2}), [block, nMax + 1]);
     check(!neg.ok, `${block} n=${nMax + 1} refused (${neg.why})`);
-    // nMax is the real max: the free floor cells cannot hold another 9x9 machine next to the template at nMax
+    const ciNeg = await checkIface(pg, neg, block, ref);
+    check(!ciNeg.ok, `${block} n=${nMax + 1}: checkIface ok:false`);
+    // free 9x9 spot at nMax (info only: set rows are fixed by the iface table)
     const fit = await pg.evaluate(([b, n]) => {
         const T = tplBuild({block: b, cls: 'DAT_EnrichmentChamber', rec: 'x', n, mk: 1, spMk: 1}), occ = new Set();
         for (const q of T.items) { const d = dim(q); for (let i = 0; i < d.w; i++) for (let j = 0; j < d.h; j++) occ.add((q.x + i) + ',' + (q.y + j)) }
         for (let x = 0; x + 9 <= T.w; x++) for (let y = 0; y + 9 <= T.h; y++) { let free = true; for (let i = 0; i < 9 && free; i++) for (let j = 0; j < 9; j++) if (occ.has((x + i) + ',' + (y + j))) { free = false; break } if (free) return {x, y} }
         return null;
-    }, [block, nMax]);
-    check(fit === null, `${block} nMax ${nMax} is the max: ${fit ? 'a free 9x9 spot exists at ' + JSON.stringify(fit) : 'no free 9x9 spot left'}`);
+    }, [block, nMaxG]);
+    console.log(`     ${block}: free 9x9 spot at nMax: ${JSON.stringify(fit)}`);
 }
-// other belt tiers at nMax (Mk1/Mk3, spMk follows)
+// other belt tiers: rate-clamped nMax (ore recipe 60/min: g Mk1 1, Mk2 2, Mk3 3) builds at nMax and refuses nMax+1
 for (const block of BLK) {
-    const nMax = await pg.evaluate(b => tplMax({block: b}), block);
-    for (const mk of [0, 2]) {
+    for (const mk of [0, 1, 2]) {
+        const nMax = await nMaxOf(block, REC.ore, mk);
+        const tag = `${block} n=${nMax} Mk${mk + 1} (Nickel ore recipe, rate-clamped)`;
         const r = await one(block, nMax, mk, REC.ore);
-        const tag = `${block} n=${nMax} Mk${mk + 1} (Nickel ore recipe)`;
-        check(!r.refused && r.ov === 0 && r.outside === 0 && r.tile.ok && r.tile.ov === 0 && r.tile.span === 0 && r.inMachines === nMax && r.outsOk === nMax, tag + ' builds, tiles, connects');
-        console.log(`     rate: in ${r.rate.inLoads.map(v => v.toFixed(0))} out ${r.rate.outLoad.toFixed(0)} cap ${r.rate.cap} derateOK ${r.rate.derOk} nByDerate ${r.rateMax}`);
+        check(!r.refused && r.ov === 0 && r.outside === 0 && r.tile.ok && r.tile.ov === 0 && r.tile.span === 0 && r.inMachines === nMax && r.outsOk === nMax && r.rate.derOk, tag + ' builds, tiles, connects, within rate');
+        const ci = await checkIface(pg, r.T, block); check(ci.ok, tag + ' checkIface ' + ci.errs.join('; '));
+        const neg = await pg.evaluate(([b, n, m]) => tplBuild({block: b, cls: 'DAT_EnrichmentChamber', rec: 'ITEM_NickelOre>ITEM_EnrichedNickelOre', n, mk: m, spMk: m}), [block, nMax + 1, mk]);
+        check(!neg.ok, tag + ' nMax+1 refused (' + neg.why + ')');
+        console.log(`     rate: in ${r.rate.inLoads.map(v => v.toFixed(0))} out ${r.rate.outLoads.map(v => v.toFixed(0))} cap ${r.rate.cap} derateOK ${r.rate.derOk} nByDerate ${r.rateMax}`);
     }
 }
+// chains: block next to itself (A.out meets B.in main); 2x2 -> 2x2c refused
+for (const block of BLK) {
+    const a = await pg.evaluate(b => tplBuild({block: b, cls: 'DAT_EnrichmentChamber', rec: 'ITEM_HydrogenFuel>ITEM_EnrichedFuel', n: 1, mk: 2, spMk: 2}), block);
+    const c = checkChain(a, a);
+    check(c.ok, `${block} chains to itself ` + (c.errs || []).join('; '));
+}
+{
+  const a = await pg.evaluate(() => tplBuild({block: '2x2', cls: 'DAT_EnrichmentChamber', rec: 'x', n: 1, mk: 2, spMk: 2})), b = await pg.evaluate(() => tplBuild({block: '2x2c', cls: 'DAT_EnrichmentChamber', rec: 'x', n: 1, mk: 2, spMk: 2}));
+  check(!checkChain(a, b).ok, '2x2 -> 2x2c chain refused');
+}
+// checkPlan: planner N vs template (R1 minimal, R2 fractional, R3 nMax, R4 multi-block) per block, recipes fuel (20/min) and ore (60/min), Mk2 belts
+const planRows = [];
+for (const block of BLK) for (const key of [REC.fuel, REC.ore]) {
+    const info = await pg.evaluate(([k, blk, t]) => { const r = [].concat(...Object.values(RECS)).find(x => rk(x) === k); const P = plan(r.o[0], 1, 1, {}, {[r.o[0]]: k}, {proto: false, enr: false, obs: false}); return {pm: P.nodes[r.o[0]].pmach, nMax: window[t.max]({block: blk, cls: t.cls, rec: k, mk: 1, spMk: 1})} }, [key, block, TPL]);
+    const pm = info.pm, nm = info.nMax;
+    for (const [tag, rate] of [['R1 pmach', pm], ['R1b 0.25 pmach', 0.25 * pm], ['R2 (nMax-1+0.3)', (nm - 1 + 0.3) * pm], ['R3 nMax', nm * pm], ['R4 (nMax+1)', (nm + 1) * pm], ['R4b (2nMax+0.5)', (2 * nm + 0.5) * pm]]) {
+        const r = await checkPlan(pg, TPL, key, rate, block, 1);
+        r.row.set = tag; r.row.rec = key.split('>')[1].replace('ITEM_', ''); planRows.push(r.row);
+        check(r.ok, `checkPlan ${block} ${r.row.rec} ${tag}: ` + r.errs.join('; '));
+    }
+}
+console.log('\nset                 block recipe               rate     N   B  nMax  pmach   planUtil minUtil maxUtil belts maxBelt supply machines');
+for (const x of planRows) console.log([x.set.padEnd(19), x.block.padEnd(5), x.rec.padEnd(20), String(x.rate).padEnd(8), String(x.N).padEnd(3), String(x.B).padEnd(2), String(x.nMax).padEnd(5), String(x.pmach).padEnd(7), String(x.planUtil).padEnd(8), String(x.minUtil).padEnd(7), String(x.maxUtil).padEnd(7), String(x.belts).padEnd(5), String(x.maxBeltUtil).padEnd(7), x.supply.padEnd(7), x.machines].join(' '));
+console.log('\niface at nMax:'); tabIface.forEach(l => console.log('  ' + l));
 console.log('block  n machines belts ug spl area (belts+ug+spl)/machine');
 for (const r of rows) console.log(r.slice(0, 7).join('\t') + '\t' + r[7].toFixed(1));
 await br.close();

@@ -1,93 +1,69 @@
-// TPL Enrichment Chamber, 1-input recipes. Global script style (no modules). Needs placer.js/prefab.js globals (PLC_BELT/PLC_SPL/PLC_UG, pfSplOff).
+// TPL Enrichment Chamber, 1-input recipes, Edge Interface v1. Global script style (no modules). Needs placer.js/prefab.js globals (PLC_BELT/PLC_SPL/PLC_UG, pfSplOff) and js/tpl/iface.js (tplIfSets, tplOutTail, tplDerate).
 // Machine DAT_EnrichmentChamber: 9x9, ports N/E/S/W faces at local 2,4,6 (all toggleable, dir-less). rot 0 always (ports symmetric), one in + one out port enabled, rest off.
-// Interface: input lane(s) at the WEST edge (belt (0,y) rot 0), output lane at the EAST edge (belt (W-1,y) rot 0). Lane rows are fixed per block type.
-//
-// Layout 'row' (1x1 14x14, 1x2 30x14): lane row y=0 = manifold above the machines, machines y=1..9 (pitch 9, in via N1 at x+4), out belt row y=10 (machines drop on it via S7), east edge.
-//   1x1: 1 machine (9 wide in 14); 1x2: 3 machines (27 in 30).
-// Layout 'T9' (2x2, 2x2c 30x30): 3 machine rows x 3 columns, pitch 10 (9 + 1 gap column), rows y=0,10,20; belt rows y=9 (lane A), 19 (out), 29 (lane B).
-//   Only 3 belt rows for 3 machine rows (4 would be 31 > 30): row r0 (y0..8) has no belt above it, so r0 takes input from lane A below it (S7) and outputs through its EAST face (E4)
-//   into a vertical collector in the gap column x=9 (c0) / x=19 (c1 via E4 and c2 via W10, shared) so the east edge column x=29 stays free (UG hop under lane A where lane A passes), down to the out row y=19. r1 (y10..18): in N1 from lane A (shared with r0), out S7 to y=19.
-//   r2 (y20..28): in S7 from lane B (y=29), out N1 to y=19 (shared with r1). One splitter per machine column on a lane (up+down+onward), last machine of a lane = plain corner belt.
-//   Fill order (n machines): r1 c0..c2, r2 c0..c2, r0 c0..c2. Lanes: in A y=9 (r0+r1, <=6 machines), in B y=29 (r2, <=3, stub belt (0,29) when unused), out y=19 (all).
-// Quantity n only adds machines, their splitters/corners, lane stubs are fixed. nMax = geometric max (tplMax); rate limit separate (tplRate / tplRateMax).
+// Layout (every block): SETS of one row. Set origin o_s from TPL_IF_SETS (1x1/1x2 S=1 [0]; 2x2 S=2 [0,15]; 2x2c S=2 [4,15]).
+//   lane row y=o (west edge x=0, belt rot 0) = manifold above the machines, machines y=o+1..o+9 (pitch 9, in via N1 at x+4, out via S7), collector row y=o+10 from x=5 to W-3,
+//   then tplOutTail jog (trunk column x=W-2 up to row o, out belt (W-1,o) rot 0). Machines x<=W-3: floor((W-3)/9) per row (1x1: 1, 30-wide: 3).
+//   Each splitter on the manifold (one per machine, last machine = corner belt) has PRIORITY on its machine-side output (b.pr=[0,-1], S face idx 0 at rot 0): machines fill in order, last one partial.
+//   T9 grid (9 machines per 2x2) dropped: its lane rows (9, 29) cannot conform to the standard slots.
+// Fill order: set by set, row left to right. Empty sets keep their stubs (belt (0,o) and belt (W-1,o)). Quantity n only adds machines + their splitters/corners + the collector.
+// Rate: g = floor(tplDerate()*cap/ri) machines per lane (M=1); with spec.rec set tplMax/tplBuild clamp the per-set count to g (g<1 -> ok:false why 'rate'); no rec -> geometric.
 const TPLE_PORTS=['N0','N1','N2','E3','E4','E5','S6','S7','S8','W9','W10','W11'];
 const TPLE_CLS='DAT_EnrichmentChamber';
-const TPLE_LAYOUT={
-  '1x1':{k:'row',W:14,H:14,cols:1,px:9,yA:0,yM:1,yO:10},
-  '1x2':{k:'row',W:30,H:14,cols:3,px:9,yA:0,yM:1,yO:10},
-  '2x2':{k:'T9',W:30,H:30,cols:3,px:10,yA:9,yO:19,yB:29},
-  '2x2c':{k:'T9',W:30,H:30,cols:3,px:10,yA:9,yO:19,yB:29}
-};
-// slots in fill order: {r,c}; r: 0 top (E collector), 1 mid, 2 bottom
-function tplEnrSlots(block){
-  const g=TPLE_LAYOUT[block];if(!g)return null;
-  if(g.k==='row')return Array.from({length:g.cols},(_,c)=>({r:1,c}));
-  const s=[];for(const r of [1,2,0])for(let c=0;c<g.cols;c++)s.push({r,c});return s;
+const TPLE_W={'1x1':14,'1x2':30,'2x2':30,'2x2c':30};
+const TPLE_S={'1x1':1,'1x2':1,'2x2':2,'2x2c':2};   // default S per block (iface table)
+const TPLE_CAP=[60,120,180];
+function tplEnrRec(rec){return rec&&typeof CATALOG!=='undefined'?CATALOG.recipes.CRAFT_Enrichment.find(r=>r.i.length===1&&r.i[0][0]+'>'+r.o[0]===rec):null}
+// per-set capacity {S,cols,g,cap} (g=Infinity without a recipe)
+function tplEnrCap(spec){
+  const W=TPLE_W[spec.block];if(!W)return null;
+  const S=spec.S||TPLE_S[spec.block],cols=Math.floor((W-3)/9),R=tplEnrRec(spec.rec);
+  const g=R?Math.floor(tplDerate()*TPLE_CAP[spec.mk|0]/(R.i[0][1]*1800/R.t)):Infinity;
+  return{S,W,cols,g,cap:Math.min(cols,g)};
 }
-function tplMax(spec){const s=tplEnrSlots(spec.block);return s?s.length:0}
+function tplMax(spec){const c=tplEnrCap(spec);return c?c.S*c.cap:0}
+// machines per set, set by set
+function tplEnrFill(S,cap,n){const a=[];for(let s=0;s<S;s++){const m=Math.min(cap,n);a.push(m);n-=m}return a}
 function tplBuild(spec){
-  const g=TPLE_LAYOUT[spec.block];
-  if(!g)return{ok:false,why:'TPL: unknown block '+spec.block};
+  const c=tplEnrCap(spec);
+  if(!c)return{ok:false,why:'TPL: unknown block '+spec.block};
   const cls=spec.cls||TPLE_CLS;
   if(cls!==TPLE_CLS)return{ok:false,why:'TPL: only '+TPLE_CLS};
-  const slots=tplEnrSlots(spec.block),nMax=slots.length,n=spec.n|0;
+  const st0=tplIfSets(spec.block,c.S);
+  if(!st0.ok)return{ok:false,why:st0.why};
+  if(c.g<1)return{ok:false,why:'rate',nMax:0};
+  const nMax=c.S*c.cap,n=spec.n|0;
   if(n<1||n>nMax)return{ok:false,why:'TPL: n '+n+' outside 1..'+nMax,nMax};
-  const mk=spec.mk|0,spMk=spec.spMk==null?mk:spec.spMk|0,bc=PLC_BELT[mk],sc=PLC_SPL[spMk],ug=PLC_UG[mk],px=g.px,T9=g.k==='T9';
-  const items=[],bt=(x,y,rot)=>items.push({cls:bc,x,y,rot,h:0,pid:0}),ugi=(x,y,rot)=>items.push({cls:ug,x,y,rot,h:0,pid:0}),
-    sp=(x,y,keep)=>items.push({cls:sc,x,y,rot:0,h:0,pid:0,off:pfSplOff(sc,0,keep)});
-  const have=(r,c)=>slots.slice(0,n).some(q=>q.r===r&&q.c===c);
-  const rowY=T9?[0,10,20]:[null,g.yM,null];
-  // machines: roles per row
-  const role=T9?{0:['S7','E4'],1:['N1','S7'],2:['S7','N1']}:{1:['N1','S7']};
-  for(const q of slots.slice(0,n)){
-    const [pin,pout0]=role[q.r],pout=T9&&q.r===0&&q.c===2?'W10':pout0;   // row 0 col 2 outputs west into the shared gap column x=19 (keeps the east edge column free for wall crossings)
-    items.push({cls:TPLE_CLS,x:q.c*px,y:rowY[q.r],rot:0,h:0,pid:0,off:TPLE_PORTS.filter(k=>k!==pin&&k!==pout),rec:spec.rec});
-  }
-  // lane A (y=yA): from x=0 to the last used column's splitter; N = row 0 machine above (T9), S = row 1 machine below
-  const rowsA=T9?[0,1]:[1];
-  const cA=Math.max(...slots.slice(0,n).filter(q=>rowsA.includes(q.r)).map(q=>q.c));
-  for(let x=0;x<=cA*px+4;x++){
-    const c=(x-4)/px;
-    if(!Number.isInteger(c)||c<0||c>cA||x!==c*px+4){bt(x,g.yA,0);continue}
-    const N=T9&&have(0,c),S=have(1,c);
-    if(c<cA)sp(x,g.yA,['E',...(N?['N']:[]),...(S?['S']:[])]);
-    else if(N&&S)sp(x,g.yA,['N','S']);
-    else bt(x,g.yA,S?1:3);
-  }
-  // lane B (T9, y=yB): always the stub belt (0,yB); machines of row 2 take the input through S7 (splitter N output / last = corner rot 3)
-  if(T9){
-    const cs=slots.slice(0,n).filter(q=>q.r===2).map(q=>q.c),cB=cs.length?Math.max(...cs):-1;
-    if(cB<0)bt(0,g.yB,0);
-    else for(let x=0;x<=cB*px+4;x++){
-      const c=(x-4)/px;
-      if(!Number.isInteger(c)||c<0||c>cB){bt(x,g.yB,0);continue}
-      if(c<cB)sp(x,g.yB,['E','N']);else bt(x,g.yB,3);
+  const mk=spec.mk|0,spMk=spec.spMk==null?mk:spec.spMk|0,bc=PLC_BELT[mk],sc=PLC_SPL[spMk],W=c.W;
+  const items=[],bt=(x,y,rot)=>items.push({cls:bc,x,y,rot,h:0,pid:0}),
+    sp=(x,y,keep)=>items.push({cls:sc,x,y,rot:0,h:0,pid:0,off:pfSplOff(sc,0,keep),pr:[0,-1]});
+  const fill=tplEnrFill(c.S,c.cap,n),ports={in:[],out:[]};
+  st0.o.forEach((o,s)=>{
+    const m=fill[s];
+    ports.in.push({x:0,y:o,item:0,dir:'E',set:s,copy:0,row:s});ports.out.push({x:W-1,y:o,dir:'E',set:s});
+    if(!m){bt(0,o,0);bt(W-1,o,0);return}
+    for(let q=0;q<m;q++)items.push({cls:TPLE_CLS,x:1+q*9,y:o+1,rot:0,h:0,pid:0,off:TPLE_PORTS.filter(k=>k!=='N1'&&k!=='S7'),rec:spec.rec});
+    for(let x=0;x<=(m-1)*9+5;x++){   // manifold lane
+      const q=(x-5)/9;
+      if(!Number.isInteger(q))bt(x,o,0);
+      else if(q<m-1)sp(x,o,['E','S']);
+      else bt(x,o,1);
     }
-  }
-  // out row: x=4 .. W-1, always full (exit lane to the east edge)
-  for(let x=4;x<g.W;x++)bt(x,g.yO,0);
-  // row 0 collectors (T9): gap column xc=px*c+9, from E4 (y=4) down to the out row; UG hop under lane A when lane A runs through (xc<=lane A last x)
-  if(T9)for(const xc of [9,19]){
-    if(!(xc===9?have(0,0):have(0,1)||have(0,2)))continue;
-    const cross=xc<=cA*px+4;
-    for(let y=4;y<g.yO;y++){
-      if(cross&&y===g.yA)continue;   // lane A cell
-      if(cross&&(y===g.yA-1||y===g.yA+1))ugi(xc,y,1);else bt(xc,y,1);
-    }
-  }
-  const lanesIn=T9?[{y:g.yA,item:0,dir:'E',x:0},{y:g.yB,item:0,dir:'E',x:0}]:[{y:g.yA,item:0,dir:'E',x:0}];
-  const st={belts:0,ug:0,spl:0,machines:n};
-  for(const b of items){if(PLC_BELT.includes(b.cls))st.belts++;else if(PLC_UG.includes(b.cls))st.ug++;else if(PLC_SPL.includes(b.cls))st.spl++}
-  return{ok:true,items,w:g.W,h:g.H,ports:{in:lanesIn,out:[{y:g.yO,dir:'E',x:g.W-1}]},nMax,stats:st,layout:g.k};
+    for(let x=5;x<=W-3;x++)bt(x,o+10,0);   // collector
+    tplOutTail(items,{bc,W,yc:o+10,yo:o});
+  });
+  const stt={belts:0,ug:0,spl:0,machines:n};
+  for(const b of items){if(PLC_BELT.includes(b.cls))stt.belts++;else if(PLC_UG.includes(b.cls))stt.ug++;else if(PLC_SPL.includes(b.cls))stt.spl++}
+  const H=TPL_IF_H[spec.block]||(W===14?14:30);
+  return{ok:true,items,w:W,h:H,ports,nMax,stats:stt,layout:'row',rows:fill.map(m=>({m})),
+    iface:{v:1,block:spec.block,S:c.S,M:1,k:1,main:0,sets:st0.o.map((o,s)=>({o,n:fill[s]})),side:[]}};
 }
-// rate model: per-machine rates of the 1-input recipe (qty*1800/t). Lane loads for the T9/row fill order. cap per belt Mk index.
-const TPLE_CAP=[60,120,180];
+// rate model: per-machine rates of the 1-input recipe (qty*1800/t). Per set lane loads (in) and out loads. cap per belt Mk index.
 function tplEnrRate(spec){
-  const R=CATALOG.recipes.CRAFT_Enrichment.find(r=>r.i.length===1&&r.i[0][0]+'>'+r.o[0]===spec.rec);
-  if(!R)return{ok:false,why:'recipe '+spec.rec};
-  const der=typeof BL!=='undefined'?BL.DERATE:0.5,cap=TPLE_CAP[spec.mk|0],ri=R.i[0][1]*1800/R.t,ro=R.o[1]*1800/R.t,g=TPLE_LAYOUT[spec.block],sl=tplEnrSlots(spec.block).slice(0,spec.n);
-  const A=sl.filter(q=>q.r<2).length,B=sl.filter(q=>q.r===2).length,inL=g.k==='T9'?[A*ri,B*ri]:[A*ri],outL=sl.length*ro;
-  return{ok:true,ri,ro,cap,der,inLoads:inL,outLoad:outL,derOk:inL.every(v=>v<=der*cap)&&outL<=der*cap,capOk:inL.every(v=>v<=cap)&&outL<=cap};
+  const R=tplEnrRec(spec.rec),c=tplEnrCap({...spec,rec:null});
+  if(!R||!c)return{ok:false,why:'recipe '+spec.rec};
+  const der=tplDerate(),cap=TPLE_CAP[spec.mk|0],ri=R.i[0][1]*1800/R.t,ro=R.o[1]*1800/R.t,fill=tplEnrFill(c.S,Math.min(c.cols,Math.floor(der*cap/ri)),spec.n),
+    inL=fill.map(m=>m*ri),outL=fill.map(m=>m*ro);
+  return{ok:true,ri,ro,cap,der,inLoads:inL,outLoads:outL,outLoad:Math.max(...outL),derOk:inL.concat(outL).every(v=>v<=der*cap+1e-9),capOk:inL.concat(outL).every(v=>v<=cap)};
 }
-// largest n (<= geometric max) whose lanes stay within the derate; 0 = even one machine exceeds it
-function tplRateMax(spec){let m=0;for(let n=1;n<=tplMax(spec);n++){const r=tplEnrRate({...spec,n});if(r.ok&&r.derOk)m=n}return m}
+// largest n whose lanes stay within the derate (0 = one machine already exceeds it)
+function tplRateMax(spec){const R=tplEnrRec(spec.rec),c=tplEnrCap({...spec,rec:null});if(!R||!c)return 0;const g=Math.floor(tplDerate()*TPLE_CAP[spec.mk|0]/(R.i[0][1]*1800/R.t));return c.S*Math.min(c.cols,g)}
