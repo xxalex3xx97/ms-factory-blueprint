@@ -15,7 +15,7 @@ const TPL_A2_CAP=[60,120,180];   // belt cap/min per Mk (mirrors inspector.js MK
 function tplA2Lim(spec){
   const B=TPL_A2_BLK[spec.block];if(!B)return{ok:false,why:'unknown block '+spec.block};
   const mk=spec.mk==null?1:spec.mk,cap=TPL_A2_CAP[mk],der=tplDerate(),geom=Math.floor((B.W-2)/5);
-  const rc=(typeof RECS!=='undefined'&&RECS['CRAFT_'+String(spec.cls).replace('DAT_','')]||[]).find(r=>rk(r)===spec.rec);
+  const rc=(typeof RECS!=='undefined'&&RECS['CRAFT_'+String(spec.cls).replace('DAT_','')]||[]).find(r=>rkm(r,spec.rec));
   if(!rc)return{ok:true,B,mk,cap,rc:null,g:Infinity,rin:null,rout:null,geom,nRow:geom,note:'recipe not in RECS: rates unchecked'};
   if(rc.i.length!==2)return{ok:false,why:'recipe has '+rc.i.length+' inputs, template is 2-input'};
   const f=q=>q*1800/rc.t,rin=rc.i.map(([,q])=>f(q)),rout=f(rc.o[1]),rmax=Math.max(...rin);

@@ -15,7 +15,7 @@ function tplGeo(block){
   const pair=f.w>=30,o=block==='2x2c'?4:0,R=Math.floor((f.h-3-o)/9);   // o = set origin row (Edge v1: 2x2c ports only on rows 4..25), everything is built at 0 and shifted by o at the end
   return{W:f.w,H:f.h,o,R,pair,m:pair?2:1,XA:pair?11:1,XB:pair?12:2,XM1:pair?13:3,XC1:pair?22:12,XM0:2,XC0:1,geom:R*(pair?2:1)};
 }
-function tplRecipe(rec){return(CATALOG.recipes.CRAFT_AdvancedAssembler||[]).find(r=>rk(r)===rec)||null}
+function tplRecipe(rec){return(CATALOG.recipes.CRAFT_AdvancedAssembler||[]).find(r=>rkm(r,rec))||null}
 // rates + limits -> {ok,why,k,g,nMax,...}; per-machine rate = qty*1800/t
 function tplLimits(S){
   const G=tplGeo(S.block);if(!G)return{ok:false,why:'tpl: unknown block '+S.block};

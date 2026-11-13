@@ -15,9 +15,13 @@ function portsHtml(b){
 }
 const ITEMS=CATALOG.items||{},RECS=CATALOG.recipes||{};
 const itemHtml=(id,n)=>`<span class="it">${iurl(id)?`<img class="ic" alt="" src="${iurl(id)}">`:""}${n?n+"&times; ":""}${esc((ITEMS[id]||{}).n||String(id).replace(/^ITEM_/,""))}</span>`;
-const rk=r=>r.i.map(x=>x[0]).join("+")+">"+r.o[0];
+// recipe key = inputs>output; the one colliding pair (Reinforced Plate, Assembler vs AdvancedAssembler) gets "#"+time so every recipe key is unique. rkb = legacy base key, rkm matches either (old saves / URLs).
+const rkb=r=>r.i.map(x=>x[0]).join("+")+">"+r.o[0];
+const RK_DUP=(()=>{const s=new Set,d=new Set;Object.values(RECS).forEach(l=>l.forEach(r=>{const k=rkb(r);s.has(k)?d.add(k):s.add(k)}));return d})();
+const rk=r=>rkb(r)+(RK_DUP.has(rkb(r))?"#"+r.t:"");
+const rkm=(r,k)=>rk(r)===k||rkb(r)===k;
 const recsOf=d=>(d&&d.crafters||[]).flatMap(c=>RECS[c]||[]);
-const recOf=b=>{const d=def(b.cls);return b.rec?(recsOf(d).find(r=>rk(r)===b.rec)||null):null};
+const recOf=b=>{const d=def(b.cls);return b.rec?(recsOf(d).find(r=>rkm(r,b.rec))||null):null};
 // raw recipe time is in 1/30 s ticks: seconds = raw/30, items/min = n*60/(raw/30) = n*1800/raw
 const pm=(n,t)=>t>0?Math.round(n*1800/t*100)/100:null;
 const secs=t=>t==null?"?":Math.round(t/30*100)/100;

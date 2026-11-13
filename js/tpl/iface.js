@@ -37,7 +37,7 @@ function tplDerate(){return typeof BL!=='undefined'&&BL.DERATE!=null?BL.DERATE:1
 //   ports.in[t] = {x:0,y,item,set,copy,row:t} item-major (perm: spec.main first); rows[t]={m:n/m_i} (each of the n machines of a set taps every lane of its item: per-lane share).
 const TPL_IF_W={'1x1':14,'1x2':30,'2x2':30,'2x2c':30},TPL_IF_B={'1x1':'BPO_Station_01','1x2':'BPO_Station_2x1','2x2':'BPO_Station_02','2x2c':'BPO_Station_03'},TPL_IF_CAP=[60,120,180];
 function tplLanesPlan(spec){
-  const rc=spec.recd||(typeof recsOf==='function'&&recsOf(def(spec.cls)).find(r=>rk(r)===spec.rec));
+  const rc=spec.recd||(typeof recsOf==='function'&&recsOf(def(spec.cls)).find(r=>rkm(r,spec.rec)));
   if(!rc||!rc.i)return null;
   const mk=spec.mk==null?1:spec.mk,cap=TPL_IF_CAP[mk],der=tplDerate(),rin=rc.i.map(([,q])=>q*1800/rc.t),rout=rc.o[1]*1800/rc.t,m=rin.map(r=>Math.max(1,Math.ceil(r/(der*cap)-1e-9)));
   if(m.every(v=>v===1))return null;

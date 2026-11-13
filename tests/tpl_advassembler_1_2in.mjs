@@ -21,7 +21,7 @@ const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } el
 const REC = {
   esm: 'ITEM_AdvancedCircuits+ITEM_Lonsdaleite>ITEM_EmptySimulationMatrix',
   maglev: 'ITEM_BasicMotor+ITEM_Superalloy>ITEM_MaglevCoupling',
-  reinf: 'ITEM_HullPlates+ITEM_Superalloy>ITEM_ReinforcedPlates',
+  reinf: 'ITEM_HullPlates+ITEM_Superalloy>ITEM_ReinforcedPlates#90',
   servo: 'ITEM_ReinforcedPlates+ITEM_MaglevCoupling>ITEM_ServoPlates',
   frame: 'ITEM_Superalloy>ITEM_SuperalloyFrame',
 };

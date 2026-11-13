@@ -16,7 +16,7 @@ function plan(item,rate,mk,ovr,pick,opts){const P=planOnce(item,rate,mk,ovr,pick
 function planOnce(item,rate,mk,ovr,pick,opts,avoid){
   ovr=ovr||{};pick=pick||{};opts=opts||{};
   const by=plnBy(!!opts.proto,!opts.obs),nodes={},edges=[],st={cycle:false},cap=i=>MKS[i][1];
-  const find=it=>{const l=by.get(it)||[];return l.find(x=>rk(x.r)===pick[it])||l.find(x=>x.r.i.some(([y])=>PLN_ENR.test(y))===!!opts.enr)||l[0]||null};
+  const find=it=>{const l=by.get(it)||[];return l.find(x=>rk(x.r)===pick[it])||l.find(x=>rkb(x.r)===pick[it])||l.find(x=>x.r.i.some(([y])=>PLN_ENR.test(y))===!!opts.enr)||l[0]||null};
   const ex=(it,rt,stack)=>{
     if(stack.has(it)){st.cycle=true;if(!st.loop){const a=[...stack];st.loop=a.slice(a.indexOf(it)).concat([it])}return}
     const n=nodes[it]||(nodes[it]={item:it,rate:0,rec:null,crafter:null,alts:(by.get(it)||[]).length,pmach:null,machines:0,util:null,in:[]});

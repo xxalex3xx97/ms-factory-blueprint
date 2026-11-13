@@ -70,5 +70,5 @@ function poWarn(cls){const t=PORT_ORDER[cls];if(!t||t.verified||PO_WARNED.has(cl
 // what the exported bytes depend on (imported ConfigHex is kept bit-for-bit while this is unchanged)
 const cfgSig=b=>JSON.stringify([b.rec||"",b.recn||"",(b.off||[]).slice().sort(),b.fl||null,b.pr||null]);
 // site recipe key (inputs>output, see inspector.js rk) <-> game Recipe.Name
-const recName=key=>RECNAMES[key]||(key?String(key).split(">").pop().replace(/^ITEM_/,"").toLowerCase():"");
+const recName=key=>RECNAMES[String(key).split("#")[0]]||(key?String(key).split("#")[0].split(">").pop().replace(/^ITEM_/,"").toLowerCase():"");
 const recKeyOf=(()=>{let m=null;return name=>{if(!m){m=new Map();Object.keys(RECNAMES).forEach(k=>m.set(RECNAMES[k].toLowerCase(),k))}return m.get(String(name).toLowerCase())}})();

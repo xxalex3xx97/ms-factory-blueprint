@@ -77,7 +77,7 @@ function tplAs1Rates(spec){
   const cap=TPL_AS1_CAP[spec.mk|0],der=tplDerate();
   let rin=spec.rin,rout=spec.rout;
   if(rin==null||rout==null){
-    const r=recsOf(def(spec.cls)).find(q=>rk(q)===spec.rec);
+    const r=recsOf(def(spec.cls)).find(q=>rkm(q,spec.rec));
     if(!r||r.i.length!==1)return null;
     rin=r.i[0][1]*1800/r.t;rout=r.o[1]*1800/r.t;
   }
@@ -160,7 +160,7 @@ const TPL_A2_CAP=[60,120,180];   // belt cap/min per Mk (mirrors inspector.js MK
 function tplA2Lim(spec){
   const B=TPL_A2_BLK[spec.block];if(!B)return{ok:false,why:'unknown block '+spec.block};
   const mk=spec.mk==null?1:spec.mk,cap=TPL_A2_CAP[mk],der=tplDerate(),geom=Math.floor((B.W-2)/5);
-  const rc=(typeof RECS!=='undefined'&&RECS['CRAFT_'+String(spec.cls).replace('DAT_','')]||[]).find(r=>rk(r)===spec.rec);
+  const rc=(typeof RECS!=='undefined'&&RECS['CRAFT_'+String(spec.cls).replace('DAT_','')]||[]).find(r=>rkm(r,spec.rec));
   if(!rc)return{ok:true,B,mk,cap,rc:null,g:Infinity,rin:null,rout:null,geom,nRow:geom,note:'recipe not in RECS: rates unchecked'};
   if(rc.i.length!==2)return{ok:false,why:'recipe has '+rc.i.length+' inputs, template is 2-input'};
   const f=q=>q*1800/rc.t,rin=rc.i.map(([,q])=>f(q)),rout=f(rc.o[1]),rmax=Math.max(...rin);
@@ -489,7 +489,7 @@ function tplGeo(block){
   const pair=f.w>=30,o=block==='2x2c'?4:0,R=Math.floor((f.h-3-o)/9);   // o = set origin row (Edge v1: 2x2c ports only on rows 4..25), everything is built at 0 and shifted by o at the end
   return{W:f.w,H:f.h,o,R,pair,m:pair?2:1,XA:pair?11:1,XB:pair?12:2,XM1:pair?13:3,XC1:pair?22:12,XM0:2,XC0:1,geom:R*(pair?2:1)};
 }
-function tplRecipe(rec){return(CATALOG.recipes.CRAFT_AdvancedAssembler||[]).find(r=>rk(r)===rec)||null}
+function tplRecipe(rec){return(CATALOG.recipes.CRAFT_AdvancedAssembler||[]).find(r=>rkm(r,rec))||null}
 // rates + limits -> {ok,why,k,g,nMax,...}; per-machine rate = qty*1800/t
 function tplLimits(S){
   const G=tplGeo(S.block);if(!G)return{ok:false,why:'tpl: unknown block '+S.block};
@@ -780,7 +780,7 @@ var TPL_CAP=[60,120,180];
 // per class: port x positions on the N/S faces at rot 0. inX[i] = column of input item i (i=0 direct feeder, i=1 lane with underpass), xo = output column.
 var TPL_MC={DAT_Supercomputer:{w:5,h:5,inX:[4,2],xo:2},DAT_RelicSynthesizer:{w:9,h:9,inX:[4],xo:4}};
 function tplRec(spec){
-  const d=def(spec.cls),r=recsOf(d).find(x=>x.i.map(y=>y[0]).join('+')+'>'+x.o[0]===spec.rec);
+  const d=def(spec.cls),r=recsOf(d).find(x=>rkm(x,spec.rec));
   return r||null;
 }
 // default S per block (Supercomputer k=2 / Relic k=0,1)

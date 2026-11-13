@@ -15,7 +15,7 @@ function tplAs1Rates(spec){
   const cap=TPL_AS1_CAP[spec.mk|0],der=tplDerate();
   let rin=spec.rin,rout=spec.rout;
   if(rin==null||rout==null){
-    const r=recsOf(def(spec.cls)).find(q=>rk(q)===spec.rec);
+    const r=recsOf(def(spec.cls)).find(q=>rkm(q,spec.rec));
     if(!r||r.i.length!==1)return null;
     rin=r.i[0][1]*1800/r.t;rout=r.o[1]*1800/r.t;
   }
