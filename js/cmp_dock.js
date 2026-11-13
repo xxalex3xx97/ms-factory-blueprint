@@ -20,18 +20,21 @@ function cmpDockHub(dk,a){
 }
 // apply to the tile T (mutates T.ms, T.blocks, T.ov). c={cls,mk}. fix={nodes,routed} optional (shifted with the tile). -> {ok,raw,oz,shx,sh} | {ok:false,why}
 function cmpDockApply(c,T,fix={}){
-  const d=dim({cls:c.cls,rot:0}),TW=d.w*FC,TH=d.h*FC,fl=floorRect({cls:c.cls,x:0,y:0,h:0,rot:0}),W=fl.w,bc=PLC_BELT[c.mk],dc=plcCls('BPO_Dock'),ms=T.ms,blocks=T.blocks,add=[],occ=new Set(),extra=[];
+  const d=dim({cls:c.cls,rot:0}),TW=d.w*FC,TH=d.h*FC,fl=floorRect({cls:c.cls,x:0,y:0,h:0,rot:0}),W=fl.w,bc=PLC_BELT[c.mk],dc=plcCls('BPO_Dock'),ad=c.cls===plcCls('BPO_Station_03')?1:0,A=16*ad,adc=plcCls('BPO_StationAdapter_01'),ads=new Set(),ms=T.ms,blocks=T.blocks,add=[],occ=new Set(),extra=[];
   const cells=(b)=>{const e=dim({cls:b.cls,rot:b.rot||0}),r=[];for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)r.push((b.x+i)+','+(b.y+j));return r};
   blocks.forEach(b=>cells(b).forEach(k=>occ.add(k)));
   const belt=(x,y,rot)=>add.push({cls:bc,x,y,h:0,rot,pid:0,dk:'p'});
   const slot=ly=>{for(let k=0;k<d.h;k++){const M=16*k+6;if(ly<=M&&ly+3>=M+1)return k}return -1};
   const dock=(q,side)=>{
     const gx=Math.floor(q.x/TW),gy=Math.floor(q.y/TH),k=slot(q.y-gy*TH),x0=gx*TW,out=side==='E',ok=k>=0&&(out?q.x+4===x0+W-1:q.x-x0<=1);
-    const b=ok&&{cls:dc,x:out?(gx+1)*d.w:gx*d.w-1,y:gy*d.h+k,rot:out?0:2};
-    if(!ok||cells(b).some(z=>occ.has(z))){extra.push(q);return false}
+    // 2x2c (ad=1): Station Adapter (1x2 units, open side) between block and dock, dock one unit further out, belts 16 cells longer
+    const b=ok&&{cls:dc,x:out?(gx+1)*d.w+ad:gx*d.w-1-ad,y:gy*d.h+k,rot:out?0:2},
+      ab=ok&&ad&&!ads.has(side+gx+'|'+gy)&&{cls:adc,x:out?(gx+1)*d.w:gx*d.w-1,y:gy*d.h,rot:out?0:2};
+    if(!ok||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))){extra.push(q);return false}
     cells(b).forEach(z=>occ.add(z));blocks.push(b);
+    if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab);ads.add(side+gx+'|'+gy)}
     const M=gy*TH+16*k+6;
-    for(const y of[M,M+1])if(out){for(let x=x0+W-1;x<=x0+W;x++)belt(x,y,0)}else for(let x=x0-1;x<=q.x-1;x++)belt(x,y,0);
+    for(const y of[M,M+1])if(out){for(let x=x0+W-1;x<=x0+W+A;x++)belt(x,y,0)}else for(let x=x0-1-A;x<=q.x-1;x++)belt(x,y,0);
     q.dd={side,gx:gx*d.w,gy:gy*d.h,u:k,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
     return true};
   for(const q of ms.filter(q=>q.dk==='in'||q.dk==='out'))if(!dock(q,q.dk==='out'?'E':'W')&&!q.dd){delete q.dk;delete q.dkx}

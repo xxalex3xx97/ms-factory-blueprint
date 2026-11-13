@@ -26,6 +26,7 @@ const dockPage = a => {
   const L = placerLayout(P, item, a.mk, a.mk, {box: 'DAT_Container_2', mod: false, dock: a.dock, bk: a.bk});
   if (!L.ok) return {err: 'layout refused: ' + L.why};
   const T = L.tile, ms = T.ms, d = dim({cls: plcCls(a.bk), rot: 0}), TW = d.w * FC, TH = d.h * FC, W = floorRect({cls: plcCls(a.bk), x: 0, y: 0, h: 0, rot: 0}).w;
+  const ad = a.bk === 'BPO_Station_03' ? 1 : 0, A = 16 * ad, adc = plcCls('BPO_StationAdapter_01');
   const dc = plcCls('BPO_Dock'), docks = T.blocks.filter(b => b.cls === dc), errs = [], cmp = L.bl.cmp, raw = cmp.raw || [], oz = cmp.oz || [], cell = new Map();
   ms.forEach(b => { const e = dim(b); for (let i = 0; i < e.w; i++) for (let j = 0; j < e.h; j++) cell.set((b.x + i) + ',' + (b.y + j), b) });
   const occ = new Map();
@@ -37,10 +38,11 @@ const dockPage = a => {
   for (const q of all) {
     const c = ms.find(m => m.x === q.x && m.y === q.y && m.dd), x0 = c.dd.gx * 16, y0 = c.dd.gy * 16, M = y0 + 16 * c.dd.u + 6;
     if (!(c.y <= M && c.y + 3 >= M + 1)) errs.push('container does not cover its door cells @' + c.x + ',' + c.y);
-    const dkb = docks.find(b => q.k === 'in' ? b.x === c.dd.gx - 1 && b.y === c.dd.gy + c.dd.u : b.x === c.dd.gx + d.w && b.y === c.dd.gy + c.dd.u);
+    const dkb = docks.find(b => q.k === 'in' ? b.x === c.dd.gx - 1 - ad && b.y === c.dd.gy + c.dd.u : b.x === c.dd.gx + d.w + ad && b.y === c.dd.gy + c.dd.u);
     if (!dkb) errs.push('no dock block for container @' + c.x + ',' + c.y);
+    if (ad && !T.blocks.some(b => b.cls === adc && b.y === c.dd.gy && b.x === (q.k === 'in' ? c.dd.gx - 1 : c.dd.gx + d.w) && b.rot === (q.k === 'in' ? 2 : 0))) errs.push('no station adapter between block and dock @' + c.x + ',' + c.y);
     const sk = q.k + c.dd.gx + ',' + c.dd.gy + ',' + c.dd.u; if (slots.has(sk)) errs.push('two docks in slot ' + sk); slots.add(sk);
-    const xs = q.k === 'in' ? Array.from({length: c.x - x0 + 1}, (_, i) => x0 - 1 + i) : [x0 + W - 1, x0 + W];
+    const xs = q.k === 'in' ? Array.from({length: c.x - x0 + 1 + A}, (_, i) => x0 - 1 - A + i) : Array.from({length: 2 + A}, (_, i) => x0 + W - 1 + i);
     if (q.k === 'out' && c.x + 4 !== x0 + W - 1) errs.push('output container not flush @' + c.x);
     list.push({cells: [M, M + 1].flatMap(y => xs.map(x => x + ',' + y)), r: c.dd.r, n: c.dd.n});
   }
@@ -50,13 +52,14 @@ const dockPage = a => {
 
 const keys = await pg.evaluate(() => [].concat(...Object.values(RECS)).map(rk).filter(k => /NickelPlates$|Capacitor$|BasicCircuit$/.test(k)));
 console.log('keys: ' + keys.join(' | '));
-const BK = {'1x1': 'BPO_Station_01', '1x2': 'BPO_Station_2x1', '2x2': 'BPO_Station_02'};
+const BK = {'1x1': 'BPO_Station_01', '1x2': 'BPO_Station_2x1', '2x2': 'BPO_Station_02', '2x2c': 'BPO_Station_03'};
 const DK = {in: {in: 'nrm', out: null}, out: {in: null, out: 'nrm'}, both: {in: 'nrm', out: 'nrm'}};
 const nickel = keys.find(k => /^ITEM_NickelOre>ITEM_NickelPlates$/.test(k)) || keys.find(k => /NickelPlates$/.test(k));
 const cases = [];
 for (const rate of [31, 480]) for (const b in BK) for (const mk of [0, 1]) for (const dk in DK) cases.push({key: nickel, name: 'Nickel Plates', rate, b, mk, dk});
 const cap = keys.find(k => />ITEM_Capacitor$/.test(k)), bc = keys.find(k => /BasicCircuit$/.test(k));
 for (const dk in DK) { cases.push({key: cap, name: 'Capacitor', rate: 100, b: "2x2", mk: 1, dk}); cases.push({key: bc, name: "Basic Circuits", rate: 100, b: "2x2", mk: 1, dk}) }
+for (const dk in DK) cases.push({key: keys.find(k => /^ITEM_EnrichedNickelOre>/.test(k)), name: '2-stage 2x2c', rate: 100, b: '2x2c', mk: 0, dk}, {key: cap, name: 'Capacitor', rate: 100, b: '2x2c', mk: 1, dk});
 for (const k of keys.filter(k => /NickelPlates$/.test(k) && k !== nickel)) for (const dk in DK) cases.push({key: k, name: '2-stage ' + k, rate: 100, b: '2x2', mk: 0, dk});
 const samples = [];
 if (process.argv[2] !== 'ui') for (const c of cases) {
