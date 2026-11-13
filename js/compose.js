@@ -32,7 +32,7 @@ function cmpBuild(t,spec,s,last){
   const used=f.sets.map((q,i)=>q.n>0?i:-1).filter(i=>i>=0);
   const lim=globalThis.CMP_CAP4?4:CMP_LANES[spec.block]||4;   // physical: a pool stacks 4x4 containers (4 port rows each) in the block height, see CMP_LANES
   if(s>0&&used.length*f.M>lim)return cmpErr('pool lanes > '+lim);
-  if(s<last&&used.length>lim)return cmpErr('pool lanes > '+lim);
+  if(s<last&&used.reduce((a,i)=>a+(f.sets[i].outs?f.sets[i].outs.length:1),0)>lim)return cmpErr('pool lanes > '+lim);
   const hs=tplIfSets(spec.block,spec.S).hs,need=(s>0?f.M:0)+4*spec.raw;
   if(used.some(i=>need>hs[i]))return cmpErr('feed height');
   return{ok:true,b};

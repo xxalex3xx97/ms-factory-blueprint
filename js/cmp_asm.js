@@ -26,7 +26,7 @@ function cmpAssemble1(c,wide){
       // first stage with k>=2: all inputs raw -> FEED block (allRaw) instead of SRC
       const feed=s===0&&g.k>=2?{sets:b.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:b.ports&&b.ports.in?b.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0),M,k:g.k}:null;
       const mid=s&&g.k>=2?{sets:b.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:b.ports&&b.ports.in?b.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0),M,k:g.k,main}:null;
-      fbs.push({feed,mid,items:b.items,inRows:used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+main*M+i)),outRows:used.map(q=>q.o)});
+      fbs.push({feed,mid,items:b.items,inRows:used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+main*M+i)),outRows:used.flatMap(q=>q.outs||[q.o])});
     }
     const f0=fbs[0].feed,g0=stages[0],shr=s=>sz.stages[s].strips[j].n/sz.stages[s].strips.reduce((a,v)=>a+v.n,0);
     let dI=null,dO=null;   // C7: dock cells of the SRC / OZ hub of this strip
@@ -83,7 +83,7 @@ function cmpAssembleTree1(c,wide){
     if(b.w!==W||b.h>H)return no('template floor '+b.w+'x'+b.h+' differs from the block floor '+W+'x'+H);
     if(b.items.some(q=>{const e=dim(q);return q.x<0||q.y<0||q.x+e.w>W||q.y+e.h>H}))return no('template items outside the block floor ('+o.item+', '+block+')');
     const used=b.iface.sets.filter(q=>q.n>0),M=b.iface.M;
-    NB[o.id]={b,lanes:b.ports.in.map((p,t)=>({y:p.y,key:o.rec.i[typeof p.item==='number'?p.item:0][0],m:b.rows&&b.rows[t]&&b.rows[t].m!=null?b.rows[t].m:null})).filter(l=>l.m!==0),ct:[],outRows:used.map(q=>q.o),inR:o.rec.i.map((_,j)=>o.k>=2?b.ports.in.filter(p=>p.item===j&&b.iface.sets[p.set].n>0).map(p=>p.y):used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+i)))};
+    NB[o.id]={b,lanes:b.ports.in.map((p,t)=>({y:p.y,key:o.rec.i[typeof p.item==='number'?p.item:0][0],m:b.rows&&b.rows[t]&&b.rows[t].m!=null?b.rows[t].m:null})).filter(l=>l.m!==0),ct:[],outRows:used.flatMap(q=>q.outs||[q.o]),inR:o.rec.i.map((_,j)=>o.k>=2?b.ports.in.filter(p=>p.item===j&&b.iface.sets[p.set].n>0).map(p=>p.y):used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+i)))};
     put(b.items,o.fb,o.row);
   }
   const par=o=>o.parent&&byId[o.parent];

@@ -27,9 +27,9 @@ function tplAs1Plan(spec){
   const cls=plcCls(B.nm),f=cls&&floorRect({cls,x:0,y:0,h:0,rot:0});if(!f)return{ok:false,why:'no floor '+B.nm};
   const R=tplAs1Rates(spec);if(!R)return{ok:false,why:'recipe is not a 1-input Assembler recipe'};
   if(R.gin<1)return{ok:false,why:'rate'};
-  const W=f.w,H=f.h,per=Math.floor((W-3)/5),T=tplIfSets(spec.block,B.S);if(!T.ok)return{ok:false,why:T.why};
-  const rows=B.rows.split('').map((t,i)=>({t,y0:T.o[i],cap:Math.min(per,t==='S'?R.gin:2*R.gin,R.gout)}));
-  return{ok:true,W,H,R,rows,S:B.S,nMax:rows.reduce((a,r)=>a+r.cap,0),cls:B.nm};
+  const W=f.w,H=f.h,per=Math.floor((W-3)/5),lay=spec.block==='2x2'&&spec.S===3,SS=lay?3:B.S,T=tplIfSets(spec.block,SS);if(!T.ok)return{ok:false,why:T.why};
+  const rows=(lay?'DDD':B.rows).split('').map((t,i)=>({t,y0:T.o[i],cap:lay?Math.min(per,2*R.gin,3*R.gout):Math.min(per,t==='S'?R.gin:2*R.gin,R.gout)}));   // lay (spec.S=3, 2x2): RAIL layout = 3 D sets of 10 rows, up to 3 collector rails per set
+  return{ok:true,W,H,R,rows,S:SS,lay,nMax:rows.reduce((a,r)=>a+r.cap,0),cls:B.nm};
 }
 function tplMax(spec){const p=tplAs1Plan(spec);return p.ok?p.nMax:0}
 function tplBuild(spec){
@@ -43,9 +43,9 @@ function tplBuild(spec){
   // fill: S sets first (bottom first), then D sets
   const order=[...P.rows.map((r,i)=>[r,i])].sort((a,b)=>(a[0].t==='S'?0:1)-(b[0].t==='S'?0:1)||b[1]-a[1]).map(q=>q[0]);
   let left=n;const cnt=new Map();for(const r of order){const m=Math.min(left,r.cap);cnt.set(r,m);left-=m}
-  const ports={in:[],out:[]},lanes=[];   // lanes: one entry per in port (planner test weights injection by lanes[p.row].m)
+  const ports={in:[],out:[]},lanes=[],ex=[],outsOf=[];   // lanes: one entry per in port (planner test weights injection by lanes[p.row].m)
   P.rows.forEach((r,s)=>{
-    const m=cnt.get(r),y0=r.y0,D=r.t==='D',yc=y0+(D?7:6),mx=k=>5*k+1;
+    const m=cnt.get(r),y0=r.y0,D=r.t==='D',yc=y0+(D?7:6),mx=k=>5*k+1,outs=[y0];
     const inP=(y,copy,mm)=>{ports.in.push({x:0,y,item:main,dir:'E',set:s,copy,row:lanes.length});lanes.push({set:s,t:r.t,y0,copy,m:mm,n:mm})};
     if(!D){
       const last=m?mx(m-1)+1:0;
@@ -68,13 +68,23 @@ function tplBuild(spec){
       for(const k of A)mach(mx(k),y0+2,offN0);
       inP(yA,0,A.length);inP(yB,1,Bk.length);
     }
-    if(m>0){for(let x=1;x<=W-3;x++)bt(x,yc,0);tplOutTail(items,{bc,W,yc,yo:y0})}
+    if(m>0&&P.lay){   // rails: group e (east first, gout machines each) on row yc+e; deeper groups drop at their S4 columns; rail 0 jogs up the trunk, rails e>0 leave east on their own row
+      const go=P.R.gout;
+      for(let e=0;e*go<m;e++){
+        const kmin=Math.max(0,m-(e+1)*go),yr=yc+e;
+        if(e)for(let k=kmin;k<=m-1-e*go;k++)for(let yy=yc;yy<yr;yy++)bt(mx(k)+1,yy,1);
+        for(let x=mx(kmin)+1;x<=(e?W-1:W-3);x++)bt(x,yr,0);
+        if(!e)tplOutTail(items,{bc,W,yc,yo:y0});else{ex.push({x:W-1,y:yr,dir:'E',set:s,rail:e});outs.push(yr)}
+      }
+    }else if(m>0){for(let x=1;x<=W-3;x++)bt(x,yc,0);tplOutTail(items,{bc,W,yc,yo:y0})}
     else bt(W-1,y0,0);   // stub: the edge cell only
     ports.out.push({x:W-1,y:y0,dir:'E',set:s});
+    outsOf.push(outs);
   });
+  ports.out.push(...ex);
   const stats={belts:0,ug:0,spl:0,machines:0};
   for(const b of items){if(PLC_BELT.includes(b.cls))stats.belts++;else if(PLC_UG.includes(b.cls))stats.ug++;else if(PLC_SPL.includes(b.cls))stats.spl++;else stats.machines++}
   const hasD=P.rows.some(r=>r.t==='D');
   return{ok:true,items,w:W,h:P.H,ports,nMax:P.nMax,stats,rates:P.R,rows:lanes,
-    iface:{v:1,block:spec.block,S:P.S,M:hasD?2:1,k:1,main,n,sets:P.rows.map(r=>({o:r.y0,n:cnt.get(r)})),side:[]}};
+    iface:{v:1,block:spec.block,S:P.S,M:hasD?2:1,k:1,main,n,sets:P.rows.map((r,i)=>({o:r.y0,n:cnt.get(r),outs:outsOf[i]})),side:[]}};
 }

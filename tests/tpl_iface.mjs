@@ -36,8 +36,14 @@ export async function checkIface(page, build, blockType, ref) {
   const inRowSet = new Set([...t.o.flatMap((o, s) => tplIfRows(blockType, f.S, s, f.k, f.M).in), ...(f.side || [])]);
   const outRowSet = new Set(t.o);
   // 2) out ports: one per set, belt rot 0 on the set origin row
-  if (build.ports.out.length !== f.S) E('ports.out count ' + build.ports.out.length + ' != S ' + f.S);
-  build.ports.out.forEach((p, s) => {
+  const mains = build.ports.out.filter(p => !p.rail), rails = build.ports.out.filter(p => p.rail);   // rail = extra out lane of a set (more machines than one belt carries), built only when needed
+  if (mains.length !== f.S) E('ports.out count ' + mains.length + ' != S ' + f.S);
+  rails.forEach(p => {
+    const b = beltAt(W - 1, p.y), q = f.sets[p.set];
+    if (p.x !== W - 1 || !q || !(q.outs || []).includes(p.y) || p.y <= t.o[p.set] || p.y >= t.o[p.set] + t.hs[p.set]) E('rail out set ' + p.set + ' at ' + p.x + ',' + p.y + ' not in iface.sets.outs / own rows');
+    if (!b || b.rot !== 0) E('rail out no belt rot0 at x=' + (W - 1) + ' y=' + p.y);
+  });
+  mains.forEach((p, s) => {
     if (p.set !== s || p.x !== W - 1 || p.y !== t.o[s]) E('out ' + s + ' at ' + p.x + ',' + p.y + ' want ' + (W - 1) + ',' + t.o[s]);
     const b = beltAt(W - 1, t.o[s]);
     if (!b || b.rot !== 0) E('out ' + s + ' no belt rot0 at x=' + (W - 1) + ' y=' + t.o[s]);
@@ -68,7 +74,7 @@ export async function checkIface(page, build, blockType, ref) {
   }
   // 5) quantity never moves a port
   if (ref) {
-    const sig = b => JSON.stringify([b.ports.in.map(p => [p.x, p.y, p.set, p.copy]).sort(), b.ports.out.map(p => [p.x, p.y]).sort()]);
+    const sig = b => JSON.stringify([b.ports.in.map(p => [p.x, p.y, p.set, p.copy]).sort(), b.ports.out.filter(p => !p.rail).map(p => [p.x, p.y]).sort()]);
     if (sig(ref) !== sig(build)) E('ports move with n (n=' + f.n + ' vs reference)');
   }
   // 6) 2x2c: all ports inside rows 4..25

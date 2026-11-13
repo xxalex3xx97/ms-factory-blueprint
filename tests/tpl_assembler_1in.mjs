@@ -25,12 +25,12 @@ const recOk = await pg.evaluate(RECS => RECS.map(r => !!recsOf(def('DAT_Assemble
 check(recOk.every(Boolean), 'all 4 recipe keys exist as 1-input Assembler recipes ' + recOk);
 const PLCSPL = /Splitter/;
 const rows = [];
-for (const block of BLOCKS) for (const rec of RECS) for (const mk of [0, 1, 2]) {
-  const nMax = await pg.evaluate(a => tplMax(a), {block, cls: 'DAT_Assembler', rec, n: 1, mk, spMk: mk});
+for (const [block, SS] of [...BLOCKS.map(b => [b, undefined]), ['2x2', 3]]) for (const rec of RECS) for (const mk of [0, 1, 2]) {   // SS=3: 2x2 RAIL layout (3 sets, up to 3 collector rails each)
+  const nMax = await pg.evaluate(a => tplMax(a), {block, S: SS, cls: 'DAT_Assembler', rec, n: 1, mk, spMk: mk});
   const ns = [...new Set([1, 2, nMax - 1, nMax].filter(n => n >= 1 && n <= nMax))];
-  const ref = ns.length ? await pg.evaluate(a => { const T = tplBuild(a); return {items: T.items, ports: T.ports, iface: T.iface, w: T.w, h: T.h} }, {block, cls: 'DAT_Assembler', rec, n: 1, mk, spMk: mk}) : null;
+  const ref = ns.length ? await pg.evaluate(a => { const T = tplBuild(a); return {items: T.items, ports: T.ports, iface: T.iface, w: T.w, h: T.h} }, {block, S: SS, cls: 'DAT_Assembler', rec, n: 1, mk, spMk: mk}) : null;
   for (const n of ns) {
-    const tag = `${block} ${rec.split('>')[1].slice(5)} Mk${mk + 1} n=${n}/${nMax}`;
+    const tag = `${block}${SS ? '/S' + SS : ''} ${rec.split('>')[1].slice(5)} Mk${mk + 1} n=${n}/${nMax}`;
     const r = await pg.evaluate(spec => {
       const T = tplBuild(spec);
       if (!T.ok) return {build: T.why};
@@ -95,7 +95,7 @@ for (const block of BLOCKS) for (const rec of RECS) for (const mk of [0, 1, 2]) 
       // belt conn rules (like bl_top __conn): UG pairing
       out.ugUnpaired = it.filter(b => PLC_UG.includes(b.cls) && !ents.has(b) && !exits.has(b)).length;
       return out;
-    }, {block, cls: 'DAT_Assembler', rec, n, mk, spMk: mk});
+    }, {block, S: SS, cls: 'DAT_Assembler', rec, n, mk, spMk: mk});
     if (r.build) { check(false, tag + ' build failed: ' + r.build); continue }
     check(r.nMax === nMax, tag + ' nMax consistent');
     check(r.ov === 0, tag + ' no overlap (' + r.ov + ')');
@@ -113,8 +113,8 @@ for (const block of BLOCKS) for (const rec of RECS) for (const mk of [0, 1, 2]) 
     rows.push([block, rec.split('>')[1].slice(5), 'Mk' + (mk + 1), n, nMax, r.stats.machines, r.stats.belts, r.stats.ug, r.stats.spl, area, (r.stats.belts / r.stats.machines).toFixed(1), r.ports.in.length + '/' + r.ports.out.length]);
   }
   // negative: nMax+1 refused
-  const neg = await pg.evaluate(a => { const T = tplBuild(a); return {ok: T.ok, why: T.why} }, {block, cls: 'DAT_Assembler', rec, n: nMax + 1, mk, spMk: mk});
-  check(neg.ok === false, `${block} ${rec.split('>')[1].slice(5)} Mk${mk + 1} n=nMax+1=${nMax + 1} refused (${neg.why})`);
+  const neg = await pg.evaluate(a => { const T = tplBuild(a); return {ok: T.ok, why: T.why} }, {block, S: SS, cls: 'DAT_Assembler', rec, n: nMax + 1, mk, spMk: mk});
+  check(neg.ok === false, `${block} ${rec.split('>')[1].slice(5)} Mk${mk + 1} n=nMax+1=${nMax + 1}${SS ? ' S' + SS : ''} refused (${neg.why})`);
 }
 // checkPlan: planner N vs template, rate sets R1-R4 per block x recipe (Mk2). Single-lane cases (one lane carries every machine) must also reproduce the planner last-machine load.
 const planRows = [];

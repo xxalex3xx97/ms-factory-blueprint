@@ -33,6 +33,16 @@ for (const [name, rate] of [['Basic Motor', 60], ['Basic Motor', 6], ['Hull Plat
     if (!ok) fails++;
   }
 }
+// SHAPE: assembler_1in RAIL layout (2x2 S=3: up to 3 collector rails per set) holds 15 Basic Motor assemblers in ONE block: Basic Motor 900 Mk2 = one strip (was K=2), exact planner N (23 + 15)
+{
+  const key = await pg.evaluate(() => { const i = [...plnBy(false).keys()].find(x => plnNm(x) === 'Basic Motor'); return rk([].concat(...Object.values(RECS)).find(r => r.o[0] === i)) });
+  for (const [dn, dock] of DK) {
+    const r = await checkCompose(pg, key, 900, 1, BK, {strict: true, mutate: 'any', dock, exactN: true});
+    const ok = r.ok && r.row.K === 1 && r.row.machines === 38;
+    console.log((ok ? 'PASS ' : 'FAIL ') + 'Basic Motor 900 Mk2 2x2 one strip (rails) ' + dn + ' K=' + r.row.K + ' blocks=' + r.row.blocks + ' belts/mach=' + r.row.beltsPerMach + (r.ok ? '' : ': ' + r.errs.slice(0, 3).join('; ')));
+    if (!ok) fails++;
+  }
+}
 if (perrs.length) { console.log('FAIL page errors: ' + perrs[0]); fails++ }
 await br.close();
 process.exit(fails ? 1 : 0);
