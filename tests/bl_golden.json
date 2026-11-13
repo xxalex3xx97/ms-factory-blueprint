@@ -1,0 +1,29 @@
+{
+ "cases": {
+  "Silicon Wafers 120": {
+   "bpm": 8.833,
+   "area": 336,
+   "sim": null
+  },
+  "Silicon Wafers 360": {
+   "bpm": 12.444,
+   "area": 1062,
+   "sim": 0
+  },
+  "Silicon Wafers 720": {
+   "bpm": 9.833,
+   "area": 1602,
+   "sim": null
+  },
+  "Basic Motor 120": {
+   "bpm": 15.6,
+   "area": 644,
+   "sim": 0
+  },
+  "Basic Motor 1000": {
+   "bpm": 14.333,
+   "area": 4588,
+   "sim": null
+  }
+ }
+}
