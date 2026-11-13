@@ -207,7 +207,7 @@ const plnSnap=async()=>{
     cl.style.transform="none";
     await Promise.all([...cl.querySelectorAll("img")].map(async im=>{try{const b=await (await fetch(im.src)).blob();im.src=await new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)})}catch(e){}}));
     const W=Math.ceil(x1-x0)+2*pad,H=Math.ceil(y1-y0)+2*pad,bg=getComputedStyle($("pln")).backgroundColor,o=document.getElementById("plnOut");
-    const body=new XMLSerializer().serializeToString(cl).replace(/^<(\w+)/,'<$1 xmlns="http://www.w3.org/1999/xhtml"');
+    const body=new XMLSerializer().serializeToString(cl).replace(/^<(\w+)(?![^>]*\sxmlns=)/,'<$1 xmlns="http://www.w3.org/1999/xhtml"');   // some browsers already emit it: a duplicate makes the XML invalid
     const x=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="${x0-pad} ${y0-pad} ${W} ${H}"><rect x="${x0-pad}" y="${y0-pad}" width="${W}" height="${H}" fill="${bg}"/><foreignObject x="0" y="0" width="${Math.ceil(x1)}" height="${Math.ceil(y1)}" overflow="visible">${body}</foreignObject></svg>`;
     return {x,W,H};
   }finally{g.style.transform=sv}
