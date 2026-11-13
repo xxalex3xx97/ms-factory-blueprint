@@ -6,6 +6,7 @@
 <title>MS Factory Blueprint</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23101a24%27/%3E%3Cpath d=%27M5 22h22M5 22V12l7 5v-5l7 5v-9h5v14%27 fill=%27none%27 stroke=%27%2342d4e8%27 stroke-width=%272.6%27 stroke-linejoin=%27round%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/gallery.css">
 </head>
 <body>
 <header>
@@ -87,6 +88,7 @@
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
       <label>Rate (items/min) <input id="plnRate" type="number" min="0.001" step="any" value="1" aria-label="Target rate in items per minute"></label>
       <button id="plnBuild" type="button" title="Preview and place machines, belts and source containers for this plan">Build factory</button>
+      <button id="galOpen" type="button" title="Template gallery: one preview per craftable recipe">Templates</button>
       </div>
       <div id="plnMain">
       <div id="plnOut" tabindex="0" role="region" aria-label="Planner flow diagram"></div>
@@ -260,6 +262,7 @@
 <script src="js/bl_geom.js"></script>
 <script src="js/bl_top.js"></script>
 <script defer src="js/placer.js"></script>
+<script defer src="js/gallery.js"></script>
 <script defer src="js/panel.js"></script>
 <script defer src="js/io.js"></script>
 <script defer src="js/simui.js"></script>
