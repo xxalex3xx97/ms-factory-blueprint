@@ -14,7 +14,8 @@ function blTop(P,item,mk,spMk,o={}){
     if(Z.ok===false)return no(Z.why);
     const nodes=Z.nodes.slice().sort((a,b)=>b.row-a.row);   // producer first
     const multi=nodes.some(n=>n.ins.length!==1||P.nodes[n.item].rec.i.length!==1);
-    if(multi){if(o.eng==='zones')return no('zones build single-input recipes only');const R=blTopMulti(P,item,mk,spMk,o,Z,nodes,BX,dock);if(R.ok!==false)R.eng='tower-multi';return R}
+    if(multi){if(o.eng==='zones')return no(Math.max(...nodes.map(n=>P.nodes[n.item].rec.i.length))>2?'3 and 4 input recipes have no template yet':'waiting for the 2-input column template');   // vcol hook: blVC (js/bl_vc.js) goes here when complete
+    const R=blTopMulti(P,item,mk,spMk,o,Z,nodes,BX,dock);if(R.ok!==false)R.eng='tower-multi';return R}
     if(nodes.some(n=>n.cons.length>1))return no('non-linear (a node feeds two consumers)');
     if(nodes.filter(n=>!n.ins[0].crafted).length!==1)return no('non-linear (more than one raw input)');
     for(let k=1;k<nodes.length;k++)if(nodes[k].ins[0].item!==nodes[k-1].item)return no('non-linear chain');

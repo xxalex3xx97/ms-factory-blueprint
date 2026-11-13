@@ -186,3 +186,16 @@ header .mnl .hbt{flex-direction:row;min-height:34px;gap:6px;width:100%;justify-c
 @media (max-width:480px){#plnForm{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}#plnBuild{grid-column:1/-1}}
 
 .plnBox.plnDim{opacity:.28}.plnBox.plnOn{outline:2px solid var(--accent,#22d3ee);outline-offset:1px}.plnArr.dim{opacity:.18}.plnHead.dim{opacity:.18}.plnLbl.dim{opacity:.25}.plnArr.on{stroke:var(--accent,#22d3ee);stroke-width:2.4}.plnHead.on{fill:var(--accent,#22d3ee)}
+
+/* planner modal: calm layout */
+#pvSet{margin-bottom:4px}#plnEngBadge{margin-left:auto;align-self:center;font-size:11px;color:var(--dim)}
+#pvDocks{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 12px;margin-bottom:4px;padding:6px 8px;border:1px solid var(--line);border-radius:6px}
+#pvDocks>label,#pvOptB>label{display:flex;flex-direction:column;gap:3px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+#pvDocks select,#pvOptB select{text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
+#pvDocks label.chk,#pvOptB label.chk{flex-direction:row;align-items:center;gap:6px;white-space:nowrap;min-height:28px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
+#pvDocks label.chk input,#pvOptB label.chk input{width:auto;flex:none;margin:0}
+.pvGt{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);align-self:center}
+#pvOpt,#pvDet{font-size:12px;color:var(--dim)}#pvOpt summary,#pvDet summary{cursor:pointer;padding:2px 0}
+#pvOptB{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:flex-end;padding:4px 0}
+#pvLine{margin-top:6px;font-size:13px;font-family:var(--mono)}#pvLine:empty{display:none}
+#plnPrevView{min-height:320px}

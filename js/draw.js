@@ -101,6 +101,7 @@ function drawPorts(s,only){   // only: [block] = a placement/paste ghost (not in
   })});
   cx.restore();
 }
+let PLC_LBL=false;   // preview: per-machine rate labels (off by default)
 let PLC_PREV=false;   // true only while placer.js paints the preview modal: no block-size labels, container badges only when they fit their box
 function drawBadges(s){
   if(s<10)return;
@@ -115,7 +116,7 @@ function drawBadges(s){
     cx.font="bold "+fs+"px system-ui,sans-serif";
     const ln=sm&&sto?txt.split(" · in "):[txt];if(ln.length>1)ln[1]="in "+ln[1];
     const nl=ln.length,pw=Math.min(W-4,Math.max(...ln.map(t=>cx.measureText(t).width))+8),mx=mx0;
-    const txtOk=!(PLC_PREV&&(pw>bw||sz+gap+th>bh));   // preview: text wider/taller than its box would collide with neighbour labels; icon stays
+    const txtOk=!(PLC_PREV&&(pw>bw||sz+gap+th>bh||(!sto&&!PLC_LBL)));   // preview: text wider/taller than its box would collide with neighbour labels; icon stays
     cx.globalAlpha=.9;cx.shadowColor="rgba(0,0,0,.6)";cx.shadowBlur=4;cx.shadowOffsetY=1;
     if(ic&&ic.complete)cx.drawImage(ic,mx-sz/2,top,sz,sz);
     cx.shadowBlur=0;cx.shadowOffsetY=0;cx.globalAlpha=1;

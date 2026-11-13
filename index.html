@@ -275,22 +275,27 @@
 <dialog id="plnPrev" aria-labelledby="plnPrevT">
   <div class="pvHd"><h3 id="plnPrevT">Factory preview</h3><div class="pvTb" role="toolbar" aria-label="Preview zoom"><button id="plnZo" type="button" aria-label="Zoom out" title="Zoom out">&minus;</button><button id="plnZi" type="button" aria-label="Zoom in" title="Zoom in">+</button><button id="plnZf" type="button" aria-label="Fit to view" title="Fit to view">Fit</button></div></div>
   <div id="pvSet">
-    <label>Blocks <select id="plnBk" aria-label="Block type" title="Block type the factory is cut from"><option value="BPO_Station_01">1x1</option><option value="BPO_Station_2x1">2x1</option><option value="BPO_Station_02" selected>2x2</option><option value="BPO_Station_03">2x2 C</option></select></label>
-    <label>Engine <select id="plnEng" aria-label="Layout engine" title="Auto picks the engine per recipe; the others pin one and refuse instead of falling back"><option value="auto" selected>Auto</option><option value="zones">Zones</option><option value="tower">Tower</option><option value="nl">No Limits</option></select></label>
-    <span id="plnEngBadge" role="status" style="align-self:center;font-weight:600"></span>
-    <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2" selected>Large Container</option></select></label>
-    <label class="chk"><input type="checkbox" id="plnDkI"> Raw inputs come from docks</label>
-    <label>Dock <select id="plnDk" aria-label="Dock type"><option value="ind">Industrial</option><option value="nrm">Normal</option></select></label>
-    <label class="chk"><input type="checkbox" id="plnDkO"> Output goes to a dock</label>
-    <label>Output dock <select id="plnDkOT" aria-label="Output dock type"><option value="">Same as input</option><option value="ind">Industrial</option><option value="nrm">Normal</option></select></label>
-    <label>Belt <select id="pvMk"aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
-    <label>Splitter <select id="pvSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
     <label>Rate (items/min) <input id="pvRate" type="number" min="0.001" step="any" aria-label="Target rate in items per minute"></label>
-    <label class="chk" hidden style="display:none" title="Open-ended chainable module: input on west edge, output on east edge, no source/sink containers"><input type="checkbox" id="plnMod"> Modular build</label>
+    <label>Belt <select id="pvMk"aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+    <label>Blocks <select id="plnBk" aria-label="Block type" title="Block type the factory is cut from"><option value="BPO_Station_01">1x1</option><option value="BPO_Station_2x1">2x1</option><option value="BPO_Station_02" selected>2x2</option><option value="BPO_Station_03">2x2 C</option></select></label>
+    <span id="plnEngBadge" role="status" title="Layout template used for this preview"></span>
   </div>
+  <div id="pvDocks"><span class="pvGt">Docks</span>
+    <label class="chk"><input type="checkbox" id="plnDkI"> Raw inputs from docks</label>
+    <label>Dock <select id="plnDk" aria-label="Dock type"><option value="ind">Industrial</option><option value="nrm">Normal</option></select></label>
+    <label class="chk"><input type="checkbox" id="plnDkO"> Output to a dock</label>
+    <label>Output dock <select id="plnDkOT" aria-label="Output dock type"><option value="">Same as input</option><option value="ind">Industrial</option><option value="nrm">Normal</option></select></label>
+  </div>
+  <details id="pvOpt"><summary>Options</summary><div id="pvOptB">
+    <label>Splitter <select id="pvSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+    <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2" selected>Large Container</option></select></label>
+    <label class="chk"><input type="checkbox" id="plnLbl"> Machine rate labels</label>
+    <label class="chk" hidden style="display:none" title="Open-ended chainable module: input on west edge, output on east edge, no source/sink containers"><input type="checkbox" id="plnMod"> Modular build</label>
+  </div></details>
   <div id="plnPrevView"><canvas id="plnPrevMap" width="300" height="180" aria-label="Factory layout preview"></canvas></div>
-  <dl id="plnPrevCnt"><dt>Machines</dt><dd id="pvMach"></dd><dt>Belts</dt><dd id="pvBelt"></dd><dt>Splitters</dt><dd id="pvSpl"></dd><dt>Containers</dt><dd id="pvBox"></dd><dt>Undergrounds</dt><dd id="pvUg"></dd><dt>Blocks</dt><dd id="pvBlk"></dd><dt>Cells</dt><dd id="pvCell"></dd><dt>In/Out</dt><dd id="pvIO"></dd></dl>
-  <div id="plnPrevNote"></div>
+  <div id="pvLine"></div>
+  <details id="pvDet"><summary>Details</summary><dl id="plnPrevCnt"><dt>Machines</dt><dd id="pvMach"></dd><dt>Belts</dt><dd id="pvBelt"></dd><dt>Splitters</dt><dd id="pvSpl"></dd><dt>Containers</dt><dd id="pvBox"></dd><dt>Undergrounds</dt><dd id="pvUg"></dd><dt>Blocks</dt><dd id="pvBlk"></dd><dt>Cells</dt><dd id="pvCell"></dd><dt>In/Out</dt><dd id="pvIO"></dd></dl>
+  <div id="plnPrevNote"></div></details>
   <p id="plnPrevErr" role="alert"></p>
   <p id="plnPrevBig" role="status"></p>
   <div class="btns"><button id="plnPlace" type="button">Place</button><button id="plnCancel" type="button">Cancel</button></div>

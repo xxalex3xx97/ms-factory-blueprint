@@ -330,6 +330,7 @@ function plcUnshare(P,item){
 }
 // belt / splitter too slow for the planned load: the layout uses the next higher Mk automatically (the note says so) instead of refusing
 function placerLayout(P,item,mk,spMk,o={}){
+  o={...o,eng:"zones"};   // old engines (tower, tower-multi, nlTop, legacy bank) are dismissed: golden templates only, a refusal is final. vcol (blVC) hook: bl_top.js blTop
   try{return placerLayoutX(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"internal error while laying out this factory ("+e.message+"): tell the developer which item and settings"}}   // a crash shows in the modal with Place disabled, never breaks the page
 }
 function placerLayoutX(P,item,mk,spMk,o={}){
@@ -777,19 +778,15 @@ const placerDock=()=>{const i=$("plnDkI").checked,o=$("plnDkO").checked;if(!i&&!
 function placerRun(open){
   const dl=$("plnPrev");if(!open&&!dl.open)return;
   const dk=placerDock();plcFb=null;
-  const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk,eng:$("plnEng").value}):{ok:false,why:"Pick an item and a rate first"};
-  plcEngBadge(L);
-  if(!L.ok){plcL=null;plcT=null;placerClear();$("plnPrevErr").textContent=L.why;$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
+  const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk}):{ok:false,why:"Pick an item and a rate first"};
+  $("plnEngBadge").textContent=L.ok?"Template: Zones":"";
+  if(!L.ok){plcL=null;plcT=null;placerClear();$("pvLine").textContent="";$("plnPrevErr").textContent=/^(Pick an item|internal error)/.test(L.why)?L.why:"Not supported yet: "+String(L.why).replace(/^BL: /,"").replace(/ \(NL used\)$/,"").replace(/^Engine zones built a layout but /,"");$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
 function placerGo(){$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;$("pvRate").value=$("plnRate").value;placerRun(true)}
 // live modal: build settings re-run the preview; errors show inside the modal with Place off
 const placerLive=()=>placerRun(false);
-// engine badge: always names the engine that built the preview (or the pinned one that refused); Auto fallback reason in the tooltip
-let plcFb=null;const PLC_ENG={zones:"Zones",tower:"Tower","tower-multi":"Tower (multi-input)",nl:"No Limits"};
-function plcEngBadge(L){const b=$("plnEngBadge"),pin=$("plnEng").value,why=s=>String(s||"").replace(/ \(NL used\)$/,"");
-  if(!L.ok){b.textContent=pin!=="auto"?"Not built: "+PLC_ENG[pin]+" refused":"Not built";b.title=why(L.why);return}
-  const n=PLC_ENG[L.eng]||"Legacy placer";b.textContent="Built by: "+n+(L.eng==="nl"&&L.blWhy?" (fallback: "+why(L.blWhy)+")":!L.eng&&plcFb?" (fallback: "+plcFb+")":"");b.title=L.blWhy?why(L.blWhy):plcFb&&!L.eng?plcFb:pin==="auto"?"Auto picked "+n:"Pinned: "+n}
+let plcFb=null;const PLC_ENG={zones:"Zones",tower:"Tower","tower-multi":"Tower (multi-input)",nl:"No Limits"};   // names only: still read by gallery/old tests
 function placerClear(){
   ["pvMach","pvBelt","pvSpl","pvBox","pvUg","pvBlk","pvCell","pvIO"].forEach(i=>{if($(i))$(i).textContent="-"});
   $("plnPrevNote").textContent="";$("plnPrevBig").textContent="";
@@ -868,6 +865,7 @@ function plcFinish(L){
   $("pvBlk").textContent=!plcT?"0 (existing floor)":plcT.ok?Object.entries(bc).map(([n,c])=>c+" x "+n).join(", "):"none fits";
   if($("pvUg"))$("pvUg").textContent=k.ug?k.ug+" ("+k.ug/2+" pairs, span "+(plcT&&plcT.ok&&plcT.max!=null?plcT.max:"-")+" max)":"0";
   $("pvCell").textContent=L.w+" x "+L.h;
+  $("pvLine").textContent=k.mach+" machines"+(plcT&&plcT.ok?" · "+plcT.blocks.length+" block"+(plcT.blocks.length>1?"s":""):"")+" · "+(k.mach?(k.belt/k.mach).toFixed(1):"0")+" belts/machine";
   const LL=plcT&&plcT.ok&&plcT.L||L;
   $("pvIO").textContent=L.mod?(L.bank?"IN west ("+LL.nIn+" belt"+(LL.nIn>1?"s":"")+"), OUT east ("+LL.nOut+" belt"+(LL.nOut>1?"s":"")+"), "+LL.hubs+" hub container(s) between stages; copy width "+L.w:"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w):L.bank?"closed: "+LL.nS+" source + "+LL.nS+" in-buffer west, "+LL.nK+" out-buffer + "+LL.nK+" sink east"+(LL.stages>1?" + "+LL.hubs+" hub container(s) between stages":""):"closed: source container in, sink container out";
   $("plnPrevNote").textContent=L.note.concat(plcT&&plcT.ok&&plcT.blocks.length>1?["Chose "+plcT.cols+" x "+plcT.rows+" blocks: fewest blocks, then squarest"+(plcT.L.bank?"; "+plcT.G+" band(s) of "+(plcT.L.stages>1?plcT.L.tbs.join("+")+" trunks per stage":plcT.L.tb+" trunk(s)"):"")+"; "+k.ug/2+" underground pairs cross the walls"]:[]).join(". ");
@@ -912,7 +910,7 @@ $("plnZi").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1.25)};
 $("plnZo").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1/1.25)};
 $("plnZf").onclick=()=>placerFitView();
 // live wiring: build settings in the modal re-run the preview; Belt/Splitter = the planner selects, synced both ways
-$("plnBk").addEventListener("change",placerLive);$("plnEng").addEventListener("change",()=>{try{localStorage.setItem("msfb.engine",$("plnEng").value)}catch(_){}placerLive()});$("plnBuf").addEventListener("change",placerLive);$("plnMod").addEventListener("change",placerLive);
+$("plnBk").addEventListener("change",placerLive);$("plnLbl").addEventListener("change",()=>{PLC_LBL=$("plnLbl").checked;plcCache=null;placerShot()});$("plnBuf").addEventListener("change",placerLive);$("plnMod").addEventListener("change",placerLive);
 $("pvMk").addEventListener("change",()=>{$("plnMk").value=$("pvMk").value;$("plnMk").dispatchEvent(new Event("change"))});
 $("pvSp").addEventListener("change",()=>{$("plnSp").value=$("pvSp").value;$("plnSp").dispatchEvent(new Event("change"))});
 const plcSync=()=>{if(!$("plnPrev").open)return;$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;$("pvRate").value=$("plnRate").value;placerLive()};
@@ -923,7 +921,6 @@ $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;
 // No Limits is the only engine in the UI (always on). plcEngine stays for tests: ?engine=old|new|nl in the page URL pins an older engine, default bl (Block engine, falls back to NL per case).
 const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl"||v==="bl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl"||v==="bl");if(typeof BL_ENGINE!=="undefined")BL_ENGINE=(v==="bl")};
 if(!plcCls("BPO_Station_03"))$("plnBk").querySelector('option[value="BPO_Station_03"]')?.remove();
-try{const v=localStorage.getItem("msfb.engine");if(PLC_ENG[v])$("plnEng").value=v}catch(_){}
 try{const v=localStorage.getItem("msfb.block");if(PLC_BKV.includes(v))$("plnBk").value=v}catch(_){}
 $("plnBk").addEventListener("change",()=>{try{localStorage.setItem("msfb.block",$("plnBk").value)}catch(_){}});
 const PLC_DK="msfb.docks",plcDkSave=()=>{try{localStorage.setItem(PLC_DK,JSON.stringify({i:$("plnDkI").checked,o:$("plnDkO").checked,t:$("plnDk").value,ot:$("plnDkOT").value}))}catch(_){}};
