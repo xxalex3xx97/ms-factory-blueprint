@@ -15,7 +15,10 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof placerTile === 'function' && typeof noBuild === 'function' && typeof blVC === 'function');
+await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/assembler_2in.js'});
+import {checkIface, checkChain} from './tpl_iface.mjs';
+import {checkPlan} from './tpl_plan.mjs';
 let fails = 0;
 const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } else console.log('ok   ' + msg) };
 const recs = await pg.evaluate(() => (RECS.CRAFT_Assembler || []).filter(r => r.i.length === 2).map(r => ({k: rk(r), name: plnNm(r.o[0]), i: r.i.map(x => x[1]), o: r.o[1], t: r.t})));
@@ -26,7 +29,7 @@ async function run(spec, shot) {
   return pg.evaluate(([spec, shot]) => {
     const T = tplBuild(spec);
     if (!T.ok) return {refused: T.why};
-    const out = {nMax: T.nMax, g: T.g, stats: T.stats, errs: []};
+    const out = {nMax: T.nMax, g: T.g, stats: T.stats, errs: [], T: spec.keep ? {iface: T.iface, ports: T.ports, w: T.w, items: T.items.map(b => ({cls: b.cls, x: b.x, y: b.y, rot: b.rot}))} : null};
     const its = spec.drop ? T.items.filter(b => !(b.x === spec.drop[0] && b.y === spec.drop[1])) : T.items, W = T.w, H = T.h;
     // (1) overlap + (2) inside floor
     const occ = new Map(); let ov = 0, outside = 0;
@@ -108,9 +111,9 @@ async function run(spec, shot) {
     // output: every machine's south port cell reaches the row's out port
     let outErr = 0;
     mach.forEach(m => {
-      const sp = mports.get(m).filter(p => p.ny === 1 && p.en), row = Math.floor(m.y / 10);
+      const sp = mports.get(m).filter(p => p.ny === 1 && p.en);
       if (sp.length < 1) { outErr++; return }
-      const tgt = T.ports.out.find(p => p.row === row);
+      const tgt = T.ports.out.find(p => m.y >= p.y && m.y < p.y + 10);
       sp.forEach(p => { const r = flood(p.x + p.nx, p.y + p.ny, 'o', 0); if (!r.has(tgt.x + ',' + tgt.y)) outErr++ });
     });
     out.outErr = outErr;
@@ -122,15 +125,16 @@ async function run(spec, shot) {
     if (T.rin) {
       out.laneLoad = Math.max(0, ...Object.entries(cnt).map(([t, c]) => c * T.rin[itemOf(t)]));
       out.laneLim = der * cap;
-      const perRow = {}; mach.forEach(m => { const r = Math.floor(m.y / 10); perRow[r] = (perRow[r] || 0) + 1 });
+      const perRow = {}; mach.forEach(m => { const r = T.ports.out.find(p => m.y >= p.y && m.y < p.y + 10).set; perRow[r] = (perRow[r] || 0) + 1 });
       out.outLoad = Math.max(0, ...Object.values(perRow)) * T.rout; out.outCap = cap;
     }
-    out.ports = {in: T.ports.in.length, out: T.ports.out.length, rows: T.rows};
+    out.ports = {in: T.ports.in.length, out: T.ports.out.length, sets: T.sets};
+    out.prAll = its.filter(b => PLC_SPL.includes(b.cls)).every(b => b.pr && b.pr[0] === 0 && b.pr[1] === -1 && portsOf(b).find(p => p.f === 'S').en);
     out.mach = mach.length; out.area = W * H;
     return out;
   }, [spec, shot]);
 }
-const MK = 1, SP = 1, rows = [];
+const MK = 1, SP = 1, rows = [], refB = {};
 const blocks = ['1x1', '1x2', '2x2', '2x2c'];
 const base = block => ({block, cls: 'DAT_Assembler', rec: BC.k, mk: MK, spMk: SP});
 for (const block of blocks) {
@@ -140,7 +144,17 @@ for (const block of blocks) {
   if (!nMax) continue;
   const ns = [...new Set([1, 2, nMax - 1, nMax])].filter(n => n >= 1 && n <= nMax);
   for (const n of ns) {
-    const spec = {...base(block), n}, r = await run(spec);
+    const spec = {...base(block), n}, r = await run({...spec, keep: true});
+    if (n === 1) refB[block] = r.T;
+    if (r.T) {
+      const ci = await checkIface(pg, r.T, block, refB[block]);
+      check(ci.ok, block + ' n=' + n + ' checkIface ' + ci.errs.slice(0, 3).join('; '));
+      check(r.prAll, block + ' n=' + n + ' every manifold splitter has priority to its machine face');
+      const nxt = await pg.evaluate(s => { const t = tplBuild(s); return t.ok ? {iface: t.iface, ports: t.ports, w: t.w, items: t.items.map(b => ({cls: b.cls, x: b.x, y: b.y, rot: b.rot}))} : null }, {...spec, main: 1});
+      check((await checkIface(pg, nxt, block)).ok, block + ' n=' + n + ' checkIface with main=1');
+      const ch = checkChain(r.T, r.T);
+      check(ch.ok, block + ' n=' + n + ' checkChain self ' + ch.errs.join('; '));
+    }
     const tag = `${block} n=${n}`;
     if (r.refused) { check(false, tag + ' refused ' + r.refused); continue }
     console.log(tag + ': ' + JSON.stringify({stats: r.stats, cut: r.cut, tile: r.tile, ports: r.ports, lane: r.laneLoad + '/' + r.laneLim, out: r.outLoad + '/' + r.outCap, maxLaneM: r.maxLaneMachines, noBuild: r.noBuild}));
@@ -180,15 +194,41 @@ for (const r of rows) console.log(r.join(' | '));
 // mutation sanity: removing the first machine's B crossover belt (and a lane head) must be caught by the flood
 {
   const T = await pg.evaluate(s => { const t = tplBuild(s); return {items: t.items.map(b => ({x: b.x, y: b.y, cls: b.cls}))} }, {...base('1x2'), n: 5});
-  const m1 = await run({...base('1x2'), n: 5, drop: [3, 2]}), m2 = await run({...base('1x2'), n: 5, drop: [0, 3]}), m3 = await run({...base('1x2'), n: 5, drop: [29, 9]});
+  const m1 = await run({...base('1x2'), n: 5, drop: [4, 2]}), m2 = await run({...base('1x2'), n: 5, drop: [0, 3]}), m3 = await run({...base('1x2'), n: 5, drop: [28, 5]});
   check(m1.portErr > 0 || m1.bad > 0, 'mutation: crossover removed is detected (portErr ' + m1.portErr + ', bad ' + m1.bad + ')');
   check(m2.portErr > 0 || m2.bad > 0, 'mutation: A1 lane head removed is detected (portErr ' + m2.portErr + ')');
   check(m3.outErr > 0, 'mutation: collector end removed is detected (outErr ' + m3.outErr + ')');
+}
+// checkPlan gate (planner N + flow calc): 3 recipes x block x rate sets. checkPlan's product check is single-input only -> its 'product' error is dropped here;
+// the product is covered by 'delivered input == planner input' (both items) + every machine's min(have/need) ratio. Planner edges with belts>2 are expected-negative (need M>2).
+console.log('\n== checkPlan');
+const planRows = [], needM = [];
+{
+  // light, balanced, lane-bound (90/120), out-bound. Reinforced Plate is NOT asserted: planner input flow (120 at N=1) != machine need (90): planner/recipe mismatch, reported only.
+  const picks = ['Basic Circuits', 'Maglev Coupling', 'Capacitor', 'Magnetic Coils'].map(n => recs.find(r => r.name === n));
+  for (const rc of picks) for (const block of blocks) {
+    const info = await pg.evaluate(([k, blk, cls]) => { const r = [].concat(...Object.values(RECS)).find(x => rk(x) === k); const P = plan(r.o[0], 1, 1, {}, {[r.o[0]]: k}, {proto: false, enr: false, obs: false}); return {pm: P.nodes[r.o[0]].pmach, nMax: tplMax({block: blk, cls, rec: k, mk: 1, spMk: 1})} }, [rc.k, block, 'DAT_Assembler']);
+    if (!info.nMax) { console.log(rc.name + ' ' + block + ': nMax 0 (refused), skipped'); continue }
+    const nm = info.nMax, pm = info.pm;
+    for (const [tag, rate] of [['R1', pm], ['R1b', 0.25 * pm], ['R2', (nm - 1 + 0.3) * pm], ['R3', nm * pm], ['R4', (nm + 1) * pm], ['R4b', (2 * nm + 0.5) * pm]]) {
+      const r = await checkPlan(pg, {build: 'tplBuild', max: 'tplMax', cls: 'DAT_Assembler'}, rc.k, rate, block, 1);
+      const errs2 = r.errs.filter(e => !/^product /.test(e));
+      r.row.set = tag; r.row.name = rc.name; planRows.push(r.row);
+      if (errs2.length && r.row.belts > 2) { needM.push(rc.name + ' ' + block + ' ' + tag + ' belts ' + r.row.belts); console.log('expected-negative (need M>2) ' + rc.name + ' ' + block + ' ' + tag + ' belts ' + r.row.belts + ': ' + errs2.join('; ')); continue }
+      // per-machine: the harness injects each lane copy proportional to its machine count (not fill order), so the partial load is spread over the copies:
+      // assert no machine is below the planner's last-machine utilisation and none above 1 (aggregate delivery == planner input is asserted by checkPlan)
+      const uLast = rate / r.row.pmach - (r.row.N - 1);
+      check(errs2.length === 0 && r.row.minUtil >= Math.min(1, uLast) - 0.01 && r.row.maxUtil <= 1.0001, 'checkPlan ' + rc.name + ' ' + block + ' ' + tag + ' N=' + r.row.N + ' B=' + r.row.B + ' ' + errs2.join('; ') + ' minUtil ' + r.row.minUtil + ' >= uLast ' + uLast.toFixed(3));
+    }
+  }
+  console.log('name block set rate N B nMax planUtil minUtil maxUtil belts maxBelt supply machines');
+  for (const x of planRows) console.log([x.name, x.block, x.set, x.rate, x.N, x.B, x.nMax, x.planUtil, x.minUtil, x.maxUtil, x.belts, x.maxBeltUtil, x.supply, x.machines].join(' | '));
 }
 // screenshots: the block pasted into the app (S.blocks), Layout view, fit
 fs.mkdirSync(ROOT + '/tests/shots', {recursive: true});
 for (const [block, n] of [['1x1', 2], ['1x2', 6], ['2x2', 18], ['2x2c', 18], ['1x2', 5]]) {
   await pg.evaluate(([spec]) => {   // planner preview dialog showing the placerTile result of the template
+    spec.n = Math.min(spec.n, tplMax(spec));
     const T = tplBuild(spec), L = {ok: true, items: T.items, w: T.w, h: T.h, tall: false, cuts: null, pitch: T.h, lanes: 1, mk: spec.mk, box: 'DAT_Container_2', note: ['tpl']};
     plcL = L; plcT = placerTile(L, PL_ALL.map(x => x === T.blockCls)); plcCache = null;
     const d = $("plnPrev"); if (!d.open) d.showModal();
