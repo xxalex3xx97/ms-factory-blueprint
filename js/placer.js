@@ -914,7 +914,7 @@ $("plnMk").addEventListener("change",plcSync);$("plnSp").addEventListener("chang
 $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;placerLive()});
 // Engine switch: Old = the original placer (default), New = prefab factory builder (pfFact2 > pfBands > pfChain, falls back to the old path when it refuses). Remembered once chosen.
 // No Limits is the only engine in the UI (always on). plcEngine stays for tests: ?engine=old|new|nl in the page URL pins an older engine, default nl.
-const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl")};
+const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl"||v==="bl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl"||v==="bl");if(typeof BL_ENGINE!=="undefined")BL_ENGINE=(v==="bl")};
 if(!plcCls("BPO_Station_03"))$("plnBk").querySelector('option[value="BPO_Station_03"]')?.remove();
 try{const v=localStorage.getItem("msfb.block");if(PLC_BKV.includes(v))$("plnBk").value=v}catch(_){}
 $("plnBk").addEventListener("change",()=>{try{localStorage.setItem("msfb.block",$("plnBk").value)}catch(_){}});
