@@ -50,6 +50,18 @@ const r = await pg.evaluate(() => {
   const L = {items, w: 10, h: 60, pitch: 1, lanes: 1, tall: true, mk: 1};
   const P = placerCut(L, cls);
   out.cut = {ok: P.ok, why: P.why || null, rc: P.rc, ug: P.ug, ov: P.ov, span: P.span, blocks: P.blocks ? P.blocks.length : null, ugAt: P.ms ? P.ms.filter(m => PLC_UG.includes(m.cls)).map(m => [m.x, m.y, m.cls]) : null};
+  // H0: 2x2 block floor, Large Container W/E faces, hand-made horizontal L (3 belt rows, y=0/14/29, cut at x=30)
+  const c2 = plcCls('BPO_Station_02');
+  const f2 = floorRect({cls: c2, x: 0, y: 0, h: 0, rot: 0});
+  out.h0Floor = {cls: c2, floor: [f2.x, f2.y, f2.w, f2.h], dim: dim({cls: c2, rot: 0})};
+  out.h0Faces = {nW: cp.filter(p => p.f === 'W').length, nE: cp.filter(p => p.f === 'E').length};
+  const hi = [{cls: C2, x: 0, y: 8, rot: 0, h: 0, pid: 0, ct: [{item: 'ITEM_Silica', n: 0, inf: true}]}];
+  for (const y of [0, 14, 29]) for (let x = 20; x <= 45; x++) hi.push({cls: PLC_BELT[1], x, y, rot: 0, h: 0, pid: 0});
+  const HL = {ok: true, items: hi, w: 46, h: 30, pitch: 31, cuts: [30], tall: true, mk: 1, lanes: 1};
+  const HP = placerCut(HL, c2);
+  const HT = placerTile(HL, placerBk());
+  out.h0L = {cut: {ok: HP.ok, why: HP.why || null, ug: HP.ug, ov: HP.ov, span: HP.span, rc: HP.rc, ugAt: HP.ms ? HP.ms.filter(m => PLC_UG.includes(m.cls)).map(m => [m.x, m.y, m.cls]) : null},
+    tile: {ok: HT.ok, why: HT.ok ? null : String(HT.why).slice(0, 200), ov: HT.ov, span: HT.span, blocks: HT.blocks ? HT.blocks.length : null}};
   return out;
 });
 console.log(JSON.stringify(r, null, 1));
@@ -57,4 +69,7 @@ await br.close();
 let fail = 0;
 if (errs.length) { console.log('PAGE ERRORS ' + errs.join(' | ')); fail++ }
 if (r.container2.nN < 4 || r.container2.nS < 4) { console.log('STOP Container_2 has fewer than 4 N or 4 S ports'); fail++ }
+if (r.h0Faces.nW < 4 || r.h0Faces.nE < 4) { console.log('STOP H0 Container_2 W/E faces lack 4 ports'); fail++ }
+if (!r.h0L.cut.ok || r.h0L.cut.ug < 1) { console.log('STOP H0 pair at x=29|30 is not a UG pair'); fail++ }
+if (!r.h0L.tile.ok) { console.log('STOP H0 placerTile refused: ' + r.h0L.tile.why); fail++ }
 process.exit(fail ? 1 : 0);
