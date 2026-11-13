@@ -5,7 +5,8 @@ const CMP_BLOCKS=['1x1','1x2','2x2','2x2c'];
 const cmpHubBlk=bk=>bk==='BPO_Station_02'||bk==='BPO_Station_03'?{cls:plcCls('BPO_Station_2x1'),rot:1,W:14,H:30,dw:1}:bk==='BPO_Station_2x1'?{cls:plcCls('BPO_Station_01'),rot:0,W:14,H:14,dw:1}:null;
 // narrow first (docks keep the full-size hubs); a column whose hub does not fit goes full size and the build is retried (r.col = failing column)
 // SHAPE2: with docks narrow hubs only on 2x2 (hubs carry hx/hw/hu tags for cmp_dock.js), no FEED hubs; a narrow build that fails or misses a dock is rebuilt full-size (as before)
-const cmpNarrow=(c,f)=>{if(globalThis.CMP_NARROW===false||c.dk&&c.bk!=='BPO_Station_02')return f(c,null);const n0=c.dk&&c.dk.notes.length,go=()=>{const wide=new Set();for(;;){if(c.dk)c.dk.notes.length=n0;const r=f(c,wide);if(r.ok||!(r.col>=0)||wide.has(r.col))return r;wide.add(r.col)}};
+const cmpNarrow=(c,f)=>{if(globalThis.CMP_NARROW===false||c.dk&&c.bk!=='BPO_Station_02')return f(c,null);const n0=c.dk&&c.dk.notes.length,go=()=>{const wide=new Set();for(;;){if(c.dk)c.dk.notes.length=n0;const r=f(c,wide);if(r.ok&&c.dk&&r.dock){const dh=r.dock.nar.filter(h=>!wide.has(h));if(dh.length){dh.forEach(h=>wide.add(h));continue}}   // ROT: a dock needs a door; the rot-1 1x2 hub is solid on its long sides, so a hub column carrying dock containers stays full size
+      if(r.ok||!(r.col>=0)||wide.has(r.col))return r;wide.add(r.col)}};
   const r=go();if(!c.dk||r.ok&&!(r.dock&&r.dock.miss&&r.dock.miss.length))return r;c.dk.notes.length=n0;return f(c,null)};
 function cmpAssemble(c){return cmpNarrow(c,cmpAssemble1)}
 function cmpAssemble1(c,wide){

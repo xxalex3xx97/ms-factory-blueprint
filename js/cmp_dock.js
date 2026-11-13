@@ -31,27 +31,31 @@ function cmpDockHub(dk,a){
 }
 // apply to the tile T (mutates T.ms, T.blocks, T.ov). c={cls,mk}. fix={nodes,routed} optional (shifted with the tile). -> {ok,raw,oz,shx,sh} | {ok:false,why}
 function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*FC;
-  const d=dim({cls:c.cls,rot:0}),TW=d.w*FC,TH=d.h*FC,fl=floorRect({cls:c.cls,x:0,y:0,h:0,rot:0}),W=fl.w,bc=PLC_BELT[c.mk],dc=plcCls('BPO_Dock'),ad=c.cls===plcCls('BPO_Station_03')?1:0,A=16*ad,adc=plcCls('BPO_StationAdapter_01'),ads=new Set(),ms=T.ms,blocks=T.blocks,add=[],occ=new Set(),extra=[],miss=[];
+  const d=dim({cls:c.cls,rot:0}),TW=d.w*FC,TH=d.h*FC,fl=floorRect({cls:c.cls,x:0,y:0,h:0,rot:0}),W=fl.w,bc=PLC_BELT[c.mk],dc=plcCls('BPO_Dock'),ad=c.cls===plcCls('BPO_Station_03')?1:0,A=16*ad,adc=plcCls('BPO_StationAdapter_01'),ads=new Set(),ms=T.ms,blocks=T.blocks,add=[],occ=new Set(),extra=[],miss=[],nar=new Set();   // nar: hub columns (hc) narrower than the block that carry a dock
   const cells=(b)=>{const e=dim({cls:b.cls,rot:b.rot||0}),r=[];for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)r.push((b.x+i)+','+(b.y+j));return r};
   blocks.forEach(b=>cells(b).forEach(k=>occ.add(k)));
+  // ENZ dock-edge rule: a ship docks only at the outer edge. A dock needs a straight free ray from its outward face to outside the structure, and must not cut the ray of an earlier dock
+  const DIRS=[[1,0],[0,1],[-1,0],[0,-1]],rays=new Set(),ray=b=>{const e=dim({cls:b.cls,rot:b.rot||0}),dd=DIRS[b.rot||0],n=(b.rot||0)%2?e.w:e.h,r=[];for(let i=0;i<n;i++){let x=b.rot===0?b.x+e.w:b.rot===2?b.x-1:b.x+i,y=b.rot===1?b.y+e.h:b.rot===3?b.y-1:b.y+i;for(let k=0;k<80;k++,x+=dd[0],y+=dd[1])r.push(x+','+y)}return r};
+  const edgeBad=b=>ray(b).some(z=>occ.has(z))||cells(b).some(z=>rays.has(z)),edgeAdd=b=>ray(b).forEach(z=>rays.add(z));
   const belt=(x,y,rot)=>add.push({cls:bc,x,y,h:0,rot,pid:0,dk:'p'});
   const slot=ly=>{for(let k=0;k<d.h;k++){const M=16*k+6;if(ly<=M&&ly+3>=M+1)return k}return -1};
   const dockV=(q,side)=>{   // N/S input cells (FEED hubs): nl_dock vertical formulas; door cols 16u+6,7; container y=1 (N) / H-5 (S), belt rows through the wall
     const gx=Math.floor(q.x/TW),gy=Math.floor(q.y/TR),u=Math.floor((q.x-gx*TW)/16),n=side==='N',M=gx*TW+16*u+6,y0=gy*TR,
       b={cls:dc,x:gx*d.w+u,y:n?gy*P-1-ad:gy*P+d.h+ad,rot:n?3:1},ab=ad&&!ads.has(side+gx+'|'+gy)&&{cls:adc,x:gx*d.w,y:n?gy*P-1:gy*P+d.h,rot:n?3:1};
-    if(u>=d.w||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))){q.why=u>=d.w?'no dock unit at this column':'the dock cells overlap another block';extra.push(q);return false}
-    cells(b).forEach(z=>occ.add(z));blocks.push(b);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab);ads.add(side+gx+'|'+gy)}
+    if(u>=d.w||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))||edgeBad(b)){q.why=u>=d.w?'no dock unit at this column':'no free outer-edge slot (another block or dock is in the way)';extra.push(q);return false}
+    cells(b).forEach(z=>occ.add(z));edgeAdd(b);blocks.push(b);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab);ads.add(side+gx+'|'+gy)}
     for(const x of[M,M+1])if(n)for(let y=y0-1-A;y<=y0;y++)belt(x,y,1);else for(let y=y0+fl.h-1;y<=y0+fl.h+A;y++)belt(x,y,3);
     q.dd={side,gx:gx*d.w,gy:gy*P,u,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
     return true};
   const dock=(q,side)=>{
+    if(q.hu===1)nar.add(q.hc);
     if(q.dkx&&q.dkx.side&&q.dkx.side!=='W'&&side==='W')return dockV(q,q.dkx.side);
     const gy=Math.floor(q.y/TR),k=slot(q.y-gy*TR),x0=q.hx!=null?q.hx:Math.floor(q.x/TW)*TW,hw=q.hw||W,u0=x0/FC,hu=q.hu||d.w,gx=u0/d.w,out=side==='E',ok=k>=0&&(out?q.x+4===x0+hw-1:q.x-x0<=1);   // SHAPE2: hub block origin / width / units from the hx,hw,hu tags (narrow hubs)
     // 2x2c (ad=1): Station Adapter (1x2 units, open side) between block and dock, dock one unit further out, belts 16 cells longer
     const b=ok&&{cls:dc,x:out?u0+hu+ad:u0-1-ad,y:gy*P+k,rot:out?0:2},
       ab=ok&&ad&&!ads.has(side+u0+'|'+gy)&&{cls:adc,x:out?u0+hu:u0-1,y:gy*P,rot:out?0:2};
-    if(!ok||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))){q.why=!ok?(out?'the output container is not flush with the east wall':'the container is not on a dock slot'):'the dock cells overlap another block';extra.push(q);return false}
-    cells(b).forEach(z=>occ.add(z));blocks.push(b);
+    if(!ok||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))||edgeBad(b)){q.why=!ok?(out?'the output container is not flush with the east wall':'the container is not on a dock slot'):'no free outer-edge slot (another block or dock is in the way)';extra.push(q);return false}
+    cells(b).forEach(z=>occ.add(z));edgeAdd(b);blocks.push(b);
     if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab);ads.add(side+u0+'|'+gy)}
     const M=gy*TR+16*k+6;
     for(const y of[M,M+1])if(out){for(let x=x0+hw-1;x<=x0+hw+A;x++)belt(x,y,0)}else for(let x=x0-1-A;x<=q.x-1;x++)belt(x,y,0);
@@ -63,9 +67,9 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
     const rows=new Map(),S=d.h===1?2:1;   // d.h=1: one Dock_2 serves two adjacent strips (group A even strip, group B odd strip)
     for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/(S*TR)),ly=q.y-g*S*TR;if(d.h>2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out&&(q.hx!=null?q.hx:Math.floor(q.x/TW)*TW)<1))return'dock slot misaligned';const kk=g+':'+(q.hx!=null?q.hx:Math.floor(q.x/TW)*TW);if(!rows.has(kk))rows.set(kk,[]);rows.get(kk).push(q)}   // SHAPE2: input hubs at any block column (dock on their west face)
     for(const [kk,E] of rows){
-      const g=+kk.split(':')[0],oy=g*S*TR,e0=E[0],x0=+kk.split(':')[1],hw=e0.hw||W,hu=e0.hu||d.w,u0=x0/FC,col=e0.hc!=null?e0.hc:Math.floor(e0.x/TW),ox=out?x0+hu*16+A:x0-16-A,dx=out?u0+hu:u0-1,db={cls:d2,x:out?dx+ad:u0-3-ad,y:g*S*P,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*S*P,rot:out?0:2};
-      if(cells(db).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z))))return'industrial dock overlaps another block';
-      cells(db).forEach(z=>occ.add(z));blocks.push(db);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab)}
+      const g=+kk.split(':')[0],oy=g*S*TR,e0=E[0],_n=e0.hu===1&&nar.add(e0.hc),x0=+kk.split(':')[1],hw=e0.hw||W,hu=e0.hu||d.w,u0=x0/FC,col=e0.hc!=null?e0.hc:Math.floor(e0.x/TW),ox=out?x0+hu*16+A:x0-16-A,dx=out?u0+hu:u0-1,db={cls:d2,x:out?dx+ad:u0-3-ad,y:g*S*P,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*S*P,rot:out?0:2};
+      if(cells(db).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))||edgeBad(db))return'industrial dock overlaps another block or has no free outer edge';
+      cells(db).forEach(z=>occ.add(z));edgeAdd(db);blocks.push(db);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab)}
       const used=[0,1].map(k=>E.filter(q=>(q.y-oy<16?0:1)===k)),dkx=E[0].dx||{},bq=[];
       for(const b of asm.boxes){if(!used[(out?26-b.x:b.x)<16?0:1].length)continue;   // SHAPE2: a lane group without lanes gets no containers/belts
         const x=out?ox+10-b.y:ox+b.y,y=oy+(out?26-b.x:b.x),g2=(y-oy<16?0:1),main=b.y===9&&(b.x===4||b.x===22),m={cls:NLD.BOX_I,x,y,h:0,rot:0,pid:0,ct:[],dk:out?'out':'in'};
@@ -88,7 +92,7 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
   for(const m of all){const e=dim(m);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++){const kk=m.x+i+','+(m.y+j);if(seen.has(kk))ov++;else seen.add(kk)}}
   T.ms=all;T.ov=ov;
   const info=q=>({item:q.ct&&q.ct[0]?q.ct[0].item:null,x:q.x,y:q.y,dd:q.dd});
-  return{ok:true,raw:all.filter(q=>q.dd&&q.dk==='in').map(q=>({...info(q),kind:'src'})),oz:all.filter(q=>q.dd&&q.dk==='out').map(info),miss:[...new Set(miss)],shx,sh};
+  return{ok:true,raw:all.filter(q=>q.dd&&q.dk==='in').map(q=>({...info(q),kind:'src'})),oz:all.filter(q=>q.dd&&q.dk==='out').map(info),miss:[...new Set(miss)],nar:[...nar],shx,sh};
 }
 
 // CMP C7d: FEED hub (all-raw first stage / tree feed node) at block column 0 with docks. Containers flush x=0 (docked ones on W slots 16k+5, one raw per slot, extras undocked), lanes routed by cmpRoute inside x=4..W-1.
