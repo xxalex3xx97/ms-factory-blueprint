@@ -4,6 +4,8 @@
 import {createRequire} from 'module';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
+import {checkIface} from './tpl_iface.mjs';
+import {checkPlan} from './tpl_plan.mjs';
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -13,6 +15,7 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=bl');
 await pg.waitForFunction(() => window.__fb && typeof placerTile === 'function' && typeof ugPairs === 'function');
+await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/assembler_1in.js'});
 let fails = 0;
 const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } else if (process.env.V) console.log('ok   ' + msg) };
@@ -20,16 +23,18 @@ const RECS = ['ITEM_TitaniumPlates>ITEM_BasicMotor', 'ITEM_TitaniumPlates>ITEM_H
 const BLOCKS = ['1x1', '1x2', '2x2', '2x2c'];
 const recOk = await pg.evaluate(RECS => RECS.map(r => !!recsOf(def('DAT_Assembler')).find(q => rk(q) === r && q.i.length === 1)), RECS);
 check(recOk.every(Boolean), 'all 4 recipe keys exist as 1-input Assembler recipes ' + recOk);
+const PLCSPL = /Splitter/;
 const rows = [];
 for (const block of BLOCKS) for (const rec of RECS) for (const mk of [0, 1, 2]) {
   const nMax = await pg.evaluate(a => tplMax(a), {block, cls: 'DAT_Assembler', rec, n: 1, mk, spMk: mk});
   const ns = [...new Set([1, 2, nMax - 1, nMax].filter(n => n >= 1 && n <= nMax))];
+  const ref = ns.length ? await pg.evaluate(a => { const T = tplBuild(a); return {items: T.items, ports: T.ports, iface: T.iface, w: T.w, h: T.h} }, {block, cls: 'DAT_Assembler', rec, n: 1, mk, spMk: mk}) : null;
   for (const n of ns) {
     const tag = `${block} ${rec.split('>')[1].slice(5)} Mk${mk + 1} n=${n}/${nMax}`;
     const r = await pg.evaluate(spec => {
       const T = tplBuild(spec);
       if (!T.ok) return {build: T.why};
-      const it = T.items, W = T.w, H = T.h, out = {W, H, stats: T.stats, nMax: T.nMax, ports: T.ports, rates: T.rates};
+      const it = T.items, W = T.w, H = T.h, out = {W, H, stats: T.stats, nMax: T.nMax, ports: T.ports, rates: T.rates, bld: {items: T.items, ports: T.ports, iface: T.iface, w: T.w, h: T.h}};
       // 1 overlap, 2 bounds
       const occ = new Map();let ov = 0, oob = 0;
       for (const b of it) { const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) { if (x < 0 || y < 0 || x >= W || y >= H) oob++; const k = x + ',' + y; if (occ.has(k)) ov++; occ.set(k, b) } }
@@ -83,7 +88,7 @@ for (const block of BLOCKS) for (const rec of RECS) for (const mk of [0, 1, 2]) 
         if (nOut !== 1) inBad++ });
       out.leak = leak; out.outBad = inBad;
       // 5 rates
-      const R = T.rates, der = BL.DERATE;
+      const R = T.rates, der = tplDerate();
       out.inLoad = Math.max(0, ...[...inLoad.values()].map(c => c * R.rin)); out.inLim = der * R.cap;
       out.outLoad = Math.max(0, ...[...outLoad.values()].map(c => c * R.rout)); out.outLim = R.cap;
       out.maxPerIn = Math.max(0, ...inLoad.values()); out.maxPerOut = Math.max(0, ...outLoad.values());
@@ -101,6 +106,9 @@ for (const block of BLOCKS) for (const rec of RECS) for (const mk of [0, 1, 2]) 
     check(r.inLoad <= r.inLim + 1e-9, tag + ' in-lane load ' + r.inLoad + ' <= ' + r.inLim + ' (max ' + r.maxPerIn + '/lane)');
     check(r.outLoad <= r.outLim + 1e-9, tag + ' out-lane load ' + r.outLoad + ' <= ' + r.outLim + ' (max ' + r.maxPerOut + '/lane)');
     check(r.ugUnpaired === 0, tag + ' UG pairs');
+    const ci = await checkIface(pg, r.bld, block, ref);
+    check(ci.ok, tag + ' checkIface ' + ci.errs.join('; '));
+    check(r.bld.items.filter(b => PLCSPL.test(b.cls)).every(b => b.pr && b.pr[0] === 0 && b.pr[1] === -1), tag + ' every splitter has priority on the machine face');
     const area = r.W * r.H;
     rows.push([block, rec.split('>')[1].slice(5), 'Mk' + (mk + 1), n, nMax, r.stats.machines, r.stats.belts, r.stats.ug, r.stats.spl, area, (r.stats.belts / r.stats.machines).toFixed(1), r.ports.in.length + '/' + r.ports.out.length]);
   }
@@ -108,6 +116,28 @@ for (const block of BLOCKS) for (const rec of RECS) for (const mk of [0, 1, 2]) 
   const neg = await pg.evaluate(a => { const T = tplBuild(a); return {ok: T.ok, why: T.why} }, {block, cls: 'DAT_Assembler', rec, n: nMax + 1, mk, spMk: mk});
   check(neg.ok === false, `${block} ${rec.split('>')[1].slice(5)} Mk${mk + 1} n=nMax+1=${nMax + 1} refused (${neg.why})`);
 }
+// checkPlan: planner N vs template, rate sets R1-R4 per block x recipe (Mk2). Single-lane cases (one lane carries every machine) must also reproduce the planner last-machine load.
+const planRows = [];
+for (const block of BLOCKS) for (const rec of ['ITEM_TitaniumPlates>ITEM_HullPlates', 'ITEM_NickelPlates>ITEM_MagneticCoils']) {
+  const info = await pg.evaluate(([k, blk]) => { const r = [].concat(...Object.values(RECS)).find(x => rk(x) === k); const P = plan(r.o[0], 1, 1, {}, {[r.o[0]]: k}, {proto: false, enr: false, obs: false}); return {pm: P.nodes[r.o[0]].pmach, nMax: tplMax({block: blk, cls: 'DAT_Assembler', rec: k, mk: 1, spMk: 1})} }, [rec, block]);
+  if (!(info.nMax >= 1)) { console.log('plan ' + block + ' ' + rec + ': nMax 0, skipped'); continue }
+  const pm = info.pm, nm = info.nMax;
+  const tpl = {build: 'tplBuild', max: 'tplMax', cls: 'DAT_Assembler'};
+  for (const [tg, rate] of [['R1 pmach', pm], ['R1b 0.25pm', 0.25 * pm], ['R2 nMax-1+.3', (nm - 1 + 0.3) * pm], ['R3 nMax', nm * pm], ['R4 nMax+1', (nm + 1) * pm], ['R4b 2nMax+.5', (2 * nm + 0.5) * pm]]) {
+    const r = await checkPlan(pg, tpl, rec, rate, block, 1);
+    r.row.set = tg; planRows.push(r.row);
+    if (r.row.belts > 2 && !r.ok) { console.log('expected-negative (planner belts ' + r.row.belts + ' > M=2) ' + block + ' ' + tg + ': ' + r.errs.join('; ')); continue }
+    check(r.ok, 'checkPlan ' + block + ' ' + rec.split('>')[1].slice(5) + ' ' + tg + ' ' + r.errs.join('; '));
+    // priority semantics: when one lane carries all N machines the last machine must carry exactly the planner remainder and the rest run full
+    const single = r.row.B === 1 && await pg.evaluate(a => tplBuild(a).rows.filter(l => l.m > 0).length === 1, {block, cls: 'DAT_Assembler', rec, n: r.row.N, mk: 1, spMk: 1});
+    if (single) {
+      const uLast = r.row.rate / r.row.pmach - (r.row.N - 1);
+      check(Math.abs(r.row.minUtil - uLast) < 0.01 && (r.row.N === 1 || r.row.maxUtil > 0.99), 'planner semantics ' + block + ' ' + tg + ' N=' + r.row.N + ' minUtil ' + r.row.minUtil + ' want ' + uLast.toFixed(3) + ' maxUtil ' + r.row.maxUtil);
+    }
+  }
+}
+console.log('plan: set | block | rate | N | B | nMax | pmach | planUtil | minUtil | maxUtil | belts | maxBelt | supply');
+for (const x of planRows) console.log([x.set, x.block, x.rate, x.N, x.B, x.nMax, x.pmach, x.planUtil, x.minUtil, x.maxUtil, x.belts, x.maxBeltUtil, x.supply].join(' | '));
 console.log('block | recipe | mk | n | nMax | machines | belts | ug | spl | area | belts/machine | lanes in/out');
 for (const r of rows) console.log(r.join(' | '));
 // screenshots (full frame 1280x800): each block at n=nMax (Mk3, Hull Plates) and 2x2 at n=1 / n=7
