@@ -15,7 +15,7 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=bl');
 await pg.waitForFunction(() => window.__fb && typeof placerTile === 'function' && typeof ugPairs === 'function');
-await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
+// iface.js is already loaded by index.html (loading it twice redeclares TPL_IF_SETS)
 await pg.addScriptTag({path: ROOT + '/js/tpl/assembler_1in.js'});
 let fails = 0;
 const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } else if (process.env.V) console.log('ok   ' + msg) };

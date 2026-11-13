@@ -125,7 +125,7 @@ if (isMain) {
     page.on('pageerror', e => pageErrs.push(e.message));
     await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=old');
     await page.waitForFunction(() => window.__fb && typeof plan === 'function' && typeof links1 === 'function' && typeof supplyRows === 'function');
-    await page.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
+    // iface.js is already loaded by index.html
     await page.addScriptTag({path: ROOT + '/js/tpl/refinery_1in.js'});
     const key = await page.evaluate(() => { const r = [].concat(...Object.values(RECS)).find(x => x.i.length === 1 && /Silica/.test(rk(x)) && /SiliconWafers$/.test(rk(x))); return r ? rk(r) : null });
     if (!key) throw new Error('Silica>SiliconWafers recipe not found');
