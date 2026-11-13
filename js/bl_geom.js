@@ -58,7 +58,9 @@ function blRow2(o){
 function blStage(S){
   const {mk,spMk,bx,cx,Y,mc,cls,rec,rowsM,PS,PN,first,ind,item,M,lane}=S;
   const bd=dim({cls:bx,rot:0}),bh=bd.h,bw=bd.w,t=mc.xinB!=null?1:0,P=mc.h+2+t,h=mc.h,w=mc.w,Rs=rowsM.length;
-  const X0=cx+bw,E0=X0+M*w,yT=j=>Y+bh+1+j*P,yIn=j=>yT(j)+t,items=[],bc=PLC_BELT[mk],ug=PLC_UG[mk];
+  const FIT=!!S.fit,nx=(y,hh)=>{if(!FIT)return y;while(!pfFitY(y,hh))y++;return y},nxC=(y,hh)=>FIT?nx(y-1,hh+1)+1:y;   // band-free mode (multi trees only): rows and trunks pushed to a wall-fitting y
+  const X0=cx+bw,E0=X0+M*w,yTa=[],yT=j=>yTa[j],yIn=j=>yTa[j]+t,items=[],bc=PLC_BELT[mk],ug=PLC_UG[mk];
+  for(let j=0;j<Rs;j++)yTa.push(nx(j?yTa[j-1]+P:Y+bh+1,P));
   if(Rs<1||PS.length<Rs||PN.length<Rs)return{ok:false,why:'BL: stage ports'};
   if(t&&!lane)return{ok:false,why:'BL: lane missing'};
   const LP=t?portsOf({cls:bx,x:cx,y:lane.y,rot:0,off:[]}).filter(p=>p.f==='W').sort((a,b)=>a.y-b.y):null;
@@ -90,7 +92,7 @@ function blStage(S){
       items.push(...r.items);
     }
   }
-  const yOutF=j=>yIn(j)+1+h,Yb=yOutF(Rs-1)+1,Yc=Yb+Rs,sinkCols=[];
+  const yOutF=j=>yIn(j)+1+h,Yb=nx(yOutF(Rs-1)+1,Rs),Yc=nxC(Yb+Rs,bh),sinkCols=[];
   for(let j=0;j<Rs;j++){
     const yr=Yb+(Rs-1-j),yOut=yOutF(j),ex=E0+(Rs-1-j),cN=cx+PN[Rs-1-j];
     sinkCols.push(cN);
@@ -119,4 +121,26 @@ function blTower(Tw){
   }
   if(Tw.dock&&Tw.dock.out==='nrm')sink.dk='out';
   return{ok:true,items,Yend:Y,sinkCols};
+}
+// blTree(Tw): spine of containers at x=cx. Tw={mk,spMk,bx,cx,dock,ev}. ev[i]={t:'raw',item} | {t:'stage',cls,mc,rec,M,rowsM,d:eventIdx of the direct container,l:eventIdx of the lane container or -1}. Every event owns one container; a stage event's container is its sink.
+function blTree(Tw){
+  const ports=portsOf({cls:Tw.bx,x:0,y:0,rot:0,off:[]}),bh=dim({cls:Tw.bx,rot:0}).h;
+  const SP=ports.filter(p=>p.f==='S').map(p=>p.x).sort((a,b)=>a-b),NP=ports.filter(p=>p.f==='N').map(p=>p.x).sort((a,b)=>a-b),Sk=ports.filter(p=>p.f==='S').map(p=>p.key);
+  const nx=(y,hh)=>{while(!pfFitY(y,hh))y++;return y};
+  const lanes=new Set(Tw.ev.map(e=>e.l).filter(v=>v>=0)),box=[],items=[];let cur=1;
+  for(let i=0;i<Tw.ev.length;i++){
+    const e=Tw.ev[i];let b;
+    if(e.t==='raw')b={cls:Tw.bx,x:Tw.cx,y:nx(cur,bh),rot:0,h:0,pid:0,ct:[{item:e.item,n:0,inf:true}]};
+    else{
+      const Rs=e.rowsM.length,D=box[e.d],L=e.l>=0?box[e.l]:null;
+      const st=blStage({mk:Tw.mk,spMk:Tw.spMk,bx:Tw.bx,cx:Tw.cx,Y:D.y,mc:e.mc,cls:e.cls,rec:e.rec,rowsM:e.rowsM,PS:SP.slice(0,Rs),PN:NP.slice(0,Rs),first:false,ind:false,M:e.M,lane:L?{y:L.y}:null,fit:true});
+      if(!st.ok)return st;
+      items.push(...st.items);
+      b={cls:Tw.bx,x:Tw.cx,y:st.Yc,rot:0,h:0,pid:0,ct:[]};
+    }
+    if(lanes.has(i))b.off=Sk;          // lane containers output west only
+    box.push(b);items.push(b);cur=b.y+bh+1;
+  }
+  if(Tw.dock&&Tw.dock.out==='nrm')box[box.length-1].dk='out';
+  return{ok:true,items,Yend:box[box.length-1].y};
 }
