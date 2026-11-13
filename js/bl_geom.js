@@ -1,15 +1,17 @@
 // BL2-BL3 geometry (blMachine, blRow, blStage, blTower). Filled in BL2+.
 // blMachine(cls): first rot 0..3 whose ports give one input (N face, not out) and one output (S face, not in); other ports must be toggleable and go to off.
-function blMachine(cls){
+function blMachine(cls,k=1){
   for(let rot=0;rot<4;rot++){
     const ps=portsOf({cls,x:0,y:0,rot,off:[]});
-    const pin=ps.filter(p=>p.nx===0&&p.ny===-1&&p.dir!=='out').sort((a,b)=>a.x-b.x)[0];
+    const pins=ps.filter(p=>p.nx===0&&p.ny===-1&&p.dir!=='out').sort((a,b)=>a.x-b.x);
     const pout=ps.filter(p=>p.nx===0&&p.ny===1&&p.dir!=='in').sort((a,b)=>a.x-b.x)[0];
-    if(!pin||!pout)continue;
-    const others=ps.filter(p=>p!==pin&&p!==pout);
+    if(pins.length<k||!pout)continue;
+    if(k===2&&pins[1].x-pins[0].x<2)continue;
+    const use=k===2?[pins[0],pins[1]]:[pins[0]];
+    const others=ps.filter(p=>!use.includes(p)&&p!==pout);
     if(others.some(p=>!p.tg))continue;
     const d=dim({cls,rot});
-    return{ok:true,rot,w:d.w,h:d.h,xin:pin.x,xout:pout.x,off:others.map(p=>p.key).sort()};
+    return{ok:true,rot,w:d.w,h:d.h,xin:k===2?pins[1].x:pins[0].x,...(k===2?{xinB:pins[0].x}:{}),xout:pout.x,off:others.map(p=>p.key).sort()};
   }
   return{ok:false,why:'BL: machine ports'};
 }
@@ -29,27 +31,68 @@ function blRow(o){
   items.push({cls:bc,x:xEx,y:yOut,rot:1,h:0,pid:0});
   return{ok:true,items,yOut};
 }
+// blRow2(o): two-input row. A (direct) manifold y=yT, B (lane) manifold y=yIn=yT+1 (UG under each A feeder), machines at yIn+1, output belt y=yOut=yIn+1+h.
+function blRow2(o){
+  const {mk,spMk,cls,rec,mc,m,X0,yT,colA,colB,xEx}=o,w=mc.w,xA=mc.xin,xB=mc.xinB,h=mc.h,yIn=yT+1,yOut=yIn+1+h;
+  if(colA>=X0+xA||colB>=X0+xB)return{ok:false,why:'BL: row input column past first splitter'};
+  const sc=PLC_SPL[spMk],bc=PLC_BELT[mk],ug=PLC_UG[mk],spl=pfSplOff(sc,0,['E','S']),items=[];
+  const bt=(x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});
+  const lastA=X0+(m-1)*w+xA,lastB=X0+(m-1)*w+xB;
+  const spA=new Set(),spB=new Set(),skip=new Set(),ent=new Set(),ext=new Set();
+  for(let k=0;k<m;k++){const b=X0+k*w;spA.add(b+xA);spB.add(b+xB);if(k<m-1){skip.add(b+xA);ent.add(b+xA-1);ext.add(b+xA+1)}}
+  for(let x=colA;x<=lastA;x++)items.push(spA.has(x)?{cls:sc,x,y:yT,rot:0,h:0,pid:0,off:spl}:bt(x,yT,0));
+  for(let k=0;k<m;k++)items.push(bt(X0+k*w+xA,yIn,1));
+  for(let x=colB;x<=lastB;x++){
+    if(skip.has(x))continue;
+    if(spB.has(x))items.push({cls:sc,x,y:yIn,rot:0,h:0,pid:0,off:spl});
+    else if(ent.has(x)||ext.has(x))items.push({cls:ug,x,y:yIn,rot:0,h:0,pid:0});
+    else items.push(bt(x,yIn,0));
+  }
+  for(let k=0;k<m;k++)items.push({cls,x:X0+k*w,y:yIn+1,rot:mc.rot,h:0,pid:0,off:mc.off,rec});
+  for(let x=X0+mc.xout;x<xEx;x++)items.push(bt(x,yOut,0));
+  items.push(bt(xEx,yOut,1));
+  return{ok:true,items,yOut};
+}
 // blStage(S): Rs rows fed from source/sink container at (cx,Y); trunks run into the container at Yc. S.cls = machine class, S.M = machines per full row (E0 = X0+M*w).
+// Two-input machines (mc.xinB set, t=1): S.lane={y} = lane container row; lane belts leave its W ports, run down columns cx-2-j and enter row B. Single-input (t=0) path is unchanged.
 function blStage(S){
-  const {mk,spMk,bx,cx,Y,mc,cls,rec,rowsM,PS,PN,first,ind,item,M}=S;
-  const bd=dim({cls:bx,rot:0}),bh=bd.h,bw=bd.w,P=mc.h+2,h=mc.h,w=mc.w,Rs=rowsM.length;
-  const X0=cx+bw,E0=X0+M*w,yIn=j=>Y+bh+1+j*P,items=[],bc=PLC_BELT[mk];
+  const {mk,spMk,bx,cx,Y,mc,cls,rec,rowsM,PS,PN,first,ind,item,M,lane}=S;
+  const bd=dim({cls:bx,rot:0}),bh=bd.h,bw=bd.w,t=mc.xinB!=null?1:0,P=mc.h+2+t,h=mc.h,w=mc.w,Rs=rowsM.length;
+  const X0=cx+bw,E0=X0+M*w,yT=j=>Y+bh+1+j*P,yIn=j=>yT(j)+t,items=[],bc=PLC_BELT[mk],ug=PLC_UG[mk];
   if(Rs<1||PS.length<Rs||PN.length<Rs)return{ok:false,why:'BL: stage ports'};
+  if(t&&!lane)return{ok:false,why:'BL: lane missing'};
+  const LP=t?portsOf({cls:bx,x:cx,y:lane.y,rot:0,off:[]}).filter(p=>p.f==='W').sort((a,b)=>a.y-b.y):null;
+  if(t&&LP.length<Rs)return{ok:false,why:'BL: lane ports'};
   const vy0=first&&ind?0:Y+bh;
   for(let j=0;j<Rs;j++){
-    const yI=yIn(j),col=cx+PS[Rs-1-j],xEx=E0+(Rs-1-j);
-    for(let y=vy0;y<yI;y++){
-      const b={cls:bc,x:col,y,rot:1,h:0,pid:0};
-      if(first&&ind&&y===0){b.dk='ie';b.di=item}
-      items.push(b);
+    const col=cx+PS[Rs-1-j],xEx=E0+(Rs-1-j);
+    if(!t){
+      const yI=yIn(j);
+      for(let y=vy0;y<yI;y++){
+        const b={cls:bc,x:col,y,rot:1,h:0,pid:0};
+        if(first&&ind&&y===0){b.dk='ie';b.di=item}
+        items.push(b);
+      }
+      const r=blRow({mk,spMk,cls,rec,mc,m:rowsM[j],X0,yIn:yI,colX:col,xEx});
+      if(!r.ok)return r;
+      items.push(...r.items);
+    }else{
+      for(let y=vy0;y<yT(j);y++){
+        const q=[...Array(j).keys()].find(q=>y>=yT(q)&&y<=yIn(q)+1);   // inside the underpass of an upper row
+        if(q===undefined)items.push({cls:bc,x:col,y,rot:1,h:0,pid:0});
+        else if(y===yT(q)||y===yIn(q)+1)items.push({cls:ug,x:col,y,rot:1,h:0,pid:0});
+      }
+      const lp=LP[Rs-1-j],lc=cx-2-j;
+      for(let x=lp.x+lp.nx;x>lc;x--)items.push({cls:bc,x,y:lp.y,rot:2,h:0,pid:0});
+      for(let y=lp.y;y<yIn(j);y++)items.push({cls:bc,x:lc,y,rot:1,h:0,pid:0});
+      const r=blRow2({mk,spMk,cls,rec,mc,m:rowsM[j],X0,yT:yT(j),colA:col,colB:lc,xEx});
+      if(!r.ok)return r;
+      items.push(...r.items);
     }
-    const r=blRow({mk,spMk,cls,rec,mc,m:rowsM[j],X0,yIn:yI,colX:col,xEx});
-    if(!r.ok)return r;
-    items.push(...r.items);
   }
-  const Yb=yIn(Rs-1)+h+2,Yc=Yb+Rs,sinkCols=[];
+  const yOutF=j=>yIn(j)+1+h,Yb=yOutF(Rs-1)+1,Yc=Yb+Rs,sinkCols=[];
   for(let j=0;j<Rs;j++){
-    const yr=Yb+(Rs-1-j),yOut=yIn(j)+1+h,ex=E0+(Rs-1-j),cN=cx+PN[Rs-1-j];
+    const yr=Yb+(Rs-1-j),yOut=yOutF(j),ex=E0+(Rs-1-j),cN=cx+PN[Rs-1-j];
     sinkCols.push(cN);
     for(let y=yOut+1;y<yr;y++)items.push({cls:bc,x:ex,y,rot:1,h:0,pid:0});
     items.push({cls:bc,x:ex,y:yr,rot:2,h:0,pid:0});
