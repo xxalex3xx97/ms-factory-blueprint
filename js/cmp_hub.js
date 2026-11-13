@@ -12,7 +12,8 @@ function cmpPool(S){
   const ya=Math.min(Math.max(Math.floor(mid-2*c),1),H-1-4*c);
   if(!S.ca&&H-1-4*c<1)return cmpNo('pool block too short (rows)');
   const AW=Ri?blHA(inRows,c,ya,'out',0,S.pyIn):null,ngW=AW?cmpNg(AW):0;
-  const cx=S.dock&&!Ro?W-5:(Ri?ngW+2:S.dock?0:1);   // OZ dock: container flush with the east edge (q.x+4===W-1)
+  let cx=S.dock&&!Ro?W-5:(Ri?ngW+2:S.dock?0:1);   // OZ dock: container flush with the east edge (q.x+4===W-1)
+  if(Ro>Ri&&!S.dock&&!S.ind){const m=W-6-cmpNg(blHA(outRows,c,ya,'in',cx+4,S.pyOut));if(m>cx&&m<=W-5)cx=m}   // F2: more lanes leave than arrive: container east, the long lane run shrinks
   if((Ri&&cx-1-ngW<1)||cx>W-5)return cmpNo('pool block too narrow (rows)');
   const AE=Ro?blHA(outRows,c,ya,'in',cx+4,S.pyOut):null,ngE=AE?cmpNg(AE):0;
   if(Ro&&cx+4+ngE+1>W-1)return cmpNo('pool block too narrow (rows)');
