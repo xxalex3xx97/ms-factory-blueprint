@@ -32,8 +32,8 @@ function cfgModel(b,d,e,ugn){
   }else if(k==="splitter"){
     if(!b.fl&&!b.pr&&!off)return;
     if(b.fl)e.Filters=b.fl;
-    const n=b.fl?b.fl.length:3;   // game config: one filter + one port flag per output (3 for a splitter); the last n site ports (UNVERIFIED mapping)
-    e.ConfigHex=cfgEnc(k,{filters:b.fl||Array(n).fill(""),prioA:b.pr?b.pr[0]:-1,prioB:b.pr?b.pr[1]:-1,ports:isSplitterCls(b.cls)?SPL_FACES.map(f=>{const q=ps.find(q=>q.f===f);return!q||q.en}):en.slice(-n)});
+    const n=b.fl?b.fl.length:isBalCls(b.cls)?2:3;   // game config: one filter + one port flag per output (3 for a splitter); the last n site ports (UNVERIFIED mapping)
+    e.ConfigHex=cfgEnc(k,{filters:b.fl||Array(n).fill(""),prioA:b.pr?b.pr[0]:-1,prioB:b.pr?b.pr[1]:-1,ports:isBalCls(b.cls)?balOuts(ps).map(q=>!q||q.en):isSplitterCls(b.cls)?SPL_FACES.map(f=>{const q=ps.find(q=>q.f===f);return!q||q.en}):en.slice(-n)});
   }
 }
 function build(){
@@ -153,6 +153,7 @@ function impCfg(b,d,m){SV++;
   if(!dc)return;
   const off=[],ps=portsOf(b),gm=gamePortMap(b);
   if(isSplitterCls(d.id))(dc.ports||[]).forEach((e,g)=>{const q=ps.find(q=>q.f===SPL_FACES[g]);if(e===false&&q&&q.tg)off.push(q.key)});
+  else if(isBalCls(d.id))(dc.ports||[]).forEach((e,g)=>{const q=balOuts(ps)[g];if(e===false&&q&&q.tg)off.push(q.key)});
   else if(gm&&dc.ports&&dc.ports.length===gm.length)dc.ports.forEach((e,g)=>{const q=ps[gm[g]];if(e===false&&q.tg)off.push(q.key)});
   else{const sk=k==="splitter"?Math.max(0,ps.length-(dc.ports||[]).length):0;(dc.ports||[]).forEach((e,i)=>{const q=ps[sk+i];if(e===false&&q&&q.tg)off.push(q.key)})}
   if(off.length)b.off=off;

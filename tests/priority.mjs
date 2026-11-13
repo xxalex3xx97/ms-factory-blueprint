@@ -96,6 +96,36 @@ try {
     const bad = IN.DefaultMachines.filter(m => /Balancer|Splitter/i.test(m.Class) && (by.get(m.MachineID) || {}).ConfigHex !== m.ConfigHex);
     chk('Main_Base (12): every balancer/splitter ConfigHex (or absence) identical', bad.length === 0, bad.map(m => m.MachineID + ':' + m.ConfigHex + ' -> ' + (by.get(m.MachineID) || {}).ConfigHex).join(' | '));
   }
+  // balancer export structure: 2 filters, prioA = index, prioB -1, 2 port flags (the two outputs); real (11) balancer hex round-trips
+  const bh = await pg.evaluate(() => {
+    S.blocks = []; S.dm = [];
+    const b = {id: 800, mid: 8000, cls: 'DAT_BeltBalancer_03', x: 3, y: 3, h: 0, rot: 0, pid: 0}; S.blocks.push(b);
+    const outs = () => portsOf(b).filter(p => p.dir === 'out'), hx = () => __fb.build().DefaultMachines[0].ConfigHex, r = {};
+    togglePrio(b, outs().find(p => +p.pos === 1).key); r.up = hx();
+    togglePrio(b, outs().find(p => +p.pos === 2).key); r.low = hx();
+    togglePort(b, outs().find(p => +p.pos === 1).key); r.off1 = hx();   // upper disabled -> flags [1,0] (index 0 = lower, 1 = upper), prio on lower stays
+    __fb.importJson(JSON.stringify(__fb.build()), true); const b2 = S.blocks[0]; r.back = JSON.stringify(b2.off) + JSON.stringify(b2.pr);
+    // flip: priority keeps its physical side (mirM remaps pr like off)
+    S.blocks = []; const f = {id: 801, mid: 8001, cls: 'DAT_BeltBalancer_03', x: 3, y: 3, h: 0, rot: 0, pid: 0}; S.blocks.push(f);
+    togglePrio(f, portsOf(f).find(p => p.dir === 'out' && +p.pos === 1).key);
+    const y0 = portsOf(f).find(p => p.pr).y, m = __fb.mirM(f), g = {...f, ...m}; r.mir = JSON.stringify(m); r.flipSide = portsOf(g).find(p => p.pr).y;
+    const sp = {id: 802, cls: 'DAT_Splitter', x: 3, y: 3, h: 0, rot: 0, pid: 0}; S.blocks = [sp]; togglePrio(sp, portsOf(sp).find(p => p.dir === 'out' && p.f === 'N').key);
+    const sy = portsOf(sp).find(p => p.pr).y, ms = __fb.mirM(sp), sg = {...sp, ...ms}; r.sm = JSON.stringify(ms); r.sy = [sy, portsOf(sg).find(p => p.pr).y];
+    r.y0 = y0; return r;
+  });
+  console.log(JSON.stringify(bh));
+  const head = '010002000000' + '0000000000000000'.slice(0, 0);
+  chk('balancer prio upper: 2 filters, prioA 1, prioB -1, 2 ports', bh.up === '0100020000000000000000000000' + '01000000ffffffff02000000' + '0101', bh.up);
+  chk('balancer prio lower: prioA 0', bh.low === '0100020000000000000000000000' + '00000000ffffffff02000000' + '0101', bh.low);
+  chk('balancer upper disabled: flags [lower=1, upper=0], prio kept', bh.off1 === '0100020000000000000000000000' + '00000000ffffffff02000000' + '0100', bh.off1);
+  chk('balancer off/prio round trip', /^\[".+"\]\[0,-1\]$/.test(bh.back), bh.back);
+  chk('mirror keeps the physical side of the priority output (balancer, splitter)', bh.flipSide === bh.y0 && bh.sy[0] === bh.sy[1], JSON.stringify([bh.flipSide, bh.y0, bh.sy, bh.mir, bh.sm]));
+  if (fs.existsSync(FILE)) {
+    await pg.evaluate(t => __fb.importJson(t, true), fs.readFileSync(FILE, 'utf8'));
+    chk('Main_Base (11) balancer 86964 hex identical', (await hex(86964)) === '0100020000000000000000000000ffffffffffffffff020000000101', await hex(86964));
+    await pg.evaluate(() => S.blocks.forEach(b => delete b.cfgKeep));
+    chk('Main_Base (11) balancer 86964 re-encoded without cfgKeep has no priority, same flags', (await hex(86964)) === undefined || (await hex(86964)) === '0100020000000000000000000000ffffffffffffffff020000000101', await hex(86964));
+  }
   // shot: Factory view, shift+click on a port toggles priority
   await pg.evaluate(() => { __fb.importJson(JSON.stringify({Version: 1, DisplayName: 'p', DefaultMachines: [], Blocks: []})); S.blocks = [{id: 9001, cls: 'DAT_Splitter', x: 4, y: 4, h: 0, rot: 0, pid: 0}]; uid = 9100; __fb.setView('F'); all(); V.z = 6; V.ox = -100; V.oy = -100; all(); });
   const pos = await pg.evaluate(() => { const b = S.blocks[0], q = portsOf(b).filter(p => p.dir === 'out')[1], s = sc(), r = cv.getBoundingClientRect(); return [r.left + V.ox + (q.x + .5 + q.nx * .5) * s, r.top + V.oy + (q.y + .5 + q.ny * .5) * s, sc()]; });

@@ -19,6 +19,8 @@ const isBalCls=c=>/^DAT_BeltBalancer_\d+$/.test(String(c||""));
 const hasPrio=c=>isSplitterCls(c)||isBalCls(c);
 // priority output index in the game config (prioA): splitter = index of the face in SPL_FACES; balancer = E-face output, start(smaller y at rot 0)=1, end=0 (local pos, so it rotates with the block)
 const prIdx=(b,p)=>isBalCls(b.cls)?(+p.pos===1?1:0):SPL_FACES.indexOf(p.f);
+// balancer config: 2 filters + 2 port flags = the 2 OUTPUT ports in game index order (0 = pos 2 / lower at rot 0, 1 = pos 1 / upper); same index as prioA
+const balOuts=ps=>[2,1].map(n=>ps.find(p=>p.dir==="out"&&+p.pos===n));
 function cfgEnc(k,d){
   const o=[1,0],i32=v=>{for(let i=0;i<4;i++)o.push((v>>(8*i))&255)},fs=s=>{if(!s)return i32(0);if(/[^\x00-\x7f]/.test(s)){i32(-(s.length+1));for(let i=0;i<s.length;i++)o.push(s.charCodeAt(i)&255,s.charCodeAt(i)>>8);o.push(0,0);return}i32(s.length+1);for(let i=0;i<s.length;i++)o.push(s.charCodeAt(i)&255);o.push(0)},bl=a=>{i32(a.length);a.forEach(p=>o.push(p?1:0))};
   if(k==="recipe"){fs(d.recipe||"");bl(d.ports)}

@@ -179,7 +179,7 @@ function mirM(b){
   for(const r2 of [b.rot&3,(b.rot+2)&3]){
     const P=portsOf(T(r2)),map=new Map();
     for(const p of P0){const j=P.find(q=>q.x===dm.w-1-p.x&&q.y===p.y&&q.nx===-p.nx&&q.ny===p.ny&&q.dir===p.dir);if(!j)break;map.set(p.key,j.key)}
-    if(map.size===P0.length)return{rot:r2,off:(b.off||[]).map(k=>map.get(k)||k)};
+    if(map.size===P0.length){const pp=P0.find(p=>p.pr),pj=pp&&P.find(q=>q.key===map.get(pp.key));return{rot:r2,off:(b.off||[]).map(k=>map.get(k)||k),...(pj?{pr:[prIdx({cls:b.cls},pj),b.pr[1]]}:{})}}
   }
   return null;
 }
