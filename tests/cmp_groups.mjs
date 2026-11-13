@@ -13,6 +13,7 @@ const SETS = {
   s1: 'nickel:31,nickel:100,nickel:480,basicmotor:20,basicmotor:100,basicmotor:900',
   s2: 'capacitor:100,capacitor:500,bc:100',
   s3: 'ac:5,ac:15,ac:30',
+  auto: 'ac:30,capacitor:100,nickel:480',   // GAUTO: no groups flag; ac:30 (K=3 strips) must pick groups by itself, the others stay on the current engine
 };
 const arg = process.argv[2] || 's1', cases = (SETS[arg] || (arg === 'all' ? Object.values(SETS).join(',') : arg)).split(',');
 const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--js-flags=--max-old-space-size=8192']});
@@ -20,13 +21,19 @@ let fails = 0; const pageErrs = [], rows = [];
 try {
   const page = await (await br.newContext()).newPage();
   page.on('pageerror', e => pageErrs.push(e.message));
-  await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp&groups=1');
+  await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp'+(arg==='auto'?'':'&groups=1'));
   await page.waitForFunction(() => window.__fb && typeof cmpGroupsRun === 'function' && typeof placerLayout === 'function');
   for (const c of cases) {
     const [n, rate] = c.split(':');
     const key = await page.evaluate(re => [].concat(...Object.values(RECS)).map(rk).find(k => new RegExp(re).test(k)), KEY[n]);
     const t0 = Date.now();
     const r = await checkCompose(page, key, +rate, 1, 'BPO_Station_02', {strict: true, mutate: 'any'});
+    if (arg === 'auto') {   // which engine built it
+      const g = await page.evaluate(([k, rate]) => { window.CMP_ENGINE = true; const rec = [].concat(...Object.values(RECS)).find(r => rk(r) === k), item = rec.o[0];
+        const P = plan(item, rate, 1, {}, {[item]: k}, {proto: false, enr: false, obs: false});
+        const L = placerLayout(P, item, 1, 1, {box: 'DAT_Container_2', mod: false, dock: null, bk: 'BPO_Station_02'}); return !!(L.bl && L.bl.cmp && L.bl.cmp.groups) }, [key, +rate]);
+      const want = n === 'ac'; if (g !== want) { fails++; console.log('FAIL ' + c + ': groups=' + g + ' expected ' + want) } else console.log('PASS engine ' + c + ' groups=' + g);
+    }
     rows.push({case: c, ok: r.ok, blocks: r.row.blocks, machines: r.row.machines, belts: r.row.belts, ms: Date.now() - t0});
     console.log((r.ok ? 'PASS ' : 'FAIL ') + c + (r.ok ? '' : ': ' + r.errs.slice(0, +process.env.NE || 4).join(' | ')));
     if (!r.ok) fails++;

@@ -234,6 +234,12 @@ function cmpCompose1(P,item,mk,spMk,o={}){
     A=cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by,dk});if(!A.ok)return indFb(A);
     stages=pl.nodes.filter(o=>!o.raw).map(o=>({item:o.item,cls:o.cls,tpl:tz.by[o.id].tpl,block,S:tz.by[o.id].S,N:o.N,perStrip:[o.N],B:1}));
     cmpI={K:pl.K||1,tree:true,stages,nodes:A.nodes,routed:A.routed};note=pl.notes.slice();per=[P.nodes[item].machines];
+    if((pl.K||1)>2&&globalThis.CMP_GROUPS===undefined){   // GAUTO: K>2 whole-tree strips -> also try the groups engine (no docks), keep it only if no more blocks and no more belts (COMPACT3 guard style) and not identical
+      if(dkw)note.push('Groups layout not available with docks yet');
+      else if(!globalThis.CMP_CAP4){let g;try{g=cmpGroupsRun(P,item,mk,spMk,BX,bk,block)}catch(e){g=null}   // groups refuses/errors -> keep the strips build
+        if(g&&g.ok){const nb=t=>t.ms.filter(b=>PLC_BELT.includes(b.cls)||PLC_UG.includes(b.cls)||PLC_SPL.includes(b.cls)).length;
+          if(g.A.T.blocks.length<=A.T.blocks.length&&nb(g.A.T)<=nb(A.T)&&g.A.T.blocks.length+nb(g.A.T)<A.T.blocks.length+nb(A.T)){A=g.A;stages=g.stages;cmpI=g.cmpI;note=g.note.concat('Groups layout used (fewer blocks than K strips)');per=g.per}}}
+    }
   }else return tr;
   if(A.dock){   // C7: raw/oz container descriptors + 'Dock n: assign ...' notes
     cmpI.raw=A.dock.raw;cmpI.oz=A.dock.oz;let n=0;
