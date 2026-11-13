@@ -20,17 +20,21 @@ const TPL_AA_REC={
  'ITEM_ChromaticAlloy+ITEM_ChitinComposite+ITEM_ReinforcedPlates+ITEM_Multisensor>ITEM_AdvancedPlates':{i:[30,30,10,5],o:5},
  'ITEM_Biolattice+ITEM_Graphene+ITEM_ReinforcedGlass+ITEM_Enzyme>ITEM_ChitinComposite':{i:[30,15,15,60],o:5},
  'ITEM_ChromaticAlloy+ITEM_Lonsdaleite+ITEM_EncodedSimulationMatrix+ITEM_SuperconductorCoil>ITEM_Multisensor':{i:[30,30,10,10],o:10}};
+// needs js/tpl/iface.js (tplIfSets, tplDerate, tplOutTail, TPL_IF_SIDE). Edge Interface v1: k=4, M=1; slots 0,1,2 at o+0..2 (item0 = main at o), item 3 = side lane at o+12 (TPL_IF_SIDE.adv_4in_item3), out at o (collector o+13 + tplOutTail).
+const TPL_AA_SDEF={'1x1':1,'1x2':1,'2x2':2,'2x2c':1};
 function tplAAGeo(S){
   const cls=plcCls(TPL_AA_BLK[S.block]);if(!cls)return{ok:false,why:'unknown block '+S.block};
-  const f=floorRect({cls,x:0,y:0,h:0,rot:0}),Fw=f.w,Fh=f.h;
-  const y0=Fh<16?0:1,bands=Math.max(0,Math.floor((Fh-y0*2)/TPL_AA_BAND)),per=Math.max(0,Math.floor((Fw-2-1-8)/TPL_AA_PITCH)+1);   // machine k: 1+9k+8<=Fw-2 (x=Fw-2 = merge column, Fw-1 = exit)
-  return{ok:bands>0&&per>0,cls,Fw,Fh,y0,bands,per,geom:bands*per};
+  const f=floorRect({cls,x:0,y:0,h:0,rot:0}),Fw=f.w,Fh=f.h,Ss=S.S||TPL_AA_SDEF[S.block],t=tplIfSets(S.block,Ss);
+  if(!t.ok)return{ok:false,why:t.why};
+  if(t.hs.some(h=>h<TPL_AA_BAND))return{ok:false,why:'S '+Ss+' too small for 14-row band in '+S.block};
+  const bands=Ss,per=Math.max(0,Math.floor((Fw-12)/TPL_AA_PITCH)+1);   // machine k: last cell 9+9k<=Fw-3 (x=Fw-2 trunk, Fw-1 port)
+  return{ok:per>0,why:'',cls,Fw,Fh,S:Ss,o:t.o,bands,per,geom:bands*per};
 }
-// rate group: machines per lane (g=floor(DERATE*cap/max input rate), same rule as vcPlan); rate-limited nMax = bands*min(per,g)
+// rate group: machines per lane g=floor(tplDerate()*cap/max input rate); rate-limited nMax = bands*min(per,g)
 function tplAARate(S,G){
   const R=TPL_AA_REC[S.rec],rates=S.rates||(R&&R.i);
   if(!rates)return{ok:false,why:'no rates for recipe '+S.rec};
-  const der=typeof BL!=='undefined'&&BL.DERATE!=null?BL.DERATE:0.5,cap=TPL_AA_CAP[S.mk],g=Math.floor(der*cap/Math.max(...rates));
+  const der=tplDerate(),cap=TPL_AA_CAP[S.mk],g=Math.floor(der*cap/Math.max(...rates));
   return{ok:g>=1,why:g<1?'rate: one machine needs '+Math.max(...rates)+'/min > derated belt '+der*cap:'',g,rates,orate:S.orate||(R&&R.o)||0,der,cap};
 }
 function tplMax(S){const G=tplAAGeo(S);if(!G.ok)return 0;if(S.noRate)return G.geom;const r=tplAARate(S);return r.ok?G.bands*Math.min(G.per,r.g):0}
@@ -40,30 +44,25 @@ function tplBuild(S){
   const gm=tplMax(S);if(n>gm){const r=tplAARate(S);return{ok:false,why:(n>G.geom?'does not fit: ':(r.ok?'rate: ':r.why+' ; '))+'n '+n+' > nMax '+gm,nMax:gm,geomMax:G.geom}}
   const rt=tplAARate(S),c=S.noRate?G.per:Math.min(G.per,rt.g),bc=PLC_BELT[S.mk],ug=PLC_UG[S.mk],sp=PLC_SPL[S.spMk],items=[];
   const bt=(x,y,rot=0)=>items.push({cls:bc,x,y,rot,h:0,pid:0}),u=(x,y)=>items.push({cls:ug,x,y,rot:0,h:0,pid:0});
-  const sE=pfSplOff(sp,0,['E','S']),sEN=pfSplOff(sp,0,['E','N']),sx=(x,y,off)=>items.push({cls:sp,x,y,rot:0,h:0,pid:0,off});
+  const sE=pfSplOff(sp,0,['E','S']),sEN=pfSplOff(sp,0,['E','N']),sx=(x,y,off,pr)=>items.push({cls:sp,x,y,rot:0,h:0,pid:0,off,pr:[pr,-1]});   // pr = machine-side output (SPL_FACES S=0,E=1,N=2): machines fill in lane order
   const mp=portsOf({cls:TPL_AA_CLS,x:0,y:0,rot:0,off:[]}),keep=mp.filter(p=>p.f==='N'||(p.f==='S'&&(p.x===2||p.x===6))),moff=mp.filter(p=>!keep.includes(p)).map(p=>p.key).sort();
-  const ports={in:[],out:[]};
+  const ports={in:[],out:[]},mn=S.main|0,perm=[mn,...[0,1,2,3].filter(i=>i!==mn)],sets=[],side=[];
   for(let b=0;b<G.bands;b++){
-    const y0=G.y0+b*TPL_AA_BAND,rA=y0,rB=y0+1,rC=y0+2,my=y0+3,rD=y0+12,rO=y0+13,nb=Math.max(0,Math.min(c,n-b*c));
-    ports.in.push({y:rA,item:0,dir:'E',band:b},{y:rB,item:1,dir:'E',band:b},{y:rC,item:2,dir:'E',band:b},{y:rD,item:3,dir:'E',band:b});
-    if(b===0)ports.out.push({y:rO,dir:'E'});
-    if(!nb){for(const y of [rA,rB,rC,rD])bt(0,y);continue}   // unused band: stub = 1 plain belt at the lane port (dead end)
+    const y0=G.o[b],rA=y0,rB=y0+1,rC=y0+2,my=y0+3,rD=y0+12,rO=y0+13,nb=Math.max(0,Math.min(c,n-b*c));
+    [rA,rB,rC,rD].forEach((y,t)=>ports.in.push({x:0,y,item:perm[t],dir:'E',set:b,copy:0,row:b}));
+    ports.out.push({x:G.Fw-1,y:y0,dir:'E',set:b});sets.push({o:y0,n:nb});side.push(rD);
+    if(!nb){for(const y of [rA,rB,rC,rD])bt(0,y);bt(G.Fw-1,y0);continue}   // unused set: stubs = 1 plain belt per lane port and at the out port
     const m0=1,last=m0+TPL_AA_PITCH*(nb-1);
     for(let k=0;k<nb;k++)items.push({cls:TPL_AA_CLS,x:m0+9*k,y:my,rot:0,h:0,pid:0,off:moff,rec:S.rec});
     // lanes: row y, splitter offset so (mx+so), spl off list, hop [ent,exit] offsets (mx+..) for every machine but the last (items between ent and exit are skipped), lanes end at the last splitter
-    const lane=(y,so,off,hop)=>{const S=new Set(),U=new Set(),skip=new Set();
+    const lane=(y,so,off,hop,pr)=>{const S=new Set(),U=new Set(),skip=new Set();
       for(let k=0;k<nb;k++){const mx=m0+9*k;S.add(mx+so);if(hop&&k<nb-1){U.add(mx+hop[0]);U.add(mx+hop[1]);for(let x=mx+hop[0]+1;x<mx+hop[1];x++)skip.add(x)}}
-      for(let x=0;x<=last+so;x++){if(S.has(x)){sx(x,y,off)}else if(U.has(x))u(x,y);else if(!skip.has(x))bt(x,y)}};
-    lane(rA,6,sE,null);lane(rB,4,sE,[5,7]);lane(rC,2,sE,[3,7]);lane(rD,2,sEN,[5,7]);
+      for(let x=0;x<=last+so;x++){if(S.has(x)){sx(x,y,off,pr)}else if(U.has(x))u(x,y);else if(!skip.has(x))bt(x,y)}};
+    lane(rA,6,sE,null,0);lane(rB,4,sE,[5,7],0);lane(rC,2,sE,[3,7],0);lane(rD,2,sEN,[5,7],2);
     for(let k=0;k<nb;k++){const mx=m0+9*k;bt(mx+6,rB,1);bt(mx+6,rC,1);bt(mx+4,rC,1);bt(mx+6,rD,1)}   // drops: lane A 2 cells, lane B 1 cell, output drop
-    for(let x=m0+6;x<G.Fw;x++)bt(x,rO);       // collector to the east edge
-  }
-  // 2x2: band 1 collector merges into band 0 collector at column Fw-2 (rows band1.rO .. band0.rO+1 flow north); replaces the band-1 collector's last two cells
-  if(G.bands>1&&n>c){
-    const r1=G.y0+TPL_AA_BAND+13,r0=G.y0+13,xc=G.Fw-2,drop=items.filter(q=>q.y===r1&&q.x>=xc);
-    for(const q of drop)items.splice(items.indexOf(q),1);
-    for(let y=r1;y>r0;y--)bt(xc,y,3);
+    for(let x=m0+6;x<=G.Fw-3;x++)bt(x,rO);       // collector to x=Fw-3, then the east tail jog to the out row y0
+    tplOutTail(items,{bc,W:G.Fw,yc:rO,yo:y0});
   }
   const stats={belts:items.filter(q=>q.cls===bc).length,ug:items.filter(q=>q.cls===ug).length,spl:items.filter(q=>q.cls===sp).length,machines:items.filter(q=>q.cls===TPL_AA_CLS).length};
-  return{ok:true,why:'',items,w:G.Fw,h:G.Fh,ports,nMax:gm,geomMax:G.geom,g:rt.g,per:G.per,bands:G.bands,rates:rt.rates,orate:rt.orate,stats};
+  return{ok:true,why:'',items,w:G.Fw,h:G.Fh,ports,rows:sets.map(q=>({m:q.n})),iface:{v:1,block:S.block,S:G.S,M:1,k:4,main:mn,n,sets,side},nMax:gm,geomMax:G.geom,g:rt.g,per:G.per,bands:G.bands,rates:rt.rates,orate:rt.orate,stats};
 }

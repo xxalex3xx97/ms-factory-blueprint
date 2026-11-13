@@ -163,6 +163,22 @@ for (const blk of BLOCKS) for (const cfg of CFG) {
   const negI = await checkIface(pg, await pg.evaluate(s => tplBuild(s), {...base, n: nMax + 1}), blk);
   check(!negI.ok, tag0 + ' checkIface refuses nMax+1');
 }
+// checkPlan gate vs the planner. Within ONE populated row (N<=mrow) the splitter priority gives N-1 full + last at planUtil (1%).
+const PREC = [['ITEM_Silica>ITEM_SiliconWafers', 1], ['ITEM_WaterIce>ITEM_HydrogenFuel', 1], ['ITEM_EnrichedNickelOre>ITEM_NickelPlates', 0]];
+for (const blk of BLOCKS) for (const [key, mk] of PREC) {
+  const info = await pg.evaluate(([k, blk, mk]) => { const r = [].concat(...Object.values(RECS)).find(x => rk(x) === k); const P = plan(r.o[0], 1, mk, {}, {[r.o[0]]: k}, {proto: false, enr: false, obs: false}); const sp = {block: blk, cls: 'DAT_Refinery', rec: k, mk, spMk: mk}; return {pm: P.nodes[r.o[0]].pmach, nMax: tplMax(sp), mrow: tplBuild({...sp, n: 1}).mrow} }, [key, blk, mk]);
+  if (!info.nMax) { check(false, `plan ${blk} ${key} nMax 0`); continue }
+  const pm = info.pm, nm = info.nMax, mr = info.mrow;
+  const sets = [['R1 N=1', 0.6 * pm], ['R1b frac', (Math.min(3, mr) + 0.3) * pm], ['R2 (mrow-1+0.3)', (mr - 1 + 0.3) * pm], ['R3 nMax', nm * pm], ['R4 nMax+1', (nm + 1) * pm], ['R4b 2nMax+.5', (2 * nm + 0.5) * pm]];
+  for (const [tag, rate] of sets) {
+    const r = await checkPlan(pg, null, key, rate, blk, mk), x = r.row, errs2 = [...r.errs];
+    if (x.N <= mr && x.B === 1) {
+      if (Math.abs(x.minUtil - (rate / pm - (x.N - 1))) > 0.01) errs2.push(`last machine util ${x.minUtil} != planner ${(rate / pm - (x.N - 1)).toFixed(4)}`);
+      if (x.N > 1 && x.maxUtil < 0.99) errs2.push(`other machines not full: max ${x.maxUtil}`);
+    }
+    check(errs2.length === 0, `plan ${blk} mk${mk} ${key.split('>')[1]} ${tag}: N=${x.N} B=${x.B} nMax=${nm} belts=${x.belts} util min/max/avg ${x.minUtil}/${x.maxUtil}/${x.planUtil} ${x.supply} ${errs2.join('; ')}`);
+  }
+}
 console.log('\nblock | config | n | nMax | machines | belts | ug | spl | area | belts/machine | rows x mrow | in% out% of belt cap');
 for (const t of table) console.log([t.blk, t.cfg, t.n, t.nMax, t.mach, t.belts, t.ug, t.spl, t.area, t.bpm, t.rows + 'x' + t.mrow, t.lin + ' ' + t.lout].join(' | '));
 await br.close();

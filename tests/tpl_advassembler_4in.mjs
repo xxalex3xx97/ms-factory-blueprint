@@ -5,6 +5,8 @@ import {createRequire} from 'module';
 import path from 'path';
 import fs from 'fs';
 import {fileURLToPath, pathToFileURL} from 'url';
+import {checkIface, checkChain} from './tpl_iface.mjs';
+import {checkPlan} from './tpl_plan.mjs';
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -14,6 +16,8 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=bl');
 await pg.waitForFunction(() => window.__fb && typeof placerCut === 'function' && typeof pfSplOff === 'function');
+await pg.waitForFunction(() => typeof plan === 'function' && typeof links1 === 'function' && typeof supplyRows === 'function');
+await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/advassembler_4in.js'});
 let fails = 0;
 const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } else console.log('ok   ' + msg) };
@@ -94,7 +98,7 @@ const analyse = (spec) => pg.evaluate((spec) => {
   out.edgeSpl = T.items.filter(b => (isS(b) || isU(b)) && (b.x === 0 || b.y === 0 || b.x === Fw - 1 || b.y === Fh - 1)).length;
   // rate: per band lane group load vs der*cap, output load vs cap
   const c = Math.min(T.per, T.g > 0 ? T.g : T.per), c0 = spec.noRate ? T.per : c, rates = T.rates;
-  const grp = Math.min(spec.n, c0), der = 0.5, cap = [60, 120, 180][spec.mk];
+  const grp = Math.min(spec.n, c0), der = tplDerate(), cap = [60, 120, 180][spec.mk];
   out.laneLoad = Math.max(...rates) * grp; out.laneLim = der * cap; out.outLoad = spec.n * T.orate; out.outCap = cap;
   out.rateOk = out.laneLoad <= out.laneLim + 1e-9 && out.outLoad <= out.outCap;
   out.ports = T.ports;
@@ -107,7 +111,7 @@ const analyse = (spec) => pg.evaluate((spec) => {
   return out;
 }, spec);
 
-const rows = [];
+const rows = [], chain = [];
 const run = async (tag, spec, shotAt) => {
   const r = await analyse(spec);
   if (r.refused) { check(false, `${tag} refused (${r.refused})`); return r }
@@ -119,6 +123,10 @@ const run = async (tag, spec, shotAt) => {
   check(r.inBad === 0, `${pre} each machine: N0,N1,N2,S6 get 4 distinct lanes, only those (bad ${r.inBad})`);
   check(r.outBad === 0 && !r.errs.length, `${pre} each machine out S8 reaches east port, no lane leak (bad ${r.outBad} ${r.errs.join(';')})`);
   check(r.rateOk, `${pre} lane load ${r.laneLoad}/${r.laneLim} per min, out ${r.outLoad}/${r.outCap}`);
+  const bl = await pg.evaluate(s => tplBuild(s), spec), ref = await pg.evaluate(s => tplBuild({...s, n: 1}), spec);
+  const ci = await checkIface(pg, bl, spec.block, ref);
+  check(ci.ok, `${pre} Edge Interface v1 ${ci.errs.join('; ')}`);
+  chain.push([bl, spec.block]);
   if (r.edgeSpl) console.log(`WARN ${pre} ${r.edgeSpl} splitter/UG on a floor edge row/col (row-stack cut rule)`);
   rows.push({tag, n: spec.n, m: r.stats.machines, belts: r.stats.belts, ug: r.stats.ug, spl: r.stats.spl, area: r.w * r.h, bpm: (r.stats.belts + r.stats.ug + r.stats.spl) / r.stats.machines});
   if (shotAt) fs.writeFileSync(ROOT + '/tests/shots/tpl_advassembler_4in_' + shotAt + '.png', Buffer.from(r.png.split(',')[1], 'base64'));
@@ -139,6 +147,44 @@ for (const block of ['1x1', '1x2', '2x2', '2x2c']) {
     check(!!neg.refused, `${tag} n=${max + 1} refused (${neg.refused})`);
   }
 }
+// chain: block next to itself (same S, same height)
+let nch = 0;
+for (const [bl, blk] of chain) { const c = checkChain(bl, bl); nch++; if (!c.ok) check(false, 'chain ' + blk + ' ' + c.errs.join(';')) }
+check(nch > 0, 'chain self-adjacency checked for ' + nch + ' builds');
+// spec.main relabel + S variants
+{
+  const bld = s => pg.evaluate(x => tplBuild(x), s);
+  const b = await bld(mkSpec('2x2', 'ac', 2, 2, {main: 2}));
+  check(b.ok && (await checkIface(pg, b, '2x2')).ok && b.ports.in.filter(p => p.copy === 0 && p.y === b.iface.sets[0].o)[0].item === 2, '2x2 main=2 relabels main row item');
+  const b1 = await bld(mkSpec('2x2', 'ac', 2, 2, {S: 1}));
+  check(b1.ok && (await checkIface(pg, b1, '2x2')).ok, '2x2 S=1 conforms');
+  const b3 = await bld(mkSpec('2x2', 'ac', 2, 2, {S: 3}));
+  check(!b3.ok, '2x2 S=3 refused (' + b3.why + ')');
+  const b2 = await bld(mkSpec('2x2c', 'ac', 2, 1, {S: 2}));
+  check(!b2.ok, '2x2c S=2 refused (' + b2.why + ')');
+}
+// checkPlan vs planner: rate sets R1 (pmach) R1b R2 (nMax-1+0.3) R3 nMax R4 nMax+1 per block and recipe. Planner e.belts>1 = expected negative (M=1, report only).
+// checkPlan's single-input product check does not apply to 4-input recipes: dropped here; instead last machine load == planner tail, rest full.
+const tplD = {build: 'tplBuild', max: 'tplMax', cls: 'DAT_AdvancedAssembler'};
+const prow = [];
+for (const block of ['1x1', '1x2', '2x2', '2x2c']) for (const [recK, mk] of [['ac', 1], ['plates', 1], ['chitin', 2]]) {
+  const info = await pg.evaluate(([k, blk, mk]) => { const r = [].concat(...Object.values(RECS)).find(x => rk(x) === k); const P = plan(r.o[0], 1, mk, {}, {[r.o[0]]: k}, {proto: false, enr: false, obs: false}); return {pm: P.nodes[r.o[0]].pmach, nMax: tplMax({block: blk, cls: 'DAT_AdvancedAssembler', rec: k, mk, spMk: mk})} }, [RECS[recK], block, mk]);
+  if (!(info.nMax >= 1)) { console.log(`plan ${block} ${recK}: nMax 0, skipped`); continue }
+  const nm = info.nMax, pm = info.pm;
+  for (const [tag, rate] of [['R1', pm], ['R1b', 0.25 * pm], ['R2', (nm - 1 + 0.3) * pm], ['R3', nm * pm], ['R4', (nm + 1) * pm]]) {
+    const r = await checkPlan(pg, tplD, RECS[recK], rate, block, mk);
+    const errs2 = r.errs.filter(e => !/^product /.test(e));
+    const w = r.row, tail = rate / w.pmach - (w.N - 1);
+    // 2x2 with N>per uses 2 sets: checkPlan injects each set equally, so each set's last machine is partial (aggregate gate only there)
+    if (w.B === 1 && w.N >= 1 && !(block === '2x2' && w.N > 3) && !(Math.abs(w.minUtil - Math.min(1, tail)) <= 0.01)) errs2.push(`last machine ${w.minUtil} != planner ${tail.toFixed(3)}`);
+    const neg = w.belts > 1;
+    prow.push({block, recK, tag, rate: w.rate, N: w.N, B: w.B, nMax: nm, belts: w.belts, tail: +tail.toFixed(3), minU: w.minUtil, maxU: w.maxUtil, mb: w.maxBeltUtil, supply: w.supply, res: errs2.length ? (neg ? 'neg-expected' : 'FAIL') : 'ok', errs: errs2});
+    if (errs2.length && !neg) check(false, `checkPlan ${block} ${recK} ${tag}: ${errs2.join('; ')}`);
+    else check(true, `checkPlan ${block} ${recK} ${tag} N=${w.N} B=${w.B}${neg ? ' (belts ' + w.belts + ' > 1: ' + (errs2.length ? 'expected negative' : 'passes anyway') + ')' : ''}`);
+  }
+}
+console.log('\nblock recipe set | rate N B nMax | planner belts | planner tail | minUtil maxUtil | maxBelt supply | result');
+for (const r of prow) console.log(`${r.block} ${r.recK} ${r.tag} | ${r.rate} ${r.N} ${r.B} ${r.nMax} | ${r.belts} | ${r.tail} | ${r.minU} ${r.maxU} | ${r.mb} ${r.supply} | ${r.res}${r.errs.length ? ' ' + r.errs.join(';') : ''}`);
 console.log('\nblock/recipe/n | machines belts ug spl | area | (belts+ug+spl)/machine');
 for (const r of rows) console.log(`${r.tag} n=${r.n} | ${r.m} ${r.belts} ${r.ug} ${r.spl} | ${r.area} | ${r.bpm.toFixed(1)}`);
 check(!errs.length, 'no page errors ' + errs.join('|'));
