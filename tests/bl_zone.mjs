@@ -278,6 +278,17 @@ for (const d of disc) {
   check(z.tileOk, `H4 ${d.name} ${d.rate} placerTile ok` + (z.tileOk ? '' : ' (' + z.tileWhy + ')'));
   check(z.tileOk && z.ov === 0 && z.span === 0, `H4 ${d.name} ${d.rate} tile ov 0, span 0`);
 }
+// H6a: blHA explicit py[] (non-adjacent containers, R=6). Port rows are the given ones; dir = sign of the row move; columns unique within each direction group.
+{
+  const yRow = [0, 5, 10, 15, 20, 25], ya = 6, py = [6, 7, 8, 14, 15, 16];
+  const A = await pg.evaluate(([yRow, ya, py]) => blHA(yRow, 2, ya, 'in', 28 - 3, py), [yRow, ya, py]);
+  const dirOk = yRow.every((y, i) => A.dir[i] === Math.sign(y - py[i]));
+  const colsOk = [-1, 1].every(d => { const cs = yRow.map((_, i) => i).filter(i => A.dir[i] === d).map(i => A.col[i]); return new Set(cs).size === cs.length });
+  const g = {py: A.py.join(','), dir: A.dir.join(','), col: A.col.join(',')};
+  console.log('H6a ' + JSON.stringify(g));
+  check(A.py.join() === py.join(), `H6a blHA explicit py kept (${A.py.join()})`);
+  check(dirOk && colsOk, 'H6a blHA dir sign and unique columns per group');
+}
 await br.close();
 if (errs.length) { console.log('PAGE ERRORS ' + errs.join(' | ')); fails++ }
 console.log(fails ? 'FAILS ' + fails : 'ALL PASS');

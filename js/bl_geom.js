@@ -199,10 +199,10 @@ function blFlip(items,XM,mcF){
   return{ok:true,items:out};
 }
 // BL H1 horizontal zones: IZ (containers + input paths) west of the wall x=30, FB (machine rows) east, sink containers at x=55. One 30x30 block; rows packed at pitch P.
-// blHA(yRow,c,ya,side,xp): port per row (s=floor((4c-R)/2), row i -> port ya+s+i). Flow dir: in = sign(yRow-py) (north -1 rot 3, south +1 rot 1); out = sign(py-yRow).
+// blHA(yRow,c,ya,side,xp,pyIn): optional pyIn = explicit port row per row (H6a, non-adjacent containers); default = contiguous port block. Port per row (s=floor((4c-R)/2), row i -> port ya+s+i). Flow dir: in = sign(yRow-py) (north -1 rot 3, south +1 rot 1); out = sign(py-yRow).
 // Column: in: x=xp+1+k (north group k from top, south group k from bottom); out: x=xp-1-k (down group k from top, up group k from bottom). Straight rows: col null.
-function blHA(yRow,c,ya,side,xp){
-  const R=yRow.length,s=Math.floor((4*c-R)/2),py=yRow.map((_,i)=>ya+s+i),dir=yRow.map((y,i)=>Math.sign(side==='in'?y-py[i]:py[i]-y)),col=new Array(R).fill(null);
+function blHA(yRow,c,ya,side,xp,pyIn){
+  const R=yRow.length,s=Math.floor((4*c-R)/2),py=pyIn||yRow.map((_,i)=>ya+s+i),dir=yRow.map((y,i)=>Math.sign(side==='in'?y-py[i]:py[i]-y)),col=new Array(R).fill(null);
   const top=side==='in'?-1:1;   // group counted from the top row (in: north, out: down); the other group from the bottom
   for(const d of [-1,1]){
     const idx=[...Array(R).keys()].filter(i=>dir[i]===d);
