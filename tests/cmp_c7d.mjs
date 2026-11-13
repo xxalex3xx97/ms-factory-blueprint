@@ -36,8 +36,8 @@ for (const c of cases) {
   if (r.refused) { check(false, tag + ' refused: ' + r.refused); continue }
   const a = await pg.evaluate(info, {key, rate: c.rate, mk: c.mk, bk: BK[c.b], dock});
   if (a.err) { check(false, tag + ' ' + a.err); continue }
-  // D2: raw hubs sit at column 0 whatever the node column; Enzyme 2x2: the middle row (3 raws, 2 W slots, neighbour rows occupy the N/S units) keeps 1 undocked container with a Dock-limited note
-  const need = c.b === '1x2' ? 1 : c.name === 'Enzyme' ? 4 : c.name === 'Xenobacteria' ? a.inf : 1;
+  // D2: raw hubs sit at column 0 whatever the node column; Enzyme 2x2: heavy middle row (3 raws > 2 W slots) takes N/S units, neighbour hubs move to bank column 1; 5/5 docked
+  const need = c.b === '1x2' ? 1 : c.name === 'Enzyme' || c.name === 'Xenobacteria' ? a.inf : 1;
   const ok = r.ok && a.ov === 0 && a.bad === 0 && a.dd >= need && (a.dd === a.inf || a.notes.some(n => /Dock-limited/.test(n)));
   check(ok, tag + ' | docked containers ' + a.dd + '/' + a.inf + ' Dock_1 blocks ' + a.docks + ' ' + JSON.stringify(a.notes.filter(n => /limited|not built/.test(n))) + (ok ? '' : ' | ' + (r.errs || []).slice(0, 3).join('; ')));
 }
