@@ -17,8 +17,8 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof placerTile === 'function' && typeof pfSplOff === 'function');
-await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
-await pg.addScriptTag({path: ROOT + '/js/tpl/enrichment_1in.js'});
+if (!(await pg.evaluate(() => typeof tplIfSets === 'function'))) await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});   // index.html may already load iface.js
+await pg.addScriptTag({path: ROOT + '/js/tpl/enrichment_1in.js'});   // fresh copy (const redeclare is fine only if bundle lacks it)
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 const REC = {fuel: 'ITEM_HydrogenFuel>ITEM_EnrichedFuel', ore: 'ITEM_NickelOre>ITEM_EnrichedNickelOre', cool: 'ITEM_NitrogenGas>ITEM_Coolant', proto: 'ITEM_Protomatter>ITEM_Silica'};
@@ -229,6 +229,22 @@ for (const x of planRows) console.log([x.set.padEnd(19), x.block.padEnd(5), x.re
 console.log('\niface at nMax:'); tabIface.forEach(l => console.log('  ' + l));
 console.log('block  n machines belts ug spl area (belts+ug+spl)/machine');
 for (const r of rows) console.log(r.slice(0, 7).join('\t') + '\t' + r[7].toFixed(1));
+// regression (1x1 overflow): every recipe x block x S x mk x n in {1,2,nMax}: all items inside the floor, or refused
+{
+  const bad = await pg.evaluate(() => {
+    const out = [], recs = CATALOG.recipes.CRAFT_Enrichment.filter(r => r.i.length === 1).map(r => r.i[0][0] + '>' + r.o[0]);
+    for (const rec of recs) for (const block of ['1x1', '1x2', '2x2', '2x2c']) for (const S of [undefined, 1, 2, 3, 4, 6]) for (let mk = 0; mk < 3; mk++) {
+      const sp = {S, block, cls: 'DAT_EnrichmentChamber', rec, mk, spMk: mk}, nm = tplMax(sp);
+      for (const n of new Set([1, 2, nm])) { if (n < 1 || n > nm) continue; const T = tplBuild({...sp, n});
+        if (!T.ok) { out.push([rec, block, S, mk, n, 'refused ' + T.why]); continue }
+        for (const b of T.items) { const d = dim(b); if (b.x < 0 || b.y < 0 || b.x + d.w > T.w || b.y + d.h > T.h) { out.push([rec, block, S, mk, n, b.cls, b.x, b.y]); break } } }
+    }
+    return {recs: recs.length, out};
+  });
+  check(bad.recs === 11 && bad.out.length === 0, `floor regression: 11 recipes x blocks x S x mk x n all inside floor ` + JSON.stringify(bad.out.slice(0, 3)));
+  const s2 = await pg.evaluate(() => tplBuild({S: 2, block: '1x1', cls: 'DAT_EnrichmentChamber', rec: 'ITEM_NickelOre>ITEM_EnrichedNickelOre', n: 1, mk: 1, spMk: 1}));
+  check(!s2.ok, '1x1 S=2 refused (sets of 7 rows cannot hold an 11-row machine row): ' + s2.why);
+}
 await br.close();
 if (errs.length) { console.log('PAGE ERRORS ' + errs.join(' | ')); fails++ }
 console.log(fails ? 'FAILS ' + fails : 'ALL PASS');

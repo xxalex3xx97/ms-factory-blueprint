@@ -18,11 +18,14 @@ function tplEnrCap(spec){
   const W=TPLE_W[spec.block];if(!W)return null;
   const S=spec.S||TPLE_S[spec.block],cols=Math.floor((W-3)/9),R=tplEnrRec(spec.rec);
   const g=R?Math.floor(tplDerate()*TPLE_CAP[spec.mk|0]/(R.i[0][1]*1800/R.t)):Infinity;
-  return{S,W,cols,g,cap:Math.min(cols,g)};
+  const cap=Math.min(cols,g),st=tplIfSets(spec.block,S);
+  // a machine row needs 11 rows (o..o+10); a set owning fewer rows (1x1/1x2 S=2: 7) holds no machines, else items leave the floor
+  const caps=(st.ok?st.hs:[]).map(h=>h>=11?cap:0);
+  return{S,W,cols,g,cap,caps,tot:caps.reduce((a,b)=>a+b,0)};
 }
-function tplMax(spec){const c=tplEnrCap(spec);return c?c.S*c.cap:0}
+function tplMax(spec){const c=tplEnrCap(spec);return c?c.tot:0}
 // machines per set, set by set
-function tplEnrFill(S,cap,n){const a=[];for(let s=0;s<S;s++){const m=Math.min(cap,n);a.push(m);n-=m}return a}
+function tplEnrFill(caps,n){const a=[];for(let s=0;s<caps.length;s++){const m=Math.min(caps[s],n);a.push(m);n-=m}return a}
 function tplBuild(spec){
   const c=tplEnrCap(spec);
   if(!c)return{ok:false,why:'TPL: unknown block '+spec.block};
@@ -31,12 +34,12 @@ function tplBuild(spec){
   const st0=tplIfSets(spec.block,c.S);
   if(!st0.ok)return{ok:false,why:st0.why};
   if(c.g<1)return{ok:false,why:'rate',nMax:0};
-  const nMax=c.S*c.cap,n=spec.n|0;
+  const nMax=c.tot,n=spec.n|0;
   if(n<1||n>nMax)return{ok:false,why:'TPL: n '+n+' outside 1..'+nMax,nMax};
   const mk=spec.mk|0,spMk=spec.spMk==null?mk:spec.spMk|0,bc=PLC_BELT[mk],sc=PLC_SPL[spMk],W=c.W;
   const items=[],bt=(x,y,rot)=>items.push({cls:bc,x,y,rot,h:0,pid:0}),
     sp=(x,y,keep)=>items.push({cls:sc,x,y,rot:0,h:0,pid:0,off:pfSplOff(sc,0,keep),pr:[0,-1]});
-  const fill=tplEnrFill(c.S,c.cap,n),ports={in:[],out:[]};
+  const fill=tplEnrFill(c.caps,n),ports={in:[],out:[]};
   st0.o.forEach((o,s)=>{
     const m=fill[s];
     ports.in.push({x:0,y:o,item:0,dir:'E',set:s,copy:0,row:s});ports.out.push({x:W-1,y:o,dir:'E',set:s});
@@ -61,9 +64,9 @@ function tplBuild(spec){
 function tplEnrRate(spec){
   const R=tplEnrRec(spec.rec),c=tplEnrCap({...spec,rec:null});
   if(!R||!c)return{ok:false,why:'recipe '+spec.rec};
-  const der=tplDerate(),cap=TPLE_CAP[spec.mk|0],ri=R.i[0][1]*1800/R.t,ro=R.o[1]*1800/R.t,fill=tplEnrFill(c.S,Math.min(c.cols,Math.floor(der*cap/ri)),spec.n),
+  const der=tplDerate(),cap=TPLE_CAP[spec.mk|0],ri=R.i[0][1]*1800/R.t,ro=R.o[1]*1800/R.t,fill=tplEnrFill(c.caps.map(v=>v&&Math.min(c.cols,Math.floor(der*cap/ri))),spec.n),
     inL=fill.map(m=>m*ri),outL=fill.map(m=>m*ro);
   return{ok:true,ri,ro,cap,der,inLoads:inL,outLoads:outL,outLoad:Math.max(...outL),derOk:inL.concat(outL).every(v=>v<=der*cap+1e-9),capOk:inL.concat(outL).every(v=>v<=cap)};
 }
 // largest n whose lanes stay within the derate (0 = one machine already exceeds it)
-function tplRateMax(spec){const R=tplEnrRec(spec.rec),c=tplEnrCap({...spec,rec:null});if(!R||!c)return 0;const g=Math.floor(tplDerate()*TPLE_CAP[spec.mk|0]/(R.i[0][1]*1800/R.t));return c.S*Math.min(c.cols,g)}
+function tplRateMax(spec){const R=tplEnrRec(spec.rec),c=tplEnrCap({...spec,rec:null});if(!R||!c)return 0;const g=Math.floor(tplDerate()*TPLE_CAP[spec.mk|0]/(R.i[0][1]*1800/R.t));return c.caps.reduce((a,v)=>a+(v?Math.min(c.cols,g):0),0)}
