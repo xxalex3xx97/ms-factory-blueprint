@@ -186,9 +186,11 @@ function cmpCompose(P,item,mk,spMk,o={}){
   const tr=cmpTree(P,item),block=CMP_BLOCKS[PL_ALL.indexOf(bk)];
   let A,sz,stages,cmpI,note,per;
   const dkw=o.dock&&(o.dock.in||o.dock.out)?o.dock:null,dkn=[],dk=dkw?{mk,in:!!dkw.in,out:!!dkw.out,notes:dkn,indIn:dkw&&dkw.in==='ind',indOut:dkw&&dkw.out==='ind'}:null;
+  const indFb=A=>{if(!dk||!(dk.indIn||dk.indOut)||!/^(dock slot misaligned|industrial dock overlaps)/.test(A.why||''))return A;   // docks are never refused: industrial dock cannot be placed -> rebuild with normal docks + note
+    const L=cmpCompose(P,item,mk,spMk,{...o,dock:{in:dkw.in==='ind'?'nrm':dkw.in,out:dkw.out==='ind'?'nrm':dkw.out}});if(L.ok)L.note=['Industrial dock not built ('+A.why+'): normal docks used',...L.note];return L};
   if(tr.ok){
     sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;
-    A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages,dk});if(!A.ok)return A;
+    A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages,dk});if(!A.ok)return indFb(A);
     stages=sz.stages.map(q=>({item:q.item,rec:q.rec,cls:q.cls,tpl:q.tpl,block:q.block,S:q.S,N:q.N,perStrip:q.perStrip,B:q.B}));cmpI={K:sz.K,stages};
     note=sz.note.concat(tr.stages[0].growth&&tr.stages[0].k>=2?['Fill the seed container ('+cmpName(item)+')']:[]);per=sz.stages[sz.stages.length-1].perStrip.slice();
   }else if(/^branching/.test(tr.why)){   // S7b: merge tree (K=1)
@@ -205,14 +207,14 @@ function cmpCompose(P,item,mk,spMk,o={}){
       if(!bz)return cmpErr(why1+(last!==why1?' (replicated strips x2..x'+CMP_MAXKT+': '+last+')':''));
       pl=bp;tz=bz;
     }
-    A=cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by,dk});if(!A.ok)return A;
+    A=cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by,dk});if(!A.ok)return indFb(A);
     stages=pl.nodes.filter(o=>!o.raw).map(o=>({item:o.item,cls:o.cls,tpl:tz.by[o.id].tpl,block,S:tz.by[o.id].S,N:o.N,perStrip:[o.N],B:1}));
     cmpI={K:pl.K||1,tree:true,stages,nodes:A.nodes,routed:A.routed};note=pl.notes.slice();per=[P.nodes[item].machines];
   }else return tr;
   if(A.dock){   // C7: raw/oz container descriptors + 'Dock n: assign ...' notes
     cmpI.raw=A.dock.raw;cmpI.oz=A.dock.oz;let n=0;
     const lines=[...A.dock.raw,...A.dock.oz].map(q=>'Dock '+(++n)+': assign '+q.dd.name+' ('+cmpR1(q.dd.r)+'/min, '+(q.dd.ind?'industrial dock lane group '+(q.dd.u+1):q.dd.n+' dock'+(q.dd.n>1?'s':''))+')');
-    note=[...note,...dkn,...(A.dock.miss||[]).map(n=>'Dock-limited: '+n.replace(/^\w+ /,'')+' cannot be docked at this position (container stays infinite)'),...lines];
+    note=[...note,...dkn,...(A.dock.miss||[]).map(n=>{const [nm,why]=n.replace(/^\w+ /,'').split('|');return 'Dock-limited: '+nm+' cannot be docked at this position ('+(why||'no dock slot')+'; container stays infinite)'}),...lines];
   }else if(dkn.length)note=[...note,...dkn];
   const T=A.T,ext=plcExt(T),ms=T.ms,cnt=f=>ms.filter(f).length;
   const L={ok:true,eng:'cmp',items:ms,cuts:[],lanes:cmpI.K,per,makes:P.nodes[item].rate,pitch:ext.h+1,w:ext.w,h:ext.h,tall:true,mod:false,box:BX,mk,ports:[],note,src:{P,item,mk,spMk,o},prefab:true,

@@ -39,7 +39,7 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
   const dockV=(q,side)=>{   // N/S input cells (FEED hubs): nl_dock vertical formulas; door cols 16u+6,7; container y=1 (N) / H-5 (S), belt rows through the wall
     const gx=Math.floor(q.x/TW),gy=Math.floor(q.y/TR),u=Math.floor((q.x-gx*TW)/16),n=side==='N',M=gx*TW+16*u+6,y0=gy*TR,
       b={cls:dc,x:gx*d.w+u,y:n?gy*P-1-ad:gy*P+d.h+ad,rot:n?3:1},ab=ad&&!ads.has(side+gx+'|'+gy)&&{cls:adc,x:gx*d.w,y:n?gy*P-1:gy*P+d.h,rot:n?3:1};
-    if(u>=d.w||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))){extra.push(q);return false}
+    if(u>=d.w||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))){q.why=u>=d.w?'no dock unit at this column':'the dock cells overlap another block';extra.push(q);return false}
     cells(b).forEach(z=>occ.add(z));blocks.push(b);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab);ads.add(side+gx+'|'+gy)}
     for(const x of[M,M+1])if(n)for(let y=y0-1-A;y<=y0;y++)belt(x,y,1);else for(let y=y0+fl.h-1;y<=y0+fl.h+A;y++)belt(x,y,3);
     q.dd={side,gx:gx*d.w,gy:gy*P,u,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
@@ -50,14 +50,14 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
     // 2x2c (ad=1): Station Adapter (1x2 units, open side) between block and dock, dock one unit further out, belts 16 cells longer
     const b=ok&&{cls:dc,x:out?(gx+1)*d.w+ad:gx*d.w-1-ad,y:gy*P+k,rot:out?0:2},
       ab=ok&&ad&&!ads.has(side+gx+'|'+gy)&&{cls:adc,x:out?(gx+1)*d.w:gx*d.w-1,y:gy*P,rot:out?0:2};
-    if(!ok||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))){extra.push(q);return false}
+    if(!ok||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))){q.why=!ok?(out?'the output container is not flush with the east wall':'the container is not on a dock slot'):'the dock cells overlap another block';extra.push(q);return false}
     cells(b).forEach(z=>occ.add(z));blocks.push(b);
     if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab);ads.add(side+gx+'|'+gy)}
     const M=gy*TR+16*k+6;
     for(const y of[M,M+1])if(out){for(let x=x0+W-1;x<=x0+W+A;x++)belt(x,y,0)}else for(let x=x0-1-A;x<=q.x-1;x++)belt(x,y,0);
     q.dd={side,gx:gx*d.w,gy:gy*P,u:k,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
     return true};
-  for(const q of ms.filter(q=>q.dk==='in'||q.dk==='out'))if(!dock(q,q.dk==='out'?'E':'W')&&!q.dd){miss.push((q.dk==='out'?'out ':'in ')+q.dkx.name);delete q.dk;delete q.dkx}
+  for(const q of ms.filter(q=>q.dk==='in'||q.dk==='out'))if(!dock(q,q.dk==='out'?'E':'W')&&!q.dd){miss.push((q.dk==='out'?'out ':'in ')+q.dkx.name+'|'+q.why);delete q.dk;delete q.dkx}
   // industrial (hz, d.h=2): one BPO_Dock_2 per hub row, nl_dock.js hz assembly (nlIndAsm transposed) shifted to the row; lanes tagged ie (input, west of block 0) / oe (output, east of the last column)
   const TRO=[1,0,3,2],asm=nlIndAsm(),d2=plcCls('BPO_Dock_2'),indGo=(tag,out)=>{
     const rows=new Map(),S=d.h===1?2:1;   // d.h=1: one Dock_2 serves two adjacent strips (group A even strip, group B odd strip)
@@ -93,7 +93,7 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
 
 // CMP C7d: FEED hub (all-raw first stage / tree feed node) at block column 0 with docks. Containers flush x=0 (docked ones on W slots 16k+5, one raw per slot, extras undocked), lanes routed by cmpRoute inside x=4..W-1.
 // S as cmpFeed + names:[], D:[per raw rate], dh (block units high). Falls back to cmpFeed (infinite containers) + note when the router fails. Seed raw: finite container, no dock.
-function cmpFeedDock(S,dk,dh,D,dw,sides){
+function cmpFeedDock(S,dk,dh,D,dw,sides,why0){
   const {W,H,mk,bx,sets,M,rawItems}=S,cap=MKS[dk.mk][1],bc=PLC_BELT[mk],nR=rawItems.length,seed=r=>S.seed!=null&&rawItems[r]===S.seed;
   const mid=!S.allRaw,pass=mid?S.pass||[]:[],sl=r=>mid&&r>=(S.main||0)?r+1:r,rows=r=>sets.flatMap(s=>Array.from({length:M},(_,c)=>(s.t?s.t[sl(r)]:s.o+sl(r)*M)+c));
   // H<30 guard removed (D3 experiment)
@@ -102,7 +102,9 @@ function cmpFeedDock(S,dk,dh,D,dw,sides){
   const use=new Array(nR).fill(0);
   for(let r=0;r<nR;r++){if(seed(r))continue;const left=rawItems.slice(r+1).filter((_,i)=>!seed(r+1+i)).length,n=cmpCellsFor(D[r],cap,rows(r).length,free.length-left).use;
     for(let i=0;i<n&&free.length;i++){cont.push({r,...free.shift(),docked:1});use[r]++}}
-  const nt=[],fb=why=>{if(sides&&sides.length)return cmpFeedDock(S,dk,dh,D,dw,[]);dk.notes.push('Dock not built for the raw inputs of this stage ('+why+'): raw containers stay infinite sources');return cmpFeed(S)};
+  const nt=[],fb=why=>{if(sides&&sides.length){const n0=dk.notes.length;   // try a normal dock slot elsewhere: each single side, then the west column only; infinite containers are the last resort
+      for(const sd of sides.length>1?[...sides.map(z=>[z]),[]]:[[]]){const r=cmpFeedDock(S,dk,dh,D,dw,sd,why);if(r.docked||!sd.length)return r;dk.notes.length=n0}}
+    dk.notes.push('Dock not built for the raw inputs of this stage ('+(why0||why)+'): raw containers stay infinite sources');return Object.assign(cmpFeed(S),{docked:0})};
   for(let r=0;r<nR;r++){const L=rows(r).length,need=Math.max(Math.ceil(L/4),seed(r)?1:use[r]||1),have=cont.filter(c=>c.r===r).length;
     if(mid&&have<need)return fb('no free side unit for '+S.names[r]);
     for(let i=have;i<need;i++){let y=1;while(y<=H-5&&cont.some(c=>c.x<4&&Math.abs(c.y-y)<4))y++;if(y>H-5)return fb('block too short for '+need+' containers');cont.push({r,x:0,y,docked:0})}}
@@ -120,5 +122,5 @@ function cmpFeedDock(S,dk,dh,D,dw,sides){
   const rt=cmpRoute({W:W-4,H,rowsN:1,mk,sources:src,sinks:snk,blocked:blk,ugMax:def(PLC_UG[mk]).maxApart,eastStart:true});
   if(!rt.ok)return fb('lane routing failed');
   rt.items.forEach(b=>items.push({...b,x:b.x+4}));dk.notes.push(...nt);
-  return{ok:true,why:'',items};
+  return{ok:true,why:'',items,docked:1};
 }
