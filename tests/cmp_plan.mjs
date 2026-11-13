@@ -60,12 +60,12 @@ const pageRun = async a => {
   if (T.ov !== 0) hard.push('tile ov ' + T.ov);
   if (T.span !== 0) hard.push('tile span ' + T.span);
   const sc = T.blocks.every(b => b.x % FC === 0 && b.y % FC === 0) && T.blocks.some(b => b.x >= FC || b.y >= FC) ? 1 : FC;
-  const geo = T.blocks.filter(b => floorRect({cls: b.cls, x: 0, y: 0, h: 0, rot: 0})).map(b => { const r = b.rot === 1 || b.rot === 3 ? b.rot : 0, d = dim({cls: b.cls, rot: r}), f = floorRect({cls: b.cls, x: 0, y: 0, h: 0, rot: r}); return {x: b.x * sc, y: b.y * sc, TW: d.w * FC, TH: d.h * FC, Fw: f.w, Fh: f.h, mir: b.rot === 2} });   // rot 2 (west docks / adapters): floor mirrored in x. dock blocks have no floor
+  const geo = T.blocks.filter(b => floorRect({cls: b.cls, x: 0, y: 0, h: 0, rot: 0})).map(b => { const r = b.rot === 1 || b.rot === 3 ? b.rot : 0, d = dim({cls: b.cls, rot: r}), f = floorRect({cls: b.cls, x: 0, y: 0, h: 0, rot: r}); return {x: b.x * sc, y: b.y * sc, TW: d.w * FC, TH: d.h * FC, Fw: f.w, Fh: f.h, mir: b.rot === 2, mirY: b.rot === 3} });   // rot 2 (west docks / adapters): floor mirrored in x, rot 3 (north docks): mirrored in y. dock blocks have no floor
   let wallHits = 0, outside = 0;
   ms.forEach(b => { if (b.dk === 'p') return; const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) {
     const g = geo.find(g => x >= g.x && x < g.x + g.TW && y >= g.y && y < g.y + g.TH);
     if (!g) { outside++; continue }
-    if ((g.mir ? g.TW - 1 - (x - g.x) : x - g.x) >= g.Fw || y - g.y >= g.Fh) wallHits++;
+    if ((g.mir ? g.TW - 1 - (x - g.x) : x - g.x) >= g.Fw || (g.mirY ? g.TH - 1 - (y - g.y) : y - g.y) >= g.Fh) wallHits++;
   } });
   if (wallHits) hard.push(wallHits + ' item cells in a wall');
   if (outside) hard.push(outside + ' item cells outside every block');

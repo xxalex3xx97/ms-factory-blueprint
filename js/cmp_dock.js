@@ -15,7 +15,8 @@ function cmpDockHub(dk,a){
       if(got<D-1e-6)dk.notes.push('Dock-limited: '+a.name+' '+cmpR1(got)+'/min of '+cmpR1(D)+'/min (needs '+Math.ceil(D/(4*cap)-1e-9)+' industrial dock groups)');
       return{ind:true,[a.kind==='in'?'pyOut':'pyIn']:py,dkx:{r:got/g,n:1,name:a.name,ind:1}};
     }
-    dk.notes.push('Industrial dock not possible for '+a.name+' ('+(dh>2?'block over 2 units high':R>8?R+' lanes, max 8':a.tree?'output of a merge tree not built yet':'source not at the west edge')+'): normal docks used');
+    dk.notes.push('Industrial dock not possible for '+a.name+' ('+(dh>2?'block over 2 units high':R>8?R+' lanes, max 8':a.tree?'output of a merge tree not built yet':'source not at the west edge')+'): no dock, plain container');
+    return{};   // INDONLY: never a normal dock
   }
   const{n,use}=cmpCellsFor(D,cap,rows.length,dh),Tn=Math.max(use,Math.ceil(rows.length/4)),ca=[];
   for(let k=0;k<use;k++)ca.push(16*k+5);
@@ -68,7 +69,7 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
     for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/(S*TR)),ly=q.y-g*S*TR;if(d.h>2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out&&(q.hx!=null?q.hx:Math.floor(q.x/TW)*TW)<1))return'dock slot misaligned';const kk=g+':'+(q.hx!=null?q.hx:Math.floor(q.x/TW)*TW);if(!rows.has(kk))rows.set(kk,[]);rows.get(kk).push(q)}   // SHAPE2: input hubs at any block column (dock on their west face)
     for(const [kk,E] of rows){
       const g=+kk.split(':')[0],oy=g*S*TR,e0=E[0],_n=e0.hu===1&&nar.add(e0.hc),x0=+kk.split(':')[1],hw=e0.hw||W,hu=e0.hu||d.w,u0=x0/FC,col=e0.hc!=null?e0.hc:Math.floor(e0.x/TW),ox=out?x0+hu*16+A:x0-16-A,dx=out?u0+hu:u0-1,db={cls:d2,x:out?dx+ad:u0-3-ad,y:g*S*P,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*S*P,rot:out?0:2};
-      if(cells(db).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))||edgeBad(db))return'industrial dock overlaps another block or has no free outer edge';
+      if(cells(db).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))||edgeBad(db))return'industrial dock overlaps another block or has no free outer edge ('+db.rot+' at unit '+db.x+','+db.y+' occ '+cells(db).find(z=>occ.has(z))+' edge '+edgeBad(db)+' '+JSON.stringify(blocks.filter(b=>b.x<=db.x+3&&b.x>=db.x-4&&b.y<=db.y+3).map(b=>[b.cls.slice(-12),b.x,b.y,b.rot]))+')';
       cells(db).forEach(z=>occ.add(z));edgeAdd(db);blocks.push(db);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab)}
       const used=[0,1].map(k=>E.filter(q=>(q.y-oy<16?0:1)===k)),dkx=E[0].dx||{},bq=[];
       for(const b of asm.boxes){if(!used[(out?26-b.x:b.x)<16?0:1].length)continue;   // SHAPE2: a lane group without lanes gets no containers/belts
@@ -79,7 +80,24 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
       for(const q of E)for(let x=out?q.x+1:x0-3-A;x<=(out?ox:x0-1);x++)belt(x,q.y,0);
       E.forEach(q=>{delete q.dk;delete q.dx})}
     return null};
-  const ierr=indGo('ie',false)||indGo('oe',true);if(ierr)return{ok:false,why:ierr};
+  // INDONLY: vertical Dock_2 on the N ('iv') / S ('is') face of a hub (nl_dock (2) / (4) assembly: S = rotated 180, flow reversed); lanes at hub x 4..7 / 22..25
+  const indV=(tag,sv)=>{const rows=new Map();
+    for(const q of ms.filter(q=>q.dk===tag)){const x0=q.hx!=null?q.hx:Math.floor(q.x/TW)*TW,lx=q.x-x0;if(!((lx>=4&&lx<=7)||(lx>=22&&lx<=25)))return'dock slot misaligned';const kk=Math.floor(q.y/TR)+':'+x0;if(!rows.has(kk))rows.set(kk,[]);rows.get(kk).push(q)}
+    for(const [kk,E] of rows){
+      const gy=+kk.split(':')[0],x0=+kk.split(':')[1],u0=x0/FC,oy=sv?gy*TR+TH+A:gy*TR-16-A,grp=lx=>(sv?lx<16:lx>=16)?1:0,gq=q=>grp(q.x-x0),
+        db={cls:d2,x:u0,y:sv?gy*P+d.h+ad:gy*P-3-ad,rot:sv?1:3},ab=ad&&{cls:adc,x:u0,y:sv?gy*P+d.h:gy*P-1,rot:sv?1:3};
+      if(cells(db).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))||edgeBad(db))return'industrial dock overlaps another block or has no free outer edge ('+db.rot+' at unit '+db.x+','+db.y+' occ '+cells(db).find(z=>occ.has(z))+' edge '+edgeBad(db)+' '+JSON.stringify(blocks.filter(b=>b.x<=db.x+3&&b.x>=db.x-4&&b.y<=db.y+3).map(b=>[b.cls.slice(-12),b.x,b.y,b.rot]))+')';
+      cells(db).forEach(z=>occ.add(z));edgeAdd(db);blocks.push(db);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab)}
+      const used=[0,1].map(k=>E.filter(q=>gq(q)===k));
+      for(const b of asm.boxes){const g2=b.x<16?0:1;if(!used[g2].length)continue;
+        const main=b.y===9&&(b.x===4||b.x===22),m={cls:NLD.BOX_I,x:sv?x0+26-b.x:x0+b.x,y:sv?oy+10-b.y:oy+b.y,h:0,rot:0,pid:0,ct:[],dk:'in'};
+        if(main){const e=used[g2][0];m.ct=[{item:e.di,n:0,inf:true}];m.dd={side:sv?'S':'N',gx:u0,gy:gy*P,u:g2,r:e.dx.r,n:1,name:e.dx.name,ind:1}}
+        add.push(m)}
+      for(const k of asm.belts)if(used[k.x<16?0:1].length)belt(sv?x0+29-k.x:x0+k.x,sv?oy+13-k.y:oy+k.y,sv?(k.rot+2)%4:k.rot);
+      for(const q of E)if(sv)for(let y=gy*TR+fl.h;y<=oy;y++)belt(q.x,y,3);else for(let y=oy+13;y<=gy*TR-1;y++)belt(q.x,y,1);
+      E.forEach(q=>{delete q.dk;delete q.dx})}
+    return null};
+  const ierr=indGo('ie',false)||indGo('oe',true)||indV('iv',false)||indV('is',true);if(ierr)return{ok:false,why:ierr};
   const boxes=add.filter(m=>m.cls===NLD.BOX_I);for(const m of boxes){ms.push(m);add.splice(add.indexOf(m),1)}
   for(const q of ms)if(q.dd)delete q.dkx;
   const sh=-Math.min(0,...blocks.map(b=>b.y)),shx=-Math.min(0,...blocks.map(b=>b.x)),all=[...ms,...add];
@@ -99,28 +117,34 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
 // S as cmpFeed + names:[], D:[per raw rate], dh (block units high). Falls back to cmpFeed (infinite containers) + note when the router fails. Seed raw: finite container, no dock.
 // ENZ: industrial dock on an all-raw FEED hub: one BPO_Dock_2 on the west face (block 2 units high), one raw per 4-lane group (lane rows 4..7 / 22..25 at x=0, tagged 'ie' for cmpDockApply). Seed raw keeps its finite container.
 // -> {ok:true,items,docked:1} | {ok:false,why}
-function cmpFeedInd(S,dk,dh,D){
+function cmpFeedInd(S,dk,dh,D,sides=[]){   // INDONLY: lane groups (<=4 lanes, ONE raw each) on the free faces: W (Dock_2 rows 4..7 / 22..25, dh=1: half dock by strip parity), then N, then S (vertical Dock_2, lanes x 4..7 / 22..25, router start sd 1 / 3)
   const {W,H,mk,bx,sets,M,rawItems}=S,cap=MKS[dk.mk][1],nR=rawItems.length,seed=r=>S.seed!=null&&rawItems[r]===S.seed,rows=r=>sets.flatMap(s=>Array.from({length:M},(_,c)=>(s.t?s.t[r]:s.o+r*M)+c)).sort((a,b)=>a-b);
   const ind=[...Array(nR).keys()].filter(r=>!seed(r));
-  if(dh!==2||H<26)return{ok:false,why:'block is not 2 units high'};
-  if(ind.length>2)return{ok:false,why:ind.length+' raws, a Dock_2 carries 2 items'};
-  if(ind.some(r=>rows(r).length>4))return{ok:false,why:'a raw needs more than 4 lanes'};
-  const items=[],src=[],snk=[],blk=new Set(),nt=[],tags=new Map();
-  ind.forEach((r,g)=>{rows(r).forEach((y,i)=>{src.push({x:0,y:(g?22:4)+i,item:rawItems[r]});snk.push({x:W-1,y,item:rawItems[r]});tags.set('0,'+((g?22:4)+i),r)});
-    const got=Math.min(D[r],4*cap);if(got<D[r]-1e-6)nt.push('Dock-limited: '+S.names[r]+' '+cmpR1(got)+'/min of '+cmpR1(D[r])+'/min (needs '+Math.ceil(D[r]/(4*cap)-1e-9)+' industrial dock groups)')});
+  if(H<10)return{ok:false,why:'block too short'};
+  const G=[];ind.forEach(r=>{const L=rows(r),n=Math.ceil(L.length/4);for(let g=0;g<n;g++)G.push({r,ys:L.slice(Math.floor(g*L.length/n),Math.floor((g+1)*L.length/n))})});
+  const sl=[];if(dh===2&&H>=26)sl.push({f:'W',a:4},{f:'W',a:22});else if(dh===1)sl.push({f:'W',a:(S.j|0)%2?6:4});
+  for(const f of['N','S'])if(sides.includes(f)&&W>=14&&(f==='N'?!S.j:S.K==null||S.j===S.K-1))sl.push({f,a:4},...W>=26?[{f,a:22}]:[]);
+  if(G.length>sl.length)return{ok:false,why:G.length+' lane groups, '+sl.length+' free industrial slots'};
+  const items=[],src=[],snk=[],blk=new Set(),nt=[],tags=new Map(),cnt=new Map(),dG=new Map();
+  G.forEach(g=>dG.set(g.r,(dG.get(g.r)||0)+1));
+  G.forEach((g,gi)=>{const s=sl[gi],r=g.r,dx={r:Math.min(D[r],4*cap*dG.get(r))/dG.get(r),n:1,name:S.names[r],ind:1};
+    g.ys.forEach((y,i)=>{const o=s.f==='W'?{x:0,y:s.a+i}:{x:s.a+i,y:s.f==='N'?0:H-1,sd:s.f==='N'?1:3};src.push({...o,item:rawItems[r]});tags.set(o.x+','+o.y,{r,dx,t:s.f==='W'?'ie':s.f==='N'?'iv':'is'})});
+    if(!cnt.has(r)){cnt.set(r,1);const got=Math.min(D[r],4*cap*dG.get(r));if(got<D[r]-1e-6)nt.push('Dock-limited: '+S.names[r]+' '+cmpR1(got)+'/min of '+cmpR1(D[r])+'/min (needs '+Math.ceil(D[r]/(4*cap)-1e-9)+' industrial dock groups)')}});
+  ind.forEach(r=>rows(r).forEach(y=>snk.push({x:W-1,y,item:rawItems[r]})));
   for(let r=0;r<nR;r++)if(seed(r)){const y=10,tr=rows(r),n=tr.length,s0=Math.floor((4-n)/2);
     items.push({cls:bx,x:0,y,rot:0,h:0,pid:0,ct:[{item:rawItems[r],n:0,inf:false}]});
     for(let xx=0;xx<4;xx++)for(let i=0;i<4;i++)blk.add(xx+','+(y+i));
     tr.forEach((t,i)=>{src.push({x:4,y:y+s0+i,item:rawItems[r]});snk.push({x:W-1,y:t,item:rawItems[r]})})}
   const rt=cmpRoute({W,H,rowsN:1,mk,sources:src,sinks:snk,blocked:blk,ugMax:def(PLC_UG[mk]).maxApart,eastStart:true});
   if(!rt.ok)return{ok:false,why:'lane routing failed'};
-  rt.items.forEach(b=>{const r=b.x===0&&b.rot===0?tags.get('0,'+b.y):undefined;items.push(r===undefined?b:{...b,dk:'ie',di:rawItems[r],yb:0,dx:{r:Math.min(D[r],4*cap),n:1,name:S.names[r],ind:1}})});
+  rt.items.forEach(b=>{const q=tags.get(b.x+','+b.y);items.push(q&&(q.t==='ie'?b.rot===0:b.rot===(q.t==='iv'?1:3))?{...b,dk:q.t,di:rawItems[q.r],yb:0,dx:q.dx}:b)});
   dk.notes.push(...nt);
   return{ok:true,why:'',items,docked:1};
 }
 function cmpFeedDock(S,dk,dh,D,dw,sides,why0){
   const {W,H,mk,bx,sets,M,rawItems}=S,cap=MKS[dk.mk][1],bc=PLC_BELT[mk],nR=rawItems.length,seed=r=>S.seed!=null&&rawItems[r]===S.seed;
-  if(dk.indIn&&S.allRaw&&!!!S.noInd){const r=cmpFeedInd(S,dk,dh,D);if(r.ok)return r;dk.notes.push('Industrial dock not possible for '+S.names.filter((_,i)=>!(S.seed!=null&&rawItems[i]===S.seed)).join(', ')+' ('+r.why+'): normal docks used')}
+  if(dk.indIn){const r=S.allRaw?cmpFeedInd(S,dk,dh,D,sides||[]):{ok:false,why:'raws of a mid-chain stage have no free outer face'};if(r.ok)return r;   // INDONLY: never normal docks; unsolved -> raw containers stay infinite sources
+    dk.notes.push('Industrial dock not possible for '+S.names.filter((_,i)=>!(S.seed!=null&&rawItems[i]===S.seed)).join(', ')+' ('+r.why+'): no dock, raw containers stay infinite sources');return Object.assign(cmpFeed(S),{docked:0})}
   const mid=!S.allRaw,pass=mid?S.pass||[]:[],sl=r=>mid&&r>=(S.main||0)?r+1:r,rows=r=>sets.flatMap(s=>Array.from({length:M},(_,c)=>(s.t?s.t[sl(r)]:s.o+sl(r)*M)+c));
   // H<30 guard removed (D3 experiment)
   // mid-chain FEED (D2): the chain lanes pass through (routed as nets so raw lanes can UG-hop them), raws come from N/S side containers only (W edge is not this column's)

@@ -210,7 +210,7 @@ function cmpCompose1(P,item,mk,spMk,o={}){
   let A,sz,stages,cmpI,note,per;
   const dkw=o.dock&&(o.dock.in||o.dock.out)?o.dock:null,dkn=[],dk=dkw?{mk,in:!!dkw.in,out:!!dkw.out,notes:dkn,indIn:dkw&&dkw.in==='ind',indOut:dkw&&dkw.out==='ind'}:null;
   const indFb=A=>{if(!dk||!(dk.indIn||dk.indOut)||!/^(dock slot misaligned|industrial dock overlaps)/.test(A.why||''))return A;   // docks are never refused: industrial dock cannot be placed -> rebuild with normal docks + note
-    const L=cmpCompose(P,item,mk,spMk,{...o,dock:{in:dkw.in==='ind'?'nrm':dkw.in,out:dkw.out==='ind'?'nrm':dkw.out}});if(L.ok)L.note=['Industrial dock not built ('+A.why+'): normal docks used',...L.note];return L};
+    const L=cmpCompose(P,item,mk,spMk,{...o,dock:{in:dkw.in==='ind'?null:dkw.in,out:dkw.out==='ind'?null:dkw.out}});if(L.ok)L.note=['Industrial dock not built ('+A.why+'): no docks on the industrial side (never normal docks)',...dkn.filter(n=>/not possible/.test(n)),...L.note];return L};   // INDONLY: industrial selected = never a normal dock; unsolved case -> that side gets no dock (plain containers) + note
   if(tr.ok){
     sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;
     A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages,dk});if(!A.ok)return indFb(A);

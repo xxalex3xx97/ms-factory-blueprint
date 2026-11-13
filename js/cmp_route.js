@@ -22,7 +22,7 @@ function cmpRoute(o) {
       const heap = [];
       const push = (c, i) => { heap.push([c, i]); let k = heap.length - 1; while (k) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p } };
       const pop = () => { const t = heap[0], l = heap.pop(); if (heap.length) { heap[0] = l; let k = 0; for (;;) { let a = 2 * k + 1, b = a + 1, m = k; if (a < heap.length && heap[a][0] < heap[m][0]) m = a; if (b < heap.length && heap[b][0] < heap[m][0]) m = b; if (m === k) break; [heap[m], heap[k]] = [heap[k], heap[m]]; k = m } } return t };
-      const st = id(s.x, s.y, 0, 0); dist[st] = 0; push(0, st);
+      const st = id(s.x, s.y, s.sd || 0, 0); dist[st] = 0; push(0, st);
       const relax = (from, c, x, y, d, f, v) => { c += noise ? rnd() * noise : 0; const i = id(x, y, d, f); if (c < dist[i]) { dist[i] = c; prev[i] = from; via[i] = v; push(c, i) } };
       let goal = -1;
       while (heap.length) {
@@ -34,7 +34,7 @@ function cmpRoute(o) {
           if (f && nd !== d) continue;
           if (nd === (d + 2) % 4) continue;
           const [dx, dy] = CMPR_D[nd], nx = x + dx, ny = y + dy, nk = key(nx, ny);
-          if (o.eastStart && i === st && nd !== 0) continue;   // lane cell at x=0 must stay a rot-0 belt (the wall swap makes it a UG exit)
+          if (o.eastStart && i === st && nd !== (s.sd || 0)) continue;   // lane cell at x=0 must stay a rot-0 belt (the wall swap makes it a UG exit)
           const turn = nd === d || i === st ? 0 : 0.2;
           if (floor(nx, ny) && nx > 0 && free(nk) && !srcAt.has(nk) && (nx < W - 1 || sinkAt.has(nk))) relax(i, c + 1 + turn + (nx === W - 2 && nd && sinkAt.has(key(W - 1, ny)) ? 4 : 0), nx, ny, nd, 0, 1);   // soft: do not park a bend on the cell in front of a sink lane
           // hop: entrance = this cell, must arrive straight (or the start cell heading east)
