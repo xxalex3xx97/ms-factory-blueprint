@@ -51,6 +51,7 @@ export async function checkIface(page, build, blockType, ref) {
     if (p.set != null && !(tplIfRows(blockType, f.S, p.set, f.k, f.M).in.includes(p.y) || (f.side || []).includes(p.y))) E('in y=' + p.y + ' not a row of set ' + p.set);
   });
   t.o.forEach((o, s) => {
+    if (f.k === 0) return;   // no input lanes (Protomatter): no main row
     const p = build.ports.in.find(q => q.set === s && q.copy === 0 && q.y === o);
     if (!p) E('set ' + s + ' main row ' + o + ' missing');
     else if (p.item !== f.main) E('set ' + s + ' main row item ' + p.item + ' != main ' + f.main);

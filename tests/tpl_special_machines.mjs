@@ -169,7 +169,7 @@ for (const C of CASES) for (const block of BLOCKS) {
     check(o.rateOk, tag + ` rates: lane ${o.laneMach} mach ${o.laneLoad}/${o.laneLim} ; out ${o.outMach} mach ${o.outLoad}/${o.cap}`);
     const ref = refB || (refB = (await pg.evaluate(CHECK, [{...base, n: 1}])).bld);
     const ci = await checkIface(pg, o.bld, block, ref);
-    check(ci.ok || (C.id === 'relic0' && ci.errs.every(e => /main row/.test(e))), tag + ' checkIface ' + ci.errs.join('; '));
+    check(ci.ok, tag + ' checkIface ' + ci.errs.join('; '));
     table.push([C.id, block, n, o.st.machines, o.st.belts, o.st.ug, o.st.spl, o.floor, (o.st.belts / o.st.machines).toFixed(2), o.ports.in + ' | ' + o.ports.out, o.freeSpace ? 'free' : 'full']);
     if (n === 1 || n === nMax) await SHOT(`tpl_special_${C.id}_${block}_n${n}`);
   }
@@ -191,17 +191,8 @@ for (const C of CASES) for (const block of BLOCKS) {
   const sets = [['R1 pmach', pm], ['R1b 0.25pm', 0.25 * pm], ['R2 nMax-1+.3', (nm - 1 + 0.3) * pm], ['R3 nMax', nm * pm], ['R4 nMax+1', (nm + 1) * pm], ['R4b 2nMax+.5', (2 * nm + 0.5) * pm]];
   for (const [tag, rate] of sets) {
     const tplD = {build: 'tplBuild', max: 'tplMax', cls: C.cls};
-    let ok, errs, row;
-    if (info.k === 0 || C.id === "relic1") {   // Relic needs planner opts.proto:true, checkPlan hardcodes proto:false -> local N + machine count only
-      const N = Math.ceil(rate / pm - 1e-9), B = Math.ceil(N / nm);
-      const mach = await pg.evaluate(([s, N, B, nm]) => { let t = 0; for (let j = 0, left = N; j < B; j++) { const nj = Math.min(Math.ceil(N / B), left); left -= nj; t += tplBuild({...s, n: nj}).stats.machines } return t }, [base, N, B, nm]);
-      errs = []; if (mach !== N) errs.push('machines ' + mach + ' != N ' + N);
-      ok = !errs.length; row = {N, B, nMax: nm, pmach: +pm.toFixed(2), planUtil: +(rate / (N * pm)).toFixed(4), minUtil: '-', maxUtil: '-', maxBeltUtil: '-', supply: "n/a(proto)", machines: mach};
-    } else {
-      const r = await checkPlan(pg, tplD, C.rec, rate, block, 1);
-      errs = info.k === 1 ? r.errs : r.errs.filter(e => !/^product /.test(e));
-      ok = !errs.length; row = r.row;
-    }
+    const r = await checkPlan(pg, tplD, C.rec, rate, block, 1, {proto: C.id !== 'super'});   // Relic Shard/Protomatter need planner proto:true
+    const errs = r.errs, ok = r.ok, row = r.row;
     check(ok, `checkPlan ${C.id} ${block} ${tag} N=${row.N} B=${row.B} ${errs.join('; ')}`);
     planTable.push([C.id, block, tag, row.rate || +rate.toFixed(1), row.N, row.B, row.nMax, row.planUtil, row.minUtil, row.maxUtil, row.maxBeltUtil, row.supply, row.machines].join(' | '));
   }
