@@ -17,7 +17,7 @@ await pg.waitForFunction(() => window.__fb && typeof placerGo === 'function' && 
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 fs.mkdirSync(ROOT + '/tests/shots', {recursive: true});
-for (const [name, rate, file] of [['Capacitor', 100, 'cmp_s7b_capacitor'], ['Basic Circuits', 100, 'cmp_s7b_bc100'], ['Enzyme', 10, 'cmp_s9_enzyme']]) {
+for (const [name, rate, file] of [['Capacitor', 100, 'cmp_s7b_capacitor'], ['Basic Circuits', 100, 'cmp_s7b_bc100'], ['Enzyme', 10, 'cmp_s9_enzyme'], ['Advanced Circuits', 5, 'cmp_s9_aa']]) {
   const a = await pg.evaluate(async ([name, rate]) => {
     const item = [...plnBy(false).keys()].find(i => plnNm(i) === name);
     $("plnItem").value = item; $("plnRate").value = rate; $("plnMk").value = 1; $("plnBuf").value = 'DAT_Container_2'; $("plnMod").checked = false;

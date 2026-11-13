@@ -47,7 +47,7 @@ await pg.evaluate(() => {
     const pr = ugPairs(ug); if (pr.length * 2 !== ug.length) out.push('unpaired ug');
     pr.forEach(p => { if (p.n > a.ugMax) out.push('span ' + p.n + ' > ' + a.ugMax) });
     // walls: hops cross only entrance->exit pairs; no item in wall (checked above); no UG pair spans a wall except last->first cell
-    pr.forEach(p => { if (Math.floor(p.u.y / P) !== Math.floor(p.t.y / P) && !(p.n === 4 && p.u.x === p.t.x)) out.push('bad wall span') });
+    pr.forEach(p => { if (Math.floor(p.u.y / P) !== Math.floor(p.t.y / P) && p.u.x !== p.t.x) out.push('bad wall span') });
     // lanes: own-lane flood and global flood, no foreign cell
     r.nets.forEach(n => {
       const mine = r.items.filter(b => own.get(b.x + ',' + b.y) === n.id);

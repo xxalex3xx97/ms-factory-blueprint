@@ -80,13 +80,16 @@ const pageRun = async a => {
   const cnt = {}; ms.forEach(m => { if (m.rec) cnt[m.rec] = (cnt[m.rec] || 0) + 1 });
   const K = (L.bl && L.bl.cmp && L.bl.cmp.K) || 1;
   const count = [], cerrs = [];
-  const tn = L.bl && L.bl.cmp && L.bl.cmp.nodes;   // tree: count machines by cell inside each node's FB rect
-  if (tn) tn.forEach(q => {
+  const sumN = {}, tn = L.bl && L.bl.cmp && L.bl.cmp.nodes;   // tree: count machines by cell inside each node's FB rect
+  if (tn) { tn.forEach(q => {
     const built = ms.filter(m => m.rec && m.x >= q.fb.x && m.x < q.fb.x + q.fb.w && m.y >= q.fb.y && m.y < q.fb.y + q.fb.h).length;
     count.push({item: q.item, key: q.rec, N: q.pN, built, util: +(+q.pU).toFixed(3)});
-    if (built !== q.pN || built !== q.N) cerrs.push('node ' + q.item + ': planner N=' + q.pN + ' built ' + built);
+    if (built !== q.N) cerrs.push('node ' + q.item + ': expected N=' + q.N + ' built ' + built);
+    sumN[q.rec] = sumN[q.rec] || {item: q.item, pN: q.pN, n: 0, c: 0}; sumN[q.rec].n += built; sumN[q.rec].c++;
   });
-  else stages.forEach(n => {
+  // unrolled fan-out copies (shared product built once per consumer): per key the total may exceed the planner N, never fall below; a single copy equals it exactly
+  Object.values(sumN).forEach(v => { if (v.c === 1 ? v.n !== v.pN : v.n < v.pN) cerrs.push('node ' + v.item + ': planner N=' + v.pN + ' built ' + v.n + ' in ' + v.c + ' copies'); else if (v.n !== v.pN) console.log('Planner N=' + v.pN + ', built ' + v.n + ' (' + v.item + ', ' + v.c + ' copies)') });
+  } else stages.forEach(n => {
     const key = rk(n.rec), built = cnt[key] || 0;
     count.push({item: plnNm(n.item), key, N: n.machines, built, util: +(+n.util).toFixed(3)});
     const fin = n.item === item;
