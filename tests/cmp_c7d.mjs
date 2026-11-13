@@ -27,7 +27,7 @@ const info = a => {
 };
 const BK = {'2x2': 'BPO_Station_02', '2x2c': 'BPO_Station_03', '1x2': 'BPO_Station_2x1', '1x1': 'BPO_Station_01'};
 const cases = [];
-for (const b of ['2x2', '2x2c']) for (const [name, rate, mk, rx] of [['Enzyme', 10, 1], ['Nutrients', 20, 1], ['Capacitor', 100, 1, '>ITEM_Capacitor$'], ['Basic Circuits', 100, 1, 'BasicCircuit$'], ['Nickel Plates', 480, 1, '^ITEM_NickelOre>ITEM_NickelPlates$']]) cases.push({name, rate, mk, b, rx});
+for (const b of ['2x2', '2x2c']) for (const [name, rate, mk, rx] of [['Enzyme', 10, 1], ['Nutrients', 20, 1], ['Capacitor', 100, 1, '>ITEM_Capacitor$'], ['Basic Circuits', 100, 1, 'BasicCircuit$'], ['Nickel Plates', 480, 1, '^ITEM_NickelOre>ITEM_NickelPlates$'], ['Xenobacteria', 10, 1]]) cases.push({name, rate, mk, b, rx});
 cases.push({name: 'Enzyme', rate: 10, mk: 1, b: '1x2'}, {name: 'Nutrients', rate: 20, mk: 1, b: '1x2'});
 for (const c of cases) {
   const tag = c.name + ' ' + c.rate + ' ' + c.b, dock = {in: 'nrm', out: null};
@@ -36,7 +36,9 @@ for (const c of cases) {
   if (r.refused) { check(false, tag + ' refused: ' + r.refused); continue }
   const a = await pg.evaluate(info, {key, rate: c.rate, mk: c.mk, bk: BK[c.b], dock});
   if (a.err) { check(false, tag + ' ' + a.err); continue }
-  const ok = r.ok && a.ov === 0 && a.bad === 0 && a.dd > 0;
+  // D2: raw hubs sit at column 0 whatever the node column; Enzyme 2x2: the middle row (3 raws, 2 W slots, neighbour rows occupy the N/S units) keeps 1 undocked container with a Dock-limited note
+  const need = c.b === '1x2' ? 1 : c.name === 'Enzyme' ? 4 : c.name === 'Xenobacteria' ? a.inf : 1;
+  const ok = r.ok && a.ov === 0 && a.bad === 0 && a.dd >= need && (a.dd === a.inf || a.notes.some(n => /Dock-limited/.test(n)));
   check(ok, tag + ' | docked containers ' + a.dd + '/' + a.inf + ' Dock_1 blocks ' + a.docks + ' ' + JSON.stringify(a.notes.filter(n => /limited|not built/.test(n))) + (ok ? '' : ' | ' + (r.errs || []).slice(0, 3).join('; ')));
 }
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
