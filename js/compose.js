@@ -181,7 +181,7 @@ function cmpCompose(P,item,mk,spMk,o={}){
   finally{globalThis.CMP_IN=false;globalThis.CMP_CAP4=false;globalThis.CMP_NOFUSE=nf0}
   const ok=C.filter(c=>c.L.ok);
   if(!ok.length){window.CMP_BK=C[0].bk;return C[0].L}
-  const k=cmpKey,bl=L=>L.tile.blocks.length,be=L=>L.stat.belts+L.stat.ug;
+  const k=cmpKey,bl=L=>L.tile.blocks.length,be=L=>L.stat.belts+L.stat.ug+L.stat.spl;
   const H=ok.filter(c=>c.nf).sort((a,b)=>k(a.L)-k(b.L))[0],pool=H?ok.filter(c=>c===H||bl(c.L)<=bl(H.L)&&be(c.L)<=be(H.L)):ok;
   let best=pool[0];for(const c of pool)if(k(c.L)<k(best.L))best=c;
   window.CMP_BK=best.bk;return best.L;
