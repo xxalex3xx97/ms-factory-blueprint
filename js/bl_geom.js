@@ -213,7 +213,7 @@ function blHA(yRow,c,ya,side,xp,pyIn){
 }
 // blHIZ(S): S={mk,bx,raw,R,P,y0,Y}. Containers at (cx, Y+ya+4j), ports E at xp=cx+4. Row j: belts xp..col-1 at py (rot 0), corner at col (rot 3 north / 1 south), vertical, corner at yIn (rot 0), belts col+1..29 at yIn.
 function blHIZ(S){
-  const {mk,bx,raw,R,P,y0,Y}=S,bc=PLC_BELT[mk],c=Math.ceil(R/4),ncol=Math.ceil(R/2),xp=28-ncol,cx=xp-4,items=[];
+  const {mk,bx,raw,R,P,y0,Y}=S,bc=PLC_BELT[mk],c=Math.ceil(R/4),ncol=Math.ceil(R/2),dn=S.pyI?Array.from({length:R},(_,j)=>Math.sign(y0+P*j-S.pyI[j])):null,xp=S.pyI?28-Math.max(dn.filter(d=>d<0).length,dn.filter(d=>d>0).length):28-ncol,cx=xp-4,items=[];   // H6b fix: explicit port rows size xp by the larger blHA group
   const yR=Array.from({length:R},(_,j)=>y0+P*j),yMid=(yR[0]+yR[R-1])/2,ya=Math.min(Math.max(Math.floor(yMid-2*c),1),29-4*c);
   const A=blHA(yR,c,ya,'in',xp,S.pyI),bt=(x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});   // H6b: S.pyI explicit port rows
   for(let j=0;j<c;j++)items.push({cls:bx,x:cx,y:Y+(S.ca?S.ca[j]:ya+4*j),rot:0,h:0,pid:0,ct:[{item:raw,n:0,inf:true}],...(S.dock?{dk:'in'}:{})});   // H6b: S.ca container rows, dk 'in' for a normal input dock

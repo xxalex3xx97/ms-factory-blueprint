@@ -41,8 +41,6 @@ for (const [name, rate] of cases) for (const dk of Object.keys(docks)) for (cons
   console.log(tag + ': ' + JSON.stringify(r));
   if (r.refused) { check(false, tag + ' refused (' + r.refused + ')'); continue }
   if (r.notZoned) { check(false, tag + ' not zoned (' + r.notZoned + ')'); continue }
-  // KNOWN LIMIT: placerCut shifts the output containers when both docks present (Nickel 720 in+out: x 57 -> 62), so the output dock check refuses. Must refuse visibly, not crash.
-  if (name === 'Nickel Plates' && rate === 720 && dk === 'both') { check(!!r.tileFail && /dock slot misaligned/.test(r.tileFail), tag + ' KNOWN LIMIT refuses visibly (' + (r.tileFail || r.refused || 'no refusal') + ')'); continue }
   if (r.tileFail) { check(false, tag + ' placerTile (' + r.tileFail + ') ov ' + r.ov + ' span ' + r.span); continue }
   const wantIn = dk === 'out' ? 0 : (rate === 480 ? 1 : 2), wantOut = dk === 'in' ? 0 : (rate === 480 ? 1 : 2);
   check(r.ov === 0 && r.span === 0, tag + ' ov 0 span 0 (ov ' + r.ov + ', span ' + r.span + ')');

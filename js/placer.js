@@ -579,7 +579,8 @@ function placerCut(L,cls){
         const prev=cuts.length?cuts[cuts.length-1]:0;
         for(let p=c;p>Math.max(prev,c-6)&&!done;p--)for(let k=1;k<=6&&!done;k++){const IT2=plcBlank(IT,p,k,L.h,mx);if(!IT2)continue;   // p: insertion column (up to 6 left of the planned cut)
           const c2=p+k,r2=plcTryCut(IT2,plcOcc(IT2),L.h,true,c2);
-          if(r2&&c2-prev<=Fw&&c2-prev>=Math.max(2,d.w*FC+2-mx)){IT.splice(0,IT.length,...IT2);mkOcc();for(let j=i+1;j<cl.length;j++)if(cl[j]>=p)cl[j]+=k;c=c2;r=r2;done=true}}
+          const nxt=i+1<cl.length?cl[i+1]:L.w,spill=IT2.some(b=>b.x>=c2&&b.x<nxt&&b.x+dim(b).w-c2>Fw);   // blank cut must not push items past the floor end
+          if(r2&&!spill&&c2-prev<=Fw&&c2-prev>=Math.max(2,d.w*FC+2-mx)){IT.splice(0,IT.length,...IT2);mkOcc();for(let j=i+1;j<cl.length;j++)if(cl[j]>=p)cl[j]+=k;c=c2;r=r2;done=true}}
         if(!done)return{ok:false,why:"internal: bank cut column "+c+" is not free even with 6 blank columns"};
       }
       cuts.push(c);ugs.push(...r)}}
