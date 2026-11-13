@@ -96,9 +96,9 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
 function cmpFeedDock(S,dk,dh,D,dw,sides){
   const {W,H,mk,bx,sets,M,rawItems}=S,cap=MKS[dk.mk][1],bc=PLC_BELT[mk],nR=rawItems.length,seed=r=>S.seed!=null&&rawItems[r]===S.seed;
   const mid=!S.allRaw,pass=mid?S.pass||[]:[],sl=r=>mid&&r>=(S.main||0)?r+1:r,rows=r=>sets.flatMap(s=>Array.from({length:M},(_,c)=>(s.t?s.t[sl(r)]:s.o+sl(r)*M)+c));
-  if(H<30)sides=[];   // ponytail: 14-row blocks are too tight for N/S containers (flood mixed items); W slots only
+  // H<30 guard removed (D3 experiment)
   // mid-chain FEED (D2): the chain lanes pass through (routed as nets so raw lanes can UG-hop them), raws come from N/S side containers only (W edge is not this column's)
-  const free=[...(mid?[]:Array.from({length:dh},(_,k)=>({side:'W',x:0,y:16*k+5}))),...(sides||[]).flatMap(sd=>Array.from({length:dw},(_,u)=>({side:sd,x:16*u+5,y:sd==='N'?1:H-5})))].filter(c=>!mid||!pass.some(y=>y>=c.y-1&&y<=c.y+4)),cont=[];   // cont: {r,x,y,docked,side}
+  const free=H<30?[...(sides||[]).includes('N')?Array.from({length:dw},(_,u)=>({side:'N',x:16*(dw-1-u)+5,y:1})):[],...(mid?[]:Array.from({length:dh},(_,k)=>({side:'W',x:0,y:16*k+5}))),...(sides||[]).includes('S')?Array.from({length:dw},(_,u)=>({side:'S',x:16*u+5,y:H-5})):[]]:[...(mid?[]:Array.from({length:dh},(_,k)=>({side:'W',x:0,y:16*k+5}))),...(sides||[]).flatMap(sd=>Array.from({length:dw},(_,u)=>({side:sd,x:16*u+5,y:sd==='N'?1:H-5})))].filter(c=>!mid||!pass.some(y=>y>=c.y-1&&y<=c.y+4)),cont=[];   // cont: {r,x,y,docked,side}
   const use=new Array(nR).fill(0);
   for(let r=0;r<nR;r++){if(seed(r))continue;const left=rawItems.slice(r+1).filter((_,i)=>!seed(r+1+i)).length,n=cmpCellsFor(D[r],cap,rows(r).length,free.length-left).use;
     for(let i=0;i<n&&free.length;i++){cont.push({r,...free.shift(),docked:1});use[r]++}}
@@ -112,7 +112,7 @@ function cmpFeedDock(S,dk,dh,D,dw,sides){
     mine.forEach((c,g)=>{const n=Math.floor(tr.length/T)+(g<tr.length%T?1:0),s0=Math.floor((4-n)/2);
       const q={cls:bx,x:c.x,y:c.y,rot:0,h:0,pid:0,ct:[{item:rawItems[r],n:0,inf:!seed(r)}]};
       if(c.docked)Object.assign(q,{dk:'in',dkx:{r:Math.min(D[r]/use[r],2*cap),n:use[r],name:S.names[r],side:c.side}});
-      items.push(q);if(c.x)for(let xx=c.x-4;xx<c.x;xx++)for(let i=0;i<4;i++)blk.add(xx+','+(c.y+i));for(let i=0;i<n;i++)src.push({x:c.x,y:c.y+s0+i,item:rawItems[r]}),snk.push({x:W-5,y:tr[p++],item:rawItems[r]})});
+      items.push(q);if(c.x)for(let xx=c.x-4;xx<c.x;xx++)for(let i=0;i<4;i++)blk.add(xx+','+(c.y+i));if(c.side==="N"||c.side==="S")for(let xx=c.x-4;xx<c.x;xx++)blk.add(xx+","+(c.side==="N"?0:H-1));for(let xx=c.x-5;xx<c.x;xx++){blk.add(xx+","+(c.y-1));blk.add(xx+","+(c.y+4))}for(let i=0;i<4;i++){blk.add((c.x-5)+","+(c.y+i));blk.add(c.x+","+(c.y+i))}for(let i=0;i<n;i++)src.push({x:c.x,y:c.y+s0+i,item:rawItems[r]}),snk.push({x:W-5,y:tr[p++],item:rawItems[r]})});
     const got=Math.min(D[r],use[r]*2*cap);
     if(!seed(r)&&got<D[r]-1e-6)nt.push('Dock-limited: '+S.names[r]+' '+cmpR1(got)+'/min of '+cmpR1(D[r])+'/min (needs '+Math.ceil(D[r]/(2*cap)-1e-9)+' docks)');
   }

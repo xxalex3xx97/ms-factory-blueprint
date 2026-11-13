@@ -28,7 +28,7 @@ const info = a => {
 const BK = {'2x2': 'BPO_Station_02', '2x2c': 'BPO_Station_03', '1x2': 'BPO_Station_2x1', '1x1': 'BPO_Station_01'};
 const cases = [];
 for (const b of ['2x2', '2x2c']) for (const [name, rate, mk, rx] of [['Enzyme', 10, 1], ['Nutrients', 20, 1], ['Capacitor', 100, 1, '>ITEM_Capacitor$'], ['Basic Circuits', 100, 1, 'BasicCircuit$'], ['Nickel Plates', 480, 1, '^ITEM_NickelOre>ITEM_NickelPlates$'], ['Xenobacteria', 10, 1], ['Nutrients', 400, 1]]) cases.push({name, rate, mk, b, rx});
-cases.push({name: 'Enzyme', rate: 10, mk: 1, b: '1x2'}, {name: 'Nutrients', rate: 20, mk: 1, b: '1x2'});
+for (const b of ['1x2', '1x1']) cases.push({name: 'Enzyme', rate: 10, mk: 1, b}, {name: 'Nutrients', rate: 20, mk: 1, b});
 for (const c of cases) {
   const tag = c.name + ' ' + c.rate + ' ' + c.b, dock = {in: 'nrm', out: null};
   const key = await pg.evaluate(([n, rx]) => { const r = [].concat(...Object.values(RECS)).find(r => rx ? new RegExp(rx).test(rk(r)) : plnNm(r.o[0]) === n); return r ? rk(r) : null }, [c.name, c.rx]);
@@ -37,8 +37,8 @@ for (const c of cases) {
   const a = await pg.evaluate(info, {key, rate: c.rate, mk: c.mk, bk: BK[c.b], dock});
   if (a.err) { check(false, tag + ' ' + a.err); continue }
   // D2: raw hubs sit at column 0 whatever the node column; Enzyme 2x2: heavy middle row (3 raws > 2 W slots) takes N/S units, neighbour hubs move to bank column 1; 5/5 docked
-  const need = c.b === '1x2' ? 1 : c.name === 'Enzyme' || c.name === 'Xenobacteria' ? a.inf : 1;
-  const ok = r.ok && a.ov === 0 && a.bad === 0 && a.dd >= need && (a.dd === a.inf || a.notes.some(n => /Dock-limited/.test(n)));
+  const need = c.name === 'Enzyme' || c.name === 'Xenobacteria' ? a.inf : 1;
+  const ok = r.ok && a.ov === 0 && a.bad === 0 && a.dd >= need && a.dd === a.inf;
   check(ok, tag + ' | docked containers ' + a.dd + '/' + a.inf + ' Dock_1 blocks ' + a.docks + ' ' + JSON.stringify(a.notes.filter(n => /limited|not built/.test(n))) + (ok ? '' : ' | ' + (r.errs || []).slice(0, 3).join('; ')));
 }
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
