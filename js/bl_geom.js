@@ -198,3 +198,56 @@ function blFlip(items,XM,mcF){
     return nb});
   return{ok:true,items:out};
 }
+// BL H1 horizontal zones: IZ (containers + input paths) west of the wall x=30, FB (machine rows) east, sink containers at x=55. One 30x30 block; rows packed at pitch P.
+// blHA(yRow,c,ya,side,xp): port per row (s=floor((4c-R)/2), row i -> port ya+s+i). Flow dir: in = sign(yRow-py) (north -1 rot 3, south +1 rot 1); out = sign(py-yRow).
+// Column: in: x=xp+1+k (north group k from top, south group k from bottom); out: x=xp-1-k (down group k from top, up group k from bottom). Straight rows: col null.
+function blHA(yRow,c,ya,side,xp){
+  const R=yRow.length,s=Math.floor((4*c-R)/2),py=yRow.map((_,i)=>ya+s+i),dir=yRow.map((y,i)=>Math.sign(side==='in'?y-py[i]:py[i]-y)),col=new Array(R).fill(null);
+  const top=side==='in'?-1:1;   // group counted from the top row (in: north, out: down); the other group from the bottom
+  for(const d of [-1,1]){
+    const idx=[...Array(R).keys()].filter(i=>dir[i]===d);
+    if(d!==top)idx.reverse();
+    idx.forEach((i,k)=>col[i]=side==='in'?xp+1+k:xp-1-k);
+  }
+  return{py,col,dir};
+}
+// blHIZ(S): S={mk,bx,raw,R,P,y0,Y}. Containers at (cx, Y+ya+4j), ports E at xp=cx+4. Row j: belts xp..col-1 at py (rot 0), corner at col (rot 3 north / 1 south), vertical, corner at yIn (rot 0), belts col+1..29 at yIn.
+function blHIZ(S){
+  const {mk,bx,raw,R,P,y0,Y}=S,bc=PLC_BELT[mk],c=Math.ceil(R/4),ncol=Math.ceil(R/2),xp=28-ncol,cx=xp-4,items=[];
+  const yR=Array.from({length:R},(_,j)=>y0+P*j),yMid=(yR[0]+yR[R-1])/2,ya=Math.min(Math.max(Math.floor(yMid-2*c),1),29-4*c);
+  const A=blHA(yR,c,ya,'in',xp),bt=(x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});
+  for(let j=0;j<c;j++)items.push({cls:bx,x:cx,y:Y+ya+4*j,rot:0,h:0,pid:0,ct:[{item:raw,n:0,inf:true}]});
+  for(let j=0;j<R;j++){
+    const yI=Y+yR[j],py=Y+A.py[j],d=A.dir[j];
+    if(d===0){for(let x=xp;x<=29;x++)items.push(bt(x,yI,0));continue}
+    const xc=A.col[j];
+    for(let x=xp;x<xc;x++)items.push(bt(x,py,0));
+    items.push(bt(xc,py,d<0?3:1));
+    for(let y=py+d;y!==yI;y+=d)items.push(bt(xc,y,d<0?3:1));
+    items.push(bt(xc,yI,0));
+    for(let x=xc+1;x<=29;x++)items.push(bt(x,yI,0));
+  }
+  return{ok:true,items,xp,cols:A.col,cx,ya,py:A.py};
+}
+// blHFB(S): S={mk,spMk,cls,rec,mc,M,R,Y,y0,bx}. Row j: blRow at yIn (collector to column xEx), manifold from x=30; output path: column (rot 1 down / 3 up), corner at py (rot 0), belts to the sink W port xp_o=54. Sink containers at (55, Y+ya+4j).
+function blHFB(S){
+  const {mk,spMk,cls,rec,mc,M,R,Y,y0,bx}=S,P=mc.h+2,bc=PLC_BELT[mk],c=Math.ceil(R/4),xc0=55,xp=54,items=[];
+  const yR=Array.from({length:R},(_,j)=>y0+P*j),yO=yR.map(y=>y+P-1),yMid=(yO[0]+yO[R-1])/2,ya=Math.min(Math.max(Math.floor(yMid-2*c),1),29-4*c);
+  const A=blHA(yO,c,ya,'out',xp),X0=31+(mc.xin===0?1:0),yOut=[],exCols=[];
+  for(let j=0;j<c;j++)items.push({cls:bx,x:xc0,y:Y+ya+4*j,rot:0,h:0,pid:0,ct:[]});
+  for(let j=0;j<R;j++){
+    const d=A.dir[j],xcol=d===0?xp:A.col[j],py=A.py[j];
+    const r=blRow({mk,spMk,cls,rec,mc,m:M,X0,yIn:Y+yR[j],colX:30,xEx:xcol});
+    if(!r.ok)return r;
+    const yo=Y+yO[j],last=r.items[r.items.length-1];
+    last.rot=d<0?3:d>0?1:0;
+    items.push(...r.items);
+    yOut.push(yo);exCols.push(xcol);
+    if(d===0)continue;
+    const bt=(x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});
+    for(let y=yo+d;y!==Y+py;y+=d)items.push(bt(xcol,y,d<0?3:1));
+    items.push(bt(xcol,Y+py,0));
+    for(let x=xcol+1;x<=xp;x++)items.push(bt(x,Y+py,0));
+  }
+  return{ok:true,items,yOut,exCols,ya,py:A.py};
+}
