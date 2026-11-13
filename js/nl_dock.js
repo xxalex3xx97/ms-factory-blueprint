@@ -53,8 +53,21 @@ function nlDockApply(L,T,cls){
     for(const x of[M,M+1])for(let y=-1-A;y<=0;y++)belt(x,y,1);
     blocks.push({cls:plcCls('BPO_Dock'),x:c*d.w+k,y:-1-ad,rot:3});if(ad)adp(c,-1,3)}
   // (2) Industrial input: one Industrial Dock + assembly per column
+  // H6c hz: one BPO_Dock_2 west of block 0 (block x=-3), nlIndAsm transposed ((x,y)->(y,x), rot 0<->1, 2<->3, u=-16+y, v=stack row), lane tails u=-3..-1 on each 'ie' lane row (blHIZ tags)
+  if(hz){
+    const ih=ms.filter(q=>q.dk==='ie');
+    if(ih.length){
+      if(ih.some(q=>q.yb!==0))return no('dock slot misaligned');
+      if(ih.some(q=>!lxOk(q.y-q.yb)))return no('dock slot misaligned');
+      const di=ih[0].di,TR=[1,0,3,2];
+      blocks.push({cls:plcCls('BPO_Dock_2'),x:-3,y:0,rot:2});
+      for(const b of asm.boxes){const inf=(b.x===22&&b.y===9)||(b.x===4&&b.y===9);
+        ms.push({cls:NLD.BOX_I,x:-16+b.y,y:b.x,h:0,rot:0,pid:0,ct:inf?[{item:di,n:0,inf:true}]:[],dk:'in'})}
+      for(const k of asm.belts)belt(-16+k.y,k.x,TR[k.rot]);
+      for(const q of ih)for(let x=-3;x<=-1;x++)belt(x,q.y,0)}
+  }
   const ie=new Map();
-  for(const q of ms.filter(q=>q.dk==='ie')){
+  for(const q of ms.filter(q=>q.dk==='ie'&&!hz)){
     const c=cx(q.x);if(!lxOk(q.x-c*TW))return no('dock slot misaligned');
     if(!ie.has(c))ie.set(c,[]);ie.get(c).push(q)}
   for(const [c,E] of ie){

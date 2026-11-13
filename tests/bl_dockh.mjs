@@ -51,6 +51,47 @@ for (const [name, rate] of cases) for (const dk of Object.keys(docks)) for (cons
   check(!r.outBad.length, tag + ' output lanes (' + r.outBad.join(' ') + ')');
   check(r.minX >= 0, tag + ' all x >= 0 (min ' + r.minX + ')');
 }
+// H6c industrial input (BPO_Dock_2 west of block 0, 8-lane asm transposed, one lane per row). Nickel 480 and 720, zones and Auto.
+for (const [name, rate] of cases) for (const eng of ['zones', 'auto']) {
+  const tag = `${name} ${rate} ind ${eng}`;
+  const r = await pg.evaluate(([name, rate, eng]) => {
+    const it = [...plnBy(false).keys()].find(i => plnNm(i) === name);
+    const P = plan(it, rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+    const o = {dock: {in: 'ind', out: null}, box: 'DAT_Container_2'};
+    if (eng === 'zones') o.eng = 'zones';
+    const L = pfCompose(P, it, 1, 0, o);
+    if (!L.ok) return {refused: L.why};
+    if (!L.bl || !L.bl.zoned) return {notZoned: L.note && L.note[0]};
+    const T = placerTile(L, placerBk());
+    if (!T.ok) return {tileFail: String(T.why).slice(0, 200), ov: T.ov, span: T.span};
+    const occ = new Map(), DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]], isB = b => PLC_BELT.includes(b.cls) || PLC_SPL.includes(b.cls);
+    for (const b of T.ms) { const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) occ.set(x + ',' + y, b) }
+    const MX = 30 + 16 * 3;   // IZ manifold column after the x shift (block -3 -> 48 cells)
+    // underground pairs (placer wall hop): an entrance jumps to the next UG cell along its rot (<=12 cells), then steps on
+    const isUG = b => !!b && /UndergroundBelt/.test(b.cls);
+    const flood = (x, y) => { let jumped = false; for (let n = 0; n < 400; n++) { if (x === MX && occ.get(x + ',' + y) && isB(occ.get(x + ',' + y))) return y; const b = occ.get(x + ',' + y); if (!b || !(isB(b) || isUG(b))) return null; const [dx, dy] = DIR[b.rot];
+      if (isUG(b) && !jumped) { let k = 1; while (k <= 12 && !isUG(occ.get((x + dx * k) + ',' + (y + dy * k)))) k++; if (k > 12) return null; if (dx && Math.sign(MX - x) === dx && Math.abs(MX - x) <= Math.abs(dx * k)) return y; x += dx * k; y += dy * k; jumped = true; continue }
+      jumped = false; x += dx; y += dy } return null };
+    const lanes = T.ms.filter(q => q.dk === 'ie').map(q => [q.x, q.y]);
+    const reached = lanes.map(([x, y]) => flood(x, y));
+    const asm = lanes.map(([x, y]) => (occ.get((x - 3) + "," + y) || {}).cls === "DAT_ConveyorBelt2" ? 1 : null);   // asm lane cell at depth 13 = u=-3 (planner H6c diagnosis); tails start there
+    const rows = [...new Set(reached.filter(v => v !== null))].sort((a, b) => a - b);
+    const minX = Math.min(...T.ms.map(q => q.x), ...T.blocks.map(b => b.x * 16));
+    return {zoned: true, K: L.bl.K, R: L.bl.r[0], rows: L.bl.r, ov: T.ov, span: T.span, noBuild: noBuild(T.ms.filter(isM).map(mItem)),
+      dock2: T.blocks.filter(b => b.cls === plcCls('BPO_Dock_2')).length, lanes: lanes.length, reachedRows: rows, laneReach: reached.map(v => v !== null), asmReach: asm.map(v => v !== null), minX};
+  }, [name, rate, eng]);
+  console.log(tag + ': ' + JSON.stringify(r));
+  if (r.refused) { check(false, tag + ' refused (' + r.refused + ')'); continue }
+  if (r.notZoned) { check(false, tag + ' not zoned (' + r.notZoned + ')'); continue }
+  if (r.tileFail) { check(false, tag + ' placerTile (' + r.tileFail + ') ov ' + r.ov + ' span ' + r.span); continue }
+  check(r.ov === 0 && r.span === 0, tag + ' ov 0 span 0 (ov ' + r.ov + ', span ' + r.span + ')');
+  check(!r.noBuild, tag + ' noBuild false');
+  check(r.dock2 === r.K, tag + ' BPO_Dock_2 count ' + r.dock2 + ' == K ' + r.K);
+  check(r.lanes === r.R && r.laneReach.every(Boolean), tag + ' every lane (' + r.lanes + ') floods to an IZ row');
+  check(r.reachedRows.length === r.R, tag + ' rows reached ' + r.reachedRows.length + '/' + r.R);
+  check(r.asmReach.every(Boolean), tag + ' asm lane cell (u=-3) is a belt in every lane row');
+  check(r.minX >= 0, tag + ' all x >= 0 (min ' + r.minX + ')');
+}
 await br.close();
 if (errs.length) { console.log('PAGE ERRORS ' + errs.join(' | ')); fails++ }
 console.log(fails ? 'FAILS ' + fails : 'ALL PASS');

@@ -216,12 +216,13 @@ function blHIZ(S){
   const {mk,bx,raw,R,P,y0,Y}=S,bc=PLC_BELT[mk],c=Math.ceil(R/4),ncol=Math.ceil(R/2),dn=S.pyI?Array.from({length:R},(_,j)=>Math.sign(y0+P*j-S.pyI[j])):null,xp=S.pyI?28-Math.max(dn.filter(d=>d<0).length,dn.filter(d=>d>0).length):28-ncol,cx=xp-4,items=[];   // H6b fix: explicit port rows size xp by the larger blHA group
   const yR=Array.from({length:R},(_,j)=>y0+P*j),yMid=(yR[0]+yR[R-1])/2,ya=Math.min(Math.max(Math.floor(yMid-2*c),1),29-4*c);
   const A=blHA(yR,c,ya,'in',xp,S.pyI),bt=(x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});   // H6b: S.pyI explicit port rows
-  for(let j=0;j<c;j++)items.push({cls:bx,x:cx,y:Y+(S.ca?S.ca[j]:ya+4*j),rot:0,h:0,pid:0,ct:[{item:raw,n:0,inf:true}],...(S.dock?{dk:'in'}:{})});   // H6b: S.ca container rows, dk 'in' for a normal input dock
+  for(let j=0;j<(S.ind?0:c);j++)items.push({cls:bx,x:cx,y:Y+(S.ca?S.ca[j]:ya+4*j),rot:0,h:0,pid:0,ct:[{item:raw,n:0,inf:true}],...(S.dock?{dk:'in'}:{})});   // H6b: S.ca container rows, dk 'in' for a normal input dock; H6c: S.ind = no containers
+  const x0=S.ind?0:xp,tag=(b,f)=>{if(f&&S.ind){b.dk='ie';b.di=raw;b.yb=Y}return b};   // H6c: industrial lanes start at x=0 and their first belt is tagged 'ie' (nlDockApply builds the dock + asm)
   for(let j=0;j<R;j++){
     const yI=Y+yR[j],py=Y+A.py[j],d=A.dir[j];
-    if(d===0){for(let x=xp;x<=29;x++)items.push(bt(x,yI,0));continue}
+    if(d===0){for(let x=x0;x<=29;x++)items.push(tag(bt(x,yI,0),x===x0));continue}
     const xc=A.col[j];
-    for(let x=xp;x<xc;x++)items.push(bt(x,py,0));
+    for(let x=x0;x<xc;x++)items.push(tag(bt(x,py,0),x===x0));
     items.push(bt(xc,py,d<0?3:1));
     for(let y=py+d;y!==yI;y+=d)items.push(bt(xc,y,d<0?3:1));
     items.push(bt(xc,yI,0));
