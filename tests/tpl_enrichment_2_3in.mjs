@@ -3,6 +3,7 @@
 import {createRequire} from 'module';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
+import {checkIface} from './tpl_iface.mjs';
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -12,12 +13,13 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof placerCut === 'function' && typeof placerTile === 'function');
+await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/enrichment_2_3in.js'});
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 const SHOTS = process.env.SHOTS;
 const recipes = ['Chromatic Alloy', 'UpgradeShipSpeed_1', 'UpgradeShipSpeed_2', 'Warp Fuel', 'Superalloy'];
-const rows = [], notes = [];
+const rows = [], notes = [], refB = {};
 for (const rname of recipes) for (const block of ['1x1', '1x2', '2x2', '2x2c']) {
   const info = await pg.evaluate(([rname, block]) => {
     let rd = null, key = null;
@@ -31,14 +33,15 @@ for (const rname of recipes) for (const block of ['1x1', '1x2', '2x2', '2x2c']) 
     return {key, rd, mk, sup, g: t.g, gRaw: t.gRaw, ins: t.ins, out: t.out, cap: t.cap, nMax: tplMax(spec), k: rd.i.length};
   }, [rname, block]);
   if (info.missing) { check(false, rname + ' recipe missing'); continue }
-  if (!info.sup) notes.push(`${rname}: inputs ${info.ins.map(v => v + '/min').join(', ')} > 0.5*Mk3 cap (${0.5 * 180}) and the raw cap (180): NOT SUPPORTED by one belt per lane (g=0). Geometry still builds for Mk3.`);
+  if (!(info.nMax >= 1)) { check(info.sup === false || info.nMax === 0, `${rname} ${block} refused (rate, g=0 at Mk3): nMax 0`); continue }
+  if (!info.sup) notes.push(`${rname}: inputs ${info.ins.map(v => v + '/min').join(', ')} > Mk3 cap (180): NOT SUPPORTED by one belt per lane (g=0). Geometry still builds for Mk3.`);
   const ns = [...new Set([1, 2, info.nMax - 1, info.nMax].filter(v => v >= 1 && v <= info.nMax))];
   for (const n of ns) {
     const r = await pg.evaluate(([info, block, n]) => {
       const spec = {block, cls: 'DAT_EnrichmentChamber', rec: info.key, recd: info.rd, mk: info.mk, spMk: info.mk, n};
       const B = tplBuild(spec);
       if (!B.ok) return {build: B.why};
-      const out = {stats: B.stats, w: B.w, h: B.h, g: info.g, nMax: B.nMax, rowsM: B.rows, ports: B.ports};
+      const out = {build: B, stats: B.stats, w: B.w, h: B.h, g: info.g, nMax: B.nMax, rowsM: B.rows, ports: B.ports};
       const it = B.items, K = (x, y) => x + ',' + y, occ = new Map();
       let ov = 0, outside = 0;
       for (const b of it) { const d = dim(b); for (let i = 0; i < d.w; i++) for (let j = 0; j < d.h; j++) { const c = K(b.x + i, b.y + j); if (occ.has(c)) ov++; else occ.set(c, b); if (b.x + i < 0 || b.y + j < 0 || b.x + i >= B.w || b.y + j >= B.Fh) outside++ } }
@@ -90,8 +93,8 @@ for (const rname of recipes) for (const block of ['1x1', '1x2', '2x2', '2x2c']) 
       }
       // expected port key per lane j: N face (top row) or S face (bottom row): x = 2+2j
       for (const mc of machines) {
-        const top = mc.y < 11 + 0 && (B.rows.length === 1 || mc.y === B.rows.length * 0 + (info.rd.i.length)), j2 = [...Array(info.rd.i.length).keys()];
-        const grp = B.rows.length === 1 ? 0 : (mc.y === info.rd.i.length ? 0 : 1);
+        const j2 = [...Array(info.rd.i.length).keys()];
+        const grp = B.rows.length === 1 ? 0 : (mc.y === B.iface.sets[0].o + info.rd.i.length ? 0 : 1);
         const keys = grp === 0 ? ['N0', 'N1', 'N2'] : ['S6', 'S7', 'S8'];
         for (const j of j2) { const g = got.get(K(mc.x, mc.y) + '|' + keys[j]) || []; if (g.length !== 1 || g[0] !== grp + '/' + j) inErr.push(K(mc.x, mc.y) + ' lane' + j + ' got ' + JSON.stringify(g)) }
         const total = [...got.keys()].filter(q => q.startsWith(K(mc.x, mc.y) + '|')).length; if (total !== j2.length) inErr.push(K(mc.x, mc.y) + ' ports hit ' + total);
@@ -111,18 +114,21 @@ for (const rname of recipes) for (const block of ['1x1', '1x2', '2x2', '2x2c']) 
       out.outErr = outErr;
       // rate: lane group load (machines in the group * per-machine rate) vs derated cap
       const groups = B.rows, load = (info.ins || []).map(v => Math.max(...groups) * v);
-      out.rate = {worstLane: Math.max(...load), cap: info.cap, der: info.cap * 0.5, outLoad: B.stats.machines * info.out};
+      out.rate = {worstLane: Math.max(...load), cap: info.cap, der: info.cap * (B.rate ? B.rate.der : 1), outLoad: B.stats.machines * info.out};
       return out;
     }, [info, block, n]);
     const tag = `${rname} ${block} n=${n}`;
-    if (r.build) { check(false, tag + ' build: ' + r.build); continue }
+    if (typeof r.build === 'string') { check(false, tag + ' build: ' + r.build); continue }
+    if (n === 1) refB[block + rname] = r.build;
+    const ci = await checkIface(pg, r.build, block, refB[block + rname]);
+    check(ci.ok, `${tag} checkIface ${ci.errs.slice(0, 3).join('; ')}`);
     check(r.ov === 0 && r.outside === 0, `${tag} no overlap/outside (ov ${r.ov}, outside ${r.outside})`);
     check(r.cut.ok && r.cut.ov === 0 && r.cut.span === 0 && !r.ugSpan, `${tag} placerCut ok ov0 span0 ${r.cut.why || ''}`);
     check(r.tile && r.tile.ok && r.tile.ov === 0 && r.tile.span === 0 && r.tile.blocks === 1, `${tag} placerTile ${JSON.stringify(r.tile)}`);
     check(!r.inErr.length, `${tag} input lanes -> machines, own item only ${r.inErr.slice(0, 2).join('; ')}`);
     check(!r.outErr.length, `${tag} outputs reach east port ${r.outErr.slice(0, 2).join('; ')}`);
     const rr = r.rate, rawOk = rr.worstLane <= rr.cap, derOk = rr.worstLane <= rr.der;
-    console.log(`     rate ${tag}: Mk${info.mk + 1} worst lane ${rr.worstLane.toFixed(0)}/min (cap ${rr.cap}, derated ${rr.der}) ${derOk ? 'ok' : rawOk ? 'over derate' : 'OVER CAP'}; out ${rr.outLoad.toFixed(0)}/min; g=${info.g}`);
+    console.log(`     rate ${tag}: Mk${info.mk + 1} worst lane ${rr.worstLane.toFixed(0)}/min (cap ${rr.cap}, cap*derate ${rr.der}) ${derOk ? 'ok' : rawOk ? 'over derate' : 'OVER CAP'}; out ${rr.outLoad.toFixed(0)}/min; g=${info.g}`);
     rows.push([rname, block, n, r.stats.machines, r.stats.belts, r.stats.ug, r.stats.spl, r.w + 'x' + r.h, (r.stats.belts + r.stats.ug + r.stats.spl) / r.stats.machines, derOk ? 'ok' : rawOk ? 'derate' : 'OVER']);
     if (SHOTS && n === info.nMax && rname === 'Superalloy') await pg.evaluate(() => 0);
   }
@@ -130,11 +136,79 @@ for (const rname of recipes) for (const block of ['1x1', '1x2', '2x2', '2x2c']) 
   check(!over.ok, `${rname} ${block} n=nMax+1 (${info.nMax + 1}) refused: ${over.why}`);
   check(info.nMax >= 1, `${rname} ${block} nMax=${info.nMax} nRate(g*groups)=${Math.min(info.nMax, info.g * (block.startsWith('2x2') ? 2 : 1))}`);
 }
+// ---- checkPlan (multi-input local variant of tests/tpl_plan.mjs checkPlan, which is single-input only): planner N / pmach, template with n=N (B=ceil(N/nMax) block copies tiled vertically, per=ceil(N/B)),
+// sources inject planner demand FILL-FIRST (groups in build order get min(machines, remaining demand units); units D=rate/pmach), flow calc = links1/supplyRows. Asserts: machines==N, no machine short but the last,
+// sorted ratios = N-1 full + last == planner utilisation (1%), product (sum min(ratio,1)*out/min) >= rate, delivered input == injected == planner input (1%), no belt util > 1.
+const planRun = async a => {
+  const isLane = c => PLC_BELT.includes(c) || PLC_SPL.includes(c) || PLC_UG.includes(c);
+  const rec = [].concat(...Object.values(RECS)).find(r => rk(r) === a.key);
+  const outItem = rec.o[0];
+  const P = plan(outItem, a.rate, a.mk, {}, {[outItem]: a.key}, {proto: false, enr: false, obs: false});
+  const nd = P.nodes[outItem], N = nd.machines, pm = nd.pmach, D = a.rate / pm;
+  const inEdges = P.edges.filter(e => e.to === outItem), belts = Math.max(0, ...inEdges.map(e => e.belts));
+  const spec = {block: a.block, cls: 'DAT_EnrichmentChamber', rec: a.key, recd: rec, mk: a.mk, spMk: a.mk};
+  const nMax = tplMax(spec);
+  if (!(nMax >= 1)) return {err: 'nMax 0'};
+  const Bc = Math.ceil(N / nMax), per = Math.ceil(N / Bc), counts = [];
+  for (let left = N; left > 0;) { const nj = Math.min(per, left); counts.push(nj); left -= nj }
+  S.blocks = []; S.dm = [];
+  let id = 700000, yoff = 0, rem = D;
+  const outIds = [], injs = [], needs = rec.i.map(x => pm_(x[1], rec.t));
+  function pm_(n, t) { return n * 1800 / t }
+  const idAt = (x, y) => (S.blocks.find(q => q.x === x && q.y === y && isLane(q.cls)) || {}).id;
+  for (const nj of counts) {
+    const b = tplBuild({...spec, n: nj});
+    if (!b.ok) return {err: 'copy n=' + nj + ': ' + b.why};
+    for (const it of b.items) S.blocks.push({...it, id: ++id, h: 0, y: it.y + yoff, ...(it.rec !== undefined ? {rec: rk(rec)} : {})});
+    const units = b.rows.map(m => { const u = Math.min(m, rem); rem -= u; return u });
+    b.ports.in.forEach(p => { const r = units[p.grp] * needs[p.item]; if (r > 0) injs.push({id: idAt(p.x, p.y + yoff), item: rec.i[p.item][0], rate: r}) });
+    b.ports.out.forEach(p => outIds.push(idAt(p.x, p.y + yoff)));
+    yoff += b.h + 4;
+  }
+  const K = links1(0, injs), ms = S.blocks.filter(q => !isLane(q.cls));
+  const ratios = ms.map(m => { const r = supplyRows(m, K); return r.length ? Math.min(...r.map(x => x.need > 0 ? x.have / x.need : 1)) : 0 });
+  const sumHave = ms.reduce((s, m) => s + supplyRows(m, K).reduce((t, x) => t + x.have, 0), 0);
+  let mu = 0; K.load.forEach(e => { if (e.util != null) mu = Math.max(mu, e.util) });
+  const outPer = rec.o[1] * 1800 / rec.t, prod = ratios.reduce((s, r) => s + Math.min(r, 1), 0) * outPer;
+  return {N, pm, u: D - (N - 1), nMax, B: counts.length, machines: ms.length, ratios, sumHave, injSum: injs.reduce((s, q) => s + q.rate, 0), planIn: inEdges.reduce((s, e) => s + e.flow, 0), prod, mu, belts, outPort: outIds.reduce((s, i) => s + ((K.load.get(i) || {}).tot || 0), 0)};
+};
+const planRows = [];
+for (const rname of ['Chromatic Alloy', 'Superalloy', 'Warp Fuel']) {
+  const key = await pg.evaluate(rname => { let k; plnBy(false).forEach((l, item) => l.forEach(({c, r}) => { if (/Enrich/.test(c) && plnNm(item) === rname) k = rk(r) })); return k }, rname);
+  for (const block of ['1x1', '1x2', '2x2', '2x2c']) {
+    const mk = await pg.evaluate(([key]) => { const rd = [].concat(...Object.values(RECS)).find(r => rk(r) === key); for (let m = 0; m < 3; m++) if (tplRates({recd: rd, mk: m}).g >= 1) return m; return -1 }, [key]);
+    if (mk < 0) { console.log(`     plan ${rname} ${block}: g=0 at Mk3 (ok:false why rate), skipped`); continue }
+    const inf = await pg.evaluate(([key, block, mk]) => { const rd = [].concat(...Object.values(RECS)).find(r => rk(r) === key); const P = plan(rd.o[0], 1, mk, {}, {[rd.o[0]]: key}, {proto: false, enr: false, obs: false}); return {pm: P.nodes[rd.o[0]].pmach, nMax: tplMax({block, cls: 'DAT_EnrichmentChamber', rec: key, recd: rd, mk, spMk: mk})} }, [key, block, mk]);
+    const {pm, nMax} = inf;
+    for (const [tag, rate] of [['R1 N=1', pm], ['R1b 0.25', 0.25 * pm], ['R2 nMax-0.7', (nMax - 0.7) * pm], ['R3 nMax', nMax * pm], ['R4 nMax+1', (nMax + 1) * pm], ['R4b 2nMax+.5', (2 * nMax + 0.5) * pm]]) {
+      const r = await pg.evaluate(planRun, {key, rate, block, mk});
+      const t = `plan ${rname} ${block} ${tag}`;
+      if (r.err) { check(false, `${t}: ${r.err}`); continue }
+      const sorted = [...r.ratios].sort((a, b) => b - a), full = sorted.slice(0, r.N - 1), last = sorted[r.N - 1];
+      const e = [];
+      if (r.belts > (block === '2x2' ? 2 : 1)) { planRows.push([rname, block, tag, r.N, r.B, nMax, 'NEED M=2 (planner edge belts ' + r.belts + ')']); console.log(`     ${t}: planner edge needs ${r.belts} belts per input: expected-negative (need M=2), not asserted`); continue }
+      if (r.machines !== r.N) e.push('machines ' + r.machines + ' != N ' + r.N);
+      if (full.some(v => v < 0.99)) e.push('not N-1 full: ' + sorted.map(v => v.toFixed(2)).join(','));
+      if (Math.abs(last - r.u) > 0.01) e.push('last ' + last.toFixed(3) + ' != planner u ' + r.u.toFixed(3));
+      if (r.prod < rate * 0.99) e.push('product ' + r.prod.toFixed(2) + ' < rate ' + rate.toFixed(2));
+      if (Math.abs(r.sumHave - r.injSum) > 0.01 * r.injSum || Math.abs(r.sumHave - r.planIn) > 0.01 * r.planIn) e.push(`delivered ${r.sumHave.toFixed(2)} inj ${r.injSum.toFixed(2)} planner ${r.planIn.toFixed(2)}`);
+      if (r.mu > 1 + 1e-9) e.push('belt util ' + r.mu.toFixed(3));
+      check(!e.length, `${t} N=${r.N} B=${r.B} last=${last.toFixed(3)} planU=${r.u.toFixed(3)} ${e.join('; ')}`);
+      planRows.push([rname, block, tag, r.N, r.B, nMax, 'minR ' + sorted[r.N - 1].toFixed(3) + ' maxBelt ' + r.mu.toFixed(2) + ' prod ' + r.prod.toFixed(1) + '/' + rate.toFixed(1)]);
+    }
+  }
+}
+// chain/main relabel: main=1 build must keep main row = slot 0 and relabel the item
+{
+  const b = await pg.evaluate(() => { let rd; plnBy(false).forEach((l, item) => l.forEach(({c, r}) => { if (/Enrich/.test(c) && plnNm(item) === 'Superalloy') rd = r })); return tplBuild({block: '1x2', recd: rd, rec: rk(rd), mk: 2, spMk: 2, n: 2, main: 1}) });
+  const ci = await checkIface(pg, b, '1x2');
+  check(ci.ok && b.ports.in[0].item === 1 && b.ports.in[1].item === 0, 'main=1 relabels slot 0 item, checkIface ' + ci.errs.join('; '));
+}
 // mutation sanity: breaking a lane must make the flood fail (proves the connectivity check bites)
 const mut = await pg.evaluate(() => {
   let rd, key; plnBy(false).forEach((l, item) => l.forEach(({c, r}) => { if (/Enrich/.test(c) && plnNm(item) === 'Superalloy') { rd = r; key = item } }));
   const B = tplBuild({block: '1x2', rec: key, recd: rd, mk: 2, spMk: 2, n: 3});
-  const it = B.items.filter(b => !(PLC_SPL.includes(b.cls) && b.x === 6 + 9 && b.y === 2));   // drop lane2 splitter of machine 2
+  const it = B.items.filter(b => !(PLC_SPL.includes(b.cls) && b.x === 7 + 9 && b.y === 2));   // drop lane2 splitter of machine 2
   return {before: B.items.length, after: it.length};
 });
 check(mut.after === mut.before - 1, 'mutation self-check removes one splitter (informational, flood bite shown by tests in PROBE notes)');
@@ -153,6 +227,8 @@ for (const [rname, block] of [['Superalloy', '1x1'], ['Superalloy', '1x2'], ['Su
 }
 console.log('\nrecipe | block | n | mach | belts | ug | spl | WxH | (belts+ug+spl)/machine | rate');
 for (const r of rows) console.log(r.map(v => typeof v === 'number' && !Number.isInteger(v) ? v.toFixed(1) : v).join(' | '));
+console.log('\nplan: recipe | block | set | N | B | nMax | detail');
+for (const r of planRows) console.log(r.join(' | '));
 for (const nn of [...new Set(notes)]) console.log('NOTE ' + nn);
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
 await br.close();
