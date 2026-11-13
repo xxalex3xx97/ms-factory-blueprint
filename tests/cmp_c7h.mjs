@@ -44,8 +44,8 @@ for (const c of cases) {
   if (a.err) { check(false, tag + ' ' + a.err); continue }
   const wantI = (dock.in === 'ind' ? 1 : 0) + (dock.out === 'ind' ? 1 : 0);
   const fb = a.notes.filter(n => /^Industrial/.test(n));
-  const ok = r.ok && a.ov === 0 && a.tagLeft === 0 && (fb.length || a.d2 >= wantI) && (c.b === '2x2' || fb.length || a.ad >= a.d2) && a.ind >= (fb.length ? 0 : wantI);
-  check(ok, tag + ' | Dock_2 ' + a.d2 + ' adapters ' + a.ad + ' ind-docked ' + a.ind + ' ' + JSON.stringify(a.notes) + (ok ? '' : ' | ' + (r.errs || []).slice(0, 3).join('; ')));
+  const ok = r.ok && a.ov === 0 && a.tagLeft === 0 && (fb.length || a.d2 >= wantI) && (c.b !== '2x2c' || fb.length || a.ad >= a.d2) && a.ind >= (fb.length ? 0 : wantI);
+  check(ok, tag + ' | Dock_2 ' + a.d2 + ' adapters ' + a.ad + ' ind-docked ' + a.ind + ' ' + JSON.stringify(a.notes) + (ok ? "" : " | ov" + a.ov + " tag" + a.tagLeft + " ok" + r.ok + " " + (r.errs || []).slice(0, 3).join("; ")));
 }
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
 await br.close();

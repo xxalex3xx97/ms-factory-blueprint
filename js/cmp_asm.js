@@ -25,8 +25,8 @@ function cmpAssemble(c){
     }
     const f0=fbs[0].feed,g0=stages[0],shr=s=>sz.stages[s].strips[j].n/sz.stages[s].strips.reduce((a,v)=>a+v.n,0);
     let dI=null,dO=null;   // C7: dock cells of the SRC / OZ hub of this strip
-    if(dk&&dk.in&&!f0){const E=Array.isArray(c.P.edges)?c.P.edges:Object.values(c.P.edges||{}),e=E.find(e=>e.from===g0.node.rec.i[0][0]&&e.to===g0.item);dI=cmpDockHub(dk,{kind:'in',name:cmpName(g0.node.rec.i[0][0]),D:(e?e.flow:0)*shr(0),rows:fbs[0].inRows,H,dh:d.h})}
-    if(dk&&dk.out)dO=cmpDockHub(dk,{kind:'out',name:cmpName(c.item),D:c.P.nodes[c.item].rate*shr(L-1),rows:fbs[L-1].outRows,H,dh:d.h});
+    if(dk&&dk.in&&!f0){const E=Array.isArray(c.P.edges)?c.P.edges:Object.values(c.P.edges||{}),e=E.find(e=>e.from===g0.node.rec.i[0][0]&&e.to===g0.item);dI=cmpDockHub(dk,{kind:'in',name:cmpName(g0.node.rec.i[0][0]),D:(e?e.flow:0)*shr(0),rows:fbs[0].inRows,H,dh:d.h,j})}
+    if(dk&&dk.out)dO=cmpDockHub(dk,{kind:'out',name:cmpName(c.item),D:c.P.nodes[c.item].rate*shr(L-1),rows:fbs[L-1].outRows,H,dh:d.h,j});
     if(dI&&dI.ok===false)return no(dI.why);if(dO&&dO.ok===false)return no(dO.why);
     const hub=(inRows,outRows,raw,item,x)=>cmpPool({W,H,mk,bx,item,raw,inRows,outRows,...x});
     const fS=f0&&{W,H,mk,bx,sets:f0.sets,M:f0.M,k:f0.k,main:0,pass:[],rawItems:g0.node.rec.i.map(q=>q[0]),allRaw:true,seed:g0.growth?g0.item:null};
@@ -93,11 +93,11 @@ function cmpAssembleTree(c){
     const p=par(o);
     if(o.raw){   // supplier SRC of a merge node (raw child of an src node is that node's own IN block)
       if(p.inKind!=='merge')continue;
-      const dI=dk&&dk.in?cmpDockHub(dk,{kind:'in',name:o.item,D:o.rate,rows:OR[o.id],H,dh:d.h}):null;if(dI&&dI.ok===false)return no(dI.why);
+      const dI=dk&&dk.in?cmpDockHub(dk,{kind:'in',name:o.item,D:o.rate,rows:OR[o.id],H,dh:d.h,j:o.row}):null;if(dI&&dI.ok===false)return no(dI.why);
       const e=bank(cmpPool({W,H,mk,bx,item:o.key,raw:true,inRows:[],outRows:OR[o.id],...dI}),o.pool,o.row,OR[o.id],null,bcol(o));if(e)return no(e);
       continue;
     }
-    const dO=dk&&dk.out&&!p?cmpDockHub(dk,{kind:'out',name:o.item,D:o.rate,rows:NB[o.id].outRows,H,dh:d.h,tree:1}):null;if(dO&&dO.ok===false)return no(dO.why);
+    const dO=dk&&dk.out&&!p?cmpDockHub(dk,{kind:'out',name:o.item,D:o.rate,rows:NB[o.id].outRows,H,dh:d.h,tree:1,j:o.row}):null;if(dO&&dO.ok===false)return no(dO.why);
     let e=hubAt(cmpPool({W,H,mk,bx,item:0,raw:false,inRows:NB[o.id].outRows,outRows:OR[o.id],...dO}),o.pool,o.row,NB[o.id]);if(e)return no(e);
     if(o.inKind==='feed'){   // all-raw k>=2 node: FEED block at the IN column (growth: seed container finite); raw docks not built here
       const bz=NB[o.id].b,hs=tplIfSets(block,sz[o.id].S).hs,sets=bz.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0);
@@ -106,7 +106,7 @@ function cmpAssembleTree(c){
       const fr=sets.flatMap(s=>fS.rawItems.flatMap((_,r)=>Array.from({length:fS.M},(_,c)=>(s.t?s.t[r]:s.o+r*fS.M)+c)));
       e=bank(fS.D?cmpFeedDock(fS,dk,d.h,fS.D,d.w,['N','S']):cmpFeed(fS),o.col,o.row,fr,NB[o.id],bcol(o));if(e)return no(e);
       continue}
-    if(o.inKind==='src'){const rc=byId[o.children[0]],dI=dk&&dk.in?cmpDockHub(dk,{kind:'in',name:rc.item,D:rc.rate,rows:NB[o.id].inR[0],H,dh:d.h}):null;if(dI&&dI.ok===false)return no(dI.why);
+    if(o.inKind==='src'){const rc=byId[o.children[0]],dI=dk&&dk.in?cmpDockHub(dk,{kind:'in',name:rc.item,D:rc.rate,rows:NB[o.id].inR[0],H,dh:d.h,j:o.row}):null;if(dI&&dI.ok===false)return no(dI.why);
       e=bank(cmpPool({W,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB[o.id].inR[0],...dI}),o.col,o.row,NB[o.id].inR[0],null,bcol(o));if(e)return no(e);continue}
     if(o.inKind!=='merge')return no('IN kind '+o.inKind+' not built in trees');
     const sub=[],walk=v=>{sub.push(v.row);v.children.forEach(i=>walk(byId[i]))};walk(o);

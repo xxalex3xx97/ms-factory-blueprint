@@ -9,13 +9,13 @@ function cmpDockHub(dk,a){
   const {D,rows,H,dh}=a,cap=MKS[dk.mk][1];
   if(a.kind==='in'?dk.indIn:dk.indOut){   // industrial (C7h/k): Dock_2 has 2 lane groups (rows 4..7 / 22..25 of the 30-row block, 4 lanes each, ONE item per group); d.h=2 blocks only
     const R=rows.length,g=Math.ceil(R/4);
-    if(dh===2&&R<=8&&H>=26&&(a.kind==='out'||!a.col)){   // input hubs deeper than the west column cannot reach the dock
-      const order=rows.map((_,i)=>i).sort((x,y)=>rows[x]-rows[y]),py=new Array(R);order.forEach((o,i)=>py[o]=i<4?4+i:22+i-4);
+    if((dh===2&&R<=8&&H>=26||dh===1&&R<=4&&H>=10)&&(a.kind==='out'||!a.col)){   // input hubs deeper than the west column cannot reach the dock
+      const order=rows.map((_,i)=>i).sort((x,y)=>rows[x]-rows[y]),py=new Array(R);order.forEach((o,i)=>py[o]=dh===1?(a.j%2?6:4)+i:i<4?4+i:22+i-4);
       const lim=g*4*cap,got=Math.min(D,lim);
       if(got<D-1e-6)dk.notes.push('Dock-limited: '+a.name+' '+cmpR1(got)+'/min of '+cmpR1(D)+'/min (needs '+Math.ceil(D/(4*cap)-1e-9)+' industrial dock groups)');
       return{ind:true,[a.kind==='in'?'pyOut':'pyIn']:py,dkx:{r:got/g,n:1,name:a.name,ind:1}};
     }
-    dk.notes.push('Industrial dock not possible for '+a.name+' ('+(dh!==2?'block 1 unit high':R>8?R+' lanes, max 8':a.tree?'output of a merge tree not built yet':'source not at the west edge')+'): normal docks used');
+    dk.notes.push('Industrial dock not possible for '+a.name+' ('+(dh>2?'block over 2 units high':R>8?R+' lanes, max 8':a.tree?'output of a merge tree not built yet':'source not at the west edge')+'): normal docks used');
   }
   const{n,use}=cmpCellsFor(D,cap,rows.length,dh),Tn=Math.max(use,Math.ceil(rows.length/4)),ca=[];
   for(let k=0;k<use;k++)ca.push(16*k+5);
@@ -60,16 +60,16 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
   for(const q of ms.filter(q=>q.dk==='in'||q.dk==='out'))if(!dock(q,q.dk==='out'?'E':'W')&&!q.dd){miss.push((q.dk==='out'?'out ':'in ')+q.dkx.name);delete q.dk;delete q.dkx}
   // industrial (hz, d.h=2): one BPO_Dock_2 per hub row, nl_dock.js hz assembly (nlIndAsm transposed) shifted to the row; lanes tagged ie (input, west of block 0) / oe (output, east of the last column)
   const TRO=[1,0,3,2],asm=nlIndAsm(),d2=plcCls('BPO_Dock_2'),indGo=(tag,out)=>{
-    const rows=new Map();
-    for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/TR),ly=q.y-g*TR;if(d.h!==2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out?Math.floor(q.x/TW)<1:Math.floor(q.x/TW)!==0))return'dock slot misaligned';if(!rows.has(g))rows.set(g,[]);rows.get(g).push(q)}
+    const rows=new Map(),S=d.h===1?2:1;   // d.h=1: one Dock_2 serves two adjacent strips (group A even strip, group B odd strip)
+    for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/(S*TR)),ly=q.y-g*S*TR;if(d.h>2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out?Math.floor(q.x/TW)<1:Math.floor(q.x/TW)!==0))return'dock slot misaligned';if(!rows.has(g))rows.set(g,[]);rows.get(g).push(q)}
     for(const [g,E] of rows){
-      const oy=g*TR,col=out?Math.floor(E[0].x/TW):-1,ox=out?(col+1)*TW+A:-16-A,dx=out?(col+1)*d.w:-1,db={cls:d2,x:out?dx+ad:-3-ad,y:g*P,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*P,rot:out?0:2};
+      const oy=g*S*TR,col=out?Math.floor(E[0].x/TW):-1,ox=out?(col+1)*TW+A:-16-A,dx=out?(col+1)*d.w:-1,db={cls:d2,x:out?dx+ad:-3-ad,y:g*S*P,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*S*P,rot:out?0:2};
       if(cells(db).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z))))return'industrial dock overlaps another block';
       cells(db).forEach(z=>occ.add(z));blocks.push(db);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab)}
       const used=[0,1].map(k=>E.filter(q=>(q.y-oy<16?0:1)===k)),dkx=E[0].dx||{},bq=[];
       for(const b of asm.boxes){
         const x=out?ox+10-b.y:ox+b.y,y=oy+(out?26-b.x:b.x),g2=(y-oy<16?0:1),main=b.y===9&&(b.x===4||b.x===22),m={cls:NLD.BOX_I,x,y,h:0,rot:0,pid:0,ct:[],dk:out?'out':'in'};
-        if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:0,gy:g*P,u:g2,r:dkx.r,n:1,name:dkx.name,ind:1};if(out&&fix.nodes)fix.nodes.filter(q=>q.pool===col&&q.row===g).forEach(q=>q.ct.push(x+','+y))}
+        if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:0,gy:g*S*P,u:g2,r:(used[g2][0].dx||dkx).r,n:1,name:(used[g2][0].dx||dkx).name,ind:1};if(out&&fix.nodes)fix.nodes.filter(q=>q.pool===col&&q.row>=g*S&&q.row<(g+1)*S).forEach(q=>q.ct.push(x+','+y))}
         add.push(m)}
       for(const k of asm.belts)belt(out?ox+13-k.y:ox+k.y,out?oy+29-k.x:oy+k.x,TRO[k.rot]);
       for(const q of E)for(let x=out?q.x+1:-3-A;x<=(out?ox:-1);x++)belt(x,q.y,0);
