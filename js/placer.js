@@ -779,7 +779,7 @@ function placerRun(open){
   const dl=$("plnPrev");if(!open&&!dl.open)return;
   const dk=placerDock();plcFb=null;
   const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk}):{ok:false,why:"Pick an item and a rate first"};
-  $("plnEngBadge").textContent=L.ok?"Template: Zones":"";
+  $("plnEngBadge").textContent=L.ok?(L.eng==="vcol"?"Template: Columns":"Template: Zones"):"";
   if(!L.ok){plcL=null;plcT=null;placerClear();$("pvLine").textContent="";$("plnPrevErr").textContent=/^(Pick an item|internal error)/.test(L.why)?L.why:"Not supported yet: "+String(L.why).replace(/^BL: /,"").replace(/ \(NL used\)$/,"").replace(/^Engine zones built a layout but /,"");$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }

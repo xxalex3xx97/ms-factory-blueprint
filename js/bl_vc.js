@@ -6,7 +6,7 @@ const VC_C2='DAT_Container_2',VC_C1='DAT_Container';
 const VC_ROT={0:2,2:0,1:1,3:3};
 const VC_CAP=[60,120,180];   // cap per belt Mk index (mirrors inspector.js MKS)
 function blVC(S){
-  const {mk,cls,rec,X,Y,T,n,w}=S,bc=PLC_BELT[mk],ug=PLC_UG[mk],sp=PLC_SPL[mk],XC=X+w,r=i=>Y+5*i,s1=Math.ceil(n/2);
+  const {mk,cls,rec,X,Y,T,n,w}=S,IA=(S.ins&&S.ins[0])||'ITEM_MagneticCoils',IB=(S.ins&&S.ins[1])||'ITEM_SiliconWafers',bc=PLC_BELT[mk],ug=PLC_UG[mk],sp=PLC_SPL[mk],XC=X+w,r=i=>Y+5*i,s1=Math.ceil(n/2);
   const XA1=X-1,XA2=X-2,XB1=X-3,XB2=X-4;
   const half=side=>{
     const M=side==='L',O=VC_OFF[side],items=[];
@@ -55,8 +55,8 @@ function blVC(S){
     B(20,Y+5*n,3);
     for(let x=17;x<=20;x++)B(x,Y+5*n-1,2);
     // feed zone: A = Magnetic Coils (x 22), B = Silicon Wafers (x 18), per golden
-    put(VC_C2,22,T,0,4,{ct:[{item:'ITEM_MagneticCoils',n:0,inf:true}]});
-    put(VC_C2,18,T,0,4,{ct:[{item:'ITEM_SiliconWafers',n:0,inf:true}]});
+    put(VC_C2,22,T,0,4,{ct:[{item:IA,n:0,inf:true}]});
+    put(VC_C2,18,T,0,4,{ct:[{item:IB,n:0,inf:true}]});
     put(VC_C1,22,T+9,0,2,{ct:[]});put(VC_C1,20,T+9,0,2,{ct:[]});
     for(let y=T+4;y<=T+8;y++)for(let x=20;x<=23;x++)B(x,y,1);
     return items;

@@ -24,8 +24,8 @@ for (const n of names) {
     const e = k.el;
     return {img: !!e.querySelector('canvas'), eng: (e.querySelector('.eng') || {}).textContent || '', chip: e.querySelector('.stat').textContent, st: (e.querySelector('.st') || {}).textContent || ''};
   }, n);
-  const gold = ['Nickel Plates', 'Silicon Wafers'].includes(n);
-  check(r && (gold ? r.img && /Zones/.test(r.eng) && /Golden/.test(r.chip) && /machines/.test(r.st) : !r.img && /^Not supported yet: ./.test(r.chip)), n + ': ' + JSON.stringify(r && [r.eng, r.chip, r.st]));
+  const gold = ['Nickel Plates', 'Silicon Wafers', 'Basic Circuits'].includes(n);
+  check(r && (gold ? r.img && /Zones|Columns/.test(r.eng) && /Golden/.test(r.chip) && /machines/.test(r.st) : !r.img && /^Not supported yet: ./.test(r.chip)), n + ': ' + JSON.stringify(r && [r.eng, r.chip, r.st]));
 }
 const ex = await pg.evaluate(() => JSON.parse(galExport(GAL.cards.find(c => c.name === 'Nickel Plates').key)));
 check(ex.v === 1 && ex.snippets[0].b.length > 0 && ex.snippets[0].b[0].cls, 'export Nickel Plates: ' + ex.snippets[0].n + ' items=' + ex.snippets[0].b.length);

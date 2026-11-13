@@ -14,7 +14,7 @@ function blTop(P,item,mk,spMk,o={}){
     if(Z.ok===false)return no(Z.why);
     const nodes=Z.nodes.slice().sort((a,b)=>b.row-a.row);   // producer first
     const multi=nodes.some(n=>n.ins.length!==1||P.nodes[n.item].rec.i.length!==1);
-    if(multi){if(o.eng==='zones')return no(Math.max(...nodes.map(n=>P.nodes[n.item].rec.i.length))>2?'3 and 4 input recipes have no template yet':'waiting for the 2-input column template');   // vcol hook: blVC (js/bl_vc.js) goes here when complete
+    if(multi){if(o.eng==='zones')return blTopV(P,item,mk,spMk,o,nodes,BX,dock);   // vcol: 2-input column template (js/bl_vc.js)
     const R=blTopMulti(P,item,mk,spMk,o,Z,nodes,BX,dock);if(R.ok!==false)R.eng='tower-multi';return R}
     if(nodes.some(n=>n.cons.length>1))return no('non-linear (a node feeds two consumers)');
     if(nodes.filter(n=>!n.ins[0].crafted).length!==1)return no('non-linear (more than one raw input)');
@@ -52,6 +52,30 @@ function blTop(P,item,mk,spMk,o={}){
       note:['Block engine: '+K+' tower(s), '+info.length+' stage(s), rows per stage '+B.r.join('/'),...(dock&&dock.out==='nrm'?['Risk: normal output dock has 2 ports (240/min per tower)']:[]),...(P.nofp||[]).map(x=>plnNm(x)+' comes from the Deep Space Observatory block (not placed)')],
       src:{P,item,mk,spMk,o},prefab:true,stat,dk:dock&&(dock.in||dock.out)?dock:null,bl:{K,n:B.n,r:B.r,M:info.map(x=>x.M),Rmax}};
   }catch(e){return no('internal error '+e.message)}finally{PLC_BOX=prevBox}
+}
+// VC4: 2-input column template (blVC, js/bl_vc.js). Single machine node, both inputs raw, DAT_Assembler only, no input dock. Refusals use the 'BL: ... (NL used)' shape so the planner shows 'Not supported yet: ...'.
+function blTopV(P,item,mk,spMk,o,nodes,BX,dock){
+  const no=why=>({ok:false,why:'BL: '+why+' (NL used)'});
+  const nd=nodes.find(n=>n.item===item),rec=P.nodes[item].rec;   // upstream nodes (crafted inputs) are not placed: the 2 feed containers are infinite sources, as in the golden
+  if(rec.i.length>2)return no('3 and 4 input recipes have no template yet');
+  if(nd.ins.length!==2||rec.i.length!==2)return no('one-input recipe with a 2-input upstream has no template yet');
+  if(dock&&dock.in)return no('input dock with the 2-input template');
+  if(dock&&dock.out==='ind')return no('industrial output dock');
+  const V=vcPlan(rec,nd.cls,mk,nd.N);
+  if(!V.ok)return no(V.why==='rate'?'one machine input above what the template lane carries':nd.cls+' has no 2-input template');
+  const ps=portsOf({cls:BX,x:0,y:0,rot:0,off:[]}),pn=ps.filter(p=>p.f==='N').map(p=>p.x).sort((a,b)=>a-b);
+  const items=[],ports=[];
+  for(let k=0;k<V.K;k++){
+    const dx=30*k;
+    for(const q of blVC({mk,cls:nd.cls,rec,X:24,Y:12,T:1,n:V.n,w:5,ins:rec.i.map(x=>x[0])}))items.push({...q,x:q.x+dx});
+    ports.push({edge:'S',off:dx+13+pn[0],dir:'out',belts:0,slot:-1,mk});   // out container (x13) bottom edge, one per stack
+  }
+  let belts=0,spl=0,ug=0;
+  for(const q of items){if(PLC_BELT.includes(q.cls))belts++;else if(PLC_SPL.includes(q.cls))spl++;else if(PLC_UG.includes(q.cls))ug++}
+  const w=30*V.K,h=5*V.n+20,act=Math.round(V.actual*100)/100;
+  return{ok:true,eng:'vcol',items,cuts:[],lanes:V.K,per:[V.machines],makes:V.actual,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
+    note:['Template: 2-input columns ('+V.n+' machines per column, '+V.K+' stack(s))','Actual '+act+'/min (rounded up to whole machines)',...(nodes.length>1?['Inputs come from infinite source containers; upstream recipes not placed']:[])],
+    src:{P,item,mk,spMk,o},prefab:true,stat:{belts,ug,spl,blocks:V.K,machines:V.machines,lanes:V.K,spills:0},dk:dock&&dock.out?dock:null,bl:{K:V.K,n:V.n,g:V.g,nmax:V.nmax,actual:act}};
 }
 // blTopMulti: two-input merge trees (one lane input per merge), called from blTop. Anything outside BL8 scope refuses with 'BL: ... (NL used)'.
 function blTopMulti(P,item,mk,spMk,o,Z,nodes,BX,dock){

@@ -2,7 +2,7 @@
 // BASE rate = one full row: machines-per-Mk2-belt (floor(120 / max input rate per machine), min 1) x output/min of one machine.
 // Everything runs client-side; results are cached per session in GAL.
 const GAL={cards:[],byKey:new Map(),busy:false};
-const GAL_ENG={zones:"Zones",tower:"Tower","tower-multi":"Tower (multi-input)",nl:"No Limits",vcol:"vcol"};
+const GAL_ENG={zones:"Zones",tower:"Tower","tower-multi":"Tower (multi-input)",nl:"No Limits",vcol:"Columns"};
 const galEsc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function galInit(){
   if(GAL.cards.length)return;
@@ -28,7 +28,7 @@ function galBuild(k){
     L.items.forEach(b=>cnt[b.rec?"mach":PLC_UG.includes(b.cls)?"ug":PLC_BELT.includes(b.cls)?"belt":PLC_SPL.includes(b.cls)?"spl":"box"]++);
     res.eng=L.eng||"legacy";res.engName=GAL_ENG[L.eng]||"Legacy placer";res.cnt=cnt;res.blocks=L.tile&&L.tile.ok?L.tile.blocks.length:0;res.w=L.w;res.h=L.h;res.T=T;res.items=L.items;res.fb=L.blWhy||"";
     res.chip=["g","Golden template"];
-  }else{res.why=String(L.why||"").replace(/ \(NL used\)$/,"");if(/Assembler/.test(k.cls)&&k.grp==="2-input")res.why="waiting for the 2-input column template";res.chip=["b","Not supported yet: "+res.why]}
+  }else{res.why=String(L.why||"").replace(/ \(NL used\)$/,"");res.chip=["b","Not supported yet: "+res.why]}
   return k.res=res;
 }
 // draw a built result into a canvas: same renderer as placerShot (paint() with PLC_PREV), fitted to the canvas
