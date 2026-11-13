@@ -9,6 +9,7 @@ function cmpAssemble(c){
     for(let s=0;s<L;s++){
       const g=stages[s],z=sz.stages[s],st=z.strips[j],pk=tplPick(g.cls,g.k,block);
       if(!pk.ok)return no(pk.why);
+      if(s===0&&g.k>=2&&pk.id==='assembler_2in')return no('all-raw 2-input assembler as a chain start is not built yet ('+g.node.rec.i.length+' inputs)');
       if(g.k!==1&&s>0)return no('composer builds 1-input stages only ('+z.item+' has '+g.k+')');
       const main=s?g.node.rec.i.findIndex(([it])=>it===stages[s-1].item):0;
       const b=pk.t.build({block,cls:g.cls,rec:g.rec,recObj:g.node.rec,recd:g.node.rec,mk,spMk,S:st.S,n:st.n,main,growth:g.growth,raw:g.k-(s?1:0)});
@@ -38,4 +39,62 @@ function cmpAssemble(c){
   }
   const max=def(ugc).maxApart,pairs=ugPairs(ms.filter(b=>PLC_UG.includes(b.cls)));
   return{ok:true,T:{ok:true,blocks,ms,ug:nug,cols:ncol,rows:K,max,rc:[],ov:0,span:pairs.filter(p=>p&&p.n>max).length,G:1}};
+}
+
+// CMP S7b: tree assembler. cmpAssembleTree({mk,spMk,bx,bk,pl (cmpPlan),sz (cmpTreeSize .by)}) -> {ok,T,nodes,routed} | {ok:false,why}.
+// Per node [IN][FB][POOL] at block columns o.col..o.col+2, block row o.row. IN = SRC block (k=1 raw), or a MERGE region (any crafted input): one block column of belts spanning the strip rows of the
+// node's subtree, routed by cmpRoute (child POOL/SRC east lanes at x=0 -> parent slot rows at x=W-1). Raw children of a merge node are SRC supplier blocks in their own strip row.
+function cmpAssembleTree(c){
+  const {mk,spMk,bx,bk,pl,sz}=c,no=why=>({ok:false,why}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk];
+  const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),NB={},ms=[],routed=[],OR={};
+  const put=(items,col,row,tag)=>items.forEach(b=>{const q={...b,x:b.x+col*TW,y:b.y+row*TH};ms.push(q);if(tag)tag.push(q)});
+  const hubAt=(h,col,row,nb)=>{if(h.ok===false)return h.why;put(h.items,col,row);if(nb)h.items.filter(q=>q.ct).forEach(q=>nb.ct.push((q.x+col*TW)+','+(q.y+row*TH)))};
+  for(const o of pl.nodes){   // 1 FB blocks
+    if(o.raw)continue;
+    const z=sz[o.id],pk=tplPick(o.cls,o.k,block),b=pk.t.build({...z.base,S:z.S,n:o.N});
+    if(!b.ok)return no(b.why);
+    if(!b.iface||b.iface.v!==1)return no('template not on Edge Interface v1');
+    if(b.w!==W||b.h!==H)return no('template floor '+b.w+'x'+b.h+' differs from the block floor '+W+'x'+H);
+    if(b.items.some(q=>{const e=dim(q);return q.x<0||q.y<0||q.x+e.w>W||q.y+e.h>H}))return no('template items outside the block floor ('+o.item+', '+block+')');
+    const used=b.iface.sets.filter(q=>q.n>0),M=b.iface.M;
+    NB[o.id]={lanes:b.ports.in.map((p,t)=>({y:p.y,key:o.rec.i[typeof p.item==='number'?p.item:0][0],m:b.rows&&b.rows[t]&&b.rows[t].m!=null?b.rows[t].m:null})).filter(l=>l.m!==0),ct:[],outRows:used.map(q=>q.o),inR:o.rec.i.map((_,j)=>o.k>=2?b.ports.in.filter(p=>p.item===j&&b.iface.sets[p.set].n>0).map(p=>p.y):used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+i)))};
+    put(b.items,o.fb,o.row);
+  }
+  const par=o=>o.parent&&byId[o.parent];
+  const outRowsOf=o=>{   // east lanes of o's POOL / SRC: local rows in o's block row
+    const p=par(o);if(!p)return[];
+    const j=p.rec.i.findIndex(([it])=>it===o.key),R=NB[p.id].inR[j].length;
+    if(o.main)return NB[p.id].inR[j].slice();
+    return o.row<p.row?Array.from({length:R},(_,k)=>H-2-2*(R-1-k)):Array.from({length:R},(_,k)=>1+2*k);
+  };
+  pl.nodes.forEach(o=>{OR[o.id]=outRowsOf(o)});
+  for(const o of pl.nodes){
+    const p=par(o);
+    if(o.raw){   // supplier SRC of a merge node (raw child of an src node is that node's own IN block)
+      if(p.inKind!=='merge')continue;
+      const e=hubAt(cmpPool({W,H,mk,bx,item:o.key,raw:true,inRows:[],outRows:OR[o.id]}),o.pool,o.row);if(e)return no(e);
+      continue;
+    }
+    let e=hubAt(cmpPool({W,H,mk,bx,item:0,raw:false,inRows:NB[o.id].outRows,outRows:OR[o.id]}),o.pool,o.row,NB[o.id]);if(e)return no(e);
+    if(o.inKind==='src'){e=hubAt(cmpPool({W,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB[o.id].inR[0]}),o.col,o.row);if(e)return no(e);continue}
+    if(o.inKind!=='merge')return no('IN kind '+o.inKind+' not built in trees');
+    const sub=[],walk=v=>{sub.push(v.row);v.children.forEach(i=>walk(byId[i]))};walk(o);
+    const r0=Math.min(...sub),r1=Math.max(...sub),sources=[],sinks=[],Y=(row,y)=>(row-r0)*(H+2)+y;
+    o.children.map(i=>byId[i]).forEach(q=>OR[q.id].forEach(y=>sources.push({x:0,y:Y(q.row,y),item:q.key})));
+    NB[o.id].inR.forEach((rows,j)=>rows.forEach(y=>sinks.push({x:W-1,y:Y(o.row,y),item:o.rec.i[j][0]})));
+    const rt=cmpRoute({W,H,rowsN:r1-r0+1,mk,sources,sinks,ugMax:def(ugc).maxApart,eastStart:true});
+    if(!rt.ok)return no('merge routing failed ('+o.item+': '+sources.length+' lanes, rows '+r0+'..'+r1+')');
+    const tag=[];put(rt.items,o.col,r0,tag);tag.forEach(q=>routed.push({x:q.x,y:q.y,cls:q.cls}));
+  }
+  // wall swap: rot-0 belts on both sides of a block boundary, same row -> UG pair
+  const at=new Map();ms.forEach(b=>{if(PLC_BELT.includes(b.cls)&&b.rot===0)at.set(b.x+','+b.y,b)});
+  ms.slice().forEach(A=>{
+    if(!PLC_BELT.includes(A.cls)||A.rot!==0||A.x%TW!==W-1)return;
+    const B=at.get((A.x+3)+','+A.y);
+    if(B&&PLC_BELT.includes(B.cls)){A.cls=B.cls=ugc;routed.forEach(q=>{if((q.x===A.x||q.x===B.x)&&q.y===A.y)q.cls=ugc})}
+  });
+  const bs=new Map();ms.forEach(b=>{const gx=Math.floor(b.x/TW),gy=Math.floor(b.y/TH);bs.set(gx+','+gy,{cls,x:gx*d.w,y:gy*d.h})});
+  const max=def(ugc).maxApart,ugs=ms.filter(b=>PLC_UG.includes(b.cls)),pairs=ugPairs(ugs);
+  const nodes=pl.nodes.filter(o=>!o.raw).map(o=>({id:o.id,item:o.item,key:o.key,rate:o.rate,lanes:NB[o.id].lanes,outRows:NB[o.id].outRows,rec:rk(o.rec),N:o.N,pN:o.pN,util:o.util,pU:o.pU,gx:o.fb*d.w,gy:o.row*d.h,inCol:o.col,pool:o.pool,row:o.row,fb:{x:o.fb*TW,y:o.row*TH,w:W,h:H},ct:NB[o.id].ct,kind:o.inKind}));
+  return{ok:true,nodes,routed,T:{ok:true,blocks:[...bs.values()],ms,ug:ugs.length,cols:pl.cols,rows:pl.rows,max,rc:[],ov:0,span:pairs.filter(p=>p&&p.n>max).length,G:1}};
 }

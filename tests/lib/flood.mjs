@@ -85,5 +85,5 @@ export const floodPage = a => {
   });
   const fin = new Set(a.finalItems || []), oz = new Set();
   mach.forEach(m => { const r = recOf(m); if (r && fin.has(r.o[0])) (outReach.get(m) || []).forEach(c => oz.add(c.id)) });
-  return {errs: [...new Set(errs)], machines: mach.length, containers: stores.length, reach: [...reach], ozReach: [...oz], ozAll: stores.filter(c => !(c.ct || []).length).length};
+  return {errs: [...new Set(errs)], machines: mach.length, containers: stores.length, reach: [...reach], ozReach: [...oz], ozAll: stores.filter(c => !(c.ct || []).length).length, outAt: [...outReach].map(([m, g]) => ({x: m.x, y: m.y, c: [...g].map(c => c.x + ',' + c.y)}))};
 };

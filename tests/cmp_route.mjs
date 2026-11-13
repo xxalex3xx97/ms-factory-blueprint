@@ -96,7 +96,7 @@ const d1 = await pg.evaluate(a => { const r = cmpRoute(a); return {ok: r.ok, why
 check(d1.ok === false && d1.why === 'merge routing failed', 'case d: blocked column -> ok:false merge routing failed');
 const d2 = await pg.evaluate(a => { a.blocked = new Set(a.blocked); const r = cmpRoute(a); return {ok: r.ok, why: r.why} }, {...base, ugMax, blocked: [...Array(96)].map((_, y) => '1,' + y), sources: [{x: 0, y: 5, item: 'A'}], sinks: [{x: 29, y: 5, item: 'A'}]});
 check(d2.ok === false && d2.why === 'merge routing failed', 'case d: blocked Set -> merge routing failed');
-check(errs.filter(e => !/cmpNo/.test(e)).length === 0, 'no page errors (cmpNo redeclare = S3 index.html in progress, ignored) ' + errs.slice(0, 2).join('; '));
+check(errs.length === 0, 'no page errors ' + errs.slice(0, 2).join('; '));
 await br.close();
 console.log(fails ? 'FAIL ' + fails : 'ALL OK');
 process.exit(fails ? 1 : 0);

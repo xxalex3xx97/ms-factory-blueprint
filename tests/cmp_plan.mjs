@@ -40,6 +40,7 @@ const pageRun = async a => {
   if (!rec) return {errs: ['recipe not found: ' + a.recipeKey]};
   const item = rec.o[0];
   const P = plan(item, a.rate, a.mk, {}, {[item]: a.recipeKey}, {proto: false, enr: false, obs: false});
+  window.__cmpP = P;
   if (!P.nodes[item] || !P.nodes[item].rec) return {errs: ['planner: no node for ' + item]};
   const hasCmp = typeof cmpCompose === 'function';
   if (a.strict && !hasCmp) return {errs: ['strict: cmpCompose does not exist yet']};
@@ -79,7 +80,13 @@ const pageRun = async a => {
   const cnt = {}; ms.forEach(m => { if (m.rec) cnt[m.rec] = (cnt[m.rec] || 0) + 1 });
   const K = (L.bl && L.bl.cmp && L.bl.cmp.K) || 1;
   const count = [], cerrs = [];
-  stages.forEach(n => {
+  const tn = L.bl && L.bl.cmp && L.bl.cmp.nodes;   // tree: count machines by cell inside each node's FB rect
+  if (tn) tn.forEach(q => {
+    const built = ms.filter(m => m.rec && m.x >= q.fb.x && m.x < q.fb.x + q.fb.w && m.y >= q.fb.y && m.y < q.fb.y + q.fb.h).length;
+    count.push({item: q.item, key: q.rec, N: q.pN, built, util: +(+q.pU).toFixed(3)});
+    if (built !== q.pN || built !== q.N) cerrs.push('node ' + q.item + ': planner N=' + q.pN + ' built ' + built);
+  });
+  else stages.forEach(n => {
     const key = rk(n.rec), built = cnt[key] || 0;
     count.push({item: plnNm(n.item), key, N: n.machines, built, util: +(+n.util).toFixed(3)});
     const fin = n.item === item;
@@ -88,20 +95,35 @@ const pageRun = async a => {
   // (5) flood
   const fl = a.floodFn ? a.floodFn : null;
   const flood = a.flood;   // set by node side through page function below
-  return {hard, cerrs, count, K, L: {eng: L.eng || null, blocks: T.blocks.length, ug: pairs.length}, items: ms, finalItems: [item], recKey: a.recipeKey, rate: a.rate, belts: ms.filter(b => PLC_BELT.includes(b.cls)).length, machines: ms.filter(b => b.rec).length, planBelts: null};
+  return {hard, cerrs, count, K, L: {eng: L.eng || null, blocks: T.blocks.length, ug: pairs.length}, items: ms, nodes: tn || null, routed: (L.bl && L.bl.cmp && L.bl.cmp.routed) || null, pm: P.nodes[item].pmach, finalItems: [item], recKey: a.recipeKey, rate: a.rate, belts: ms.filter(b => PLC_BELT.includes(b.cls)).length, machines: ms.filter(b => b.rec).length, planBelts: null};
 };
 
 // links1 stats on the model loaded by pageRun (containers are sources)
-const pageFlow = () => {
+const pageFlow = a => {
   const isLane = c => PLC_BELT.includes(c) || PLC_SPL.includes(c) || PLC_UG.includes(c);
   const K = links1(0, []);
   const ms = S.blocks.filter(q => !isLane(q.cls) && !isStore(q));
-  let full = 0, partial = 0;
-  ms.forEach(m => { const rows = supplyRows(m, K); const r = rows.length ? Math.min(...rows.map(x => x.need > 0 ? x.have / x.need : 1)) : 0; if (r >= 1 - 1e-9) full++; else partial++ });
+  let full = 0, partial = 0, oz = 0; const pl = [];
+  ms.forEach(m => { const rows = supplyRows(m, K); const r = rows.length ? Math.min(...rows.map(x => x.need > 0 ? x.have / x.need : 1)) : 0; if (r >= 1 - 1e-9) full++; else { partial++; pl.push((m.rec || m.cls) + ':' + r.toFixed(2)) } if (a && m.rec === a.recKey) oz += Math.min(r, 1) * a.pm });
   let mu = 0; K.load.forEach(e => { if (e.util != null) mu = Math.max(mu, e.util) });
-  return {full, partial, mu: +mu.toFixed(3)};
+  return {full, partial, mu: +mu.toFixed(3), oz, pl};
 };
 
+// stage-wise links1 (spec 6.6): each node's FB alone, planner edge flows injected at its input lane cells; product on its out belts >= 0.99 x node rate
+const pageStage = a => {
+  const P = window.__cmpP, res = [];
+  for (const q of a.nodes) {
+    const its = a.items.filter(b => b.x >= q.fb.x && b.x < q.fb.x + q.fb.w && b.y >= q.fb.y && b.y < q.fb.y + q.fb.h).map(b => ({...b, x: b.x - q.fb.x, y: b.y - q.fb.y})).map(b => PLC_UG.includes(b.cls) && (b.x === 0 || b.x === q.fb.w - 1) ? {...b, cls: PLC_BELT[a.mk]} : b);   // wall UG ends back to belts (isolated block)
+    S.blocks = []; let id = 600000; its.forEach(b => S.blocks.push({...b, id: ++id, h: 0}));
+    const idAt = (x, y) => (S.blocks.find(b => { const d = dim(b); return x >= b.x && x < b.x + d.w && y >= b.y && y < b.y + d.h }) || {}).id;
+    const injs = [];
+    q.lanes.forEach(l => { const e = P.edges.find(e => e.from === l.key && e.to === q.key), rate = (e ? e.flow : 0) * (l.m == null ? 1 / q.lanes.filter(z => z.key === l.key).length : l.m / q.N); if (rate > 0) injs.push({id: idAt(0, l.y), item: l.key, rate}) });
+    const K = links1(0, injs);
+    const prod = q.outRows.reduce((s, y) => s + ((K.load.get(idAt(q.fb.w - 1, y)) || {}).tot || 0), 0);
+    res.push({item: q.item, rate: q.rate, prod: +prod.toFixed(2), inj: injs.length});
+  }
+  return res;
+};
 const pageDelete = a => { const i = S.blocks.findIndex(b => PLC_BELT.includes(b.cls) && b.x + ',' + b.y === a.cell); if (i < 0) return false; S.blocks.splice(i, 1); return true };
 
 export async function printTree(page, name, rate, mk = 1) {
@@ -121,8 +143,19 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
   const soft = [...r.cerrs, ...fl.errs];
   if (strict) { errs.push(...soft); if (!fl.ozReach.length) errs.push('product reaches no container') }
   else if (soft.length) console.log('  (non-strict) ' + soft.length + ' soft errs, first: ' + soft.slice(0, 2).join(' | '));
-  const flow = await page.evaluate(pageFlow);
+  if (r.nodes) {   // every machine output reaches its own node's POOL container
+    for (const q of r.nodes) for (const m of fl.outAt.filter(m => m.x >= q.fb.x && m.x < q.fb.x + q.fb.w && m.y >= q.fb.y && m.y < q.fb.y + q.fb.h)) if (!m.c.some(c => q.ct.includes(c))) errs.push('node ' + q.item + ': machine @' + m.x + ',' + m.y + ' output misses its POOL');
+    const ozc = r.nodes.find(q => q.row === Math.min(...r.nodes.map(z => z.row)) && q.pool === Math.max(...r.nodes.map(z => z.pool)));
+    if (ozc && !ozc.ct.length) errs.push('no OZ container');
+  }
+  const flow = await page.evaluate(pageFlow, {recKey: r.recKey, pm: r.pm});
   if (strict && flow.mu > 1 + 1e-9) errs.push('belt util ' + flow.mu + ' > 1');
+  if (r.nodes) {
+    const st = await page.evaluate(pageStage, {nodes: r.nodes, items: r.items, mk});
+    st.forEach(z => { if (z.prod < 0.99 * z.rate) errs.push('stage ' + z.item + ': product ' + z.prod + ' < 0.99 x ' + (+z.rate).toFixed(2)) });
+    row.stageProd = st.map(z => z.item.slice(0, 8) + ' ' + z.prod + '/' + (+z.rate).toFixed(1) + ' inj' + z.inj).join('; ');
+    if (opts.oz) console.log('  stage-wise: ' + row.stageProd);
+  }
   Object.assign(row, {eng: r.L.eng, K: r.K, blocks: r.L.blocks, ug: r.L.ug, stages: r.count.map(c => c.item + ' N' + c.N + '/' + c.built + ' u' + c.util).join('; '), belts: r.belts, machines: r.machines,
     beltsPerMach: r.machines ? +(r.belts / r.machines).toFixed(1) : null, floodErrs: fl.errs.length, containers: fl.containers, ozReach: fl.ozReach.length, full: flow.full, partial: flow.partial, maxBelt: flow.mu});
   if (opts.mutate) {
@@ -132,7 +165,22 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
     if (!gone) errs.push('mutation: no belt reached by the flood');
     else { const m2 = await page.evaluate(floodPage, {items: gone, finalItems: r.finalItems}); row.mutErrs = m2.errs.length; row.mutOz = m2.ozReach.length; if (!(m2.errs.length > fl.errs.length || m2.ozReach.length < fl.ozReach.length)) errs.push('mutation (deleted belt @' + pick.x + ',' + pick.y + ') did not turn the flood red') }
   }
-  return {ok: errs.length === 0, errs, row};
+  if (opts.mutate && r.routed && r.routed.length) {   // router mutations: delete one routed belt, then one routed UG exit
+    const isUg = b => b.cls.includes('Underground') || b.cls.includes('UG');
+    for (const kind of ['belt', 'exit']) {
+      const gone = await page.evaluate(({items, routed, kind}) => {
+        const ugs = items.filter(b => PLC_UG.includes(b.cls)), ex = new Set(ugPairs(ugs).map(p => p.t.x + ',' + p.t.y)), rs = new Set(routed.map(q => q.x + ',' + q.y));
+        const c = items.filter(b => rs.has(b.x + ',' + b.y) && (kind === 'exit' ? ex.has(b.x + ',' + b.y) : PLC_BELT.includes(b.cls)));
+        const pick = c[Math.floor(c.length / 2)];
+        return pick ? {x: pick.x, y: pick.y} : null;
+      }, {items: r.items, routed: r.routed, kind});
+      if (!gone) { if (kind === 'belt') errs.push('mutation: no routed belt'); continue }
+      const m2 = await page.evaluate(floodPage, {items: r.items.filter(b => !(b.x === gone.x && b.y === gone.y)), finalItems: r.finalItems});
+      row['mut' + kind] = m2.errs.length;
+      if (!(m2.errs.length > fl.errs.length || m2.ozReach.length < fl.ozReach.length)) errs.push('mutation (deleted routed ' + kind + ' @' + gone.x + ',' + gone.y + ') did not turn the flood red');
+    }
+  }
+  return {ok: errs.length === 0, errs, row, nodes: r.nodes, count: r.count};
 }
 const PLC_BELT_NAMES = ['DAT_ConveyorBelt', 'DAT_ConveyorBelt2', 'DAT_ConveyorBelt3'];
 
@@ -186,6 +234,32 @@ if (isMain) {
         rows.push({block: b, tpl: rc.cls, k: rc.k, ...r.row});
         if (r.refused) { console.log('REFUSED ' + rc.name + ' ' + rate.toFixed(1) + ' ' + b + ': ' + r.refused); continue }
         console.log((r.ok ? 'PASS ' : 'FAIL ') + rc.name + ' ' + rate.toFixed(1) + ' ' + b + (r.ok ? '' : ': ' + r.errs.join('; ')));
+        if (!r.ok) fails++;
+      }
+      console.table(rows);
+    } else if (mode === 's7b') {   // composer S7b gate: merge trees, strict, 2x2
+      await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp');
+      await page.waitForFunction(() => window.__fb && typeof cmpCompose === 'function' && typeof cmpAssembleTree === 'function');
+      const cand = await page.evaluate(() => {   // step 1 scan: 1 crafted + 1 raw input
+        const r = [];
+        for (const rec of [].concat(...Object.values(RECS))) {
+          if (rec.i.length !== 2) continue;
+          const item = rec.o[0], key = rk(rec); let P; try { P = plan(item, 30, 1, {}, {[item]: key}, {proto: false, enr: false, obs: false}) } catch (e) { continue }
+          const n = P.nodes[item]; if (!n || !n.rec || !n.crafter || !plnCb(n.crafter)) continue;
+          const cr = rec.i.filter(([it]) => it !== item && P.nodes[it] && P.nodes[it].crafter);
+          if (cr.length === 1 && rec.i.length === 2 && !rec.i.some(([it]) => it === item)) r.push(key + ' k=2 N=' + n.machines + ' crafted=' + plnNm(cr[0][0]));
+        }
+        return r;
+      });
+      console.log('1 crafted + 1 raw candidates (' + cand.length + '):'); cand.slice(0, 12).forEach(c => console.log('  ' + c));
+      const want = (process.argv[3] || 'capacitor,bc').split(','), S = {capacitor: ['ITEM_NickelPlates+ITEM_TitaniumPlates>ITEM_Capacitor', 100], bc: ['ITEM_SiliconWafers+ITEM_MagneticCoils>ITEM_BasicCircuit', 100]}, rows = [];
+      for (const w of want) {
+        const [key, rate] = S[w] || [w, 100];
+        const r = await checkCompose(page, key, rate, 1, 'BPO_Station_02', {strict: true, mutate: true, oz: true});
+        rows.push({tree: w, ...r.row});
+        if (r.refused) { console.log('REFUSED ' + w + ': ' + r.refused); fails++; continue }
+        console.log((r.ok ? 'PASS ' : 'FAIL ') + w + (r.ok ? '' : ': ' + r.errs.join('; ')));
+        if (r.count) console.table(r.count);
         if (!r.ok) fails++;
       }
       console.table(rows);

@@ -96,19 +96,62 @@ function cmpSize(P,item,mk,spMk,block){
   return{ok:true,K,stages,note};
 }
 
+// CMP S7b: tree sizing (K=1: one FB block per node). pl = cmpPlan result. -> {ok,by:{nodeId:{S,m,base,tpl}}} | {ok:false,why}
+function cmpTreeSize(pl,mk,spMk,block){
+  const Ss=TPL_IF_SETS[block]?Object.keys(TPL_IF_SETS[block]).map(Number):[],by={},byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o]));
+  if(!Ss.length)return cmpErr('no block '+block);
+  for(const o of pl.nodes){
+    if(o.raw)continue;
+    const merge=o.inKind==='merge';
+    if(o.inKind==='feed')return cmpErr('all-raw multi-input stage inside a tree is not built yet ('+o.item+')');
+    if(o.growth)return cmpErr('growth stage inside a tree is not built yet ('+o.item+')');
+    const pk=tplPick(o.cls,o.k,block);if(!pk.ok)return cmpErr(pk.why);
+    if(merge&&o.k>=2&&pk.id!=='assembler_2in')return cmpErr('merge into '+String(o.cls).replace(/^DAT_/,'')+' with '+o.k+' inputs is not built yet');
+    const main=merge?o.rec.i.findIndex(([it])=>it===byId[o.children[0]].key):0;
+    const base={block,cls:o.cls,rec:rk(o.rec),recObj:o.rec,recd:o.rec,mk,spMk,main,growth:false,raw:merge?0:o.k};
+    let mx=0,why='no size fits '+block,pick=null;
+    for(const S of Ss){
+      const m=pk.t.max({...base,S});
+      if(!(m>0)){why=pk.t.build({...base,S}).why||why;continue}
+      mx=Math.max(mx,m);
+      if(m<o.N)continue;
+      const c=cmpBuild(pk.t,{...base,S,n:o.N},merge?1:0,2);
+      if(c.ok){pick={S,m};break}
+      why=c.why;
+    }
+    if(!pick){
+      if(mx&&mx<o.N)return cmpErr('stage '+o.item+' needs '+o.N+' machines but a block holds '+mx+' (stacked blocks not built)');
+      return cmpErr('stage '+o.item+' ('+o.N+' machines): '+why);
+    }
+    by[o.id]={...pick,base,tpl:pk.id};
+  }
+  return{ok:true,by};
+}
+
 // CMP C3: cmpCompose(P,item,mk,spMk,o) -> placerLayout result (fixed tile) | {ok:false,why}. Linear chain of 1-input stages, K strips. Docks not built yet.
 function cmpCompose(P,item,mk,spMk,o={}){
   const BX=o.box||PLC_BOX,bk=o.bk||PL_ALL[placerBk().indexOf(true)];
   if(!bk)return cmpErr('no block type selected');
   if(BX!=='DAT_Container_2')return cmpErr('needs Large Container');
   if(o.dock&&(o.dock.in||o.dock.out))return cmpErr('docks are not built in the composer yet');
-  const tr=cmpTree(P,item);if(!tr.ok)return tr;
-  const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;
-  const A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages});if(!A.ok)return A;
-  const T=A.T,ext=plcExt(T),ms=T.ms,cnt=f=>ms.filter(f).length,last=sz.stages[sz.stages.length-1];
-  const L={ok:true,eng:'cmp',items:ms,cuts:[],lanes:sz.K,per:last.perStrip.slice(),makes:P.nodes[item].rate,pitch:ext.h+1,w:ext.w,h:ext.h,tall:true,mod:false,box:BX,mk,ports:[],note:sz.note.concat(tr.stages[0].growth&&tr.stages[0].k>=2?['Fill the seed container ('+cmpName(item)+')']:[]),src:{P,item,mk,spMk,o},prefab:true,
-    stat:{belts:cnt(b=>PLC_BELT.includes(b.cls)),ug:cnt(b=>PLC_UG.includes(b.cls)),spl:cnt(b=>PLC_SPL.includes(b.cls)),blocks:T.blocks.length,machines:cnt(b=>b.rec),lanes:sz.K,spills:0},
-    dk:o.dock||null,bl:{zoned:true,n:new Array(T.cols-1).fill(0),cmp:{K:sz.K,stages:sz.stages.map(q=>({item:q.item,cls:q.cls,tpl:q.tpl,block:q.block,S:q.S,N:q.N,perStrip:q.perStrip,B:q.B}))}},tile:T,tileBk:'cmp',fixedTile:true};
+  const tr=cmpTree(P,item),block=CMP_BLOCKS[PL_ALL.indexOf(bk)];
+  let A,sz,stages,cmpI,note,per;
+  if(tr.ok){
+    sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;
+    A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages});if(!A.ok)return A;
+    stages=sz.stages.map(q=>({item:q.item,cls:q.cls,tpl:q.tpl,block:q.block,S:q.S,N:q.N,perStrip:q.perStrip,B:q.B}));cmpI={K:sz.K,stages};
+    note=sz.note.concat(tr.stages[0].growth&&tr.stages[0].k>=2?['Fill the seed container ('+cmpName(item)+')']:[]);per=sz.stages[sz.stages.length-1].perStrip.slice();
+  }else if(/^branching/.test(tr.why)){   // S7b: merge tree (K=1)
+    const pl=cmpPlan(P,item,mk,{});if(!pl.ok)return pl;
+    const tz=cmpTreeSize(pl,mk,spMk,block);if(!tz.ok)return tz;
+    A=cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by});if(!A.ok)return A;
+    stages=pl.nodes.filter(o=>!o.raw).map(o=>({item:o.item,cls:o.cls,tpl:tz.by[o.id].tpl,block,S:tz.by[o.id].S,N:o.N,perStrip:[o.N],B:1}));
+    cmpI={K:1,tree:true,stages,nodes:A.nodes,routed:A.routed};note=pl.notes.slice();per=[P.nodes[item].machines];
+  }else return tr;
+  const T=A.T,ext=plcExt(T),ms=T.ms,cnt=f=>ms.filter(f).length;
+  const L={ok:true,eng:'cmp',items:ms,cuts:[],lanes:cmpI.K,per,makes:P.nodes[item].rate,pitch:ext.h+1,w:ext.w,h:ext.h,tall:true,mod:false,box:BX,mk,ports:[],note,src:{P,item,mk,spMk,o},prefab:true,
+    stat:{belts:cnt(b=>PLC_BELT.includes(b.cls)),ug:cnt(b=>PLC_UG.includes(b.cls)),spl:cnt(b=>PLC_SPL.includes(b.cls)),blocks:T.blocks.length,machines:cnt(b=>b.rec),lanes:cmpI.K,spills:0},
+    dk:o.dock||null,bl:{zoned:true,n:new Array(T.cols-1).fill(0),cmp:cmpI},tile:T,tileBk:'cmp',fixedTile:true};
   T.L=L;
   return L;
 }

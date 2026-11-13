@@ -5,7 +5,7 @@
 // Moves: step to a free floor cell, or straight UG hop (entrance = current cell, exit free floor cell, n=exit-entrance+1 <= ugMax) over perpendicular straight belts of other nets,
 // or over a wall (entrance last floor cell, exit first floor cell of the next block, vertical only). No same-axis UG end inside any span (ugPairs pairs consecutive ends of a line).
 // A belt's rot points to the next cell of its own path only. Greedy per lane (longest first, 3 shuffles); nets = [{id,item,src,sink,cells:['x,y',..]}].
-const CMPR_D = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+var CMPR_D = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 function cmpRoute(o) {
   const {W, H, rowsN, mk, sources, sinks, ugMax} = o, blocked = new Set(o.blocked || []), P = H + 2, HT = rowsN * P;
   const key = (x, y) => x + ',' + y, floor = (x, y) => x >= 0 && x < W && y >= 0 && y < HT && y % P < H;
@@ -33,6 +33,7 @@ function cmpRoute(o) {
           if (f && nd !== d) continue;
           if (nd === (d + 2) % 4) continue;
           const [dx, dy] = CMPR_D[nd], nx = x + dx, ny = y + dy, nk = key(nx, ny);
+          if (o.eastStart && i === st && nd !== 0) continue;   // lane cell at x=0 must stay a rot-0 belt (the wall swap makes it a UG exit)
           const turn = nd === d || i === st ? 0 : 0.2;
           if (floor(nx, ny) && nx > 0 && free(nk) && !srcAt.has(nk) && (nx < W - 1 || sinkAt.has(nk))) relax(i, c + 1 + turn, nx, ny, nd, 0, 1);
           // hop: entrance = this cell, must arrive straight (or the start cell heading east)
