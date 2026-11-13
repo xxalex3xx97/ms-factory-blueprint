@@ -447,7 +447,7 @@ function plcFourLane(P,item,mk,spMk,o={}){
   const note=ins.map((x,i)=>"Input "+(i+1)+" "+plnNm(x)+": "+(P.nodes[x]&&P.nodes[x].rec?"made by another factory: build it separately and feed this container":"source container (infinite)"));
   return{ok:true,items,lanes:N,per:Array(N).fill(1),makes:N*T.pmach,h:N*step-1,pitch:step,w:W,mod:false,box:BX,mk,four:true,note:["Four inputs: one machine per lane, "+N+" lane(s)",...note],src:{P,item,mk,spMk,o}};
 }
-function placerLayoutA(P,item,mk,spMk,o={}){if(PLC_PREFAB&&!o.nopf&&!o.mod){const q=pfCompose(P,item,mk,spMk,o);if(q.ok){const bk=placerBk(),T=placerTile(q,bk);if(T.ok){q.tile=T;q.tileBk=bk.join();return q}}}const FR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.length===4&&!P.nodes[item].rec.i.some(([x])=>x===item);if(FR){try{return plcFourLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Four: layout not built for this recipe ("+e.message+")"}}}const GR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.some(([x])=>x===item);if(GR&&P.nodes[item].rec.i.length===2){try{return plcGrowthLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": feedback layout not built for this recipe ("+e.message+")"}}}if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": the feedback layout for more than one extra input is not built yet"};const GA=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GA)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GA.item)+": the feedback layout inside a chain is not built yet"};
+function placerLayoutA(P,item,mk,spMk,o={}){if(PLC_PREFAB&&!o.nopf&&!o.mod){const q=pfCompose(P,item,mk,spMk,o),pin=o.eng&&o.eng!=="auto";if(q.ok){const bk=placerBk(),T=placerTile(q,bk);if(T.ok){q.tile=T;q.tileBk=bk.join();return q}plcFb=(PLC_ENG[q.eng]||"engine")+" built a layout but the blocks do not fit: "+T.why;if(pin)return{ok:false,why:"Engine "+o.eng+" built a layout but the blocks do not fit: "+T.why}}else if(pin)return q}const FR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.length===4&&!P.nodes[item].rec.i.some(([x])=>x===item);if(FR){try{return plcFourLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Four: layout not built for this recipe ("+e.message+")"}}}const GR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.some(([x])=>x===item);if(GR&&P.nodes[item].rec.i.length===2){try{return plcGrowthLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": feedback layout not built for this recipe ("+e.message+")"}}}if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": the feedback layout for more than one extra input is not built yet"};const GA=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GA)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GA.item)+": the feedback layout inside a chain is not built yet"};
 P=plcUnshare(P,item);
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why});
   const tr=plcTree(P,item);if(!tr.ok)return no(tr.why);
@@ -775,14 +775,20 @@ const placerBk=()=>PLC_BKV.map(c=>c===$("plnBk").value);
 const placerDock=()=>{const i=$("plnDkI").checked,o=$("plnDkO").checked;if(!i&&!o)return null;const t=$("plnDk").value;return{in:i?t:null,out:o?($("plnDkOT").value||t):null}};
 function placerRun(open){
   const dl=$("plnPrev");if(!open&&!dl.open)return;
-  const dk=placerDock();
-  const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk}):{ok:false,why:"Pick an item and a rate first"};
+  const dk=placerDock();plcFb=null;
+  const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk,eng:$("plnEng").value}):{ok:false,why:"Pick an item and a rate first"};
+  plcEngBadge(L);
   if(!L.ok){plcL=null;plcT=null;placerClear();$("plnPrevErr").textContent=L.why;$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
 function placerGo(){$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;$("pvRate").value=$("plnRate").value;placerRun(true)}
 // live modal: build settings re-run the preview; errors show inside the modal with Place off
 const placerLive=()=>placerRun(false);
+// engine badge: always names the engine that built the preview (or the pinned one that refused); Auto fallback reason in the tooltip
+let plcFb=null;const PLC_ENG={zones:"Zones",tower:"Tower","tower-multi":"Tower (multi-input)",nl:"No Limits"};
+function plcEngBadge(L){const b=$("plnEngBadge"),pin=$("plnEng").value,why=s=>String(s||"").replace(/ \(NL used\)$/,"");
+  if(!L.ok){b.textContent=pin!=="auto"?"Not built: "+PLC_ENG[pin]+" refused":"Not built";b.title=why(L.why);return}
+  const n=PLC_ENG[L.eng]||"Legacy placer";b.textContent="Built by: "+n+(L.eng==="nl"&&L.blWhy?" (fallback: "+why(L.blWhy)+")":!L.eng&&plcFb?" (fallback: "+plcFb+")":"");b.title=L.blWhy?why(L.blWhy):plcFb&&!L.eng?plcFb:pin==="auto"?"Auto picked "+n:"Pinned: "+n}
 function placerClear(){
   ["pvMach","pvBelt","pvSpl","pvBox","pvUg","pvBlk","pvCell","pvIO"].forEach(i=>{if($(i))$(i).textContent="-"});
   $("plnPrevNote").textContent="";$("plnPrevBig").textContent="";
@@ -905,7 +911,7 @@ $("plnZi").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1.25)};
 $("plnZo").onclick=()=>{const {w,h}=placerSize();plcZ({x:w/2,y:h/2},1/1.25)};
 $("plnZf").onclick=()=>placerFitView();
 // live wiring: build settings in the modal re-run the preview; Belt/Splitter = the planner selects, synced both ways
-$("plnBk").addEventListener("change",placerLive);$("plnBuf").addEventListener("change",placerLive);$("plnMod").addEventListener("change",placerLive);
+$("plnBk").addEventListener("change",placerLive);$("plnEng").addEventListener("change",()=>{try{localStorage.setItem("msfb.engine",$("plnEng").value)}catch(_){}placerLive()});$("plnBuf").addEventListener("change",placerLive);$("plnMod").addEventListener("change",placerLive);
 $("pvMk").addEventListener("change",()=>{$("plnMk").value=$("pvMk").value;$("plnMk").dispatchEvent(new Event("change"))});
 $("pvSp").addEventListener("change",()=>{$("plnSp").value=$("pvSp").value;$("plnSp").dispatchEvent(new Event("change"))});
 const plcSync=()=>{if(!$("plnPrev").open)return;$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;$("pvRate").value=$("plnRate").value;placerLive()};
@@ -916,6 +922,7 @@ $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;
 // No Limits is the only engine in the UI (always on). plcEngine stays for tests: ?engine=old|new|nl in the page URL pins an older engine, default bl (Block engine, falls back to NL per case).
 const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl"||v==="bl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl"||v==="bl");if(typeof BL_ENGINE!=="undefined")BL_ENGINE=(v==="bl")};
 if(!plcCls("BPO_Station_03"))$("plnBk").querySelector('option[value="BPO_Station_03"]')?.remove();
+try{const v=localStorage.getItem("msfb.engine");if(PLC_ENG[v])$("plnEng").value=v}catch(_){}
 try{const v=localStorage.getItem("msfb.block");if(PLC_BKV.includes(v))$("plnBk").value=v}catch(_){}
 $("plnBk").addEventListener("change",()=>{try{localStorage.setItem("msfb.block",$("plnBk").value)}catch(_){}});
 const PLC_DK="msfb.docks",plcDkSave=()=>{try{localStorage.setItem(PLC_DK,JSON.stringify({i:$("plnDkI").checked,o:$("plnDkO").checked,t:$("plnDk").value,ot:$("plnDkOT").value}))}catch(_){}};

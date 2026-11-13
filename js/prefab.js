@@ -1137,8 +1137,9 @@ let PF_DOWN=false;   // step 1: single-stage pfCompose builds outDown (test hook
 function pfCompose(P,item,mk,spMk,o={}){
   const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
   if(!T||!T.rec)return no('no recipe');
-  if(typeof BL_ENGINE!=='undefined'&&BL_ENGINE){const R=blTop(P,item,mk,spMk,o);if(R&&R.ok!==false)return R}
-  if(typeof NL_ENGINE!=='undefined'&&NL_ENGINE)return nlTop(P,item,mk,spMk,o);   // NL builds growth itself
+  let blWhy=null;   // engine select: o.eng 'zones'|'tower' pins Block (refusal returned, no fallback), 'nl' pins NL, else auto
+  if(o.eng!=='nl'&&typeof BL_ENGINE!=='undefined'&&BL_ENGINE){const R=blTop(P,item,mk,spMk,o);if(R&&R.ok!==false)return R;blWhy=R&&R.why;if(o.eng==='zones'||o.eng==='tower')return R?{ok:false,why:String(R.why).replace(/ \(NL used\)$/,'')}:no('Block engine refused')}
+  if(typeof NL_ENGINE!=='undefined'&&NL_ENGINE){const R=nlTop(P,item,mk,spMk,o);if(R&&R.ok!==false){R.eng='nl';R.blWhy=blWhy}return R}   // NL builds growth itself
   if(T.rec.i.some(([x])=>x===item))return no('growth not built in prefab');
   if(typeof LC_ENGINE!=='undefined'&&LC_ENGINE){const R=lcTop(P,item,mk,spMk,o);if(R&&R.ok!==false)return R}
   if(!T.rec.i.every(([x])=>!(P.nodes[x]&&P.nodes[x].crafter))){   // a machine upstream: chain (step 7)

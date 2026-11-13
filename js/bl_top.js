@@ -14,12 +14,13 @@ function blTop(P,item,mk,spMk,o={}){
     if(Z.ok===false)return no(Z.why);
     const nodes=Z.nodes.slice().sort((a,b)=>b.row-a.row);   // producer first
     const multi=nodes.some(n=>n.ins.length!==1||P.nodes[n.item].rec.i.length!==1);
-    if(multi)return blTopMulti(P,item,mk,spMk,o,Z,nodes,BX,dock);
+    if(multi){if(o.eng==='zones')return no('zones build single-input recipes only');const R=blTopMulti(P,item,mk,spMk,o,Z,nodes,BX,dock);if(R.ok!==false)R.eng='tower-multi';return R}
     if(nodes.some(n=>n.cons.length>1))return no('non-linear (a node feeds two consumers)');
     if(nodes.filter(n=>!n.ins[0].crafted).length!==1)return no('non-linear (more than one raw input)');
     for(let k=1;k<nodes.length;k++)if(nodes[k].ins[0].item!==nodes[k-1].item)return no('non-linear chain');
     if(dock&&dock.out==='ind')return no('industrial output dock');
-    if(nodes.length===1&&!(dock&&(dock.in||dock.out))){const Z=blTopZ(P,item,mk,spMk,nodes,BX,o);if(Z.ok)return Z}   // Z3: zoned single stage first, old tower on refusal
+    if(o.eng==='zones'){if(nodes.length!==1)return no('zones build one-stage recipes only');if(dock&&(dock.in||dock.out))return no('zones do not support docks');const Z=blTopZ(P,item,mk,spMk,nodes,BX,o);return Z.ok?Z:{ok:false,why:Z.why}}
+    if(o.eng!=='tower'&&nodes.length===1&&!(dock&&(dock.in||dock.out))){const Z=blTopZ(P,item,mk,spMk,nodes,BX,o);if(Z.ok)return Z}   // Z3: zoned single stage first, old tower on refusal
     const ind=!!(dock&&dock.in==='ind'),cap=MKS[mk][1],bw=dim({cls:BX,rot:0}).w,ps=portsOf({cls:BX,x:0,y:0,rot:0,off:[]});
     const Rmax=Math.min(3,ps.filter(p=>p.f==='S').length,ps.filter(p=>p.f==='N').length);
     const info=nodes.map(n=>{
@@ -46,7 +47,7 @@ function blTop(P,item,mk,spMk,o={}){
     const w=plcMmax(items,q=>q.x+dim(q).w)+1,h=plcMmax(items,q=>q.y+dim(q).h);
     const cuts=[];for(let c=PF_GRID.cw;c<w-1;c+=PF_GRID.cw)cuts.push(c);
     const stat={belts,ug:0,spl,blocks:K*info.length,machines,lanes:K,spills:0};
-    return{ok:true,items,cuts,lanes:K,per:[machines],makes:fin,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
+    return{ok:true,eng:'tower',items,cuts,lanes:K,per:[machines],makes:fin,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
       note:['Block engine: '+K+' tower(s), '+info.length+' stage(s), rows per stage '+B.r.join('/'),...(dock&&dock.out==='nrm'?['Risk: normal output dock has 2 ports (240/min per tower)']:[]),...(P.nofp||[]).map(x=>plnNm(x)+' comes from the Deep Space Observatory block (not placed)')],
       src:{P,item,mk,spMk,o},prefab:true,stat,dk:dock&&(dock.in||dock.out)?dock:null,bl:{K,n:B.n,r:B.r,M:info.map(x=>x.M),Rmax}};
   }catch(e){return no('internal error '+e.message)}finally{PLC_BOX=prevBox}
@@ -110,7 +111,7 @@ function blTopZ(P,item,mk,spMk,nodes,BX,o){
   const M=blM(fi,n.fo,mc.w,cap,bw,4);   // zone width at the 4-row cap
   if(M<1)return no('machine does not fit the zone width or belt cap');
   const R=Math.ceil(n.N/M);
-  if(R>Math.min(BL.RB(mc.h+2),4))return no('rows over the zone cap');
+  if(R>BL.RB(mc.h+2))return no('rows over the zone cap');
   const iz=blIZ({mk,bx:BX,cx:0,Y:0,R,raw:n.ins[0].item}),fb=blFB({mk,spMk,cls:n.cls,rec:n.rec,mc,M,R,cx:0,Y:30});
   if(!fb.ok)return no(fb.why);
   const oz=blOZ({mk,bx:BX,Y:60,R,E0:fb.E0});
@@ -120,7 +121,7 @@ function blTopZ(P,item,mk,spMk,nodes,BX,o){
   const machines=R*M,w=plcMmax(items,q=>q.x+dim(q).w)+1,h=plcMmax(items,q=>q.y+dim(q).h);
   const ports=oz.xs.map(x=>({edge:'S',off:x,dir:'out',belts:fb.exCols.filter(ex=>ex>=x&&ex<=x+3).length,slot:-1,mk}));
   const stat={belts,ug:0,spl,blocks:3,machines,lanes:1,spills:0};
-  return{ok:true,items,cuts:[],lanes:1,per:[machines],makes:R*M*n.fo,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
+  return{ok:true,eng:'zones',items,cuts:[],lanes:1,per:[machines],makes:R*M*n.fo,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
     note:['Block engine: zoned tower (IZ/FB/OZ), 1 stage, '+R+' rows x '+M+' machines'],
     src:{P,item,mk,spMk,o},prefab:true,stat,dk:null,bl:{K:1,n:[n.N],r:[R],M:[M],Rmax:4,zoned:true}};
 }

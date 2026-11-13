@@ -272,6 +272,8 @@
   <div class="pvHd"><h3 id="plnPrevT">Factory preview</h3><div class="pvTb" role="toolbar" aria-label="Preview zoom"><button id="plnZo" type="button" aria-label="Zoom out" title="Zoom out">&minus;</button><button id="plnZi" type="button" aria-label="Zoom in" title="Zoom in">+</button><button id="plnZf" type="button" aria-label="Fit to view" title="Fit to view">Fit</button></div></div>
   <div id="pvSet">
     <label>Blocks <select id="plnBk" aria-label="Block type" title="Block type the factory is cut from"><option value="BPO_Station_01">1x1</option><option value="BPO_Station_2x1">2x1</option><option value="BPO_Station_02" selected>2x2</option><option value="BPO_Station_03">2x2 C</option></select></label>
+    <label>Engine <select id="plnEng" aria-label="Layout engine" title="Auto picks the engine per recipe; the others pin one and refuse instead of falling back"><option value="auto" selected>Auto</option><option value="zones">Zones</option><option value="tower">Tower</option><option value="nl">No Limits</option></select></label>
+    <span id="plnEngBadge" role="status" style="align-self:center;font-weight:600"></span>
     <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2" selected>Large Container</option></select></label>
     <label class="chk"><input type="checkbox" id="plnDkI"> Raw inputs come from docks</label>
     <label>Dock <select id="plnDk" aria-label="Dock type"><option value="ind">Industrial</option><option value="nrm">Normal</option></select></label>
