@@ -20,7 +20,7 @@ await pg.waitForFunction(() => window.__fb && typeof blTop === 'function' && typ
 let fails = 0;
 const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } else console.log('ok   ' + msg) };
 const WIN = Number(process.env.WIN || 600);
-const cases = [['Silicon Wafers', 120], ['Silicon Wafers', 360], ['Silicon Wafers', 720], ['Basic Motor', 120], ['Basic Motor', 1000]];
+const cases = [['Silicon Wafers', 120], ['Silicon Wafers', 360], ['Silicon Wafers', 720], ['Basic Motor', 120], ['Basic Motor', 1000], ['Basic Circuits', 100]];
 const sims = {'Silicon Wafers 360': true, 'Basic Motor 120': true};
 const rows = [];
 const out = {cases: {}};

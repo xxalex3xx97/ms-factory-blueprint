@@ -1,5 +1,5 @@
 // BL4 blTop gates (page, ?engine=bl). Run: node tests/bl_top.mjs   Exit 1 on FAIL or page error.
-// Refusals (Basic Circuits 100, Enzyme 10, Exoskeleton Mk. 3 1): blTop ok false, pfCompose returns the NL result.
+// Refusals (Enzyme 10, Exoskeleton Mk. 3 1): blTop ok false, pfCompose returns the NL result. Basic Circuits 100 now builds (2-input merge, see tests/bl_multi.mjs).
 // Built (Silicon Wafers 120/360/720, first auto-discovered 2-stage chain at 120 and 1000): placerTile ok, tile ov 0, span 0, machines == K*sum(n_s), ports == K all S, connectivity 0, makes >= request.
 // Sim (Silicon Wafers 360, chain at 120): sink rate from t=120 s within 15% of planned makes. Prints the BL vs NL belts/machine table.
 import fs from 'fs';
@@ -116,7 +116,7 @@ for (const [name, rate] of cases) {
     bpm: (r.belts / r.machines).toFixed(1), nlbpm: r.nlBelts != null ? (r.nlBelts / r.nlMach).toFixed(1) : '-'});
 }
 // refusals: blTop refuses, pfCompose falls through to NL
-for (const [name, rate] of [['Basic Circuits', 100], ['Enzyme', 10], ['Exoskeleton Mk. 3', 1]]) {
+for (const [name, rate] of [['Enzyme', 10], ['Exoskeleton Mk. 3', 1]]) {
   const r = await pg.evaluate(caseFn, [name, rate]);
   const tag = name + ' ' + rate;
   if (r.refused) { check(false, tag + ': pfCompose refused (' + r.refused + ')'); continue }

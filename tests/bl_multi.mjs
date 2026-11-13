@@ -151,6 +151,36 @@ else check(dOut.dkOut === dOut.K && dOut.tileOk, 'Basic Circuits 100 dock out=nr
 // Enzyme 10: 3 inputs stay on NL
 const en = await pg.evaluate(() => { const it = [...plnBy(false).keys()].find(i => plnNm(i) === 'Enzyme'); const P = plan(it, 10, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false}); const bl = blTop(P, it, 1, 0, {}); const L = pfCompose(P, it, 1, 0, {}); return {why: bl.why, ok: L.ok, note: String(L.note && L.note[0])} });
 check(/^BL: .* \(NL used\)$/.test(en.why) && /No Limits/.test(en.note), 'Enzyme 10 refused (' + en.why + '), pfCompose NL (' + en.note.slice(0, 30) + ')');
+// auto-discovered two-input recipes at 60/min: first 3 that build (scan of the first 300 items)
+const found = await pg.evaluate(() => {
+  const out = []; let n = 0;
+  for (const it of plnBy(false).keys()) {
+    if (++n > 300 || out.length >= 3) break;
+    try {
+      const P = plan(it, 60, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+      const T = P.nodes[it];
+      if (!T || !T.rec || T.rec.i.some(([x]) => x === it)) continue;
+      const Z = pfFactTree(P, it, 1);
+      if (Z.ok === false || !Z.nodes.some(q => q.ins.length === 2)) continue;
+      if (blTop(P, it, 1, 0, {}).ok) out.push(plnNm(it));
+    } catch (e) {}
+  }
+  return out;
+});
+console.log('auto-discovered two-input recipes at 60/min: ' + (found.join(', ') || 'none'));
+for (const name of found) {
+  const tag = name + ' 60', r = await built(name, 60, null);
+  if (r.refused) { check(false, tag + ' refused (' + r.refused + ')'); continue }
+  check(r.wallBad.length === 0 && r.emptyLow.length === 0, tag + ': wall rules (' + r.wallBad.length + ' non-belt on wall rows, ' + r.emptyLow.length + ' empty containers at y%30<2)');
+  check(r.tileOk, tag + ': placerTile ok' + (r.tileOk ? '' : ' (' + r.tileWhy + ')'));
+  if (!r.tileOk) continue;
+  check(r.tileOv === 0 && r.tileSpan === 0, tag + ': tile ov ' + r.tileOv + ' span ' + r.tileSpan);
+  check(r.conn.dangEnd === 0 && r.conn.noSrc === 0 && r.conn.ugUnpaired === 0 && r.conn.boxNoBelt === 0, tag + ': connectivity 0 (' + JSON.stringify(r.conn).slice(0, 200) + ')');
+  check(r.machines === r.K * r.nSum, tag + ': machines ' + r.machines + ' == K*sum(n_s) ' + (r.K * r.nSum));
+  check(r.ports === r.K && r.portsS, tag + ': ports ' + r.ports + ' == K ' + r.K + ', all S');
+  check(r.makes >= r.request, tag + ': planned ' + r.makes.toFixed(1) + ' >= request ' + r.request);
+  console.log('     ' + tag + ': K ' + r.K + ', stages ' + r.stages + ', rows ' + r.rows + ', h ' + r.h + ', belts/machine BL ' + (r.belts / r.machines).toFixed(1) + ' vs NL ' + (r.nlBelts / r.nlMach).toFixed(1));
+}
 // sim: Basic Circuits 100 (untiled), sink = bottom containers, measure from t=300
 const WIN = Number(process.env.WIN || 900);
 const sim = await pg.evaluate(WIN => {

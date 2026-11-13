@@ -24,6 +24,11 @@
    "bpm": 14.333,
    "area": 4588,
    "sim": null
+  },
+  "Basic Circuits 100": {
+   "bpm": 20.684,
+   "area": 3965,
+   "sim": null
   }
  }
 }
