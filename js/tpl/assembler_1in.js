@@ -78,7 +78,7 @@ function tplBuild(spec){
         tplRun(items,{bc,ug,y:yr,xa:xl+1,xb:e?W-1:W-3});
         if(!e)tplOutTail(items,{bc,W,yc,yo:y0});else{ex.push({x:W-1,y:yr,dir:'E',set:s,rail:e});outs.push(yr)}
       }
-    }else if(m>0){for(let x=1;x<=W-3;x++)bt(x,yc,0);tplOutTail(items,{bc,W,yc,yo:y0})}
+    }else if(m>0){const xl=mx(m-1)+1;for(let x=2;x<=xl;x++)bt(x,yc,0);tplRun(items,{bc,ug,y:yc,xa:xl+1,xb:W-3});tplOutTail(items,{bc,W,yc,yo:y0})}   // SHAPE: belts from the first injection column to the last, UG hops to the trunk
     else bt(W-1,y0,0);   // stub: the edge cell only
     ports.out.push({x:W-1,y:y0,dir:'E',set:s});
     outsOf.push(outs);
