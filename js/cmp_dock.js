@@ -6,7 +6,18 @@ const cmpCellsFor=(D,cap,lanes,avail)=>{const n=Math.max(Math.ceil(D/(2*cap)-1e-
 const cmpR1=v=>Math.round(v*10)/10;
 // plan the containers of one SRC / OZ hub: a={kind:'in'|'out',name,D,rows (lane rows of the hub),H,dh}. dk={mk,notes:[]}. -> extra cmpPool params {ca,dock:true,dkx,pyOut|pyIn} | {ok:false,why}
 function cmpDockHub(dk,a){
-  const {D,rows,H,dh}=a,cap=MKS[dk.mk][1],{n,use}=cmpCellsFor(D,cap,rows.length,dh),Tn=Math.max(use,Math.ceil(rows.length/4)),ca=[];
+  const {D,rows,H,dh}=a,cap=MKS[dk.mk][1];
+  if(a.kind==='in'?dk.indIn:dk.indOut){   // industrial (C7h/k): Dock_2 has 2 lane groups (rows 4..7 / 22..25 of the 30-row block, 4 lanes each, ONE item per group); d.h=2 blocks only
+    const R=rows.length,g=Math.ceil(R/4);
+    if(dh===2&&R<=8&&H>=26&&!a.tree&&(a.kind==='out'||!a.col)){   // input hubs deeper than the west column cannot reach the dock
+      const order=rows.map((_,i)=>i).sort((x,y)=>rows[x]-rows[y]),py=new Array(R);order.forEach((o,i)=>py[o]=i<4?4+i:22+i-4);
+      const lim=g*4*cap,got=Math.min(D,lim);
+      if(got<D-1e-6)dk.notes.push('Dock-limited: '+a.name+' '+cmpR1(got)+'/min of '+cmpR1(D)+'/min (needs '+Math.ceil(D/(4*cap)-1e-9)+' industrial dock groups)');
+      return{ind:true,[a.kind==='in'?'pyOut':'pyIn']:py,dkx:{r:got/g,n:1,name:a.name,ind:1}};
+    }
+    dk.notes.push('Industrial dock not possible for '+a.name+' ('+(dh!==2?'block 1 unit high':R>8?R+' lanes, max 8':a.tree?'output of a merge tree not built yet':'source not at the west edge')+'): normal docks used');
+  }
+  const{n,use}=cmpCellsFor(D,cap,rows.length,dh),Tn=Math.max(use,Math.ceil(rows.length/4)),ca=[];
   for(let k=0;k<use;k++)ca.push(16*k+5);
   for(let y=1;ca.length<Tn&&y<=H-5;y++)if(ca.every(v=>y+3<v||y>v+3))ca.push(y);   // undocked extras (lanes>4 per docked slot)
   if(ca.length<Tn)return{ok:false,why:'dock hub needs '+Tn+' containers but the block holds '+ca.length};
@@ -38,6 +49,25 @@ function cmpDockApply(c,T,fix={}){
     q.dd={side,gx:gx*d.w,gy:gy*d.h,u:k,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
     return true};
   for(const q of ms.filter(q=>q.dk==='in'||q.dk==='out'))if(!dock(q,q.dk==='out'?'E':'W')&&!q.dd){delete q.dk;delete q.dkx}
+  // industrial (hz, d.h=2): one BPO_Dock_2 per hub row, nl_dock.js hz assembly (nlIndAsm transposed) shifted to the row; lanes tagged ie (input, west of block 0) / oe (output, east of the last column)
+  const TR=[1,0,3,2],asm=nlIndAsm(),d2=plcCls('BPO_Dock_2'),indGo=(tag,out)=>{
+    const rows=new Map();
+    for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/TH),ly=q.y-g*TH;if(d.h!==2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out?Math.floor(q.x/TW)<1:Math.floor(q.x/TW)!==0))return'dock slot misaligned';if(!rows.has(g))rows.set(g,[]);rows.get(g).push(q)}
+    for(const [g,E] of rows){
+      const oy=g*TH,col=out?Math.floor(E[0].x/TW):-1,ox=out?(col+1)*TW+A:-16-A,dx=out?(col+1)*d.w:-1,db={cls:d2,x:out?dx+ad:-3-ad,y:g*d.h,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*d.h,rot:out?0:2};
+      if(cells(db).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z))))return'industrial dock overlaps another block';
+      cells(db).forEach(z=>occ.add(z));blocks.push(db);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab)}
+      const used=[0,1].map(k=>E.filter(q=>(q.y-oy<16?0:1)===k)),dkx=E[0].dx||{},bq=[];
+      for(const b of asm.boxes){
+        const x=out?ox+10-b.y:ox+b.y,y=oy+(out?26-b.x:b.x),g2=(y-oy<16?0:1),main=b.y===9&&(b.x===4||b.x===22),m={cls:NLD.BOX_I,x,y,h:0,rot:0,pid:0,ct:[],dk:out?'out':'in'};
+        if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:0,gy:g*d.h,u:g2,r:dkx.r,n:1,name:dkx.name,ind:1}}
+        add.push(m)}
+      for(const k of asm.belts)belt(out?ox+13-k.y:ox+k.y,out?oy+29-k.x:oy+k.x,TR[k.rot]);
+      for(const q of E)for(let x=out?q.x+1:-3-A;x<=(out?ox:-1);x++)belt(x,q.y,0);
+      E.forEach(q=>{delete q.dk;delete q.dx})}
+    return null};
+  const ierr=indGo('ie',false)||indGo('oe',true);if(ierr)return{ok:false,why:ierr};
+  const boxes=add.filter(m=>m.cls===NLD.BOX_I);for(const m of boxes){ms.push(m);add.splice(add.indexOf(m),1)}
   for(const q of ms)if(q.dd)delete q.dkx;
   const sh=-Math.min(0,...blocks.map(b=>b.y)),shx=-Math.min(0,...blocks.map(b=>b.x)),all=[...ms,...add];
   for(const m of all){m.x+=16*shx;m.y+=16*sh}

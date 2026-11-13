@@ -18,21 +18,21 @@ function cmpPool(S){
   if(Ro&&cx+4+ngE+1>W-2)return cmpNo('pool block too narrow (rows)');
   const items=[];
   for(let j=0;j<(S.ind?0:c);j++)items.push({cls:bx,x:cx,y:S.ca?S.ca[j]:ya+4*j,rot:0,h:0,pid:0,ct:raw?[{item,n:0,inf:true}]:[],...(S.dock?(raw?{dk:'in',dkx:S.dkx}:!Ro?{dk:'out',dkx:S.dkx}:{}):{})});
-  if(Ri){   // blHFB 'out' loop: belts to the jog column, vertical, corner at the port row, belts to the container W face
-    const A=blHA(inRows,c,ya,'out',cx-1,S.pyIn);
+  if(Ri){   // blHFB 'out' loop: belts to the jog column, vertical, corner at the port row, belts to the container W face (industrial OZ, S.ind: to x=W-1, last belt tagged 'oe')
+    const A=blHA(inRows,c,ya,'out',cx-1,S.pyIn),xe=S.ind&&!Ro?W-1:cx-1,tl=(b,x)=>{if(S.ind&&!Ro&&x===xe){b.dk='oe';b.dx=S.dkx}return b};
     for(let j=0;j<Ri;j++){
       const y=inRows[j],py=A.py[j],d=A.dir[j];
-      if(!d){for(let x=0;x<=cx-1;x++)items.push(bt(x,y,0));continue}
+      if(!d){for(let x=0;x<=xe;x++)items.push(tl(bt(x,y,0),x));continue}
       const xc=A.col[j];
       for(let x=0;x<xc;x++)items.push(bt(x,y,0));
       items.push(bt(xc,y,d<0?3:1));
       for(let yy=y+d;yy!==py;yy+=d)items.push(bt(xc,yy,d<0?3:1));
       items.push(bt(xc,py,0));
-      for(let x=xc+1;x<=cx-1;x++)items.push(bt(x,py,0));
+      for(let x=xc+1;x<=xe;x++)items.push(tl(bt(x,py,0),x));
     }
   }
   if(Ro){   // blHIN loop: from the container E face (or x=0 for industrial input) to x=W-1
-    const A=AE,xp=cx+4,x0=S.ind?0:xp,tag=(b,f)=>{if(f&&S.ind){b.dk='ie';b.di=item;b.yb=0}return b};
+    const A=AE,xp=cx+4,x0=S.ind?0:xp,tag=(b,f)=>{if(f&&S.ind){b.dk='ie';b.di=item;b.yb=0;b.dx=S.dkx}return b};
     for(let j=0;j<Ro;j++){
       const yI=outRows[j],py=A.py[j],d=A.dir[j];
       if(!d){for(let x=x0;x<=W-1;x++)items.push(tag(bt(x,yI,0),x===x0));continue}
