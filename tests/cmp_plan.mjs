@@ -211,7 +211,7 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
       if (!red) errs.push('mutation (deleted routed ' + kind + ' @' + gone[0].x + ',' + gone[0].y + ') did not turn the flood red');
     }
   }
-  return {ok: errs.length === 0, errs, row, nodes: r.nodes, count: r.count};
+  return {ok: errs.length === 0, errs, row, nodes: r.nodes, count: r.count, items: r.items};
 }
 const PLC_BELT_NAMES = ['DAT_ConveyorBelt', 'DAT_ConveyorBelt2', 'DAT_ConveyorBelt3'];
 
