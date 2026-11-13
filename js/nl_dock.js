@@ -28,7 +28,7 @@ function nlDockApply(L,T,cls){
     slot=(q,c)=>[0,1].find(k=>{const M=c*TW+16*k+DOFF+2,bw=dim(q).w;return q.x<=M&&q.x+bw-1>=M+1}),
     below=(c,g)=>blocks.some(b=>b.x>=c*d.w&&b.x<c*d.w+d.w&&b.y===(g+1)*d.h),
     lxOk=lx=>(lx>=4&&lx<=7)||(lx>=22&&lx<=25),
-    asm=nlIndAsm(),
+    asm=nlIndAsm(),TR=[1,0,3,2],
     ad=cls===plcCls('BPO_Station_03')?1:0,A=16*ad,adc=plcCls('BPO_StationAdapter_01'),ads=new Set(),   // 2x2 C: a station adapter between tile and dock moves the dock stack out one cell
     adp=(c,y,rot)=>{const k=c+'|'+y;if(!ads.has(k)){ads.add(k);blocks.push({cls:adc,x:c*d.w,y,rot})}};
   if(hz&&ad)return no('horizontal dock on 2x2 C');
@@ -59,7 +59,7 @@ function nlDockApply(L,T,cls){
     if(ih.length){
       if(ih.some(q=>q.yb!==0))return no('dock slot misaligned');
       if(ih.some(q=>!lxOk(q.y-q.yb)))return no('dock slot misaligned');
-      const di=ih[0].di,TR=[1,0,3,2];
+      const di=ih[0].di;
       blocks.push({cls:plcCls('BPO_Dock_2'),x:-3,y:0,rot:2});
       for(const b of asm.boxes){const inf=(b.x===22&&b.y===9)||(b.x===4&&b.y===9);
         ms.push({cls:NLD.BOX_I,x:-16+b.y,y:b.x,h:0,rot:0,pid:0,ct:inf?[{item:di,n:0,inf:true}]:[],dk:'in'})}
@@ -96,9 +96,23 @@ function nlDockApply(L,T,cls){
     q.y+=dy;
     for(const x of[M,M+1])for(let y=Fb;y<=Fb+1+A;y++)belt(x,y,1);
     blocks.push({cls:plcCls('BPO_Dock'),x:c*d.w+k,y:(g+1)*d.h+ad,rot:1});if(ad)adp(c,(g+1)*d.h,1)}
+  // (4h) H6d hz industrial output: transpose of (4). One BPO_Dock_2 east of the last FB per stack (group g), lanes on rows 4..7/22..25, tails to ox
+  if(hz){
+    const oh=new Map();
+    for(const q of ms.filter(q=>q.dk==='oe')){
+      if(cx(q.x)!==L.bl.n.length)return no('dock slot misaligned');
+      const g=Math.floor(q.y/TH);if(!lxOk(q.y-g*TH))return no('dock slot misaligned');
+      if(!oh.has(g))oh.set(g,[]);oh.get(g).push(q)}
+    for(const [g,E] of oh){
+      const c=L.bl.n.length,ox=(c+1)*TW,oy=g*TH;
+      blocks.push({cls:plcCls('BPO_Dock_2'),x:(c+1)*d.w,y:g*d.h,rot:0});
+      for(const b of asm.boxes)ms.push({cls:NLD.BOX_I,x:ox+10-b.y,y:oy+26-b.x,h:0,rot:0,pid:0,ct:[],dk:'out'});
+      for(const k of asm.belts)belt(ox+13-k.y,oy+29-k.x,TR[k.rot]);
+      for(const q of E)for(let x=q.x+1;x<=ox;x++)belt(x,q.y,0)}
+  }
   // (4) Industrial output: assembly mirrored 180 under the block, tails extended to its first row
   const oe=new Map();
-  for(const q of ms.filter(q=>q.dk==='oe')){
+  for(const q of ms.filter(q=>q.dk==='oe'&&!hz)){
     const c=cx(q.x),g=Math.floor(q.y/TH);if(!lxOk(q.x-c*TW))return no('dock slot misaligned');
     if(below(c,g))return no('a block lies below the output dock');
     const key=c+'|'+g;if(!oe.has(key))oe.set(key,{c,g,E:[]});oe.get(key).E.push(q)}

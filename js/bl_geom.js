@@ -232,11 +232,11 @@ function blHIZ(S){
 }
 // blHFB(S): S={mk,spMk,cls,rec,mc,M,R,Y,y0,bx}. Row j: blRow at yIn (collector to column xEx), manifold from x=30; output path: column (rot 1 down / 3 up), corner at py (rot 0), belts to the sink W port xp_o=54. Sink containers at (55, Y+ya+4j).
 function blHFB(S){
-  const {mk,spMk,cls,rec,mc,M,R,Y,y0,bx,B=30,nextR=0}=S,P=mc.h+2,bc=PLC_BELT[mk],c=S.c||Math.ceil(R/4),items=[];
+  const {mk,spMk,cls,rec,mc,M,R,Y,y0,bx,B=30,nextR=0,ind=false}=S,P=mc.h+2,bc=PLC_BELT[mk],c=S.c||Math.ceil(R/4),items=[],endO=()=>{if(ind&&!nextR){const t=items[items.length-1];t.dk='oe';t.yb=Y}};   // H6d: last belt of each row = industrial output lane (nlDockApply)
   const xc0=nextR?B+24-Math.ceil(nextR/2):B+25,xp=nextR?xc0-1:B+24;   // H4: non-last sink leaves its E face to the next stage's input
   const yR=Array.from({length:R},(_,j)=>y0+P*j),yO=yR.map(y=>y+P-1),yMid=(yO[0]+yO[R-1])/2,ya=Math.min(Math.max(Math.floor(yMid-2*c),1),29-4*c);
   const A=blHA(yO,c,ya,'out',xp,S.pyO),X0=B+1+(mc.xin===0?1:0),yOut=[],exCols=[];   // H6b: S.pyO explicit port rows
-  for(let j=0;j<c;j++)items.push({cls:bx,x:xc0,y:Y+(S.ca?S.ca[j]:ya+4*j),rot:0,h:0,pid:0,ct:[],...(S.dock&&!nextR?{dk:'out'}:{})});   // H6b: S.ca rows, dk 'out' on the last stage
+  for(let j=0;j<(ind&&!nextR?0:c);j++)items.push({cls:bx,x:xc0,y:Y+(S.ca?S.ca[j]:ya+4*j),rot:0,h:0,pid:0,ct:[],...(S.dock&&!nextR?{dk:'out'}:{})});   // H6b: S.ca rows, dk 'out' on the last stage; H6d: ind = no sink containers
   for(let j=0;j<R;j++){
     const d=A.dir[j],xcol=d===0?xp:A.col[j],py=A.py[j];
     const r=blRow({mk,spMk,cls,rec,mc,m:M,X0,yIn:Y+yR[j],colX:B,xEx:xcol});
@@ -245,11 +245,12 @@ function blHFB(S){
     last.rot=d<0?3:d>0?1:0;
     items.push(...r.items);
     yOut.push(yo);exCols.push(xcol);
-    if(d===0)continue;
+    if(d===0){endO();continue}
     const bt=(x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});
     for(let y=yo+d;y!==Y+py;y+=d)items.push(bt(xcol,y,d<0?3:1));
     items.push(bt(xcol,Y+py,0));
     for(let x=xcol+1;x<=xp;x++)items.push(bt(x,Y+py,0));
+    endO();
   }
   return{ok:true,items,yOut,exCols,ya,py:A.py,c,xc0};
 }

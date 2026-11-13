@@ -74,11 +74,12 @@ for (const [name, rate] of cases) for (const eng of ['zones', 'auto']) {
       jumped = false; x += dx; y += dy } return null };
     const lanes = T.ms.filter(q => q.dk === 'ie').map(q => [q.x, q.y]);
     const reached = lanes.map(([x, y]) => flood(x, y));
-    const asm = lanes.map(([x, y]) => (occ.get((x - 3) + "," + y) || {}).cls === "DAT_ConveyorBelt2" ? 1 : null);   // asm lane cell at depth 13 = u=-3 (planner H6c diagnosis); tails start there
+    // H6c strengthened: tail start is u=-3 (x-3); the cell at u=-4 (x-4) must be an asm belt or a container (report what is there)
+    const asm = lanes.map(([x, y]) => { const b = occ.get((x - 4) + "," + y); return b ? {cls: b.cls, x: b.x, y: b.y, adj: PLC_BELT.includes(b.cls) || /Container/.test(b.cls)} : null });
     const rows = [...new Set(reached.filter(v => v !== null))].sort((a, b) => a - b);
     const minX = Math.min(...T.ms.map(q => q.x), ...T.blocks.map(b => b.x * 16));
     return {zoned: true, K: L.bl.K, R: L.bl.r[0], rows: L.bl.r, ov: T.ov, span: T.span, noBuild: noBuild(T.ms.filter(isM).map(mItem)),
-      dock2: T.blocks.filter(b => b.cls === plcCls('BPO_Dock_2')).length, lanes: lanes.length, reachedRows: rows, laneReach: reached.map(v => v !== null), asmReach: asm.map(v => v !== null), minX};
+      dock2: T.blocks.filter(b => b.cls === plcCls('BPO_Dock_2')).length, lanes: lanes.length, reachedRows: rows, laneReach: reached.map(v => v !== null), asmReach: asm, minX};
   }, [name, rate, eng]);
   console.log(tag + ': ' + JSON.stringify(r));
   if (r.refused) { check(false, tag + ' refused (' + r.refused + ')'); continue }
@@ -89,7 +90,42 @@ for (const [name, rate] of cases) for (const eng of ['zones', 'auto']) {
   check(r.dock2 === r.K, tag + ' BPO_Dock_2 count ' + r.dock2 + ' == K ' + r.K);
   check(r.lanes === r.R && r.laneReach.every(Boolean), tag + ' every lane (' + r.lanes + ') floods to an IZ row');
   check(r.reachedRows.length === r.R, tag + ' rows reached ' + r.reachedRows.length + '/' + r.R);
-  check(r.asmReach.every(Boolean), tag + ' asm lane cell (u=-3) is a belt in every lane row');
+  check(r.asmReach.every(a => a && a.adj), tag + ' u=-4 cell next to tail start is asm belt/container (u=-4: ' + JSON.stringify(r.asmReach) + ')');
+  check(r.minX >= 0, tag + ' all x >= 0 (min ' + r.minX + ')');
+}
+// H6d industrial output (BPO_Dock_2 east of the last FB, transposed asm, lane per row, tails to the dock). Nickel 480 and 720, zones and Auto; out=ind, and in=ind+out=ind.
+for (const [name, rate] of cases) for (const eng of ['zones', 'auto']) for (const both of [false, true]) {
+  const tag = `${name} ${rate} ${both ? 'in+out ind' : 'out ind'} ${eng}`;
+  const r = await pg.evaluate(([name, rate, eng, both]) => {
+    const it = [...plnBy(false).keys()].find(i => plnNm(i) === name);
+    const P = plan(it, rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+    const o = {dock: {in: both ? 'ind' : null, out: 'ind'}, box: 'DAT_Container_2'};
+    if (eng === 'zones') o.eng = 'zones';
+    const L = pfCompose(P, it, 1, 0, o);
+    if (!L.ok) return {refused: L.why};
+    if (!L.bl || !L.bl.zoned) return {notZoned: L.note && L.note[0]};
+    const T = placerTile(L, placerBk());
+    if (!T.ok) return {tileFail: String(T.why).slice(0, 200), ov: T.ov, span: T.span};
+    const occ = new Map(), DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]], isB = b => PLC_BELT.includes(b.cls) || PLC_SPL.includes(b.cls);
+    for (const b of T.ms) { const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) occ.set(x + ',' + y, b) }
+    // forward walk along belt rots from a lane cell; returns the last belt x reached
+    const fwd = (x, y) => { let last = x; for (let n = 0; n < 400; n++) { const b = occ.get(x + ',' + y); if (!b || !isB(b)) break; last = x; const [dx, dy] = DIR[b.rot]; x += dx; y += dy } return last };
+    const outs = T.ms.filter(q => q.dk === 'oe');
+    const dock2 = T.blocks.filter(b => b.cls === plcCls('BPO_Dock_2'));
+    const dockX = dock2.length ? Math.max(...dock2.map(b => b.x * 16)) : null;   // output dock is the east-most one
+    const reached = outs.map(q => fwd(q.x, q.y) === dockX);
+    const minX = Math.min(...T.ms.map(q => q.x), ...T.blocks.map(b => b.x * 16));
+    return {zoned: true, K: L.bl.K, rowsOut: L.bl.r[L.bl.r.length - 1], outRows: outs.length, dockX, reached, dock2: dock2.length, ov: T.ov, span: T.span, noBuild: noBuild(T.ms.filter(isM).map(mItem)), minX};
+  }, [name, rate, eng, both]);
+  console.log(tag + ': ' + JSON.stringify(r));
+  if (r.refused) { check(false, tag + ' refused (' + r.refused + ')'); continue }
+  if (r.notZoned) { check(false, tag + ' not zoned (' + r.notZoned + ')'); continue }
+  if (r.tileFail) { check(false, tag + ' placerTile (' + r.tileFail + ') ov ' + r.ov + ' span ' + r.span); continue }
+  check(r.ov === 0 && r.span === 0, tag + ' ov 0 span 0 (ov ' + r.ov + ', span ' + r.span + ')');
+  check(!r.noBuild, tag + ' noBuild false');
+  check(r.dock2 === r.K * (both ? 2 : 1), tag + ' BPO_Dock_2 count ' + r.dock2 + ' == K ' + r.K + (both ? ' x2' : ''));
+  check(r.outRows === r.rowsOut, tag + ' output lane rows ' + r.outRows + ' == rows ' + r.rowsOut);
+  check(r.reached.every(Boolean), tag + ' every output row reaches the dock (dockX ' + r.dockX + ', reached ' + r.reached.filter(Boolean).length + '/' + r.reached.length + ')');
   check(r.minX >= 0, tag + ' all x >= 0 (min ' + r.minX + ')');
 }
 await br.close();
