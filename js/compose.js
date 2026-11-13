@@ -166,19 +166,20 @@ function cmpArmoury(P,item,mk,spMk,o,bk,BX){
 
 // CMP C3: cmpCompose(P,item,mk,spMk,o) -> placerLayout result (fixed tile) | {ok:false,why}. Linear chain of 1-input stages, K strips. Docks not built yet.
 function cmpCompose(P,item,mk,spMk,o={}){
-  const BX=o.box||PLC_BOX,bk=o.bk||($('plnBk').value==='auto'?'auto':PL_ALL[placerBk().indexOf(true)]);
+  if(!o.bk||o.bk==='auto')window.CMP_BK=undefined;   // a failed Auto build must not leave the previous pick behind
+  const sel=$('plnBk'),BX=o.box||PLC_BOX,bk=o.bk||(sel?(sel.value==='auto'?'auto':PL_ALL[placerBk().indexOf(true)]):null);
   if(!bk)return cmpErr('no block type selected');
-  if(bk==='auto'){   // CMP density: build with every block type, keep the one with the fewest blocks, then the fewest belts
+  if(bk==='auto'){   // CMP density: build with every block type, keep the one with the least floor area (blocks x block area), then the fewest belts
     let best=null,why=null;
     for(const b of PL_ALL){
       if(!plcCls(b))continue;
       const L=cmpCompose(P,item,mk,spMk,{...o,bk:b});
       if(!L.ok){why=why||L.why;continue}
-      const k=L.stat.blocks*1e6+L.stat.belts+L.stat.ug;
+      const k=L.tile.blocks.reduce((a,q)=>{const e=dim({cls:q.cls,rot:q.rot||0});return a+e.w*e.h},0)*1e6+L.stat.belts+L.stat.ug;   // floor area (block units) first, then belts
       if(!best||k<best.k)best={L,k,b};
     }
     if(!best)return cmpErr(why||'no block type builds');
-    window.CMP_BK=best.b;best.L.note=[...best.L.note,'Block type '+CMP_BLOCKS[PL_ALL.indexOf(best.b)]+' (auto: fewest blocks, then fewest belts)'];
+    window.CMP_BK=best.b;best.L.note=[...best.L.note,'Block type '+CMP_BLOCKS[PL_ALL.indexOf(best.b)]+' (auto: least floor area, then fewest belts)'];
     return best.L;
   }
   if(BX!=='DAT_Container_2')return cmpErr('needs Large Container');

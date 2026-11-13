@@ -43,6 +43,8 @@ const fm = await pg.evaluate(run, {name: 'Nickel Plates', rx: '^ITEM_NickelOre>I
 check(fm.ok && fm.note.some(n => n === 'Dock-limited: Foo cannot be docked at this position (the dock cells overlap another block; container stays infinite)'), 'miss reason reaches the note');
 const mu = await pg.evaluate(() => { const bc = plcCls('BPO_Station_02'), bx = NLD.BOX_I, T = {blocks: [{cls: bc, x: 0, y: 0, rot: 0}], ms: [{cls: bx, x: 0, y: 10, rot: 0, h: 0, pid: 0, ct: [{item: 'ITEM_X', n: 0, inf: true}], dk: 'in', dkx: {r: 1, n: 1, name: 'X'}}], ov: 0}; const r = cmpDockApply({cls: bc, mk: 0}, T, {}); return {ok: r.ok, miss: r.miss} });
 check(mu.ok && mu.miss.length === 1 && /\|the container is not on a dock slot$/.test(mu.miss[0]), 'misaligned container -> miss with reason ' + JSON.stringify(mu));
+const bkr = await pg.evaluate(() => { window.CMP_BK = 'BPO_Station_01'; const P = plan('ITEM_NickelOre', 10, 1, {}, {}, {proto: false, enr: false, obs: false}), L = cmpCompose(P, 'ITEM_NickelOre', 1, 1, {bk: 'auto', box: 'DAT_Container_2'}); return {ok: L.ok, bk: window.CMP_BK} });
+check(!bkr.ok && bkr.bk === undefined, 'failed Auto build resets CMP_BK ' + JSON.stringify(bkr));
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
 await br.close();
 console.log(fails ? 'FAILS ' + fails : 'ALL PASS');
