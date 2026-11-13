@@ -12,7 +12,7 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof plan === 'function' && typeof plnBy === 'function');
-for (const f of ['js/tpl/iface.js', 'js/tpl/bundle.js', 'js/tpl/registry.js', 'js/compose.js']) await pg.addScriptTag({path: path.join(ROOT, f)});
+if (!await pg.evaluate(() => typeof cmpSize === 'function')) for (const f of ['js/tpl/iface.js', 'js/tpl/bundle.js', 'js/tpl/registry.js', 'js/compose.js']) await pg.addScriptTag({path: path.join(ROOT, f)});
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 check(await pg.evaluate(() => Object.keys(TPLM).length === 10), 'bundle loads: 10 templates in one page with iface.js');

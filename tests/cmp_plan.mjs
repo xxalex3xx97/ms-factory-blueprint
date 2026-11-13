@@ -146,7 +146,21 @@ if (isMain) {
     page.on('pageerror', e => pageErrs.push(e.message));
     await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=old');
     await page.waitForFunction(() => window.__fb && typeof plan === 'function' && typeof links1 === 'function' && typeof supplyRows === 'function' && typeof placerLayout === 'function');
-    if (mode === 'tree') {
+    if (mode === 'c3') {   // composer C3 gate: Nickel Plates (plain and via enriched ore) x blocks, strict; needs ?engine=cmp
+      await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp');
+      await page.waitForFunction(() => window.__fb && typeof cmpCompose === 'function' && typeof placerLayout === 'function');
+      const keys = await page.evaluate(() => [].concat(...Object.values(RECS)).map(rk).filter(k => /NickelPlates$/.test(k)));
+      console.log('nickel plate recipes: ' + keys);
+      const BK = {'1x1': 'BPO_Station_01', '1x2': 'BPO_Station_2x1', '2x2': 'BPO_Station_02'}, rows = [];
+      for (const key of keys) for (const rate of [31, 480]) for (const b in BK) {
+        const r = await checkCompose(page, key, rate, 1, BK[b], {strict: true, mutate: true});
+        rows.push({block: b, ...r.row});
+        if (r.refused && /Enriched/.test(key)) { console.log('REFUSED (2-stage, not required) ' + key + ' ' + rate + ' ' + b + ': ' + r.refused); continue }
+        console.log((r.ok ? 'PASS ' : 'FAIL ') + key + ' ' + rate + ' ' + b + (r.ok ? '' : ': ' + r.errs.join('; ')));
+        if (!r.ok) fails++;
+      }
+      console.table(rows);
+    } else if (mode === 'tree') {
       for (const [n, r] of [['Nickel Plates', 31], ['Nickel Plates', 480], ['Basic Circuits', 100], ['Capacitor', 100], ['Enzyme', 10], ['Advanced Circuits', 5]]) console.log(await printTree(page, n, r, 1) + '\n');
     } else {
       const key = await page.evaluate(() => { const r = [].concat(...Object.values(RECS)).find(x => x.i.length === 1 && /Silica/.test(rk(x)) && /SiliconWafers$/.test(rk(x))); return r ? rk(r) : null });

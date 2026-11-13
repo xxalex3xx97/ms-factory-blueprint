@@ -14,8 +14,10 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof placerTile === 'function' && typeof blHA === 'function');
-await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
-await pg.addScriptTag({path: ROOT + '/js/cmp_hub.js'});
+if (!await pg.evaluate(() => typeof cmpPool === 'function')) {   // index.html loads them since CMP S3
+  await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
+  await pg.addScriptTag({path: ROOT + '/js/cmp_hub.js'});
+}
 for (const id of ['refinery_1in', 'assembler_2in']) {   // templates share top-level const names: wrap each in an IIFE (like the bundle)
   const src = fs.readFileSync(ROOT + '/js/tpl/' + id + '.js', 'utf8');
   await pg.evaluate(([id, src]) => { window.TB = window.TB || {}; (0, eval)('window.TB.' + id + '=(()=>{' + src + '\n;return {build:tplBuild,max:tplMax};})()') }, [id, src]);

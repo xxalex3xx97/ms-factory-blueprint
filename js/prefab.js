@@ -1135,6 +1135,7 @@ function pfChainDown(P,item,mk,spMk,o={}){
 }
 let PF_DOWN=false;   // step 1: single-stage pfCompose builds outDown (test hook, default off)
 function pfCompose(P,item,mk,spMk,o={}){
+  if(o.eng==='cmp')return cmpCompose(P,item,mk,spMk,o);
   const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
   if(!T||!T.rec)return no('no recipe');
   let blWhy=null;   // engine select: o.eng 'zones'|'tower' pins Block (refusal returned, no fallback), 'nl' pins NL, else auto

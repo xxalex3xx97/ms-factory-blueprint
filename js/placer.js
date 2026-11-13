@@ -7,6 +7,7 @@ const PL_ALL=[...PL_STD,"BPO_Station_03"];   // + 2x2 C (floor 30x30); not in PL
 const PLC_UG=["DAT_UndergroundBelt","DAT_UndergroundBelt_2","DAT_UndergroundBelt_3"];const plcCls=nm=>Object.keys(BASE).find(k=>BASE[k].kind==="b"&&BASE[k].name===nm);
 const PLC_SRC=480;
 let PLC_BANK=false;   // test hook only (slice 1): bank layout instead of the lane layout
+var CMP_ENGINE=false;   // composer (js/compose.js) instead of zones: ?engine=cmp
 let PLC_G=0;   // test hook: force band count
 const PLC_BIG=12;   // blocks above which the modal asks to confirm (not a limit)
 const plcPp=(cls,rot)=>portsOf({cls,x:0,y:0,rot,off:[]});
@@ -330,7 +331,7 @@ function plcUnshare(P,item){
 }
 // belt / splitter too slow for the planned load: the layout uses the next higher Mk automatically (the note says so) instead of refusing
 function placerLayout(P,item,mk,spMk,o={}){
-  o={...o,eng:"zones"};   // old engines (tower, tower-multi, nlTop, legacy bank) are dismissed: golden templates only, a refusal is final. vcol (blVC) hook: bl_top.js blTop
+  o={...o,eng:(typeof CMP_ENGINE!=="undefined"&&CMP_ENGINE)?"cmp":"zones"};   // old engines (tower, tower-multi, nlTop, legacy bank) are dismissed: golden templates only, a refusal is final. vcol (blVC) hook: bl_top.js blTop
   try{return placerLayoutX(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"internal error while laying out this factory ("+e.message+"): tell the developer which item and settings"}}   // a crash shows in the modal with Place disabled, never breaks the page
 }
 function placerLayoutX(P,item,mk,spMk,o={}){
@@ -448,7 +449,7 @@ function plcFourLane(P,item,mk,spMk,o={}){
   const note=ins.map((x,i)=>"Input "+(i+1)+" "+plnNm(x)+": "+(P.nodes[x]&&P.nodes[x].rec?"made by another factory: build it separately and feed this container":"source container (infinite)"));
   return{ok:true,items,lanes:N,per:Array(N).fill(1),makes:N*T.pmach,h:N*step-1,pitch:step,w:W,mod:false,box:BX,mk,four:true,note:["Four inputs: one machine per lane, "+N+" lane(s)",...note],src:{P,item,mk,spMk,o}};
 }
-function placerLayoutA(P,item,mk,spMk,o={}){if(PLC_PREFAB&&!o.nopf&&!o.mod){const q=pfCompose(P,item,mk,spMk,o),pin=o.eng&&o.eng!=="auto";if(q.ok){const bk=placerBk(),T=placerTile(q,bk);if(T.ok){q.tile=T;q.tileBk=bk.join();return q}plcFb=(PLC_ENG[q.eng]||"engine")+" built a layout but the blocks do not fit: "+T.why;if(pin)return{ok:false,why:"Engine "+o.eng+" built a layout but the blocks do not fit: "+T.why}}else if(pin)return q}const FR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.length===4&&!P.nodes[item].rec.i.some(([x])=>x===item);if(FR){try{return plcFourLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Four: layout not built for this recipe ("+e.message+")"}}}const GR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.some(([x])=>x===item);if(GR&&P.nodes[item].rec.i.length===2){try{return plcGrowthLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": feedback layout not built for this recipe ("+e.message+")"}}}if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": the feedback layout for more than one extra input is not built yet"};const GA=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GA)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GA.item)+": the feedback layout inside a chain is not built yet"};
+function placerLayoutA(P,item,mk,spMk,o={}){if(PLC_PREFAB&&!o.nopf&&!o.mod){const q=pfCompose(P,item,mk,spMk,o),pin=o.eng&&o.eng!=="auto";if(q.ok&&q.fixedTile)return q;if(q.ok){const bk=placerBk(),T=placerTile(q,bk);if(T.ok){q.tile=T;q.tileBk=bk.join();return q}plcFb=(PLC_ENG[q.eng]||"engine")+" built a layout but the blocks do not fit: "+T.why;if(pin)return{ok:false,why:"Engine "+o.eng+" built a layout but the blocks do not fit: "+T.why}}else if(pin)return q}const FR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.length===4&&!P.nodes[item].rec.i.some(([x])=>x===item);if(FR){try{return plcFourLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Four: layout not built for this recipe ("+e.message+")"}}}const GR=P.nodes[item]&&P.nodes[item].rec&&P.nodes[item].rec.i.some(([x])=>x===item);if(GR&&P.nodes[item].rec.i.length===2){try{return plcGrowthLane(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": feedback layout not built for this recipe ("+e.message+")"}}}if(GR)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(item)+": the feedback layout for more than one extra input is not built yet"};const GA=Object.values(P.nodes).find(n=>n.rec&&n.rec.i.some(([x])=>x===n.item));if(GA)return{ok:false,why:"Step 1: only single-input single-recipe plans. Growth recipe "+plnNm(GA.item)+": the feedback layout inside a chain is not built yet"};
 P=plcUnshare(P,item);
   const BX=o.box||PLC_BOX,no=why=>({ok:false,why});
   const tr=plcTree(P,item);if(!tr.ok)return no(tr.why);
@@ -779,7 +780,7 @@ function placerRun(open){
   const dl=$("plnPrev");if(!open&&!dl.open)return;
   const dk=placerDock();plcFb=null;
   const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk}):{ok:false,why:"Pick an item and a rate first"};
-  $("plnEngBadge").textContent=L.ok?(L.eng==="vcol"?"Template: Columns":"Template: Zones"):"";
+  $("plnEngBadge").textContent=L.ok?(L.eng==="cmp"?"Template: Composer":L.eng==="vcol"?"Template: Columns":"Template: Zones"):"";
   if(!L.ok){plcL=null;plcT=null;placerClear();$("pvLine").textContent="";$("plnPrevErr").textContent=/^(Pick an item|internal error)/.test(L.why)?L.why:"Not supported yet: "+String(L.why).replace(/^BL: /,"").replace(/ \(NL used\)$/,"").replace(/^Engine zones built a layout but /,"");$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
@@ -839,7 +840,7 @@ function placerPreview(L){
   plcBig=false;$("plnPrevBig").textContent="";$("plnPlace").textContent="Place";
   const ok=placerBk();plcT=null;
   if(!ok.some(Boolean))return plcFinish(L);
-  if(L.tile&&L.tileBk===ok.join()){plcT=L.tile;return plcFinish(L)}   // tiled once already in placerLayoutA for these ticks
+  if(L.tile&&(L.fixedTile||L.tileBk===ok.join())){plcT=L.tile;return plcFinish(L)}   // tiled once already in placerLayoutA for these ticks
   const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}   // open at once, so the progress bar shows during the search
   const tok=++plcTok,g=placerTileGen(L,ok),t00=performance.now();$("plnPlace").disabled=true;
   // runs steps synchronously for up to 200 ms (small plans finish in the same call as before), then yields
@@ -926,5 +927,5 @@ $("plnBk").addEventListener("change",()=>{try{localStorage.setItem("msfb.block",
 const PLC_DK="msfb.docks",plcDkSave=()=>{try{localStorage.setItem(PLC_DK,JSON.stringify({i:$("plnDkI").checked,o:$("plnDkO").checked,t:$("plnDk").value,ot:$("plnDkOT").value}))}catch(_){}};
 try{const s=JSON.parse(localStorage.getItem(PLC_DK)||"{}");$("plnDkI").checked=!!s.i;$("plnDkO").checked=!!s.o;if(["ind","nrm"].includes(s.t))$("plnDk").value=s.t;if(["","ind","nrm"].includes(s.ot))$("plnDkOT").value=s.ot}catch(_){}
 ["plnDkI","plnDkO","plnDk","plnDkOT"].forEach(id=>$(id).addEventListener("change",()=>{plcDkSave();placerLive()}));
-try{plcEngine(new URLSearchParams(location.search).get("engine")||"bl")}catch(_){plcEngine("bl")}
+try{const v=new URLSearchParams(location.search).get("engine");if(v==="cmp"){CMP_ENGINE=true;plcEngine("bl")}else plcEngine(v||"bl")}catch(_){plcEngine("bl")}
 window.addEventListener("resize",()=>{if($("plnPrev").open)requestAnimationFrame(placerFitView)});

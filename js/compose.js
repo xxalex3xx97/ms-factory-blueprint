@@ -2,17 +2,17 @@
 // cmpSize(P,item,mk,spMk,block): per stage template, S (capacity m(S)), K strips, machines per strip n[s][j].
 // Needs planner.js (plnCb, def, rk), js/tpl/iface.js (TPL_IF_SETS, tplIfSets), js/tpl/bundle.js + registry.js (tplPick).
 const CMP_MAXK=4;
-const cmpNo=why=>({ok:false,why});
+const cmpErr=why=>({ok:false,why});
 const cmpName=it=>typeof plnNm==='function'?plnNm(it):String(it);
 
 function cmpTree(P,item){
   const chain=[];let x=item;
   for(;;){
     const n=P.nodes[x];
-    if(!n||!n.crafter||!n.rec||!plnCb(n.crafter))return cmpNo('No machine builds this recipe');
-    if(/Armoury/i.test(n.crafter))return cmpNo('Armoury');
+    if(!n||!n.crafter||!n.rec||!plnCb(n.crafter))return cmpErr('No machine builds this recipe');
+    if(/Armoury/i.test(n.crafter))return cmpErr('Armoury');
     const cr=n.rec.i.filter(([it])=>P.nodes[it]&&P.nodes[it].crafter);
-    if(cr.length>1)return cmpNo('branching tree (merge/branch not built yet)');
+    if(cr.length>1)return cmpErr('branching tree (merge/branch not built yet)');
     chain.push({item:x,node:n,cls:def(plnCb(n.crafter).id).key,k:n.rec.i.length,rec:rk(n.rec),N:n.machines,pm:n.pmach,rate:n.rate,util:n.util,growth:n.rec.i.some(([it])=>it===x),craftedIn:cr.length?cr[0][0]:null});
     if(!cr.length)break;
     x=cr[0][0];
@@ -23,15 +23,15 @@ function cmpTree(P,item){
 // one build + Edge Interface checks: <=4 lanes per pooled face, feed height. Returns {ok,b} | {ok:false,why}
 function cmpBuild(t,spec,s,last){
   const b=t.build(spec);
-  if(!b||!b.ok)return cmpNo(b&&b.why||'build failed');
+  if(!b||!b.ok)return cmpErr(b&&b.why||'build failed');
   const f=b.iface;
-  if(!f||!f.sets)return cmpNo('template lacks iface.sets');
-  if(f.v!==1)return cmpNo('template not on Edge Interface v1');
+  if(!f||!f.sets)return cmpErr('template lacks iface.sets');
+  if(f.v!==1)return cmpErr('template not on Edge Interface v1');
   const used=f.sets.map((q,i)=>q.n>0?i:-1).filter(i=>i>=0);
-  if(s>0&&used.length*f.M>4)return cmpNo('pool lanes > 4');
-  if(s<last&&used.length>4)return cmpNo('pool lanes > 4');
+  if(s>0&&used.length*f.M>4)return cmpErr('pool lanes > 4');
+  if(s<last&&used.length>4)return cmpErr('pool lanes > 4');
   const hs=tplIfSets(spec.block,spec.S).hs,need=(s>0?f.M:0)+4*spec.raw;
-  if(used.some(i=>need>hs[i]))return cmpNo('feed height');
+  if(used.some(i=>need>hs[i]))return cmpErr('feed height');
   return{ok:true,b};
 }
 
@@ -47,11 +47,11 @@ function cmpDist(info,K,last,eq,ex){
 function cmpSize(P,item,mk,spMk,block){
   const T=cmpTree(P,item);if(!T.ok)return T;
   const st=T.stages,L=st.length,last=L-1,Ss=TPL_IF_SETS[block]?Object.keys(TPL_IF_SETS[block]).map(Number):[];
-  if(!Ss.length)return cmpNo('no block '+block);
+  if(!Ss.length)return cmpErr('no block '+block);
   const info=[];
   for(let s=0;s<L;s++){
     const g=st[s],pk=tplPick(g.cls,g.k,block);
-    if(!pk.ok)return cmpNo(pk.why);
+    if(!pk.ok)return cmpErr(pk.why);
     const base={block,cls:g.cls,rec:g.rec,recObj:g.node.rec,recd:g.node.rec,mk,spMk,main:s?g.node.rec.i.findIndex(([it])=>it===st[s-1].item):0,growth:g.growth,raw:g.k-(s?1:0)};
     let best=null,why='no size fits '+block;
     for(const S of Ss){
@@ -61,18 +61,18 @@ function cmpSize(P,item,mk,spMk,block){
       if(!c.ok){why=c.why;continue}
       if(!best||m>best.m)best={S,m};
     }
-    if(!best)return cmpNo(why);
+    if(!best)return cmpErr(why);
     info.push({g,pk,base,best});
   }
   const fin=info[last].g,eq=fin.rate/fin.pm,ex=fin.N-eq;   // ex = missing share of the partial machine (1-u)
   const minN=Math.min(...info.map(q=>q.g.N));
   let K=Math.max(...info.map(q=>Math.ceil(q.g.N/q.best.m-1e-9))),n;
   for(let extra=0;;extra++){
-    if(K>minN){const q=info.find(q=>q.g.N<K);return cmpNo('K strips needed ('+K+') but stage '+cmpName(q.g.item)+' has only '+q.g.N+' machines (cross-strip merge not built)')}
+    if(K>minN){const q=info.find(q=>q.g.N<K);return cmpErr('K strips needed ('+K+') but stage '+cmpName(q.g.item)+' has only '+q.g.N+' machines (cross-strip merge not built)')}
     n=cmpDist(info,K,last,eq,ex);
     const bad=info.findIndex((q,s)=>n[s].some(v=>v>q.best.m));
     if(bad<0)break;
-    if(extra>=CMP_MAXK)return cmpNo('stage '+cmpName(info[bad].g.item)+' needs more than '+CMP_MAXK+' extra strips');
+    if(extra>=CMP_MAXK)return cmpErr('stage '+cmpName(info[bad].g.item)+' needs more than '+CMP_MAXK+' extra strips');
     K++;
   }
   const stages=[];
@@ -86,7 +86,7 @@ function cmpSize(P,item,mk,spMk,block){
         if(c.ok){pick=S;break}
         why=c.why;
       }
-      if(pick==null)return cmpNo(why);
+      if(pick==null)return cmpErr(why);
       strips.push({S:pick,n:need});
     }
     stages.push({item:cmpName(q.g.item),cls:q.g.cls,tpl:q.pk.id,block,S:q.best.S,N:q.g.N,m:q.best.m,perStrip:n[s].slice(),B:1,strips});
@@ -94,4 +94,21 @@ function cmpSize(P,item,mk,spMk,block){
   const note=[];
   if(K>1)stages.forEach(q=>{const t=q.perStrip.reduce((a,v)=>a+v,0);if(t!==q.N)note.push('Planner N='+q.N+', built '+t+' ('+K+' strips)')});
   return{ok:true,K,stages,note};
+}
+
+// CMP C3: cmpCompose(P,item,mk,spMk,o) -> placerLayout result (fixed tile) | {ok:false,why}. Linear chain of 1-input stages, K strips. Docks not built yet.
+function cmpCompose(P,item,mk,spMk,o={}){
+  const BX=o.box||PLC_BOX,bk=o.bk||PL_ALL[placerBk().indexOf(true)];
+  if(!bk)return cmpErr('no block type selected');
+  if(BX!=='DAT_Container_2')return cmpErr('needs Large Container');
+  if(o.dock&&(o.dock.in||o.dock.out))return cmpErr('docks are not built in the composer yet');
+  const tr=cmpTree(P,item);if(!tr.ok)return tr;
+  const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;
+  const A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages});if(!A.ok)return A;
+  const T=A.T,ext=plcExt(T),ms=T.ms,cnt=f=>ms.filter(f).length,last=sz.stages[sz.stages.length-1];
+  const L={ok:true,eng:'cmp',items:ms,cuts:[],lanes:sz.K,per:last.perStrip.slice(),makes:P.nodes[item].rate,pitch:ext.h+1,w:ext.w,h:ext.h,tall:true,mod:false,box:BX,mk,ports:[],note:sz.note.slice(),src:{P,item,mk,spMk,o},prefab:true,
+    stat:{belts:cnt(b=>PLC_BELT.includes(b.cls)),ug:cnt(b=>PLC_UG.includes(b.cls)),spl:cnt(b=>PLC_SPL.includes(b.cls)),blocks:T.blocks.length,machines:cnt(b=>b.rec),lanes:sz.K,spills:0},
+    dk:o.dock||null,bl:{zoned:true,n:new Array(T.cols-1).fill(0),cmp:{K:sz.K,stages:sz.stages.map(q=>({item:q.item,cls:q.cls,tpl:q.tpl,block:q.block,S:q.S,N:q.N,perStrip:q.perStrip,B:q.B}))}},tile:T,tileBk:'cmp',fixedTile:true};
+  T.L=L;
+  return L;
 }
