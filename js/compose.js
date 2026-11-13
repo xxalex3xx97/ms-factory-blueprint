@@ -136,8 +136,7 @@ function cmpCompose(P,item,mk,spMk,o={}){
   if(BX!=='DAT_Container_2')return cmpErr('needs Large Container');
   const tr=cmpTree(P,item),block=CMP_BLOCKS[PL_ALL.indexOf(bk)];
   let A,sz,stages,cmpI,note,per;
-  const dkw=o.dock&&(o.dock.in||o.dock.out)?o.dock:null,dkn=[],dk=dkw?{mk,in:!!dkw.in,out:!!dkw.out,notes:dkn}:null;
-  if(dkw&&(dkw.in==='ind'||dkw.out==='ind'))dkn.push('Industrial dock not built yet: normal docks used');
+  const dkw=o.dock&&(o.dock.in||o.dock.out)?o.dock:null,dkn=[],dk=dkw?{mk,in:!!dkw.in,out:!!dkw.out,notes:dkn,indIn:dkw&&dkw.in==='ind',indOut:dkw&&dkw.out==='ind'}:null;
   if(tr.ok){
     sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;
     A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages,dk});if(!A.ok)return A;
@@ -152,7 +151,7 @@ function cmpCompose(P,item,mk,spMk,o={}){
   }else return tr;
   if(A.dock){   // C7: raw/oz container descriptors + 'Dock n: assign ...' notes
     cmpI.raw=A.dock.raw;cmpI.oz=A.dock.oz;let n=0;
-    const lines=[...A.dock.raw,...A.dock.oz].map(q=>'Dock '+(++n)+': assign '+q.dd.name+' ('+cmpR1(q.dd.r)+'/min, '+q.dd.n+' dock'+(q.dd.n>1?'s':'')+')');
+    const lines=[...A.dock.raw,...A.dock.oz].map(q=>'Dock '+(++n)+': assign '+q.dd.name+' ('+cmpR1(q.dd.r)+'/min, '+(q.dd.ind?'industrial dock lane group '+(q.dd.u+1):q.dd.n+' dock'+(q.dd.n>1?'s':''))+')');
     note=[...note,...dkn,...lines];
   }else if(dkn.length)note=[...note,...dkn];
   const T=A.T,ext=plcExt(T),ms=T.ms,cnt=f=>ms.filter(f).length;
