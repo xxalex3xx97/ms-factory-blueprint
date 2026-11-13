@@ -87,7 +87,7 @@ function cmpAssembleTree(c){
   // CMP D2: with docks, a raw hub (SRC / FEED) sits at block column 0 (touches the dock edge); its lanes pass through the empty block columns 1..col (x=0..W-1 rot 0, wall step makes UG hops)
   // a row with more raws than W slots (heavy) needs the N/S dock units: its neighbour rows' raw hubs move to bank column 1 so block column 0 stays empty there
   const heavy=new Set(pl.nodes.filter(o=>!o.raw&&o.inKind==='feed'&&o.rec.i.filter(([it])=>!(o.growth&&it===o.key)).length>d.h).map(o=>o.row));
-  const adx=bk==='BPO_Station_03'?2:1,bcol=o=>dk&&dk.in?((o.raw?o.pool:o.col)>=adx&&!heavy.has(o.row)&&(heavy.has(o.row-1)||heavy.has(o.row+1))?adx:0):o.col;
+  const adx=bk==='BPO_Station_03'||bk==='BPO_Station_01'?2:1,bcol=o=>dk&&dk.in?((o.raw?o.pool:o.col)>=adx&&!heavy.has(o.row)&&(heavy.has(o.row-1)||heavy.has(o.row+1))?adx:0):o.col;
   const bank=(h,col,row,rows,nb,bc=0)=>{const e=hubAt(h,dk&&dk.in?bc:col,row,nb);if(e||!dk||!dk.in)return e;for(let cc=bc+1;cc<=col;cc++)for(const y of new Set(rows))for(let x=0;x<W;x++)ms.push({cls:PLC_BELT[mk],x:x+cc*TW,y:y+row*TH,h:0,rot:0,pid:0})};
   for(const o of pl.nodes){
     const p=par(o);
