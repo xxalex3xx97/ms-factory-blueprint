@@ -65,10 +65,10 @@ function blTower(Tw){
   const items=[];let Y=1,sink=null,sinkCols=null;
   if(!Tw.ind){const src={cls:Tw.bx,x:Tw.cx,y:1,rot:0,h:0,pid:0,ct:[{item:Tw.raw,n:0,inf:true}]};if(Tw.dock&&Tw.dock.in==='nrm')src.dk='in';items.push(src)}
   for(let s=0;s<Tw.stages.length;s++){
-    const rowsM=Tw.stages[s].rowsM,Rs=rowsM.length;
+    const SG=Tw.stages[s],rowsM=SG.rowsM,Rs=rowsM.length;   // per-stage cls/mc/rec/M (chains mix machines); tower-level values are fallbacks
     if(s===0&&Tw.ind&&Rs>2)return{ok:false,why:'BL: industrial input allows 2 rows in stage 0'};
     const PS=s===0&&Tw.ind?[0,2]:SP.slice(0,Rs);
-    const st=blStage({mk:Tw.mk,spMk:Tw.spMk,bx:Tw.bx,cx:Tw.cx,Y,mc:Tw.mc,cls:Tw.cls,rec:Tw.rec,rowsM,PS,PN:NP.slice(0,Rs),first:s===0,ind:!!Tw.ind,item:Tw.raw,M:Tw.M});
+    const st=blStage({mk:Tw.mk,spMk:Tw.spMk,bx:Tw.bx,cx:Tw.cx,Y,mc:SG.mc||Tw.mc,cls:SG.cls||Tw.cls,rec:SG.rec||Tw.rec,rowsM,PS,PN:NP.slice(0,Rs),first:s===0,ind:!!Tw.ind,item:Tw.raw,M:SG.M||Tw.M});
     if(!st.ok)return st;
     items.push(...st.items);
     sink={cls:Tw.bx,x:Tw.cx,y:st.Yc,rot:0,h:0,pid:0,ct:[]};items.push(sink);
