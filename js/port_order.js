@@ -1,6 +1,6 @@
 // GENERATED from F:MSBlueprintUnitmodsBlueprintUnitScriptspu_port_data.lua (tooling/gen_port_order.py). Do not edit.
 // cells = game port byte order at rot 0 (config byte i = cells[i]); half cells, origin = machine centre, y down. Rotation: (x,y)->(-y,x) per step (unverified for rot!=0).
-// verified = confirmed in game (Refinery, Assembler); all others rule-derived.
+// verified = confirmed in game (Refinery, Assembler); all others rule-derived. GrowthChamber/Supercomputer: cells = Assembler cells (positions 2 and 4 on every side), verified:true on the USER statement 2026-11-14 + screenshot msedge_GLzZMiQdEr (not seen in game, byte order = Assembler order assumed).
 const PORT_ORDER={
   DAT_AdvancedAssembler:{verified:false,cells:[[9,-4],[9,0],[9,4],[4,9],[0,9],[-4,9],[-9,4],[-9,0],[-9,-4],[-4,-9],[0,-9],[4,-9]]},
   DAT_Assembler:{verified:true,cells:[[5,-2],[5,2],[2,5],[-2,5],[-5,2],[-5,-2],[-2,-5],[2,-5]]},
@@ -16,7 +16,7 @@ const PORT_ORDER={
   DAT_ConveyorBelt3:{verified:false,cells:[[1,0],[0,1],[-1,0],[0,-1]]},
   DAT_ElectroSciLab:{verified:false,cells:[[5,0]]},
   DAT_EnrichmentChamber:{verified:false,cells:[[9,-4],[9,0],[9,4],[4,9],[0,9],[-4,9],[-9,4],[-9,0],[-9,-4],[-4,-9],[0,-9],[4,-9]]},
-  DAT_GrowthChamber:{verified:false,cells:[[5,0],[5,4],[4,5],[0,5],[-5,4],[-5,0],[0,-5],[4,-5]]},
+  DAT_GrowthChamber:{verified:true,cells:[[5,-2],[5,2],[2,5],[-2,5],[-5,2],[-5,-2],[-2,-5],[2,-5]]},
   DAT_LargeConveyorBelt:{verified:false,cells:[[3,0],[0,3],[-3,0],[0,-3]]},
   DAT_MatSciLab:{verified:false,cells:[[3,0]]},
   DAT_QuantumSciLab:{verified:false,cells:[[9,-6],[6,9]]},
@@ -27,7 +27,7 @@ const PORT_ORDER={
   DAT_Splitter:{verified:false,cells:[[1,0],[0,1],[-1,0],[0,-1]]},
   DAT_Splitter_2:{verified:false,cells:[[1,0],[0,1],[-1,0],[0,-1]]},
   DAT_Splitter_3:{verified:false,cells:[[1,0],[0,1],[-1,0],[0,-1]]},
-  DAT_Supercomputer:{verified:false,cells:[[5,0],[5,4],[4,5],[0,5],[-5,4],[-5,0],[0,-5],[4,-5]]},
+  DAT_Supercomputer:{verified:true,cells:[[5,-2],[5,2],[2,5],[-2,5],[-5,2],[-5,-2],[-2,-5],[2,-5]]},
   DAT_TradeConsole:{verified:false,cells:[[5,-2],[5,2],[2,5],[-2,5],[-5,2],[-5,-2],[-2,-5],[2,-5]]},
   DAT_UndergroundBelt:{verified:false,cells:[[-1,0]]},
   DAT_UndergroundBelt_2:{verified:false,cells:[[-1,0]]},

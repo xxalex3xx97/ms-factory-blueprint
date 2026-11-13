@@ -652,13 +652,13 @@ function tplBuild(S){
 TPLM.growth_2_3_4in=(()=>{
 // TPL growth_2_3_4in: DAT_GrowthChamber (5x5) factory-only template for 2, 3 or 4 input recipes (growth recipes use the same layout: the seed is just lane item 0 of the recipe).
 // Spec: vault main-sequence/tasks/2026-11-13-template-contract.md + edge-interface-v1.md. Globals: tplBuild(spec), tplMax(spec). Needs PLC_BELT/PLC_SPL/PLC_UG, pfSplOff, portsOf, dim, RECS, rk (page globals) and js/tpl/iface.js (tplIfSets, tplOutTail, tplDerate, TPL_IF_SIDE). Tests: tests/tpl_growth_2_3_4in.mjs.
-// GrowthChamber ports (rot 0, model.js portsOf): 2 per face (N x=2,4; E y=2,4; S x=2,4; W y=2,4), dir null = BIDIRECTIONAL, all toggleable. A port is input/output by item flow (user fact, no face rule).
+// GrowthChamber ports (rot 0, model.js portsOf): 2 per face at positions 2 and 4 (N x=1,3; E y=1,3; S x=1,3; W y=1,3; user 2026-11-14, same as Assembler), dir null = BIDIRECTIONAL, all toggleable. A port is input/output by item flow (user fact, no face rule).
 // EDGE INTERFACE v1: sets S per block (1x1/1x2 1; 2x2 3, k=4 2; 2x2c 2), each set = one machine row group at origin o_s with its own lanes (rows o,o+1 + side rows k3 o+8, k4 o+7,o+8) and ONE out row o_s at x=W-1. Machines x<=W-3, trunk x=W-2 (tplOutTail). n fills set by set; empty sets keep belt stubs. Manifold splitters have PRIORITY toward their machine (b.pr) so machines fill in order.
 // LAYOUT of one set (rot 0, pitch p, y offsets from the set top yo; machine y=yo+2..yo+6):
-//  N side (all k): lane A far row yo+0 (splitter at X+4, feeder belt (X+4,yo+1) down), lane B near row yo+1 (splitter at X+2 = the N0 port cell, UG hop over the A feeder). Same as blRow2.
-//  k=2: collector row yo+7 = S port row; output port S4 (x=2); S5 off. rows 8.
-//  k=3: input C = far lane on row yo+8 (splitter X+2, feeder belt up at (X+2,yo+7)); output port S5 (x=4) on collector row yo+7, which UG-hops the C feeders of the next machines. rows 9.
-//  k=4: pitch 6. C near lane row yo+7 (splitter X+2, UG hop over D feeder), D far lane row yo+8 (splitter X+4, feeder up at (X+4,yo+7)). Output port E2 (y=yo+4) -> gap column X+5 down, vertical UG under both S lanes (yo+6 -> yo+9), collector row yo+10. rows 11. UNVERIFIED: output on an E port, gap column shared with the next machine's (off) W port.
+//  N side (all k): lane A far row yo+0 (splitter at X+3, feeder belt (X+3,yo+1) down), lane B near row yo+1 (splitter at X+1 = the N0 port cell, UG hop over the A feeder). Same as blRow2.
+//  k=2: collector row yo+7 = S port row; output port S4 (x=1); S5 off. rows 8.
+//  k=3: input C = far lane on row yo+8 (splitter X+1, feeder belt up at (X+1,yo+7)); output port S5 (x=3) on collector row yo+7, which UG-hops the C feeders of the next machines. rows 9.
+//  k=4: pitch 6. C near lane row yo+7 (splitter X+1, UG hop over D feeder), D far lane row yo+8 (splitter X+3, feeder up at (X+3,yo+7)). Output port E2 (y=yo+3) -> gap column X+5 down, vertical UG under both S lanes (yo+6 -> yo+9), collector row yo+10. rows 11. UNVERIFIED: output on an E port, gap column shared with the next machine's (off) W port.
 // Block floors (planner cells): 1x1 14x14, 1x2 30x14, 2x2 30x30, 2x2c 30x30 (2x2c ports rows 4..25).
 const TPLG_FLOOR={'1x1':[14,14],'1x2':[30,14],'2x2':[30,30],'2x2c':[30,30]};
 const TPLG_CAP=[60,120,180];
@@ -722,36 +722,36 @@ function tplBuild(spec){
   const rowOf=(yo,n)=>{
     for(let i=0;i<n;i++)it(cls,XS(i),yo+2,0,{off,rec:spec.rec});
     const last=n-1;
-    const ing=(x,c,lo,hi)=>{const v=ix(x,c);return v>=lo&&v<hi},hop=x=>ing(x,3,0,last)||ing(x,5,0,last);   // hop: UG over the next machine's feeder column (offset 4)
-    for(let x=0;x<=XS(last)+4;x++){if(ing(x,4,0,n))S(x,yo,['E','S'],0);else B(x,yo,0)}
-    for(let i=0;i<n;i++)B(XS(i)+4,yo+1,1);
-    for(let x=0;x<=XS(last)+2;x++){
-      if(ing(x,2,0,n)){S(x,yo+1,['E','S'],0);continue}
-      if(ing(x,4,0,last))continue;
+    const ing=(x,c,lo,hi)=>{const v=ix(x,c);return v>=lo&&v<hi},hop=x=>ing(x,2,0,last)||ing(x,4,0,last);   // hop: UG over the next machine's feeder column (offset 3)
+    for(let x=0;x<=XS(last)+3;x++){if(ing(x,3,0,n))S(x,yo,['E','S'],0);else B(x,yo,0)}
+    for(let i=0;i<n;i++)B(XS(i)+3,yo+1,1);
+    for(let x=0;x<=XS(last)+1;x++){
+      if(ing(x,1,0,n)){S(x,yo+1,['E','S'],0);continue}
+      if(ing(x,3,0,last))continue;
       if(hop(x)){U(x,yo+1,0);continue}
       B(x,yo+1,0);
     }
     const yc=tplLaneRows(k,yo).out;
     if(k===2){
-      for(let x=XS(0)+2;x<=Fw-3;x++)B(x,yo+7,0);
+      for(let x=XS(0)+1;x<=Fw-3;x++)B(x,yo+7,0);
     }else if(k===3){
-      for(let x=0;x<=XS(last)+2;x++){if(ing(x,2,0,n))S(x,yo+8,['E','N'],2);else B(x,yo+8,0)}
-      for(let i=0;i<n;i++)B(XS(i)+2,yo+7,3);
-      for(let x=XS(0)+4;x<=Fw-3;x++){
-        if(ing(x,2,1,n))continue;   // C feeder column of machine j>=1
-        if(ing(x,1,1,n)||ing(x,3,1,n)){U(x,yo+7,0);continue}
+      for(let x=0;x<=XS(last)+1;x++){if(ing(x,1,0,n))S(x,yo+8,['E','N'],2);else B(x,yo+8,0)}
+      for(let i=0;i<n;i++)B(XS(i)+1,yo+7,3);
+      for(let x=XS(0)+3;x<=Fw-3;x++){
+        if(ing(x,1,1,n))continue;   // C feeder column of machine j>=1
+        if(ing(x,0,1,n)||ing(x,2,1,n)){U(x,yo+7,0);continue}
         B(x,yo+7,0);
       }
     }else{
-      for(let x=0;x<=XS(last)+2;x++){
-        if(ing(x,2,0,n)){S(x,yo+7,['E','N'],2);continue}
-        if(ing(x,4,0,last))continue;
+      for(let x=0;x<=XS(last)+1;x++){
+        if(ing(x,1,0,n)){S(x,yo+7,['E','N'],2);continue}
+        if(ing(x,3,0,last))continue;
         if(hop(x)){U(x,yo+7,0);continue}
         B(x,yo+7,0);
       }
-      for(let x=0;x<=XS(last)+4;x++){if(ing(x,4,0,n))S(x,yo+8,['E','N'],2);else B(x,yo+8,0)}
-      for(let i=0;i<n;i++)B(XS(i)+4,yo+7,3);
-      for(let i=0;i<n;i++){const x=XS(i)+5;B(x,yo+4,1);B(x,yo+5,1);U(x,yo+6,1);U(x,yo+9,1)}
+      for(let x=0;x<=XS(last)+3;x++){if(ing(x,3,0,n))S(x,yo+8,['E','N'],2);else B(x,yo+8,0)}
+      for(let i=0;i<n;i++)B(XS(i)+3,yo+7,3);
+      for(let i=0;i<n;i++){const x=XS(i)+5;B(x,yo+3,1);B(x,yo+4,1);B(x,yo+5,1);U(x,yo+6,1);U(x,yo+9,1)}
       for(let x=XS(0)+5;x<=Fw-3;x++)B(x,yo+10,0);
     }
     tplOutTail(items,{bc,W:Fw,yc,yo});
@@ -793,7 +793,7 @@ TPLM.special_machines=(()=>{
 var TPL_BLK={'1x1':[14,14,'BPO_Station_01'],'1x2':[30,14,'BPO_Station_2x1'],'2x2':[30,30,'BPO_Station_02'],'2x2c':[30,30,'BPO_Station_03']};
 var TPL_CAP=[60,120,180];
 // per class: port x positions on the N/S faces at rot 0. inX[i] = column of input item i (i=0 direct feeder, i=1 lane with underpass), xo = output column.
-var TPL_MC={DAT_Supercomputer:{w:5,h:5,inX:[4,2],xo:2},DAT_RelicSynthesizer:{w:9,h:9,inX:[4],xo:4}};
+var TPL_MC={DAT_Supercomputer:{w:5,h:5,inX:[3,1],xo:1},DAT_RelicSynthesizer:{w:9,h:9,inX:[4],xo:4}};
 function tplRec(spec){
   const d=def(spec.cls),r=recsOf(d).find(x=>rkm(x,spec.rec));
   return r||null;

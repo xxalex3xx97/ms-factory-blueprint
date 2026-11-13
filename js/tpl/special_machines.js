@@ -8,7 +8,7 @@
 var TPL_BLK={'1x1':[14,14,'BPO_Station_01'],'1x2':[30,14,'BPO_Station_2x1'],'2x2':[30,30,'BPO_Station_02'],'2x2c':[30,30,'BPO_Station_03']};
 var TPL_CAP=[60,120,180];
 // per class: port x positions on the N/S faces at rot 0. inX[i] = column of input item i (i=0 direct feeder, i=1 lane with underpass), xo = output column.
-var TPL_MC={DAT_Supercomputer:{w:5,h:5,inX:[4,2],xo:2},DAT_RelicSynthesizer:{w:9,h:9,inX:[4],xo:4}};
+var TPL_MC={DAT_Supercomputer:{w:5,h:5,inX:[3,1],xo:1},DAT_RelicSynthesizer:{w:9,h:9,inX:[4],xo:4}};
 function tplRec(spec){
   const d=def(spec.cls),r=recsOf(d).find(x=>rkm(x,spec.rec));
   return r||null;
