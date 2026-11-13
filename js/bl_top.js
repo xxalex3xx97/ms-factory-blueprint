@@ -19,8 +19,8 @@ function blTop(P,item,mk,spMk,o={}){
     if(nodes.filter(n=>!n.ins[0].crafted).length!==1)return no('non-linear (more than one raw input)');
     for(let k=1;k<nodes.length;k++)if(nodes[k].ins[0].item!==nodes[k-1].item)return no('non-linear chain');
     if(dock&&dock.out==='ind')return no('industrial output dock');
-    if(o.eng==='zones'){if(dock&&(dock.in||dock.out))return no('zones do not support docks');const Z=blTopZ(P,item,mk,spMk,nodes,BX,o);return Z.ok?Z:{ok:false,why:Z.why}}
-    if(o.eng!=='tower'&&!(dock&&(dock.in||dock.out))){const Z=blTopZ(P,item,mk,spMk,nodes,BX,o);if(Z.ok)return Z}   // Z3: zoned single stage first, old tower on refusal
+    if(o.eng==='zones'){if(dock&&(dock.in==='ind'||dock.out==='ind'))return no('zones do not support industrial docks');const Z=blTopZ(P,item,mk,spMk,nodes,BX,o);return Z.ok?Z:{ok:false,why:Z.why}}
+    if(o.eng!=='tower'&&!(dock&&(dock.in==='ind'||dock.out==='ind'))){const Z=blTopZ(P,item,mk,spMk,nodes,BX,o);if(Z.ok)return Z}   // Z3: zoned single stage first, old tower on refusal
     const ind=!!(dock&&dock.in==='ind'),cap=MKS[mk][1],bw=dim({cls:BX,rot:0}).w,ps=portsOf({cls:BX,x:0,y:0,rot:0,off:[]});
     const Rmax=Math.min(3,ps.filter(p=>p.f==='S').length,ps.filter(p=>p.f==='N').length);
     const info=nodes.map(n=>{
@@ -100,10 +100,21 @@ function blTopMulti(P,item,mk,spMk,o,Z,nodes,BX,dock){
     note:['Block engine: '+K+' tower(s), '+nodes.length+' stage(s), rows per stage '+B.r.join('/')+' (2-input merge, lane)',...(dock&&dock.out==='nrm'?['Risk: normal output dock has 2 ports (240/min per tower)']:[]),...(P.nofp||[]).map(x=>plnNm(x)+' comes from the Deep Space Observatory block (not placed)')],
     src:{P,item,mk,spMk,o},prefab:true,stat,dk:dock&&(dock.in||dock.out)?dock:null,bl:{K,n:B.n,r:B.r,M:info.map(x=>x.M),Rmax}};
 }
-// blTopZ (H3, H4): zoned chain. Stage s (producer first): block 0 = IZ (input containers, west); FB_s = block s+1 (machine rows, sink containers at its east end; the next stage's input rows run from that sink into block s+2). K stacks at Y=30k, each its own strip. Single raw input, Large Container only, no dock. Refuses {ok:false,why} so blTop falls back to the tower.
+// H6b: container rows for a horizontal dock. Container j at local y a_j=16k+5 (its rows hold the dock lanes M=16k+6, M+1=16k+7). Port rows split across the containers (n_j rows each, <=4). Returns {ca,py} or null when c>2.
+function blDockRows(yRow,c,ya){
+  const R=yRow.length;if(c>2)return null;
+  const ca=c===1?[Math.abs(5-ya)<=Math.abs(21-ya)?5:21]:[5,21],n=c===1?[R]:[Math.ceil(R/2),R-Math.ceil(R/2)],py=[];
+  n.forEach((nj,j)=>{for(let i=0;i<nj;i++)py.push(ca[j]+Math.floor((4-nj)/2)+i)});
+  return{ca,py};
+}
+// blYaOf: the container row the vertical/row layout picks (same formula as blHIZ / blHFB).
+function blYaOf(yRow,c){const yMid=(yRow[0]+yRow[yRow.length-1])/2;return Math.min(Math.max(Math.floor(yMid-2*c),1),29-4*c)}
+// blTopZ (H3, H4, H6b): zoned chain. Stage s (producer first): block 0 = IZ (input containers, west); FB_s = block s+1 (machine rows, sink containers at its east end; the next stage's input rows run from that sink into block s+2). K stacks at Y=30k, each its own strip. Single raw input, Large Container only. Normal docks (H6b): IZ containers dk 'in' and last-stage sinks dk 'out'. Industrial docks refuse. Refuses {ok:false,why} so blTop falls back to the tower.
 function blTopZ(P,item,mk,spMk,nodes,BX,o){
   const no=why=>({ok:false,why:'BL: zone '+why});
   if(BX!=='DAT_Container_2')return no('needs Large Container');
+  const dock=o.dock||null,dIn=!!(dock&&dock.in==='nrm'),dOut=!!(dock&&dock.out==='nrm');
+  if(dock&&(dock.in==='ind'||dock.out==='ind'))return no('industrial dock not yet');
   const S=nodes.length,cap=MKS[mk][1],bw=dim({cls:BX,rot:0}).w;
   const st=nodes.map(n=>{const mc=blMachine(n.cls);if(!mc.ok)return null;const fi=P.edges.filter(e=>e.from===n.ins[0].item&&e.to===n.item).reduce((a,e)=>a+e.flow,0)/n.N;return{n,mc,fi,PH:mc.h+2,RB:BL.RB(mc.h+2)}});
   if(st.some(x=>!x))return no('machine ports');
@@ -112,15 +123,20 @@ function blTopZ(P,item,mk,spMk,nodes,BX,o){
   const B=blNK(nodes.map(n=>n.N),Mp,st.map(x=>x.RB)),K=B.K,r=B.n.map((v,s)=>Math.ceil(v/Mp[s]));
   const M=Mp,y0=st.map((x,s)=>r[s]*x.PH===30?0:1);
   for(let s=0;s<S;s++)if(blRW(r[s],st[s].mc.w,s<S-1?r[s+1]:0).M<M[s])return no('machine does not fit the zone width');   // pass 2: exact rows of the next stage
+  const rowsOf=s=>Array.from({length:r[s]},(_,j)=>y0[s]+st[s].PH*j);
+  const yIn=rowsOf(0),cIn=Math.ceil(r[0]/4),dI=dIn?blDockRows(yIn,cIn,blYaOf(yIn,cIn)):null;
+  if(dIn&&!dI)return no('dock needs <=2 containers per stack');
+  const yO=rowsOf(S-1).map(y=>y+st[S-1].PH-1),cO=Math.ceil(r[S-1]/4),dO=dOut?blDockRows(yO,cO,blYaOf(yO,cO)):null;
+  if(dOut&&!dO)return no('dock needs <=2 containers per stack');
   const items=[];
   for(let k=0;k<K;k++){
-    const Y=30*k,iz=blHIZ({mk,bx:BX,raw:nodes[0].ins[0].item,R:r[0],P:st[0].PH,y0:y0[0],Y});
+    const Y=30*k,iz=blHIZ({mk,bx:BX,raw:nodes[0].ins[0].item,R:r[0],P:st[0].PH,y0:y0[0],Y,ca:dI&&dI.ca,pyI:dI&&dI.py,dock:dIn});
     items.push(...iz.items);
     const sinks=[];
     for(let s=0;s<S;s++){
-      const c=s<S-1?Math.ceil(Math.max(r[s],r[s+1])/4):undefined;
+      const last=s===S-1,c=s<S-1?Math.ceil(Math.max(r[s],r[s+1])/4):undefined;
       if(s<S-1&&4*c<r[s+1])return no('next stage rows');
-      const fk=blHFB({mk,spMk,cls:nodes[s].cls,rec:nodes[s].rec,mc:st[s].mc,M:M[s],R:r[s],Y,y0:y0[s],bx:BX,B:30*(s+1),nextR:s<S-1?r[s+1]:0,c});
+      const fk=blHFB({mk,spMk,cls:nodes[s].cls,rec:nodes[s].rec,mc:st[s].mc,M:M[s],R:r[s],Y,y0:y0[s],bx:BX,B:30*(s+1),nextR:s<S-1?r[s+1]:0,c,ca:last&&dO?dO.ca:undefined,pyO:last&&dO?dO.py:undefined,dock:last&&dOut});
       if(!fk.ok)return no(fk.why);
       items.push(...fk.items);sinks.push(fk);
     }
@@ -135,7 +151,9 @@ function blTopZ(P,item,mk,spMk,nodes,BX,o){
   const cuts=[];for(let s=1;s<=S;s++)cuts.push(30*s);
   const ports=[];   // H3: sink containers sit inside each FB east end; no OZ port list
   const stat={belts,ug:0,spl,blocks:K*(S+1),machines,lanes:1,spills:0};
+  const note=['Block engine: zoned tower (IZ west | FB east), '+S+' stage(s), '+r.map(v=>v*K).join('/')+' rows, '+K+' stack(s)'];
+  if(dOut)note.push('Risk: normal output dock has 2 ports');
   return{ok:true,eng:'zones',items,cuts,lanes:1,per:[machines],makes:K*r[last]*M[last]*nodes[last].fo,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
-    note:['Block engine: zoned tower (IZ west | FB east), '+S+' stage(s), '+r.map(v=>v*K).join('/')+' rows, '+K+' stack(s)'],
-    src:{P,item,mk,spMk,o},prefab:true,stat,dk:null,bl:{K,n:nodes.map(n=>n.N),r:r.map(v=>v*K),M,Rmax:4,zoned:true,stacks:K}};
+    note,
+    src:{P,item,mk,spMk,o},prefab:true,stat,dk:dock&&(dock.in||dock.out)?dock:null,bl:{K,n:nodes.map(n=>n.N),r:r.map(v=>v*K),M,Rmax:4,zoned:true,stacks:K}};
 }

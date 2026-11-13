@@ -215,8 +215,8 @@ function blHA(yRow,c,ya,side,xp,pyIn){
 function blHIZ(S){
   const {mk,bx,raw,R,P,y0,Y}=S,bc=PLC_BELT[mk],c=Math.ceil(R/4),ncol=Math.ceil(R/2),xp=28-ncol,cx=xp-4,items=[];
   const yR=Array.from({length:R},(_,j)=>y0+P*j),yMid=(yR[0]+yR[R-1])/2,ya=Math.min(Math.max(Math.floor(yMid-2*c),1),29-4*c);
-  const A=blHA(yR,c,ya,'in',xp),bt=(x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});
-  for(let j=0;j<c;j++)items.push({cls:bx,x:cx,y:Y+ya+4*j,rot:0,h:0,pid:0,ct:[{item:raw,n:0,inf:true}]});
+  const A=blHA(yR,c,ya,'in',xp,S.pyI),bt=(x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});   // H6b: S.pyI explicit port rows
+  for(let j=0;j<c;j++)items.push({cls:bx,x:cx,y:Y+(S.ca?S.ca[j]:ya+4*j),rot:0,h:0,pid:0,ct:[{item:raw,n:0,inf:true}],...(S.dock?{dk:'in'}:{})});   // H6b: S.ca container rows, dk 'in' for a normal input dock
   for(let j=0;j<R;j++){
     const yI=Y+yR[j],py=Y+A.py[j],d=A.dir[j];
     if(d===0){for(let x=xp;x<=29;x++)items.push(bt(x,yI,0));continue}
@@ -234,8 +234,8 @@ function blHFB(S){
   const {mk,spMk,cls,rec,mc,M,R,Y,y0,bx,B=30,nextR=0}=S,P=mc.h+2,bc=PLC_BELT[mk],c=S.c||Math.ceil(R/4),items=[];
   const xc0=nextR?B+24-Math.ceil(nextR/2):B+25,xp=nextR?xc0-1:B+24;   // H4: non-last sink leaves its E face to the next stage's input
   const yR=Array.from({length:R},(_,j)=>y0+P*j),yO=yR.map(y=>y+P-1),yMid=(yO[0]+yO[R-1])/2,ya=Math.min(Math.max(Math.floor(yMid-2*c),1),29-4*c);
-  const A=blHA(yO,c,ya,'out',xp),X0=B+1+(mc.xin===0?1:0),yOut=[],exCols=[];
-  for(let j=0;j<c;j++)items.push({cls:bx,x:xc0,y:Y+ya+4*j,rot:0,h:0,pid:0,ct:[]});
+  const A=blHA(yO,c,ya,'out',xp,S.pyO),X0=B+1+(mc.xin===0?1:0),yOut=[],exCols=[];   // H6b: S.pyO explicit port rows
+  for(let j=0;j<c;j++)items.push({cls:bx,x:xc0,y:Y+(S.ca?S.ca[j]:ya+4*j),rot:0,h:0,pid:0,ct:[],...(S.dock&&!nextR?{dk:'out'}:{})});   // H6b: S.ca rows, dk 'out' on the last stage
   for(let j=0;j<R;j++){
     const d=A.dir[j],xcol=d===0?xp:A.col[j],py=A.py[j];
     const r=blRow({mk,spMk,cls,rec,mc,m:M,X0,yIn:Y+yR[j],colX:B,xEx:xcol});

@@ -20,6 +20,7 @@ function nlIndAsm(){const B=[],K=[],rg=(a,b)=>Array.from({length:b-a+1},(_,i)=>a
   return{boxes:B,belts:K}}
 // post-cut: add dock blocks, assemblies and belts to the tile result T (ms/blocks copies); {ok:false,why} when a dock does not fit
 function nlDockApply(L,T,cls){
+  const hz=!!(L.bl&&L.bl.zoned);   // H6b: zoned (horizontal) layout: docks west of the IZ / east of the last FB
   const ms=T.ms.map(q=>({...q})),blocks=T.blocks.map(q=>({...q})),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,
     fl=floorRect({cls,x:0,y:0,h:0,rot:0}),bc=PLC_BELT[L.mk],addM=[],no=why=>({ok:false,why}),
     belt=(x,y,rot,t='p')=>addM.push({cls:bc,x,y,h:0,rot,pid:0,dk:t}),
@@ -30,9 +31,20 @@ function nlDockApply(L,T,cls){
     asm=nlIndAsm(),
     ad=cls===plcCls('BPO_Station_03')?1:0,A=16*ad,adc=plcCls('BPO_StationAdapter_01'),ads=new Set(),   // 2x2 C: a station adapter between tile and dock moves the dock stack out one cell
     adp=(c,y,rot)=>{const k=c+'|'+y;if(!ads.has(k)){ads.add(k);blocks.push({cls:adc,x:c*d.w,y,rot})}};
+  if(hz&&ad)return no('horizontal dock on 2x2 C');
+  const hzM=(g,k)=>g*TH+16*k+6,hzSlot=(q,bh)=>{const g=Math.floor(q.y/TH);for(let k=0;k<d.h;k++){const M=hzM(g,k);if(q.y<=M&&q.y+bh-1>=M+1)return{g,k,M}}return null};
   // (1) Normal input: one dock per raw container
   const used=new Set();
   for(const q of ms.filter(q=>q.dk==='in')){
+    if(hz){
+      if(cx(q.x)!==0)return no('dock slot misaligned');
+      const h=hzSlot(q,dim(q).h);
+      if(!h)return no('dock slot misaligned');
+      if(used.has(h.g+'|'+h.k))return no('two input docks in one slot');
+      used.add(h.g+'|'+h.k);
+      for(const y of[h.M,h.M+1])for(let x=-1;x<=q.x-1;x++)belt(x,y,0);
+      blocks.push({cls:plcCls('BPO_Dock'),x:-1,y:h.g*d.h+h.k,rot:2});
+      continue}
     const c=cx(q.x),k=slot(q,c);
     if(k===undefined||q.y>=TH)return no('dock slot misaligned');
     if(used.has(c+'|'+k))return no('two input docks in one slot');
@@ -54,6 +66,15 @@ function nlDockApply(L,T,cls){
     for(const q of E)for(let y=oy+13;y<=-1;y++)belt(q.x,y,1)}
   // (3) Normal output: container moved to the block floor bottom, belts to the dock ports
   for(const q of ms.filter(q=>q.dk==='out')){
+    if(hz){
+      const c=cx(q.x),Fbx=c*TW+fl.w-1,bq=dim(q).w;
+      if(c!==L.bl.n.length)return no('dock slot misaligned');
+      if(q.x+bq!==Fbx)return no('dock slot misaligned');
+      const h=hzSlot(q,dim(q).h);
+      if(!h)return no('dock slot misaligned');
+      for(const y of[h.M,h.M+1])for(let x=Fbx;x<=Fbx+1;x++)belt(x,y,0);
+      blocks.push({cls:plcCls('BPO_Dock'),x:(c+1)*d.w,y:h.g*d.h+h.k,rot:0});
+      continue}
     const c=cx(q.x),g=Math.floor(q.y/TH),Fb=g*TH+fl.h-1,k=slot(q,c),bh=dim(q).h,dy=Fb-bh-q.y;
     if(k===undefined||dy<0)return no('dock slot misaligned');
     if(below(c,g))return no('a block lies below the output dock');
@@ -77,6 +98,8 @@ function nlDockApply(L,T,cls){
   // dock blocks above row 0 shift the whole plan down
   const sh=-Math.min(0,...blocks.map(b=>b.y)),all=[...ms,...addM];
   if(sh){for(const m of all)m.y+=16*sh;for(const b of blocks)b.y+=sh}
+  const shx=-Math.min(0,...blocks.map(b=>b.x));   // H6b: x shift (horizontal docks west of block 0)
+  if(shx){for(const m of all)m.x+=16*shx;for(const b of blocks)b.x+=shx}
   const seen=new Set();let ov=0;   // same overlap count as placerCut
   for(const m of all){const e=dim(m);for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++){const kk=K(m.x+i,m.y+j);if(seen.has(kk))ov++;else seen.add(kk)}}
   return{...T,ms:all,blocks,ov}}
