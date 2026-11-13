@@ -36,6 +36,15 @@ await pg.evaluate(() => {
       it = n;
     }
   };
+  // wall hop (entrance and exit in different blocks): starts anywhere in its block, vertical (same x, belt rot vertical), crosses exactly one wall (adjacent blocks), length <= ugMax. -> error text | null
+  window.wallBad = (p, P, ugMax) => {
+    const bu = Math.floor(p.u.y / P), bt = Math.floor(p.t.y / P);
+    if (bu === bt) return null;
+    if (p.u.x !== p.t.x) return 'wall hop sideways @' + p.u.x + ',' + p.u.y;
+    if (Math.abs(bt - bu) !== 1) return 'wall hop crosses ' + Math.abs(bt - bu) + ' walls @' + p.u.x + ',' + p.u.y;
+    if (p.n > ugMax) return 'wall hop length ' + p.n + ' > ' + ugMax + ' @' + p.u.x + ',' + p.u.y;
+    return null;
+  };
   window.chkRoute = (r, a, c) => {   // a: {W,H,rowsN,mk,sources,sinks,ugMax}
     const P = a.H + 2, out = [], own = new Map();
     r.nets.forEach(n => n.cells.forEach(k => own.set(k, n.id)));
@@ -47,7 +56,7 @@ await pg.evaluate(() => {
     const pr = ugPairs(ug); if (pr.length * 2 !== ug.length) out.push('unpaired ug');
     pr.forEach(p => { if (p.n > a.ugMax) out.push('span ' + p.n + ' > ' + a.ugMax) });
     // walls: hops cross only entrance->exit pairs; no item in wall (checked above); no UG pair spans a wall except last->first cell
-    pr.forEach(p => { if (Math.floor(p.u.y / P) !== Math.floor(p.t.y / P) && p.u.x !== p.t.x) out.push('bad wall span') });
+    pr.forEach(p => { const w = wallBad(p, P, a.ugMax); if (w) out.push(w) });
     // lanes: own-lane flood and global flood, no foreign cell
     r.nets.forEach(n => {
       const mine = r.items.filter(b => own.get(b.x + ',' + b.y) === n.id);
@@ -91,6 +100,10 @@ for (const [name, a, need] of cases) {
     if (need.floor) check(res.chk.nFloorHops >= 1, `case ${name}: perpendicular floor hop used`);
   }
 }
+// wall-hop checker mutations: a legal hop passes, a sideways / two-wall / over-long hop must fail
+const wb = await pg.evaluate(ugMax => { const P = 32, h = (ux, uy, tx, ty, n) => wallBad({u: {x: ux, y: uy}, t: {x: tx, y: ty}, n}, P, ugMax); return {ok: h(5, 29, 5, 34, 5), side: h(5, 29, 6, 34, 5), two: h(5, 29, 5, 66, 5), long: h(5, 29, 5, 34, ugMax + 1), floor: h(5, 3, 7, 10, 7)} }, ugMax);
+check(wb.ok === null && wb.floor === null, 'wallBad: legal wall hop and floor hop pass');
+check(!!wb.side && !!wb.two && !!wb.long, 'wallBad mutations (sideways, two walls, over-long) fail: ' + [wb.side, wb.two, wb.long].join(' | '));
 // (d) impossible: column x=1 blocked, and more sources than sinks
 const d1 = await pg.evaluate(a => { const r = cmpRoute(a); return {ok: r.ok, why: r.why} }, {...base, ugMax, blocked: [...Array(96)].map((_, y) => '1,' + y), sources: [{x: 0, y: 5, item: 'A'}], sinks: [{x: 29, y: 5, item: 'A'}]}).catch(e => ({ok: 'err ' + e.message}));
 check(d1.ok === false && d1.why === 'merge routing failed', 'case d: blocked column -> ok:false merge routing failed');
