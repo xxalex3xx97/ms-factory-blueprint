@@ -4,22 +4,22 @@ const cmpBt=(bc,x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});
 const cmpNo=why=>({ok:false,why,items:[]});
 // largest group of rows that share a flow direction (= columns blHA needs)
 const cmpNg=A=>Math.max(0,...[-1,1].map(d=>A.dir.filter(v=>v===d).length));
-// cmpPool(S): S={W,H,mk,bx,item,raw,inRows,outRows,ind?,ca?,pyOut?,dock?}. Container(s) 4x4 at (cx,ya+4j); west ports x=cx-1, east ports x=cx+4. raw=true: infinite source container(s).
+// cmpPool(S): S={W,H,mk,bx,item,raw,inRows,outRows,ind?,ca?,pyOut?,pyIn?,dock?,dkx?}. dock (cmp_dock.js cmpDockHub): ca = container rows (one per dock cell), SRC container flush x=0, OZ container flush east, dk tags. Container(s) 4x4 at (cx,ya+4j); west ports x=cx-1, east ports x=cx+4. raw=true: infinite source container(s).
 function cmpPool(S){
   const {W,H,mk,bx,item,raw,inRows,outRows}=S,bc=PLC_BELT[mk],Ri=inRows.length,Ro=outRows.length,bt=(x,y,rot)=>cmpBt(bc,x,y,rot);
   if(Ri&&Ro&&(Ri>4||Ro>4))return cmpNo('pool needs <=4 lanes per face (in '+Ri+', out '+Ro+')');
-  const c=Math.ceil(Math.max(Ri,Ro,1)/4),all=[...inRows,...outRows],mid=all.length?(Math.min(...all)+Math.max(...all))/2:(H-1)/2;
+  const c=S.ca?S.ca.length:Math.ceil(Math.max(Ri,Ro,1)/4),all=[...inRows,...outRows],mid=all.length?(Math.min(...all)+Math.max(...all))/2:(H-1)/2;
   const ya=Math.min(Math.max(Math.floor(mid-2*c),1),H-1-4*c);
-  if(H-1-4*c<1)return cmpNo('pool block too short (rows)');
-  const AW=Ri?blHA(inRows,c,ya,'out',0):null,ngW=AW?cmpNg(AW):0;
-  const cx=S.dock&&!Ro?W-5:(Ri?ngW+2:1);   // OZ dock: container flush with the east edge (q.x+4===W-1)
+  if(!S.ca&&H-1-4*c<1)return cmpNo('pool block too short (rows)');
+  const AW=Ri?blHA(inRows,c,ya,'out',0,S.pyIn):null,ngW=AW?cmpNg(AW):0;
+  const cx=S.dock&&!Ro?W-5:(Ri?ngW+2:S.dock?0:1);   // OZ dock: container flush with the east edge (q.x+4===W-1)
   if((Ri&&cx-1-ngW<1)||cx>W-5)return cmpNo('pool block too narrow (rows)');
   const AE=Ro?blHA(outRows,c,ya,'in',cx+4,S.pyOut):null,ngE=AE?cmpNg(AE):0;
   if(Ro&&cx+4+ngE+1>W-2)return cmpNo('pool block too narrow (rows)');
   const items=[];
-  for(let j=0;j<(S.ind?0:c);j++)items.push({cls:bx,x:cx,y:S.ca?S.ca[j]:ya+4*j,rot:0,h:0,pid:0,ct:raw?[{item,n:0,inf:true}]:[],...(S.dock?(raw?{dk:'in'}:!Ro?{dk:'out'}:{}):{})});
+  for(let j=0;j<(S.ind?0:c);j++)items.push({cls:bx,x:cx,y:S.ca?S.ca[j]:ya+4*j,rot:0,h:0,pid:0,ct:raw?[{item,n:0,inf:true}]:[],...(S.dock?(raw?{dk:'in',dkx:S.dkx}:!Ro?{dk:'out',dkx:S.dkx}:{}):{})});
   if(Ri){   // blHFB 'out' loop: belts to the jog column, vertical, corner at the port row, belts to the container W face
-    const A=blHA(inRows,c,ya,'out',cx-1);
+    const A=blHA(inRows,c,ya,'out',cx-1,S.pyIn);
     for(let j=0;j<Ri;j++){
       const y=inRows[j],py=A.py[j],d=A.dir[j];
       if(!d){for(let x=0;x<=cx-1;x++)items.push(bt(x,y,0));continue}

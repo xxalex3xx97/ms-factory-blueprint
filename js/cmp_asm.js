@@ -2,7 +2,7 @@
 // cmpAssemble(c) c={P,item,mk,spMk,bx,bk (name of the Blocks select class),sz (cmpSize result),stages (cmpTree stages)} -> {ok:true,T} | {ok:false,why}. Linear chain of 1-input stages (k=1), first stage may have k>=2 all raw (FEED block, allRaw, seed container); K strips stacked vertically.
 const CMP_BLOCKS=['1x1','1x2','2x2','2x2c'];
 function cmpAssemble(c){
-  const {mk,spMk,bx,bk,sz,stages}=c,no=why=>({ok:false,why}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,L=stages.length,K=sz.K;
+  const {mk,spMk,bx,bk,sz,stages}=c,dk=c.dk,no=why=>({ok:false,why}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,L=stages.length,K=sz.K;
   const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],ugc=PLC_UG[mk],ncol=2*L+1,ms=[],blocks=[];let nug=0;
   for(let j=0;j<K;j++){
     const fbs=[],y0=j*d.h*FC;
@@ -22,10 +22,15 @@ function cmpAssemble(c){
       const feed=s===0&&g.k>=2?{sets:b.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:b.ports&&b.ports.in?b.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0),M,k:g.k}:null;
       fbs.push({feed,items:b.items,inRows:used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+main*M+i)),outRows:used.map(q=>q.o)});
     }
-    const hub=(inRows,outRows,raw,item)=>cmpPool({W,H,mk,bx,item,raw,inRows,outRows});
-    const f0=fbs[0].feed,g0=stages[0];
-    const seq=[f0?cmpFeed({W,H,mk,bx,sets:f0.sets,M:f0.M,k:f0.k,main:0,pass:[],rawItems:g0.node.rec.i.map(q=>q[0]),allRaw:true,seed:g0.growth?g0.item:null}):hub([],fbs[0].inRows,true,g0.node.rec.i[0][0])];
-    for(let s=0;s<L;s++){seq.push({items:fbs[s].items});seq.push(hub(fbs[s].outRows,s<L-1?fbs[s+1].inRows:[],false,0))}
+    const f0=fbs[0].feed,g0=stages[0],shr=s=>sz.stages[s].strips[j].n/sz.stages[s].strips.reduce((a,v)=>a+v.n,0);
+    let dI=null,dO=null;   // C7: dock cells of the SRC / OZ hub of this strip
+    if(dk&&dk.in&&!f0){const E=Array.isArray(c.P.edges)?c.P.edges:Object.values(c.P.edges||{}),e=E.find(e=>e.from===g0.node.rec.i[0][0]&&e.to===g0.item);dI=cmpDockHub(dk,{kind:'in',name:cmpName(g0.node.rec.i[0][0]),D:(e?e.flow:0)*shr(0),rows:fbs[0].inRows,H,dh:d.h})}
+    if(dk&&dk.out)dO=cmpDockHub(dk,{kind:'out',name:cmpName(c.item),D:c.P.nodes[c.item].rate*shr(L-1),rows:fbs[L-1].outRows,H,dh:d.h});
+    if(dI&&dI.ok===false)return no(dI.why);if(dO&&dO.ok===false)return no(dO.why);
+    const hub=(inRows,outRows,raw,item,x)=>cmpPool({W,H,mk,bx,item,raw,inRows,outRows,...x});
+    if(dk&&dk.in&&f0&&j===0)dk.notes.push('Dock for '+g0.node.rec.i.length+' raw inputs of the first stage is not built yet: the raw containers stay infinite sources');
+    const seq=[f0?cmpFeed({W,H,mk,bx,sets:f0.sets,M:f0.M,k:f0.k,main:0,pass:[],rawItems:g0.node.rec.i.map(q=>q[0]),allRaw:true,seed:g0.growth?g0.item:null}):hub([],fbs[0].inRows,true,g0.node.rec.i[0][0],dI)];
+    for(let s=0;s<L;s++){seq.push({items:fbs[s].items});seq.push(hub(fbs[s].outRows,s<L-1?fbs[s+1].inRows:[],false,0,s===L-1?dO:null))}
     for(const h of seq)if(h.ok===false)return no(h.why);
     const strip=[];
     seq.forEach((h,i)=>{h.items.forEach(b=>strip.push({...b,x:b.x+i*TW,y:b.y+y0}));blocks.push({cls,x:i*d.w,y:j*d.h})});
@@ -38,14 +43,16 @@ function cmpAssemble(c){
     ms.push(...strip);
   }
   const max=def(ugc).maxApart,pairs=ugPairs(ms.filter(b=>PLC_UG.includes(b.cls)));
-  return{ok:true,T:{ok:true,blocks,ms,ug:nug,cols:ncol,rows:K,max,rc:[],ov:0,span:pairs.filter(p=>p&&p.n>max).length,G:1}};
+  const T={ok:true,blocks,ms,ug:nug,cols:ncol,rows:K,max,rc:[],ov:0,span:pairs.filter(p=>p&&p.n>max).length,G:1};
+  if(dk&&(dk.in||dk.out)){const r=cmpDockApply({cls,mk},T);if(!r.ok)return no(r.why);return{ok:true,T,dock:r}}
+  return{ok:true,T};
 }
 
 // CMP S7b: tree assembler. cmpAssembleTree({mk,spMk,bx,bk,pl (cmpPlan),sz (cmpTreeSize .by)}) -> {ok,T,nodes,routed} | {ok:false,why}.
 // Per node [IN][FB][POOL] at block columns o.col..o.col+2, block row o.row. IN = SRC block (k=1 raw), or a MERGE region (any crafted input): one block column of belts spanning the strip rows of the
 // node's subtree, routed by cmpRoute (child POOL/SRC east lanes at x=0 -> parent slot rows at x=W-1). Raw children of a merge node are SRC supplier blocks in their own strip row.
 function cmpAssembleTree(c){
-  const {mk,spMk,bx,bk,pl,sz}=c,no=why=>({ok:false,why}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk];
+  const {mk,spMk,bx,bk,pl,sz}=c,dk=c.dk,no=why=>({ok:false,why}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk];
   const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),NB={},ms=[],routed=[],OR={};
   const put=(items,col,row,tag)=>items.forEach(b=>{const q={...b,x:b.x+col*TW,y:b.y+row*TH};ms.push(q);if(tag)tag.push(q)});
   const hubAt=(h,col,row,nb)=>{if(h.ok===false)return h.why;put(h.items,col,row);if(nb)h.items.filter(q=>q.ct).forEach(q=>nb.ct.push((q.x+col*TW)+','+(q.y+row*TH)))};
@@ -72,11 +79,14 @@ function cmpAssembleTree(c){
     const p=par(o);
     if(o.raw){   // supplier SRC of a merge node (raw child of an src node is that node's own IN block)
       if(p.inKind!=='merge')continue;
-      const e=hubAt(cmpPool({W,H,mk,bx,item:o.key,raw:true,inRows:[],outRows:OR[o.id]}),o.pool,o.row);if(e)return no(e);
+      const dI=dk&&dk.in?cmpDockHub(dk,{kind:'in',name:o.item,D:o.rate,rows:OR[o.id],H,dh:d.h}):null;if(dI&&dI.ok===false)return no(dI.why);
+      const e=hubAt(cmpPool({W,H,mk,bx,item:o.key,raw:true,inRows:[],outRows:OR[o.id],...dI}),o.pool,o.row);if(e)return no(e);
       continue;
     }
-    let e=hubAt(cmpPool({W,H,mk,bx,item:0,raw:false,inRows:NB[o.id].outRows,outRows:OR[o.id]}),o.pool,o.row,NB[o.id]);if(e)return no(e);
-    if(o.inKind==='src'){e=hubAt(cmpPool({W,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB[o.id].inR[0]}),o.col,o.row);if(e)return no(e);continue}
+    const dO=dk&&dk.out&&!p?cmpDockHub(dk,{kind:'out',name:o.item,D:o.rate,rows:NB[o.id].outRows,H,dh:d.h}):null;if(dO&&dO.ok===false)return no(dO.why);
+    let e=hubAt(cmpPool({W,H,mk,bx,item:0,raw:false,inRows:NB[o.id].outRows,outRows:OR[o.id],...dO}),o.pool,o.row,NB[o.id]);if(e)return no(e);
+    if(o.inKind==='src'){const rc=byId[o.children[0]],dI=dk&&dk.in?cmpDockHub(dk,{kind:'in',name:rc.item,D:rc.rate,rows:NB[o.id].inR[0],H,dh:d.h}):null;if(dI&&dI.ok===false)return no(dI.why);
+      e=hubAt(cmpPool({W,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB[o.id].inR[0],...dI}),o.col,o.row);if(e)return no(e);continue}
     if(o.inKind!=='merge')return no('IN kind '+o.inKind+' not built in trees');
     const sub=[],walk=v=>{sub.push(v.row);v.children.forEach(i=>walk(byId[i]))};walk(o);
     const r0=Math.min(...sub),r1=Math.max(...sub),sources=[],sinks=[],Y=(row,y)=>(row-r0)*(H+2)+y;
@@ -96,5 +106,7 @@ function cmpAssembleTree(c){
   const bs=new Map();ms.forEach(b=>{const gx=Math.floor(b.x/TW),gy=Math.floor(b.y/TH);bs.set(gx+','+gy,{cls,x:gx*d.w,y:gy*d.h})});
   const max=def(ugc).maxApart,ugs=ms.filter(b=>PLC_UG.includes(b.cls)),pairs=ugPairs(ugs);
   const nodes=pl.nodes.filter(o=>!o.raw).map(o=>({id:o.id,item:o.item,key:o.key,rate:o.rate,lanes:NB[o.id].lanes,outRows:NB[o.id].outRows,rec:rk(o.rec),N:o.N,pN:o.pN,util:o.util,pU:o.pU,gx:o.fb*d.w,gy:o.row*d.h,inCol:o.col,pool:o.pool,row:o.row,fb:{x:o.fb*TW,y:o.row*TH,w:W,h:H},ct:NB[o.id].ct,kind:o.inKind}));
-  return{ok:true,nodes,routed,T:{ok:true,blocks:[...bs.values()],ms,ug:ugs.length,cols:pl.cols,rows:pl.rows,max,rc:[],ov:0,span:pairs.filter(p=>p&&p.n>max).length,G:1}};
+  const T={ok:true,blocks:[...bs.values()],ms,ug:ugs.length,cols:pl.cols,rows:pl.rows,max,rc:[],ov:0,span:pairs.filter(p=>p&&p.n>max).length,G:1};
+  if(dk&&(dk.in||dk.out)){const r=cmpDockApply({cls,mk},T,{nodes,routed});if(!r.ok)return no(r.why);return{ok:true,nodes,routed,T,dock:r}}
+  return{ok:true,nodes,routed,T};
 }

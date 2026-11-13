@@ -45,7 +45,7 @@ const pageRun = async a => {
   const hasCmp = typeof cmpCompose === 'function';
   if (a.strict && !hasCmp) return {errs: ['strict: cmpCompose does not exist yet']};
   if (hasCmp && a.strict) window.CMP_ENGINE = true;
-  const L = placerLayout(P, item, a.mk, a.mk, {box: 'DAT_Container_2', mod: false, dock: null, bk: a.bk});
+  const L = placerLayout(P, item, a.mk, a.mk, {box: 'DAT_Container_2', mod: false, dock: a.dock || null, bk: a.bk});
   if (!L.ok) return {errs: ['layout refused: ' + L.why], refused: L.why};
   let T = L.tile;
   if (!T) { T = placerTile(L, placerBk()); if (!T.ok) return {errs: ['tile failed: ' + T.why]} }
@@ -60,9 +60,9 @@ const pageRun = async a => {
   if (T.ov !== 0) hard.push('tile ov ' + T.ov);
   if (T.span !== 0) hard.push('tile span ' + T.span);
   const sc = T.blocks.every(b => b.x % FC === 0 && b.y % FC === 0) && T.blocks.some(b => b.x >= FC || b.y >= FC) ? 1 : FC;
-  const geo = T.blocks.map(b => { const d = dim({cls: b.cls, rot: 0}), f = floorRect({cls: b.cls, x: 0, y: 0, h: 0, rot: 0}); return {x: b.x * sc, y: b.y * sc, TW: d.w * FC, TH: d.h * FC, Fw: f.w, Fh: f.h} });
+  const geo = T.blocks.filter(b => floorRect({cls: b.cls, x: 0, y: 0, h: 0, rot: 0})).map(b => { const d = dim({cls: b.cls, rot: 0}), f = floorRect({cls: b.cls, x: 0, y: 0, h: 0, rot: 0}); return {x: b.x * sc, y: b.y * sc, TW: d.w * FC, TH: d.h * FC, Fw: f.w, Fh: f.h} });   // dock blocks have no floor
   let wallHits = 0, outside = 0;
-  ms.forEach(b => { const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) {
+  ms.forEach(b => { if (b.dk === 'p') return; const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) {
     const g = geo.find(g => x >= g.x && x < g.x + g.TW && y >= g.y && y < g.y + g.TH);
     if (!g) { outside++; continue }
     if (x - g.x >= g.Fw || y - g.y >= g.Fh) wallHits++;
@@ -134,7 +134,7 @@ export async function printTree(page, name, rate, mk = 1) {
 // node side: asserts. bk: class of the Blocks select (optional). Returns {ok, errs, row}.
 export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opts = {}) {
   const strict = opts.strict !== false;
-  const r = await page.evaluate(pageRun, {recipeKey, rate, mk, bk, strict});
+  const r = await page.evaluate(pageRun, {recipeKey, rate, mk, bk, strict, dock: opts.dock || null});
   const errs = [...(r.errs || [])];
   const row = {recipe: recipeKey, rate: +(+rate).toFixed(2)};
   if (r.errs) return {ok: false, errs, row, refused: r.refused};

@@ -133,21 +133,28 @@ function cmpCompose(P,item,mk,spMk,o={}){
   const BX=o.box||PLC_BOX,bk=o.bk||PL_ALL[placerBk().indexOf(true)];
   if(!bk)return cmpErr('no block type selected');
   if(BX!=='DAT_Container_2')return cmpErr('needs Large Container');
-  if(o.dock&&(o.dock.in||o.dock.out))return cmpErr('docks are not built in the composer yet');
   const tr=cmpTree(P,item),block=CMP_BLOCKS[PL_ALL.indexOf(bk)];
   let A,sz,stages,cmpI,note,per;
+  const dkw=o.dock&&(o.dock.in||o.dock.out)?o.dock:null,dkn=[],dk=dkw?{mk,in:!!dkw.in,out:!!dkw.out,notes:dkn}:null;
+  if(dkw&&bk===PL_ALL[3]){dkn.push('Docks on 2x2 C are not built yet: the raw and output containers stay without docks');dk.in=dk.out=false}
+  if(dkw&&(dkw.in==='ind'||dkw.out==='ind'))dkn.push('Industrial dock not built yet: normal docks used');
   if(tr.ok){
     sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;
-    A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages});if(!A.ok)return A;
+    A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages,dk});if(!A.ok)return A;
     stages=sz.stages.map(q=>({item:q.item,cls:q.cls,tpl:q.tpl,block:q.block,S:q.S,N:q.N,perStrip:q.perStrip,B:q.B}));cmpI={K:sz.K,stages};
     note=sz.note.concat(tr.stages[0].growth&&tr.stages[0].k>=2?['Fill the seed container ('+cmpName(item)+')']:[]);per=sz.stages[sz.stages.length-1].perStrip.slice();
   }else if(/^branching/.test(tr.why)){   // S7b: merge tree (K=1)
     const pl=cmpPlan(P,item,mk,{});if(!pl.ok)return pl;
     const tz=cmpTreeSize(pl,mk,spMk,block);if(!tz.ok)return tz;
-    A=cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by});if(!A.ok)return A;
+    A=cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by,dk});if(!A.ok)return A;
     stages=pl.nodes.filter(o=>!o.raw).map(o=>({item:o.item,cls:o.cls,tpl:tz.by[o.id].tpl,block,S:tz.by[o.id].S,N:o.N,perStrip:[o.N],B:1}));
     cmpI={K:1,tree:true,stages,nodes:A.nodes,routed:A.routed};note=pl.notes.slice();per=[P.nodes[item].machines];
   }else return tr;
+  if(A.dock){   // C7: raw/oz container descriptors + 'Dock n: assign ...' notes
+    cmpI.raw=A.dock.raw;cmpI.oz=A.dock.oz;let n=0;
+    const lines=[...A.dock.raw,...A.dock.oz].map(q=>'Dock '+(++n)+': assign '+q.dd.name+' ('+cmpR1(q.dd.r)+'/min, '+q.dd.n+' dock'+(q.dd.n>1?'s':'')+')');
+    note=[...note,...dkn,...lines];
+  }else if(dkn.length)note=[...note,...dkn];
   const T=A.T,ext=plcExt(T),ms=T.ms,cnt=f=>ms.filter(f).length;
   const L={ok:true,eng:'cmp',items:ms,cuts:[],lanes:cmpI.K,per,makes:P.nodes[item].rate,pitch:ext.h+1,w:ext.w,h:ext.h,tall:true,mod:false,box:BX,mk,ports:[],note,src:{P,item,mk,spMk,o},prefab:true,
     stat:{belts:cnt(b=>PLC_BELT.includes(b.cls)),ug:cnt(b=>PLC_UG.includes(b.cls)),spl:cnt(b=>PLC_SPL.includes(b.cls)),blocks:T.blocks.length,machines:cnt(b=>b.rec),lanes:cmpI.K,spills:0},
