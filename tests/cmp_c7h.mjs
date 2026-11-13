@@ -27,6 +27,7 @@ const info = a => {
 };
 const keys = await pg.evaluate(() => [].concat(...Object.values(RECS)).map(rk).filter(k => /NickelPlates$|Capacitor$/.test(k)));
 const bc = await pg.evaluate(() => [].concat(...Object.values(RECS)).map(rk).find(k => /BasicCircuit$/.test(k))), nickel = keys.find(k => /^ITEM_NickelOre>ITEM_NickelPlates$/.test(k)), two = keys.find(k => /^ITEM_EnrichedNickelOre>/.test(k)), cap = keys.find(k => />ITEM_Capacitor$/.test(k));
+const keysAll = await pg.evaluate(() => [].concat(...Object.values(RECS)).map(rk)), xeno = keysAll.find(k => />ITEM_Xenobacteria$/), enz = keysAll.find(k => />ITEM_Enzyme$/);
 const BK = {'2x2': 'BPO_Station_02', '2x2c': 'BPO_Station_03', '1x2': 'BPO_Station_2x1', '1x1': 'BPO_Station_01'};
 const DH1 = new Set(['1x2', '1x1']);
 const DK = {'ind in': {in: 'ind', out: null}, 'ind out': {in: null, out: 'ind'}, 'ind both': {in: 'ind', out: 'ind'}, 'ind in+nrm out': {in: 'ind', out: 'nrm'}};
@@ -34,9 +35,12 @@ const cases = [];
 for (const b in BK) for (const dk in DK) {
   if (DH1.has(b)) { cases.push({key: nickel, name: 'Nickel 31', rate: 31, mk: 1, b, dk}, {key: nickel, name: 'Nickel 480', rate: 480, mk: 1, b, dk}); continue }
   cases.push({key: nickel, name: 'Nickel 31', rate: 31, mk: 1, b, dk}, {key: nickel, name: 'Nickel 480', rate: 480, mk: 1, b, dk}, {key: two, name: '2-stage 100', rate: 100, mk: 0, b, dk});
+  cases.push({key: xeno, name: 'Xenobacteria 30', rate: 30, mk: 1, b, dk}, {key: enz, name: 'Enzyme 30', rate: 30, mk: 1, b, dk}, {key: enz, name: 'Enzyme 10', rate: 10, mk: 0, b, dk});   // ENZ: industrial FEED hubs (Xeno 1 raw; Enzyme/Nutrients 3 raws fall back with a note)
   cases.push({key: cap, name: 'Capacitor 100', rate: 100, mk: 1, b, dk}, {key: bc, name: 'Basic Circuits 100', rate: 100, mk: 1, b, dk});
 }
+const flt = process.env.CASE && new RegExp(process.env.CASE);
 for (const c of cases) {
+  if (flt && !flt.test(c.name + ' ' + c.b + ' ' + c.dk)) continue;
   const tag = c.name + ' ' + c.b + ' Mk' + (c.mk + 1) + ' ' + c.dk, dock = DK[c.dk];
   const r = await checkCompose(pg, c.key, c.rate, c.mk, BK[c.b], {strict: true, mutate: 'any', dock});
   if (r.refused) { check(false, tag + ' refused: ' + r.refused); continue }

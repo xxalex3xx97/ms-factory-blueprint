@@ -187,7 +187,7 @@ function cmpCompose1(P,item,mk,spMk,o={}){
       if(!plcCls(b))continue;
       const L=cmpCompose(P,item,mk,spMk,{...o,bk:b});
       if(!L.ok){why=why||L.why;continue}
-      const k=L.tile.blocks.reduce((a,q)=>{const e=dim({cls:q.cls,rot:q.rot||0});return a+e.w*e.h},0)*1e6+L.stat.belts+L.stat.ug;   // floor area (block units) first, then belts
+      const k=L.tile.blocks.reduce((a,q)=>{const e=dim({cls:q.cls,rot:q.rot||0});return a+e.w*e.h},0)*1e6+L.stat.belts+L.stat.ug+(L.note.some(n=>/^Dock-limited|^Dock not built|cannot be docked/.test(n))?1e12:0);   // a build that lost a dock never beats one that kept all; then floor area (block units), then belts
       if(!best||k<best.k)best={L,k,b};
     }
     if(!best)return cmpErr(why||'no block type builds');
@@ -195,6 +195,7 @@ function cmpCompose1(P,item,mk,spMk,o={}){
     return best.L;
   }
   if(BX!=='DAT_Container_2')return cmpErr('needs Large Container');
+  globalThis.CMP_DH=o.dock&&o.dock.in?(bk==='BPO_Station_02'||bk==='BPO_Station_03'?2:1):0;   // ENZ: block units high for the dock-aware row choice in cmpPlan
   if(P.nodes[item]&&/Armoury/i.test(P.nodes[item].crafter||''))return cmpArmoury(P,item,mk,spMk,o,bk,BX);
   const tr=cmpTree(P,item),block=CMP_BLOCKS[PL_ALL.indexOf(bk)];
   let A,sz,stages,cmpI,note,per;

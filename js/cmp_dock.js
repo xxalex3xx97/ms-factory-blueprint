@@ -97,8 +97,30 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
 
 // CMP C7d: FEED hub (all-raw first stage / tree feed node) at block column 0 with docks. Containers flush x=0 (docked ones on W slots 16k+5, one raw per slot, extras undocked), lanes routed by cmpRoute inside x=4..W-1.
 // S as cmpFeed + names:[], D:[per raw rate], dh (block units high). Falls back to cmpFeed (infinite containers) + note when the router fails. Seed raw: finite container, no dock.
+// ENZ: industrial dock on an all-raw FEED hub: one BPO_Dock_2 on the west face (block 2 units high), one raw per 4-lane group (lane rows 4..7 / 22..25 at x=0, tagged 'ie' for cmpDockApply). Seed raw keeps its finite container.
+// -> {ok:true,items,docked:1} | {ok:false,why}
+function cmpFeedInd(S,dk,dh,D){
+  const {W,H,mk,bx,sets,M,rawItems}=S,cap=MKS[dk.mk][1],nR=rawItems.length,seed=r=>S.seed!=null&&rawItems[r]===S.seed,rows=r=>sets.flatMap(s=>Array.from({length:M},(_,c)=>(s.t?s.t[r]:s.o+r*M)+c)).sort((a,b)=>a-b);
+  const ind=[...Array(nR).keys()].filter(r=>!seed(r));
+  if(dh!==2||H<26)return{ok:false,why:'block is not 2 units high'};
+  if(ind.length>2)return{ok:false,why:ind.length+' raws, a Dock_2 carries 2 items'};
+  if(ind.some(r=>rows(r).length>4))return{ok:false,why:'a raw needs more than 4 lanes'};
+  const items=[],src=[],snk=[],blk=new Set(),nt=[],tags=new Map();
+  ind.forEach((r,g)=>{rows(r).forEach((y,i)=>{src.push({x:0,y:(g?22:4)+i,item:rawItems[r]});snk.push({x:W-1,y,item:rawItems[r]});tags.set('0,'+((g?22:4)+i),r)});
+    const got=Math.min(D[r],4*cap);if(got<D[r]-1e-6)nt.push('Dock-limited: '+S.names[r]+' '+cmpR1(got)+'/min of '+cmpR1(D[r])+'/min (needs '+Math.ceil(D[r]/(4*cap)-1e-9)+' industrial dock groups)')});
+  for(let r=0;r<nR;r++)if(seed(r)){const y=10,tr=rows(r),n=tr.length,s0=Math.floor((4-n)/2);
+    items.push({cls:bx,x:0,y,rot:0,h:0,pid:0,ct:[{item:rawItems[r],n:0,inf:false}]});
+    for(let xx=0;xx<4;xx++)for(let i=0;i<4;i++)blk.add(xx+','+(y+i));
+    tr.forEach((t,i)=>{src.push({x:4,y:y+s0+i,item:rawItems[r]});snk.push({x:W-1,y:t,item:rawItems[r]})})}
+  const rt=cmpRoute({W,H,rowsN:1,mk,sources:src,sinks:snk,blocked:blk,ugMax:def(PLC_UG[mk]).maxApart,eastStart:true});
+  if(!rt.ok)return{ok:false,why:'lane routing failed'};
+  rt.items.forEach(b=>{const r=b.x===0&&b.rot===0?tags.get('0,'+b.y):undefined;items.push(r===undefined?b:{...b,dk:'ie',di:rawItems[r],yb:0,dx:{r:Math.min(D[r],4*cap),n:1,name:S.names[r],ind:1}})});
+  dk.notes.push(...nt);
+  return{ok:true,why:'',items,docked:1};
+}
 function cmpFeedDock(S,dk,dh,D,dw,sides,why0){
   const {W,H,mk,bx,sets,M,rawItems}=S,cap=MKS[dk.mk][1],bc=PLC_BELT[mk],nR=rawItems.length,seed=r=>S.seed!=null&&rawItems[r]===S.seed;
+  if(dk.indIn&&S.allRaw&&!!!S.noInd){const r=cmpFeedInd(S,dk,dh,D);if(r.ok)return r;dk.notes.push('Industrial dock not possible for '+S.names.filter((_,i)=>!(S.seed!=null&&rawItems[i]===S.seed)).join(', ')+' ('+r.why+'): normal docks used')}
   const mid=!S.allRaw,pass=mid?S.pass||[]:[],sl=r=>mid&&r>=(S.main||0)?r+1:r,rows=r=>sets.flatMap(s=>Array.from({length:M},(_,c)=>(s.t?s.t[sl(r)]:s.o+sl(r)*M)+c));
   // H<30 guard removed (D3 experiment)
   // mid-chain FEED (D2): the chain lanes pass through (routed as nets so raw lanes can UG-hop them), raws come from N/S side containers only (W edge is not this column's)

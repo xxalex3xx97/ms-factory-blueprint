@@ -32,7 +32,8 @@ function cmpPlan(P,item,mk,opts){
     }
     o.inKind=o.children.some(c=>!c.raw)?'merge':(o.k===1?'src':'feed');
     o.sub=o.N+o.children.reduce((a,c)=>a+c.sub,0);
-    o.children.sort((a,b)=>b.sub-a.sub||b.rate-a.rate);   // subtree machines desc, then flow desc (stable otherwise)
+    const dh=globalThis.CMP_DH||0,hung=c=>dh&&c.inKind==='feed'&&c.children.filter(x=>x.raw).length>dh?1:0;   // ENZ dock edge: a feed node with more raws than west dock slots needs the free N/S faces of an outer row, so it must not take the middle (main) row
+    o.children.sort((a,b)=>b.sub-a.sub||hung(a)-hung(b)||b.rate-a.rate);   // subtree machines desc, then flow desc (stable otherwise)
     if(o.children.length)o.children[0].main=true;
     return o;
   }
@@ -51,6 +52,7 @@ function cmpPlan(P,item,mk,opts){
     const root=P.nodes[item];
     if(!root||isRaw(item))refuse('No machine builds this recipe');
     const r=build(item,opts&&opts.rate!=null?opts.rate:root.rate,0,null);   // opts.rate: S12 replicated strip (root rate share)
+    nodes.forEach(o=>{if(o.raw&&o.parent){const p=nodes.find(q=>q.id===o.parent);if(p.inKind!=='merge')o.depth=p.depth}});   // ENZ: raw leaf of a src/feed node is that node's own IN hub, it needs no column of its own
     const D=Math.max(...nodes.map(o=>o.depth));
     // rows: root main down, root sides alternate / greedy balance (largest first); non-root sides far side
     const [m,...sides]=r.children;

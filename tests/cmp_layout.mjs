@@ -42,9 +42,9 @@ for (const [tag, r] of Object.entries(R)) {
   const cells = new Map();
   let ok1 = true, ok2 = true, ok3 = true;
   // raw leaves of a 'feed' node are dock/container descriptors on the parent's row (no block cell, no band of their own): by design, not a layout clash
-  const leaf = o => o.raw && o.parent && byId(o.parent).inKind === 'feed';
+  const leaf = o => o.raw && o.parent && byId(o.parent).inKind !== 'merge';   // ENZ: a raw leaf of a src/feed node is that node's own IN hub (no block column of its own)
   for (const o of r.nodes) {
-    if (o.parent) { const p = byId(o.parent); if (o.pool !== p.col - 1) ok1 = false }
+    if (o.parent && !leaf(o)) { const p = byId(o.parent); if (o.pool !== p.col - 1) ok1 = false }
     if (!leaf(o)) for (let c = o.col; c <= o.col + 2; c++) { const k = o.row + ':' + c; if (cells.has(k)) ok2 = false; cells.set(k, o.id) }
     const kids = o.children.map(byId).filter(c => !leaf(c));
     kids.forEach((c, i) => { if (i && c.row === o.row) ok3 = false; });
@@ -53,6 +53,7 @@ for (const [tag, r] of Object.entries(R)) {
       if ([...a].some(x => b.has(x))) ok3 = false;
     }
   }
+  check(r.D === Math.max(...r.nodes.filter(o => !leaf(o)).map(o => o.depth)) && r.cols === 3 * r.D + 3, tag + ': compact columns (no column for raw leaves of src/feed nodes)');
   check(ok1, tag + ': child POOL column = parent IN-1');
   check(ok2, tag + ': no two blocks in one cell');
   check(ok3, tag + ': sibling bands disjoint, sides off parent row');
@@ -60,7 +61,7 @@ for (const [tag, r] of Object.entries(R)) {
     check(r.nodes.filter(o => !o.raw).every(o => o.N === o.pN && Math.abs(o.util - o.pU) < 1e-9), tag + ': single-consumer nodes N/util = planner exactly');
   if (tag.startsWith('Basic')) {
     const root = r.nodes.find(o => !o.parent);
-    check(r.D === 3 && root.col === 9, tag + ': D=3, root merge col 9');
+    check(r.D === 2 && root.col === 6, tag + ': D=2, root merge col 6 (raw leaves of src nodes carry no column)');
     check(rowsOf(r.nodes, root).size === 2, tag + ': root merge spans 2 rows');
   }
   if (tag.startsWith('Capacitor')) {
