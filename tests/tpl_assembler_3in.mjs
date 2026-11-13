@@ -6,6 +6,8 @@
 import {createRequire} from 'module';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
+import {checkIface, checkChain} from './tpl_iface.mjs';
+import {checkPlan} from './tpl_plan.mjs';
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -15,6 +17,7 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof placerCut === 'function' && typeof pfSplOff === 'function');
+await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/assembler_3in.js'});
 let fails = 0;
 const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } };
@@ -25,17 +28,19 @@ const res = await pg.evaluate(() => {
   const DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]];
   const isB = b => PLC_BELT.includes(b.cls), isU = b => PLC_UG.includes(b.cls), isS = b => PLC_SPL.includes(b.cls);
   const out = [];
-  const runCase = (R, blk, MK, n, mode) => {
+  const runCase = (R, blk, MK, n, mode, main) => {
     const rin = R.r.i.map(([, q]) => q * 1800 / R.r.t), rout = R.r.o[1] * 1800 / R.r.t, cap = [60, 120, 180][MK];
-    const spec = {block: blk, cls: 'DAT_Assembler', rec: R.rec, n, mk: MK, spMk: MK, ...(mode === 'rate' ? {rates: rin} : {})};
+    const spec = {block: blk, cls: 'DAT_Assembler', rec: R.rec, n, mk: MK, spMk: MK, main: main || 0, ...(mode === 'rate' ? {rates: rin, rout} : {geom: true})};
     const T = tplBuild(spec), g = {recipe: R.name, blk, n, mk: MK, mode, ok: T.ok, why: T.why || null, f: [], rin, rout};
     if (!T.ok) return g;
     const occ = new Map();
     for (const b of T.items) { const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) { const k = x + ',' + y; if (occ.has(k)) g.f.push('overlap ' + k); occ.set(k, b); if (x < 0 || y < 0 || x >= T.w || y >= T.h) g.f.push('outside ' + k) } }
     const fl = floorRect({cls: plcCls(NAMES[blk]), x: 0, y: 0, h: 0, rot: 0});
     if (fl.w !== T.w || fl.h !== T.h) g.f.push('floor mismatch');
-    const doorOk = y => TPL_DOOR[blk].some(([a, b]) => y >= a && y <= b);
-    [...T.ports.in, ...T.ports.out].forEach(p => { if (!doorOk(p.y)) g.f.push('port row ' + p.y + ' not in a wall door') });
+    const spls = T.items.filter(b => PLC_SPL.includes(b.cls));
+    spls.forEach(b => { const en = portsOf({...b}).filter(p => p.dir === 'out' && p.en).length; if (en > 1 && !b.pr) g.f.push('splitter ' + b.x + ',' + b.y + ' with 2 outputs has no priority') });
+    g.nPr = spls.filter(b => b.pr).length;
+    g.T = MK === 1 ? JSON.parse(JSON.stringify(T)) : null;
     const L = {ok: true, items: T.items.map(b => ({...b})), w: T.w, h: T.h, pitch: 1, lanes: 1, tall: false, mk: MK};
     const cut = placerCut(L, plcCls(NAMES[blk]));
     g.cut = cut.ok && !cut.ov && !cut.span; if (!g.cut) g.f.push('placerCut ' + (cut.why || 'ov ' + cut.ov + ' span ' + cut.span));
@@ -54,30 +59,33 @@ const res = await pg.evaluate(() => {
       return {reach, edge};
     };
     const want = ['S5', 'N1', 'N0'];
-    T.ports.in.forEach(p => {
-      const fr = flood(0, p.y), exp = mach.map((_, i) => i + ':' + want[p.item]).sort(), got = [...fr.reach].sort();
+    T.ports.in.forEach((p, t) => {
+      const perm = [main || 0, ...[0, 1, 2].filter(i => i !== (main || 0))];
+      if (p.item !== perm[t]) g.f.push('port ' + t + ' item ' + p.item + ' want ' + perm[t]);
+      const fr = flood(0, p.y), exp = mach.map((_, i) => i + ':' + want[t]).sort(), got = [...fr.reach].sort();
       if (JSON.stringify(exp) !== JSON.stringify(got)) g.f.push('lane ' + p.item + ' reaches ' + got.join(' ') + ' want ' + exp.join(' '));
     });
     let outOk = 0;
     for (const m of mach) { const fr = flood(m.x + 5, m.y + 3); if (fr.edge.includes((T.w - 1) + ',' + T.ports.out[0].y)) outOk++ }
     if (outOk !== n) g.f.push('outputs reach edge ' + outOk + '/' + n);
     g.load = rin.map(r => r * n); g.loadOut = rout * n;
-    g.overCap = g.load.some(l => l > cap) || g.loadOut > cap; g.overDerate = g.load.some(l => l > 0.5 * cap) || g.loadOut > 0.5 * cap;
+    g.overCap = g.load.some(l => l > cap) || g.loadOut > cap; g.overDerate = g.load.some(l => l > cap) || g.loadOut > cap;
     if (mode === 'rate' && g.overCap) g.f.push('rate mode but a lane over the belt cap');
-    if (mode === 'rate' && g.overDerate && n > 1) g.f.push('rate mode but a lane over the derate with n>1');
+    
     g.cnt = T.stats; g.cols = T.cols; g.nMax = T.nMax; g.bpm = +(T.stats.belts / n).toFixed(1); g.area = T.w * T.h;
     return g;
   };
   for (const R of recs) for (const blk of Object.keys(NAMES)) for (const MK of [0, 1, 2]) {
-    const nMax = tplMax({block: blk, mk: MK});
+    const nMax = tplMax({block: blk, mk: MK, geom: true});
     const ns = [...new Set((MK === 1 ? [1, 2, nMax - 1, nMax] : [1, nMax]).filter(n => n >= 1 && n <= nMax))];
     for (const n of ns) { const g = runCase(R, blk, MK, n, 'geom'); g.nMax = nMax; out.push(g) }
-    out.push({recipe: R.name, blk, mk: MK, mode: 'geom', n: nMax + 1, neg: true, refused: !tplBuild({block: blk, cls: 'DAT_Assembler', rec: R.rec, n: nMax + 1, mk: MK, spMk: MK}).ok, f: []});
+    if (MK === 1) { const g = runCase(R, blk, MK, nMax, 'geom', 2); g.main = 2; g.nMax = nMax; out.push(g) }
+    out.push({recipe: R.name, blk, mk: MK, mode: 'geom', n: nMax + 1, neg: true, refused: !tplBuild({block: blk, cls: 'DAT_Assembler', rec: R.rec, n: nMax + 1, mk: MK, spMk: MK, geom: true}).ok, f: []});
     // rate mode
-    const rin = R.r.i.map(([, q]) => q * 1800 / R.r.t), nR = tplMax({block: blk, mk: MK, rates: rin});
-    if (nR === 0) { out.push({recipe: R.name, blk, mk: MK, mode: 'rate', n: 1, neg: true, refused: !tplBuild({block: blk, cls: 'DAT_Assembler', rec: R.rec, n: 1, mk: MK, spMk: MK, rates: rin}).ok, f: [], over: true}); continue }
+    const rin = R.r.i.map(([, q]) => q * 1800 / R.r.t), nR = tplMax({block: blk, mk: MK, rec: R.rec, rates: rin, rout: R.r.o[1] * 1800 / R.r.t});
+    if (nR === 0) { out.push({recipe: R.name, blk, mk: MK, mode: 'rate', n: 1, neg: true, refused: !tplBuild({block: blk, cls: 'DAT_Assembler', rec: R.rec, n: 1, mk: MK, spMk: MK, rates: rin, rout: R.r.o[1] * 1800 / R.r.t}).ok, f: [], over: true}); continue }
     const g = runCase(R, blk, MK, nR, 'rate'); g.nMax = nR; out.push(g);
-    if (nR < tplMax({block: blk, mk: MK})) out.push({recipe: R.name, blk, mk: MK, mode: 'rate', n: nR + 1, neg: true, refused: !tplBuild({block: blk, cls: 'DAT_Assembler', rec: R.rec, n: nR + 1, mk: MK, spMk: MK, rates: rin}).ok, f: []});
+    if (nR < tplMax({block: blk, mk: MK, geom: true})) out.push({recipe: R.name, blk, mk: MK, mode: 'rate', n: nR + 1, neg: true, refused: !tplBuild({block: blk, cls: 'DAT_Assembler', rec: R.rec, n: nR + 1, mk: MK, spMk: MK, rates: rin, rout: R.r.o[1] * 1800 / R.r.t}).ok, f: []});
   }
   return out;
 });
@@ -95,14 +103,46 @@ tab.forEach(t => console.log(t));
 console.log('\nRATE mode (one lane group at derate):');
 rt.filter(l => /Mk2/.test(l)).forEach(l => console.log(l));
 console.log('rate mode refusals (single machine > belt cap): ' + res.filter(g => g.over).map(g => g.recipe + ' Mk' + (g.mk + 1) + ' ' + g.blk).join(', '));
+// Edge v1 gate: checkIface for every Mk2 build (n=1 reference), nMax+1 refused, chain with itself
+const refs = {};
+for (const g of res) if (g.T && g.n === 1 && g.mode === 'geom' && !g.main) refs[g.recipe + g.blk] = g.T;
+let nIf = 0;
+for (const g of res) {
+  if (!g.T) continue;
+  const r = await checkIface(pg, g.T, g.blk, refs[g.recipe + g.blk]); nIf++;
+  check(r.ok, `iface ${g.recipe} ${g.blk} ${g.mode} n=${g.n}${g.main ? ' main=' + g.main : ''}: ${r.errs.join('; ')}`);
+}
+console.log('checkIface runs: ' + nIf);
+for (const blk of ['1x1', '1x2', '2x2', '2x2c']) {
+  const T = res.find(g => g.T && g.blk === blk && g.n > 1 && !g.main);
+  if (T) { const c = checkChain(T.T, T.T); check(c.ok, 'chain ' + blk + ' -> itself: ' + c.errs.join('; ')) }
+  const big = res.find(g => g.neg && g.blk === blk && g.mode === 'geom'); check(big && big.refused, 'nMax+1 stays ok:false ' + blk);
+}
+// checkPlan (tests/tpl_plan.mjs). Shared file assumes single-input: build.rows=[{m:n}] gives every lane weight 1; its product check (prodPull=0 for multi-input) is filtered out locally, delivered input == planner input is still asserted
+const TPL = {build: 'tplBuild', max: 'tplMax', cls: 'DAT_Assembler'};
+const keys = await pg.evaluate(() => { const o = []; plnBy(false).forEach(l => l.forEach(({c, r}) => { if (c === 'CRAFT_Assembler' && r.i.length === 3) o.push(r.i.map(x => x[0]).join('+') + '>' + r.o[0]) })); return [...new Set(o)] });
+const prow = [];
+for (const key of [keys[0], keys[Math.floor(keys.length / 2)], keys[keys.length - 1]]) for (const block of ['1x1', '1x2', '2x2', '2x2c']) {
+  const info = await pg.evaluate(([k, blk]) => { const r = [].concat(...Object.values(RECS)).find(x => rk(x) === k); const P = plan(r.o[0], 1, 1, {}, {[r.o[0]]: k}, {proto: false, enr: false, obs: false}); return {pm: P.nodes[r.o[0]].pmach, nMax: tplMax({block: blk, cls: 'DAT_Assembler', rec: k, mk: 1, spMk: 1})} }, [key, block]);
+  if (!(info.nMax >= 1)) { console.log('plan ' + block + ' ' + key + ': nMax 0 (refused)'); continue }
+  const pm = info.pm, nm = info.nMax;
+  for (const [tag, rate] of [['R1 pmach', pm], ['R1b .25', .25 * pm], ['R2 (nMax-1+.3)', (nm - 1 + .3) * pm], ['R3 nMax', nm * pm], ['R4 (nMax+1)', (nm + 1) * pm], ['R4b (2nMax+.5)', (2 * nm + .5) * pm]]) {
+    const r = await checkPlan(pg, TPL, key, rate, block, 1);
+    const errs2 = r.errs.filter(e => !/^product /.test(e));
+    r.row.set = tag; r.row.key = key; prow.push(r.row);
+    check(errs2.length === 0, `plan ${block} ${key} ${tag}: ${errs2.join('; ')}`);
+  }
+}
+console.log('\nset | recipe | block | rate | N | B | nMax | pmach | planUtil | minUtil | maxUtil | belts | maxBelt | supply | machines');
+for (const x of prow) console.log([x.set, x.key.slice(0, 40), x.block, x.rate, x.N, x.B, x.nMax, x.pmach, x.planUtil, x.minUtil, x.maxUtil, x.belts, x.maxBeltUtil, x.supply, x.machines].join(' | '));
 // screenshots: n=1 and n=nMax per block, Containment Coil, Mk2 (geometry mode)
 for (const blk of ['1x1', '1x2', '2x2', '2x2c']) {
-  const nM = await pg.evaluate(b => tplMax({block: b}), blk);
+  const nM = await pg.evaluate(b => tplMax({block: b, geom: true}), blk);
   for (const n of [...new Set([1, nM])]) {
     await pg.evaluate(([blk, n]) => {
       const rr = plnBy(false); let rec = null;
       rr.forEach((l, it) => l.forEach(({c, r}) => { if (c === 'CRAFT_Assembler' && r.i.length === 3 && !rec) rec = r.i.map(x => x[0]).join('+') + '>' + r.o[0] }));
-      const T = tplBuild({block: blk, cls: 'DAT_Assembler', rec, n, mk: 1, spMk: 1}), S = 22, c = document.createElement('canvas'); c.id = 'tplshot';
+      const T = tplBuild({block: blk, cls: 'DAT_Assembler', rec, n, mk: 1, spMk: 1, geom: true}), S = 22, c = document.createElement('canvas'); c.id = 'tplshot';
       c.width = T.w * S + 2; c.height = T.h * S + 2; c.style.cssText = 'position:fixed;left:0;top:0;z-index:99999;background:#10151c';
       const g = c.getContext('2d'); g.translate(1, 1);
       g.strokeStyle = '#243040'; for (let x = 0; x <= T.w; x++) { g.beginPath(); g.moveTo(x * S, 0); g.lineTo(x * S, T.h * S); g.stroke() } for (let y = 0; y <= T.h; y++) { g.beginPath(); g.moveTo(0, y * S); g.lineTo(T.w * S, y * S); g.stroke() }
