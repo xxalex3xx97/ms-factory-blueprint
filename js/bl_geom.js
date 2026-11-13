@@ -1,6 +1,15 @@
 // BL2-BL3 geometry (blMachine, blRow, blStage, blTower). Filled in BL2+.
 // blMachine(cls): first rot 0..3 whose ports give one input (N face, not out) and one output (S face, not in); other ports must be toggleable and go to off.
-function blMachine(cls,k=1){
+function blMachine(cls,k=1,mir=false){
+  if(mir){   // flipped machine (blFlip): same rot, pin/pout at the mirrored x (w-1-x); both must exist, others off. Two-input: refused.
+    const b=blMachine(cls,k);if(!b.ok)return b;if(k!==1)return{ok:false,why:'BL: flip two-input machine'};
+    const ps=portsOf({cls,x:0,y:0,rot:b.rot,off:[]}),xi=b.w-1-b.xin,xo=b.w-1-b.xout;
+    const pi=ps.find(p=>p.nx===0&&p.ny===-1&&p.dir!=='out'&&p.x===xi),po=ps.find(p=>p.nx===0&&p.ny===1&&p.dir!=='in'&&p.x===xo);
+    if(!pi||!po)return{ok:false,why:'BL: flip, no machine port at the mirrored x'};
+    const others=ps.filter(p=>p!==pi&&p!==po);
+    if(others.some(p=>!p.tg))return{ok:false,why:'BL: flip, machine ports'};
+    return{...b,xin:xi,xout:xo,off:others.map(p=>p.key).sort()};
+  }
   for(let rot=0;rot<4;rot++){
     const ps=portsOf({cls,x:0,y:0,rot,off:[]});
     const pins=ps.filter(p=>p.nx===0&&p.ny===-1&&p.dir!=='out').sort((a,b)=>a.x-b.x);
@@ -143,4 +152,49 @@ function blTree(Tw){
   }
   if(Tw.dock&&Tw.dock.out==='nrm')box[box.length-1].dk='out';
   return{ok:true,items,Yend:box[box.length-1].y};
+}
+// BL Z1 zones: IZ (input containers + straight verticals), FB (machine rows only), OZ (sink containers only). Each zone is one 30-cell block: y=Y+0 and Y+29 are wall cells (the placer turns a vertical crossing into a UG pair).
+// blZL(R): column layout for R rows (Large Container, 4 ports/face). c=ceil(R/3) containers; PS = ascending port offsets, lower rows on A (floor(R/2) ports), upper on B (x=cx+4).
+const blZL=R=>{const c=Math.ceil(R/3);if(c===1)return{c,PS:Array.from({length:R},(_,i)=>i),cont:[0]};const a=Math.floor(R/2);return{c,PS:[...Array.from({length:a},(_,i)=>i),...Array.from({length:R-a},(_,i)=>4+i)],cont:[0,4]}};
+// blFB(S): S={mk,spMk,cls,rec,mc,M,R,cx,Y}. Row j: input vertical from Y to yIn-1 at col PS[R-1-j]; blRow at yIn=Y+1+P*j (P=h+2); output vertical yOut+1..Y+29 at ex=E0+(R-1-j).
+function blFB(S){
+  const {mk,spMk,cls,rec,mc,M,R,cx,Y}=S,L=blZL(R),P=mc.h+2,Fh=PF_GRID.ch,bc=PLC_BELT[mk];
+  if(R<1||R>Math.floor((Fh-2)/P))return{ok:false,why:'BL: zone rows'};
+  const X0=cx+L.PS[R-1]+(mc.xin===0?1:0),E0=X0+M*mc.w,items=[],yIn=[],yOut=[],exCols=[];
+  for(let j=0;j<R;j++){
+    const yi=1+P*j,col=cx+L.PS[R-1-j],ex=E0+(R-1-j);
+    for(let y=0;y<yi;y++)items.push({cls:bc,x:col,y:Y+y,rot:1,h:0,pid:0});
+    const r=blRow({mk,spMk,cls,rec,mc,m:M,X0,yIn:Y+yi,colX:col,xEx:ex});
+    if(!r.ok)return r;
+    items.push(...r.items);
+    yIn.push(Y+yi);yOut.push(r.yOut);exCols.push(ex);
+    for(let y=r.yOut+1;y<=Y+Fh-1;y++)items.push({cls:bc,x:ex,y,rot:1,h:0,pid:0});
+  }
+  return{ok:true,items,yIn,yOut,exCols,X0,E0};
+}
+// blIZ(S): S={mk,bx,cx,Y,R,raw}. Containers at Y+1 (A at cx, B at cx+4 when R>3), each PS port: straight vertical Y+5..Y+29.
+function blIZ(S){
+  const {mk,bx,cx,Y,R,raw}=S,L=blZL(R),Fh=PF_GRID.ch,bc=PLC_BELT[mk],items=[];
+  for(const o of L.cont)items.push({cls:bx,x:cx+o,y:Y+1,rot:0,h:0,pid:0,ct:[{item:raw,n:0,inf:true}]});
+  for(const p of L.PS)for(let y=Y+5;y<=Y+Fh-1;y++)items.push({cls:bc,x:cx+p,y,rot:1,h:0,pid:0});
+  return{ok:true,items};
+}
+// blOZ(S): S={mk,bx,Y,R,E0}. Sink containers at Y+2 covering the ex columns E0..E0+R-1 (c=1: one at E0; c=2: left E0+g0-4, right E0+g0, g0=floor(R/2)); belts Y+0..Y+1 at each ex column.
+function blOZ(S){
+  const {mk,bx,Y,R,E0}=S,L=blZL(R),g0=Math.floor(R/2),bc=PLC_BELT[mk],items=[];
+  const xs=L.c===1?[E0]:[E0+g0-4,E0+g0];
+  for(const x of xs)items.push({cls:bx,x,y:Y+2,rot:0,h:0,pid:0,ct:[]});
+  for(let j=0;j<R;j++)for(let y=Y;y<=Y+1;y++)items.push({cls:bc,x:E0+j,y,rot:1,h:0,pid:0});
+  return{ok:true,items,xs};
+}
+// blFlip(items,XM,mcF): mirror a zone around x=XM (x'=XM-x-(w-1)). Belts/UG rot 0<->2; splitters rot 0->2 with W/S off; machines keep rot, off = mcF.off (blMachine(cls,1,true)); containers move only.
+function blFlip(items,XM,mcF){
+  if(!mcF||!mcF.ok)return{ok:false,why:mcF&&mcF.why||'BL: flip, no mirrored machine'};
+  const out=items.map(b=>{
+    const nb={...b,x:XM-b.x-(dim(b).w-1)};
+    if(PLC_BELT.includes(b.cls)||PLC_UG.includes(b.cls))nb.rot=b.rot===0?2:b.rot===2?0:b.rot;
+    else if(PLC_SPL.includes(b.cls)){nb.rot=b.rot===0?2:b.rot;nb.off=pfSplOff(b.cls,2,['W','S'])}
+    else if(!b.cls.startsWith('DAT_Container'))nb.off=mcF.off;
+    return nb});
+  return{ok:true,items:out};
 }
