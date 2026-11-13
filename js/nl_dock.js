@@ -58,7 +58,7 @@ function nlDockApply(L,T,cls){
     if(k===undefined||dy<0)return no('dock slot misaligned');
     if(below(c,g))return no('a block lies below the output dock');
     const pN=portsOf({cls:q.cls,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='N'),xN=q.x+pN.x,M=c*TW+16*k+DOFF+2;
-    for(let y=q.y;y<q.y+dy;y++)belt(xN,y,1);
+    const bwq=dim(q).w,cols=[];for(let x=q.x;x<q.x+bwq;x++)if(ms.some(m=>m.x===x&&m.y===q.y-1&&PLC_BELT.includes(m.cls)&&m.rot===1))cols.push(x);for(const xx of cols.length?cols:[xN])for(let y=q.y;y<q.y+dy;y++)belt(xx,y,1);
     q.y+=dy;
     for(const x of[M,M+1])for(let y=Fb;y<=Fb+1+A;y++)belt(x,y,1);
     blocks.push({cls:plcCls('BPO_Dock'),x:c*d.w+k,y:(g+1)*d.h+ad,rot:1});if(ad)adp(c,(g+1)*d.h,1)}

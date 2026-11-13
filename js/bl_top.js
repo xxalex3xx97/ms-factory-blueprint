@@ -45,7 +45,7 @@ function blTop(P,item,mk,spMk,o={}){
     const cuts=[];for(let c=PF_GRID.cw;c<w-1;c+=PF_GRID.cw)cuts.push(c);
     const stat={belts,ug:0,spl,blocks:K*info.length,machines,lanes:K,spills:0};
     return{ok:true,items,cuts,lanes:K,per:[machines],makes:fin,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
-      note:['Block engine: '+K+' tower(s), '+info.length+' stage(s), rows per stage '+B.r.join('/'),...(P.nofp||[]).map(x=>plnNm(x)+' comes from the Deep Space Observatory block (not placed)')],
+      note:['Block engine: '+K+' tower(s), '+info.length+' stage(s), rows per stage '+B.r.join('/'),...(dock&&dock.out==='nrm'?['Risk: normal output dock has 2 ports (240/min per tower)']:[]),...(P.nofp||[]).map(x=>plnNm(x)+' comes from the Deep Space Observatory block (not placed)')],
       src:{P,item,mk,spMk,o},prefab:true,stat,dk:dock&&(dock.in||dock.out)?dock:null,bl:{K,n:B.n,r:B.r,M:info.map(x=>x.M),Rmax}};
   }catch(e){return no('internal error '+e.message)}finally{PLC_BOX=prevBox}
 }
