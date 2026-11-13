@@ -12,6 +12,13 @@ function cmpRun(items,mk,y,xa,xb,f){
   for(;cur<xb;cur++)items.push(mkb(bc,cur));
   put(xb);
 }
+// SHAPE2: vertical lane interior between corner rows ya and yb (both exclusive), rot = 1/3; UG hops like cmpRun
+function cmpRunV(items,mk,x,ya,yb,rot){
+  const bc=PLC_BELT[mk],ug=PLC_UG[mk],D=def(ug).maxApart-1,s=yb>ya?1:-1,mkb=(c,y)=>({cls:c,x,y,rot,h:0,pid:0});
+  let cur=ya+s;const rem=()=>(yb-s-cur)*s+1;
+  while(rem()>=2){const y=cur+s*Math.min(D,rem()-1);items.push(mkb(ug,cur),mkb(ug,y));cur=y+s}
+  for(;rem()>0;cur+=s)items.push(mkb(bc,cur));
+}
 // largest group of rows that share a flow direction (= columns blHA needs)
 const cmpNg=A=>Math.max(0,...[-1,1].map(d=>A.dir.filter(v=>v===d).length));
 // cmpPool(S): S={W,H,mk,bx,item,raw,inRows,outRows,ind?,ca?,pyOut?,pyIn?,dock?,dkx?}. dock (cmp_dock.js cmpDockHub): ca = container rows (one per dock cell), SRC container flush x=0, OZ container flush east, dk tags. Container(s) 4x4 at (cx,ya+4j); west ports x=cx-1, east ports x=cx+4. raw=true: infinite source container(s).
@@ -36,7 +43,7 @@ function cmpPool(S){
       const xc=A.col[j];
       cmpRun(items,mk,y,0,xc-1);
       items.push(bt(xc,y,d<0?3:1));
-      for(let yy=y+d;yy!==py;yy+=d)items.push(bt(xc,yy,d<0?3:1));
+      cmpRunV(items,mk,xc,y,py,d<0?3:1);
       items.push(bt(xc,py,0));
       cmpRun(items,mk,py,xc+1,xe,tl);
     }
@@ -49,7 +56,7 @@ function cmpPool(S){
       const xc=A.col[j];
       cmpRun(items,mk,py,x0,xc-1,(b,x)=>tag(b,x===x0));
       items.push(bt(xc,py,d<0?3:1));
-      for(let yy=py+d;yy!==yI;yy+=d)items.push(bt(xc,yy,d<0?3:1));
+      cmpRunV(items,mk,xc,py,yI,d<0?3:1);
       items.push(bt(xc,yI,0));
       cmpRun(items,mk,yI,xc+1,W-1);
     }

@@ -47,7 +47,7 @@ await pg.evaluate(() => {
         const k = x + ',' + y; if (seen.has(k)) return {dead: 1}; seen.add(k);
         const it = occ.get(k); if (!it) return {dead: 1};
         if (it.cls.startsWith('DAT_Container')) return {box: it};
-        if (PLC_UG.includes(it.cls) && it.rot === 0) { let nx = x + 1; while (nx < W && !(occ.get(nx + ',' + y) && PLC_UG.includes(occ.get(nx + ',' + y).cls))) nx++; if (nx >= W) return {dead: 1}; x = nx; seen.add(x + ',' + y); x += 1; if (x >= W) return {edge: y, x: W}; continue }   // SHAPE: UG hop = entrance jumps to the next UG of the row (exit), then one cell on
+        if (PLC_UG.includes(it.cls)) { const [ux, uy] = DIR[it.rot]; let nx = x + ux, ny = y + uy; while (nx >= 0 && nx < W && ny >= 0 && ny < H && !(occ.get(nx + ',' + ny) && PLC_UG.includes(occ.get(nx + ',' + ny).cls))) { nx += ux; ny += uy } if (nx < 0 || nx >= W || ny < 0 || ny >= H) return {dead: 1}; x = nx; y = ny; seen.add(x + ',' + y); x += ux; y += uy; if (x >= W) return {edge: y, x: W}; if (x < 0) return {edge: y, x: -1}; continue }   // SHAPE: UG hop (any direction) = entrance jumps to the next UG on its line (exit), then one cell on   // SHAPE: UG hop = entrance jumps to the next UG of the row (exit), then one cell on
         if (!PLC_BELT.includes(it.cls)) return {dead: 1};
         const [dx, dy] = DIR[it.rot]; x += dx; y += dy;
         if (x < 0 || x >= W) return {edge: y, x: x < 0 ? -1 : W};
