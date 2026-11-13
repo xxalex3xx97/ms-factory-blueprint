@@ -2,6 +2,7 @@
 // cmpSize(P,item,mk,spMk,block): per stage template, S (capacity m(S)), K strips, machines per strip n[s][j].
 // Needs planner.js (plnCb, def, rk), js/tpl/iface.js (TPL_IF_SETS, tplIfSets), js/tpl/bundle.js + registry.js (tplPick).
 const CMP_MAXK=4;
+const CMP_MERGE_OK=['assembler_2in','growth_2_3_4in','assembler_3in','enrichment_2_3in','advassembler_4in'];
 const cmpErr=why=>({ok:false,why});
 const cmpName=it=>typeof plnNm==='function'?plnNm(it):String(it);
 
@@ -103,12 +104,12 @@ function cmpTreeSize(pl,mk,spMk,block){
   for(const o of pl.nodes){
     if(o.raw)continue;
     const merge=o.inKind==='merge';
-    if(o.inKind==='feed')return cmpErr('all-raw multi-input stage inside a tree is not built yet ('+o.item+')');
-    if(o.growth)return cmpErr('growth stage inside a tree is not built yet ('+o.item+')');
     const pk=tplPick(o.cls,o.k,block);if(!pk.ok)return cmpErr(pk.why);
-    if(merge&&o.k>=2&&pk.id!=='assembler_2in')return cmpErr('merge into '+String(o.cls).replace(/^DAT_/,'')+' with '+o.k+' inputs is not built yet');
-    const main=merge?o.rec.i.findIndex(([it])=>it===byId[o.children[0]].key):0;
-    const base={block,cls:o.cls,rec:rk(o.rec),recObj:o.rec,recd:o.rec,mk,spMk,main,growth:false,raw:merge?0:o.k};
+    if(merge&&o.k>=2&&!CMP_MERGE_OK.includes(pk.id))return cmpErr('merge into '+String(o.cls).replace(/^DAT_/,'')+' with '+o.k+' inputs is not built yet');
+    // growth k>=3 merge: template lane 0 (top row) = the first child placed above the node, else the routing main (a straight main lane on the top row would wall off the wall-hop landing of every above side child)
+    const mc=merge?(o.k>=3&&o.children.map(i=>byId[i]).find(c=>c.row<o.row)||byId[o.children[0]]):null;
+    const main=merge?o.rec.i.findIndex(([it])=>it===mc.key):0;
+    const base={block,cls:o.cls,rec:rk(o.rec),recObj:o.rec,recd:o.rec,mk,spMk,main,growth:o.growth,raw:merge?0:o.k};
     let mx=0,why='no size fits '+block,pick=null;
     for(const S of Ss){
       const m=pk.t.max({...base,S});
@@ -136,7 +137,6 @@ function cmpCompose(P,item,mk,spMk,o={}){
   const tr=cmpTree(P,item),block=CMP_BLOCKS[PL_ALL.indexOf(bk)];
   let A,sz,stages,cmpI,note,per;
   const dkw=o.dock&&(o.dock.in||o.dock.out)?o.dock:null,dkn=[],dk=dkw?{mk,in:!!dkw.in,out:!!dkw.out,notes:dkn}:null;
-  if(dkw&&bk===PL_ALL[3]){dkn.push('Docks on 2x2 C are not built yet: the raw and output containers stay without docks');dk.in=dk.out=false}
   if(dkw&&(dkw.in==='ind'||dkw.out==='ind'))dkn.push('Industrial dock not built yet: normal docks used');
   if(tr.ok){
     sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;

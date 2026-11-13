@@ -37,10 +37,11 @@ function cmpPlan(P,item,mk,opts){
     return o;
   }
   // rows beyond the node row used by its subtree (direction-free)
-  const ext=v=>{if(!v.children.length)return 0;let x=ext(v.children[0]);for(const c of v.children.slice(1))x+=1+ext(c);return x};
+  const ext=v=>{if(!v.children.length||v.inKind==='feed')return 0;let x=ext(v.children[0]);for(const c of v.children.slice(1))x+=1+ext(c);return x};
   // place v at row R, all its side bands go in direction s
   function place(v,R,s){
     v.row=R;if(!v.children.length)return;
+    if(v.inKind==='feed'){v.children.forEach(c=>{c.row=R});return}
     const [m,...sides]=v.children;
     place(m,R,s);
     let x=ext(m);

@@ -61,10 +61,10 @@ function cmpAssembleTree(c){
     const z=sz[o.id],pk=tplPick(o.cls,o.k,block),b=pk.t.build({...z.base,S:z.S,n:o.N});
     if(!b.ok)return no(b.why);
     if(!b.iface||b.iface.v!==1)return no('template not on Edge Interface v1');
-    if(b.w!==W||b.h!==H)return no('template floor '+b.w+'x'+b.h+' differs from the block floor '+W+'x'+H);
+    if(b.w!==W||b.h>H)return no('template floor '+b.w+'x'+b.h+' differs from the block floor '+W+'x'+H);
     if(b.items.some(q=>{const e=dim(q);return q.x<0||q.y<0||q.x+e.w>W||q.y+e.h>H}))return no('template items outside the block floor ('+o.item+', '+block+')');
     const used=b.iface.sets.filter(q=>q.n>0),M=b.iface.M;
-    NB[o.id]={lanes:b.ports.in.map((p,t)=>({y:p.y,key:o.rec.i[typeof p.item==='number'?p.item:0][0],m:b.rows&&b.rows[t]&&b.rows[t].m!=null?b.rows[t].m:null})).filter(l=>l.m!==0),ct:[],outRows:used.map(q=>q.o),inR:o.rec.i.map((_,j)=>o.k>=2?b.ports.in.filter(p=>p.item===j&&b.iface.sets[p.set].n>0).map(p=>p.y):used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+i)))};
+    NB[o.id]={b,lanes:b.ports.in.map((p,t)=>({y:p.y,key:o.rec.i[typeof p.item==='number'?p.item:0][0],m:b.rows&&b.rows[t]&&b.rows[t].m!=null?b.rows[t].m:null})).filter(l=>l.m!==0),ct:[],outRows:used.map(q=>q.o),inR:o.rec.i.map((_,j)=>o.k>=2?b.ports.in.filter(p=>p.item===j&&b.iface.sets[p.set].n>0).map(p=>p.y):used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+i)))};
     put(b.items,o.fb,o.row);
   }
   const par=o=>o.parent&&byId[o.parent];
@@ -85,6 +85,11 @@ function cmpAssembleTree(c){
     }
     const dO=dk&&dk.out&&!p?cmpDockHub(dk,{kind:'out',name:o.item,D:o.rate,rows:NB[o.id].outRows,H,dh:d.h}):null;if(dO&&dO.ok===false)return no(dO.why);
     let e=hubAt(cmpPool({W,H,mk,bx,item:0,raw:false,inRows:NB[o.id].outRows,outRows:OR[o.id],...dO}),o.pool,o.row,NB[o.id]);if(e)return no(e);
+    if(o.inKind==='feed'){   // all-raw k>=2 node: FEED block at the IN column (growth: seed container finite); raw docks not built here
+      const bz=NB[o.id].b,hs=tplIfSets(block,sz[o.id].S).hs,sets=bz.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0);
+      e=hubAt(cmpFeed({W,H,mk,bx,sets,M:bz.iface.M,k:o.k,main:0,pass:[],rawItems:o.rec.i.map(q=>q[0]),allRaw:true,seed:o.growth?o.key:null}),o.col,o.row,NB[o.id]);if(e)return no(e);
+      if(dk&&dk.in&&!dk.fn){dk.fn=1;dk.notes.push('Dock for the raw inputs of an all-raw multi-input stage is not built yet: those raw containers stay infinite sources')}
+      continue}
     if(o.inKind==='src'){const rc=byId[o.children[0]],dI=dk&&dk.in?cmpDockHub(dk,{kind:'in',name:rc.item,D:rc.rate,rows:NB[o.id].inR[0],H,dh:d.h}):null;if(dI&&dI.ok===false)return no(dI.why);
       e=hubAt(cmpPool({W,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB[o.id].inR[0],...dI}),o.col,o.row);if(e)return no(e);continue}
     if(o.inKind!=='merge')return no('IN kind '+o.inKind+' not built in trees');
@@ -93,7 +98,7 @@ function cmpAssembleTree(c){
     o.children.map(i=>byId[i]).forEach(q=>OR[q.id].forEach(y=>sources.push({x:0,y:Y(q.row,y),item:q.key})));
     NB[o.id].inR.forEach((rows,j)=>rows.forEach(y=>sinks.push({x:W-1,y:Y(o.row,y),item:o.rec.i[j][0]})));
     const rt=cmpRoute({W,H,rowsN:r1-r0+1,mk,sources,sinks,ugMax:def(ugc).maxApart,eastStart:true});
-    if(!rt.ok)return no('merge routing failed ('+o.item+': '+sources.length+' lanes, rows '+r0+'..'+r1+')');
+    if(!rt.ok)return no('merge routing failed ('+o.item+': '+sources.length+' lanes, rows '+r0+'..'+r1+')'+(rt.why?': '+rt.why:'')+(globalThis.__rtdbg?JSON.stringify({sources,sinks}):''));
     const tag=[];put(rt.items,o.col,r0,tag);tag.forEach(q=>routed.push({x:q.x,y:q.y,cls:q.cls}));
   }
   // wall swap: rot-0 belts on both sides of a block boundary, same row -> UG pair

@@ -117,9 +117,12 @@ const pageStage = a => {
     S.blocks = []; let id = 600000; its.forEach(b => S.blocks.push({...b, id: ++id, h: 0}));
     const idAt = (x, y) => (S.blocks.find(b => { const d = dim(b); return x >= b.x && x < b.x + d.w && y >= b.y && y < b.y + d.h }) || {}).id;
     const injs = [];
-    q.lanes.forEach(l => { const e = P.edges.find(e => e.from === l.key && e.to === q.key), rate = (e ? e.flow : 0) * (l.m == null ? 1 / q.lanes.filter(z => z.key === l.key).length : l.m / q.N); if (rate > 0) injs.push({id: idAt(0, l.y), item: l.key, rate}) });
+    q.lanes.forEach(l => { const e = P.edges.find(e => e.from === l.key && e.to === q.key), rate = (e ? e.flow : l.key === q.key ? 2 * q.rate : 0) * (l.m == null ? 1 / q.lanes.filter(z => z.key === l.key).length : l.m / q.N); if (rate > 0) injs.push({id: idAt(0, l.y), item: l.key, rate}) });
     const K = links1(0, injs);
-    const prod = q.outRows.reduce((s, y) => s + ((K.load.get(idAt(q.fb.w - 1, y)) || {}).tot || 0), 0);
+    let prod = q.outRows.reduce((s, y) => s + ((K.load.get(idAt(q.fb.w - 1, y)) || {}).tot || 0), 0);
+    // links1 does not model growth chamber output (flow dies at the machine): judge growth nodes by input supply ratio x per-machine rate (UNVERIFIED output belts)
+    const gm = S.blocks.filter(b => /GrowthChamber/.test(b.cls));
+    if (gm.length) { const pm = q.rate / (q.N - 1 + q.util); prod = gm.reduce((s, m) => { const rows = supplyRows(m, K); return s + (rows.length ? Math.min(1, ...rows.map(x => x.need > 0 ? x.have / x.need : 1)) : 0) * pm }, 0) }
     res.push({item: q.item, rate: q.rate, prod: +prod.toFixed(2), inj: injs.length});
   }
   return res;
@@ -252,7 +255,7 @@ if (isMain) {
         return r;
       });
       console.log('1 crafted + 1 raw candidates (' + cand.length + '):'); cand.slice(0, 12).forEach(c => console.log('  ' + c));
-      const want = (process.argv[3] || 'capacitor,bc').split(','), S = {capacitor: ['ITEM_NickelPlates+ITEM_TitaniumPlates>ITEM_Capacitor', 100], bc: ['ITEM_SiliconWafers+ITEM_MagneticCoils>ITEM_BasicCircuit', 100]}, rows = [];
+      const want = (process.argv[3] || 'capacitor,bc').split(','), S = {capacitor: ['ITEM_NickelPlates+ITEM_TitaniumPlates>ITEM_Capacitor', 100], bc: ['ITEM_SiliconWafers+ITEM_MagneticCoils>ITEM_BasicCircuit', 100], enzyme: ['ITEM_Biomass+ITEM_Xenobacteria+ITEM_Nutrients>ITEM_Enzyme', 10], aa: ['ITEM_DetectorArray+ITEM_BasicCircuit+ITEM_Superalloy+ITEM_Coolant>ITEM_AdvancedCircuits', 5]}, rows = [];
       for (const w of want) {
         const [key, rate] = S[w] || [w, 100];
         const r = await checkCompose(page, key, rate, 1, 'BPO_Station_02', {strict: true, mutate: true, oz: true});
