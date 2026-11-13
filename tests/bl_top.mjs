@@ -148,6 +148,37 @@ for (const [name, rate] of [['Silicon Wafers', 360], [chain120, 120]]) {
 // table
 console.log('tag | K | stages | rows | w x h | belts | splitters | machines | BL belts/machine | NL belts/machine');
 for (const r of rows) console.log([r.tag, r.K, r.stages, r.rows, r.wh, r.belts, r.spl, r.machines, r.bpm, r.nlbpm].join(' | '));
+// BL6 fallbacks: growth (recipe consumes its own item), Armoury (above), in=nrm with out=ind, ?engine=nl pin
+const growth = await pg.evaluate(() => { for (const it of plnBy(false).keys()) if ((plnBy(false).get(it) || []).some(e => e.r.i.some(([x]) => x === it))) return plnNm(it); return null });
+console.log('growth item: ' + growth);
+if (growth) {
+  const g = await pg.evaluate(name => {
+    const it = [...plnBy(false).keys()].find(i => plnNm(i) === name);
+    const P = plan(it, 10, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+    const bl = blTop(P, it, 1, 0, {}), L = pfCompose(P, it, 1, 0, {});
+    return {blWhy: bl.why, ok: L.ok, note: String(L.note && L.note[0]), bl: !!L.bl};
+  }, growth);
+  check(g.blWhy === 'BL: growth (NL used)' && !g.bl, growth + ' growth: blTop refuses (' + g.blWhy + ')');
+  check(g.ok && /No Limits/.test(g.note), growth + ' growth: pfCompose returns NL (' + g.note.slice(0, 40) + ')');
+}
+const fb = await pg.evaluate(() => {
+  const it = [...plnBy(false).keys()].find(i => plnNm(i) === 'Silicon Wafers');
+  const P = plan(it, 360, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+  const L = pfCompose(P, it, 1, 0, {dock: {in: 'nrm', out: 'ind'}});
+  return {ok: L.ok, bl: !!L.bl, note: String(L.note && L.note[0])};
+});
+check(fb.ok && !fb.bl && /No Limits/.test(fb.note), 'Silicon Wafers 360 in=nrm out=ind: NL result (' + fb.note.slice(0, 40) + ')');
+const pgN = await (await br.newContext()).newPage();
+pgN.on('pageerror', e => errs.push(e.message));
+await pgN.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=nl');
+await pgN.waitForFunction(() => window.__fb && typeof pfCompose === 'function' && typeof plan === 'function');
+const nl = await pgN.evaluate(() => {
+  const it = [...plnBy(false).keys()].find(i => plnNm(i) === 'Silicon Wafers');
+  const P = plan(it, 360, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+  const L = pfCompose(P, it, 1, 0, {});
+  return {bl: BL_ENGINE, nl: NL_ENGINE, ok: L.ok, note: String(L.note && L.note[0])};
+});
+check(nl.bl === false && nl.nl === true && nl.ok && /No Limits/.test(nl.note) && !/Block engine/.test(nl.note), '?engine=nl: BL off, NL result (' + nl.note.slice(0, 40) + ')');
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs.join(' | ') : ''));
 await br.close();
 process.exit(fails || errs.length ? 1 : 0);
