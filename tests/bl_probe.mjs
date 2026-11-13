@@ -70,6 +70,25 @@ const r = await pg.evaluate(() => {
   const h4L = {ok: true, items: h4, w: 46, h: 30, pitch: 31, cuts: [30], tall: true, mk: 1, lanes: 1};
   const h4T = placerTile(h4L, placerBk());
   out.h4 = {nW: h4W.length, nE: h4E.length, tile: {ok: h4T.ok, why: h4T.ok ? null : String(h4T.why).slice(0, 200), ov: h4T.ov, span: h4T.span, blocks: h4T.blocks ? h4T.blocks.length : null}};
+  // H6.0: dock probe. Dims and ports of BPO_Dock / BPO_Dock_2 at rot 0 and 2; placerTile + noBuild at negative bx; nlIndAsm transposed lanes and extents
+  const h6 = {};
+  for (const [nm, cls] of [['BPO_Dock', plcCls('BPO_Dock')], ['BPO_Dock_2', plcCls('BPO_Dock_2')]]) for (const rot of [0, 2]) {
+    const d = dim({cls, rot});
+    h6[nm + ' rot' + rot] = {w: d.w, h: d.h, ports: portsOf({cls, x: 0, y: 0, rot, off: []}).map(p => [p.f, p.x, p.y, p.nx, p.ny, p.dir]), floor: floorRect({cls, x: 0, y: 0, h: 0, rot}) || null};
+  }
+  const dk = plcCls('BPO_Dock');
+  const negL = {ok: true, items: [{cls: dk, x: -2, y: 0, rot: 0, h: 0, pid: 0}, {cls: 'DAT_Container_2', x: 2, y: 0, rot: 0, h: 0, pid: 0, ct: [{item: 'ITEM_Silica', n: 0, inf: true}]}], w: 6, h: 4, pitch: 5, cuts: [], tall: true, mk: 1, lanes: 1};
+  const nt = placerTile(negL, placerBk());
+  h6.negTile = {ok: nt.ok, why: nt.ok ? null : String(nt.why).slice(0, 160), ov: nt.ov, span: nt.span};
+  const dd = dim({cls: dk, rot: 0});
+  h6.negNoBuild = noBuild([{x: -2, y: 0, w: dd.w, h: dd.h, l: 0}]);
+  const asm = nlIndAsm();
+  const ext = a => ({minX: Math.min(...a.map(q => q.x)), maxX: Math.max(...a.map(q => q.x)), minY: Math.min(...a.map(q => q.y)), maxY: Math.max(...a.map(q => q.y))});
+  const T = asm.belts.map(k => ({x: k.y, y: k.x, rot: [1, 0, 3, 2][k.rot]})), TB = asm.boxes.map(b => ({x: b.y, y: b.x}));
+  const cells = new Set(), dup = [];
+  for (const q of [...T, ...TB]) { const kk = q.x + ',' + q.y; if (cells.has(kk)) dup.push(kk); cells.add(kk) }
+  h6.asm = {nBoxes: asm.boxes.length, nBelts: asm.belts.length, boxes: ext(asm.boxes), belts: ext(asm.belts), transBoxes: ext(TB), transBelts: ext(T), dupCells: dup.length, laneYs: [...new Set(asm.belts.filter(k => k.y === 8).map(k => k.x))].sort((a, b) => a - b), transLaneYs: [...new Set(T.filter(k => k.x === 8).map(k => k.y))].sort((a, b) => a - b)};
+  out.h6 = h6;
   return out;
 });
 console.log(JSON.stringify(r, null, 1));
@@ -81,4 +100,5 @@ if (r.h0Faces.nW < 4 || r.h0Faces.nE < 4) { console.log('STOP H0 Container_2 W/E
 if (!r.h0L.cut.ok || r.h0L.cut.ug < 1) { console.log('STOP H0 pair at x=29|30 is not a UG pair'); fail++ }
 if (!r.h0L.tile.ok) { console.log('STOP H0 placerTile refused: ' + r.h0L.tile.why); fail++ }
 if (!r.h4.tile.ok) { console.log('STOP H4 container W-in + E-out placerTile refused: ' + r.h4.tile.why); fail++ }
+if (r.h6.negTile && !r.h6.negTile.ok) { console.log('STOP H6 placerTile refuses dock at negative bx: ' + r.h6.negTile.why); fail++ }
 process.exit(fail ? 1 : 0);
