@@ -9,7 +9,7 @@ function cmpDockHub(dk,a){
   const {D,rows,H,dh}=a,cap=MKS[dk.mk][1];
   if(a.kind==='in'?dk.indIn:dk.indOut){   // industrial (C7h/k): Dock_2 has 2 lane groups (rows 4..7 / 22..25 of the 30-row block, 4 lanes each, ONE item per group); d.h=2 blocks only
     const R=rows.length,g=Math.ceil(R/4);
-    if(dh===2&&R<=8&&H>=26&&!a.tree&&(a.kind==='out'||!a.col)){   // input hubs deeper than the west column cannot reach the dock
+    if(dh===2&&R<=8&&H>=26&&(a.kind==='out'||!a.col)){   // input hubs deeper than the west column cannot reach the dock
       const order=rows.map((_,i)=>i).sort((x,y)=>rows[x]-rows[y]),py=new Array(R);order.forEach((o,i)=>py[o]=i<4?4+i:22+i-4);
       const lim=g*4*cap,got=Math.min(D,lim);
       if(got<D-1e-6)dk.notes.push('Dock-limited: '+a.name+' '+cmpR1(got)+'/min of '+cmpR1(D)+'/min (needs '+Math.ceil(D/(4*cap)-1e-9)+' industrial dock groups)');
@@ -69,7 +69,7 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
       const used=[0,1].map(k=>E.filter(q=>(q.y-oy<16?0:1)===k)),dkx=E[0].dx||{},bq=[];
       for(const b of asm.boxes){
         const x=out?ox+10-b.y:ox+b.y,y=oy+(out?26-b.x:b.x),g2=(y-oy<16?0:1),main=b.y===9&&(b.x===4||b.x===22),m={cls:NLD.BOX_I,x,y,h:0,rot:0,pid:0,ct:[],dk:out?'out':'in'};
-        if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:0,gy:g*P,u:g2,r:dkx.r,n:1,name:dkx.name,ind:1}}
+        if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:0,gy:g*P,u:g2,r:dkx.r,n:1,name:dkx.name,ind:1};if(out&&fix.nodes)fix.nodes.filter(q=>q.pool===col&&q.row===g).forEach(q=>q.ct.push(x+','+y))}
         add.push(m)}
       for(const k of asm.belts)belt(out?ox+13-k.y:ox+k.y,out?oy+29-k.x:oy+k.x,TRO[k.rot]);
       for(const q of E)for(let x=out?q.x+1:-3-A;x<=(out?ox:-1);x++)belt(x,q.y,0);

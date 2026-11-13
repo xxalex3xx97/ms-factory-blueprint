@@ -26,13 +26,15 @@ const info = a => {
   return {err: '', d2: T.blocks.filter(b => b.cls === d2).length, ad: T.blocks.filter(b => b.cls === adc).length, inf: inf.length, dd: dd.length, ind: dd.filter(m => m.dd.ind).length, notes: L.note.filter(n => /^Dock|^Industrial/.test(n)), ov: T.ov, tagLeft: T.ms.filter(m => m.dk === 'ie' || m.dk === 'oe').length};
 };
 const keys = await pg.evaluate(() => [].concat(...Object.values(RECS)).map(rk).filter(k => /NickelPlates$|Capacitor$/.test(k)));
-const nickel = keys.find(k => /^ITEM_NickelOre>ITEM_NickelPlates$/.test(k)), two = keys.find(k => /^ITEM_EnrichedNickelOre>/.test(k)), cap = keys.find(k => />ITEM_Capacitor$/.test(k));
-const BK = {'2x2': 'BPO_Station_02', '2x2c': 'BPO_Station_03'};
+const bc = await pg.evaluate(() => [].concat(...Object.values(RECS)).map(rk).find(k => /BasicCircuit$/.test(k))), nickel = keys.find(k => /^ITEM_NickelOre>ITEM_NickelPlates$/.test(k)), two = keys.find(k => /^ITEM_EnrichedNickelOre>/.test(k)), cap = keys.find(k => />ITEM_Capacitor$/.test(k));
+const BK = {'2x2': 'BPO_Station_02', '2x2c': 'BPO_Station_03', '1x2': 'BPO_Station_2x1', '1x1': 'BPO_Station_01'};
+const DH1 = new Set(['1x2', '1x1']);
 const DK = {'ind in': {in: 'ind', out: null}, 'ind out': {in: null, out: 'ind'}, 'ind both': {in: 'ind', out: 'ind'}, 'ind in+nrm out': {in: 'ind', out: 'nrm'}};
 const cases = [];
 for (const b in BK) for (const dk in DK) {
+  if (DH1.has(b)) { cases.push({key: nickel, name: 'Nickel 31', rate: 31, mk: 1, b, dk}, {key: nickel, name: 'Nickel 480', rate: 480, mk: 1, b, dk}); continue }
   cases.push({key: nickel, name: 'Nickel 31', rate: 31, mk: 1, b, dk}, {key: nickel, name: 'Nickel 480', rate: 480, mk: 1, b, dk}, {key: two, name: '2-stage 100', rate: 100, mk: 0, b, dk});
-  if (b === '2x2' && dk !== 'ind out') cases.push({key: cap, name: 'Capacitor 100', rate: 100, mk: 1, b, dk});
+  cases.push({key: cap, name: 'Capacitor 100', rate: 100, mk: 1, b, dk}, {key: bc, name: 'Basic Circuits 100', rate: 100, mk: 1, b, dk});
 }
 for (const c of cases) {
   const tag = c.name + ' ' + c.b + ' Mk' + (c.mk + 1) + ' ' + c.dk, dock = DK[c.dk];
