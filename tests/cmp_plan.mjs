@@ -88,7 +88,7 @@ const pageRun = async a => {
     sumN[q.rec] = sumN[q.rec] || {item: q.item, pN: q.pN, n: 0, c: 0}; sumN[q.rec].n += built; sumN[q.rec].c++;
   });
   // unrolled fan-out copies (shared product built once per consumer): per key the total may exceed the planner N, never fall below; a single copy equals it exactly
-  Object.values(sumN).forEach(v => { if (v.c === 1 ? v.n !== v.pN : v.n < v.pN) cerrs.push('node ' + v.item + ': planner N=' + v.pN + ' built ' + v.n + ' in ' + v.c + ' copies'); else if (v.n !== v.pN) console.log('Planner N=' + v.pN + ', built ' + v.n + ' (' + v.item + ', ' + v.c + ' copies)') });
+  Object.values(sumN).forEach(v => { if (v.c === 1 || a.exactN ? v.n !== v.pN : v.n < v.pN) cerrs.push('node ' + v.item + ': planner N=' + v.pN + ' built ' + v.n + ' in ' + v.c + ' copies'); else if (v.n !== v.pN) console.log('Planner N=' + v.pN + ', built ' + v.n + ' (' + v.item + ', ' + v.c + ' copies)') });
   } else stages.forEach(n => {
     const key = rk(n.rec), built = cnt[key] || 0;
     count.push({item: plnNm(n.item), key, N: n.machines, built, util: +(+n.util).toFixed(3)});
@@ -142,7 +142,7 @@ export async function printTree(page, name, rate, mk = 1) {
 // node side: asserts. bk: class of the Blocks select (optional). Returns {ok, errs, row}.
 export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opts = {}) {
   const strict = opts.strict !== false;
-  const r = await page.evaluate(pageRun, {recipeKey, rate, mk, bk, strict, dock: opts.dock || null});
+  const r = await page.evaluate(pageRun, {recipeKey, rate, mk, bk, strict, dock: opts.dock || null, exactN: !!opts.exactN});
   const errs = [...(r.errs || [])];
   const row = {recipe: recipeKey, rate: +(+rate).toFixed(2)};
   if (r.errs) return {ok: false, errs, row, refused: r.refused};

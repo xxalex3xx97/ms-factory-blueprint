@@ -79,18 +79,53 @@ function cmpPlan(P,item,mk,opts){
     return{ok:true,why:null,nodes:nodes.map(o=>({id:o.id,item:o.item,key:o.key,raw:o.raw,rec:o.rec,cls:o.cls,k:o.k,N:o.N,util:o.util,pm:o.pm,pN:o.pN,pU:o.pU,rate:o.rate,depth:o.depth,col:o.col,fb:o.fb,pool:o.pool,row:o.row,main:o.main,inKind:o.inKind,growth:o.growth,children:o.children.map(c=>c.id),parent:o.parent,note:o.note})),D,rows,cols:3*D+3,notes};
   }catch(e){if(e&&e.cmpWhy!==undefined)return cmpNo(e.cmpWhy);throw e}
 }
-// CMP S12: cmpPlanK(P,item,mk,K) = K replicated tree strips stacked in rows, each a full tree at a share of the root rate (root machines split like cmpDist: floor(N/K) each, partial one last; every
-// other node ceil(share rate/pm) per copy). Each strip has its own OZ. Notes list planner N vs built. -> cmpPlan-shaped result with .K, or {ok:false}.
-function cmpPlanK(P,item,mk,K){
-  const a=cmpPlanK1(P,item,mk,K,1),b=cmpPlanK1(P,item,mk,K,0);   // equal rate shares vs whole machines first: the one with fewer machines wins (ties: equal shares)
-  if(!a.ok||!b.ok)return a.ok?a:b;
-  const t=q=>q.nodes.reduce((s,o)=>s+o.N,0);return t(b)<t(a)?b:a;
+// CMP S12: cmpPlanK(P,item,mk,K,caps) = K replicated tree strips stacked in rows, each a full tree at a share of the root rate; each strip has its own OZ. Candidate splits: cmpSplit (per-key machine sums equal the
+// one-strip plan N when possible), equal rate shares, whole root machines; fewest machines wins (ties: first). Notes list planner N vs built. caps[key] = machines one block holds. -> cmpPlan-shaped result with .K, or {ok:false}.
+function cmpPlanK(P,item,mk,K,caps){
+  const n=P.nodes[item],eq=n.rate/n.pmach,ex=n.machines-eq,R=[];
+  const sp=cmpSplit(P,item,mk,K,caps);if(sp)R.push(sp.map(x=>x/eq*n.rate));
+  R.push(Array.from({length:K},()=>n.rate/K));
+  R.push(Array.from({length:K},(_,j)=>(Math.floor(n.machines/K)+(j<n.machines%K?1:0)-(j===K-1?ex:0))/eq*n.rate));
+  let best=null,bt=0,err=null;
+  for(const r of R){const q=cmpPlanK1(P,item,mk,K,r);if(!q.ok){err=err||q;continue}const t=q.nodes.reduce((s,o)=>s+o.N,0);if(!best||t<bt){best=q;bt=t}}
+  return best||err;
 }
-function cmpPlanK1(P,item,mk,K,even){
-  const n=P.nodes[item],eq=n.rate/n.pmach,ex=n.machines-eq,out=[];let row=0,D=0,cols=0;
+// root loads x_j (machine-equivalents, sum = rate/pm) per strip: tries strip loads at the breakpoints where some node needs a whole number of machines, DFS minimising built-over-plan machines then fractional machines
+function cmpSplit(P,item,mk,K,caps){
+  const pl=cmpPlan(P,item,mk,{});if(!pl.ok)return null;
+  const ns=pl.nodes.filter(o=>!o.raw),root=ns.find(o=>!o.parent),R=root.rate/root.pm,c=ns.map(o=>o.rate/o.pm/R),keys=[...new Set(ns.map(o=>o.key))];
+  const ki=ns.map(o=>keys.indexOf(o.key)),tgt=keys.map(k=>ns.reduce((s,o)=>s+(o.key===k?o.N:0),0)),cap=ns.map(o=>caps&&caps[o.key]||1e9);
+  const nd=(i,x)=>Math.ceil(c[i]*x-1e-9),fr=(i,x)=>Math.abs(c[i]*x-Math.round(c[i]*x))>1e-7?1:0;
+  const ok=x=>x>1e-9&&ns.every((o,i)=>nd(i,x)<=cap[i]);
+  const cm=new Map();
+  ns.forEach((o,i)=>{for(let t=1;t<=Math.min(o.N,cap[i]);t++){const x=t/c[i];if(x<R-1e-9&&ok(x))cm.set(Math.round(x*1e6),x)}});
+  const cand=[...cm.values()].sort((a,b)=>b-a);
+  let best=null,bc=1e9,cnt=0;
+  const rec=(j,xs,rem,built,f)=>{
+    if(cnt++>3e5)return;
+    if(j===K-1){
+      if(!ok(rem))return;
+      const b=built.slice();let ff=f;ns.forEach((o,i)=>{b[ki[i]]+=nd(i,rem);ff+=fr(i,rem)});
+      const cost=1000*b.reduce((s,v,k)=>s+v-tgt[k],0)+ff;if(cost<bc){bc=cost;best=[...xs,rem]}return;
+    }
+    const lb=built.slice();ns.forEach((o,i)=>{lb[ki[i]]+=nd(i,rem)});
+    // all strips so far + at least the remaining load as one lump (a lower bound on machines)
+    if(1000*lb.reduce((s,v,k)=>s+v-tgt[k],0)+f>=bc)return;
+    for(const x of cand){
+      if(x>(j?xs[j-1]:1e9)+1e-9||x>=rem-1e-9)continue;
+      const b=built.slice();let ff=f;ns.forEach((o,i)=>{b[ki[i]]+=nd(i,x);ff+=fr(i,x)});
+      rec(j+1,[...xs,x],rem-x,b,ff);
+      if(bc<1000)return;
+    }
+  };
+  rec(0,[],R,new Array(keys.length).fill(0),0);
+  return bc<1000?best:null;   // only an exact split is worth the search; otherwise the plain shares below
+}
+function cmpPlanK1(P,item,mk,K,rates){
+  const out=[];let row=0,D=0,cols=0;
   for(let j=0;j<K;j++){
-    const nj=Math.floor(n.machines/K)+(j<n.machines%K?1:0),rate=even?n.rate/K:(nj-(j===K-1?ex:0))/eq*n.rate;
-    if(!(nj>0&&rate>0))return cmpNo('root '+cmpName(item)+' has only '+n.machines+' machines: cannot split into '+K+' strips');
+    const rate=rates[j];
+    if(!(rate>0))return cmpNo('root '+cmpName(item)+' cannot be split into '+K+' strips');
     const pl=cmpPlan(P,item,mk,{rate});if(!pl.ok)return pl;
     D=pl.D;cols=pl.cols;
     pl.nodes.forEach(o=>out.push({...o,id:'s'+j+o.id,children:o.children.map(c=>'s'+j+c),parent:o.parent&&'s'+j+o.parent,row:o.row+row,note:''}));

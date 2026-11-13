@@ -1,7 +1,7 @@
 // CMP C1 (geometry-free sizing, spec sections 2.1-2.3). cmpTree(P,item): linear stage chain, producer first.
 // cmpSize(P,item,mk,spMk,block): per stage template, S (capacity m(S)), K strips, machines per strip n[s][j].
 // Needs planner.js (plnCb, def, rk), js/tpl/iface.js (TPL_IF_SETS, tplIfSets), js/tpl/bundle.js + registry.js (tplPick).
-const CMP_MAXK=4;
+const CMP_MAXK=4,CMP_MAXKT=12;   // CMP_MAXKT: tree strips
 const CMP_MERGE_OK=['assembler_2in','advassembler_1_2in','growth_2_3_4in','assembler_3in','enrichment_2_3in','advassembler_4in'];
 const cmpErr=why=>({ok:false,why});
 const cmpName=it=>typeof plnNm==='function'?plnNm(it):String(it);
@@ -98,8 +98,8 @@ function cmpSize(P,item,mk,spMk,block){
 }
 
 // CMP S7b: tree sizing (K=1: one FB block per node). pl = cmpPlan result. -> {ok,by:{nodeId:{S,m,base,tpl}}} | {ok:false,why}
-function cmpTreeSize(pl,mk,spMk,block){
-  const Ss=TPL_IF_SETS[block]?Object.keys(TPL_IF_SETS[block]).map(Number):[],by={},byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o]));
+function cmpTreeSize(pl,mk,spMk,block,caps){
+  let bad=null;const Ss=TPL_IF_SETS[block]?Object.keys(TPL_IF_SETS[block]).map(Number):[],by={},byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o]));
   if(!Ss.length)return cmpErr('no block '+block);
   for(const o of pl.nodes){
     if(o.raw)continue;
@@ -110,23 +110,27 @@ function cmpTreeSize(pl,mk,spMk,block){
     const mc=merge?(o.k>=3&&o.children.map(i=>byId[i]).find(c=>c.row<o.row)||byId[o.children[0]]):null;
     const main=merge?o.rec.i.findIndex(([it])=>it===mc.key):0;
     const base={block,cls:o.cls,rec:rk(o.rec),recObj:o.rec,recd:o.rec,mk,spMk,main,growth:o.growth,raw:merge?0:o.k};
-    let mx=0,why='no size fits '+block,pick=null;
+    let mx=0,bm=0,why='no size fits '+block,pick=null;
     for(const S of Ss){
       const m=pk.t.max({...base,S});
       if(!(m>0)){why=pk.t.build({...base,S}).why||why;continue}
       mx=Math.max(mx,m);
+      if(caps)for(let n=m;n>bm;n--)if(cmpBuild(pk.t,{...base,S,n},merge?1:0,2).ok){bm=n;break}
       if(m<o.N)continue;
       const c=cmpBuild(pk.t,{...base,S,n:o.N},merge?1:0,2);
       if(c.ok){pick={S,m};break}
       why=c.why;
     }
     if(!pick){
-      if(mx&&mx<o.N)return cmpErr('stage '+o.item+' needs '+o.N+' machines but a block holds '+mx+' (stacked blocks not built)');
-      return cmpErr('stage '+o.item+' ('+o.N+' machines): '+why);
+      if(caps)caps[o.key]=Math.min(caps[o.key]||1e9,bm);
+      const e=mx&&mx<o.N?cmpErr('stage '+o.item+' needs '+o.N+' machines but a block holds '+mx+' (stacked blocks not built)'):cmpErr('stage '+o.item+' ('+o.N+' machines): '+why);
+      if(caps){bad=bad||e;continue}
+      return e;
     }
+    if(caps)caps[o.key]=Math.min(caps[o.key]||1e9,bm);
     by[o.id]={...pick,base,tpl:pk.id};
   }
-  return{ok:true,by};
+  return bad||{ok:true,by};
 }
 
 // CMP C3: cmpCompose(P,item,mk,spMk,o) -> placerLayout result (fixed tile) | {ok:false,why}. Linear chain of 1-input stages, K strips. Docks not built yet.
@@ -144,11 +148,17 @@ function cmpCompose(P,item,mk,spMk,o={}){
     note=sz.note.concat(tr.stages[0].growth&&tr.stages[0].k>=2?['Fill the seed container ('+cmpName(item)+')']:[]);per=sz.stages[sz.stages.length-1].perStrip.slice();
   }else if(/^branching/.test(tr.why)){   // S7b: merge tree (K=1)
     let pl=cmpPlan(P,item,mk,{});if(!pl.ok)return pl;
-    let tz=cmpTreeSize(pl,mk,spMk,block);
+    const caps={};let tz=cmpTreeSize(pl,mk,spMk,block,caps);
     if(!tz.ok){   // S12: a node needs more machines than one block holds -> K replicated tree strips (each its own OZ), root machines split like cmpDist
-      const why1=tz.why;let k=2,last=why1;
-      for(;k<=CMP_MAXK+1&&!tz.ok;k++){const q=cmpPlanK(P,item,mk,k);if(!q.ok){last=q.why;break}pl=q;tz=cmpTreeSize(pl,mk,spMk,block);if(!tz.ok)last=tz.why}
-      if(!tz.ok)return cmpErr(why1+(last!==why1?' (replicated strips x2..x'+(CMP_MAXK+1)+': '+last+')':''));
+      const why1=tz.why,ex=q=>{const t={};q.nodes.forEach(o=>{if(!o.raw)t[o.key]=(t[o.key]||0)+o.N});return Object.keys(t).reduce((s,k)=>s+t[k]-P.nodes[k].machines,0)};
+      let last=why1,bp=null,bz=null,bx=1e9;   // first K whose strips build exactly the planner machines; else the K with the fewest extra machines
+      for(let k=2;k<=CMP_MAXKT;k++){
+        const q=cmpPlanK(P,item,mk,k,caps);if(!q.ok){last=q.why;break}
+        const z=cmpTreeSize(q,mk,spMk,block);if(!z.ok){last=z.why;continue}
+        const e=ex(q);if(e<bx){bp=q;bz=z;bx=e}if(!e)break;
+      }
+      if(!bz)return cmpErr(why1+(last!==why1?' (replicated strips x2..x'+CMP_MAXKT+': '+last+')':''));
+      pl=bp;tz=bz;
     }
     A=cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by,dk});if(!A.ok)return A;
     stages=pl.nodes.filter(o=>!o.raw).map(o=>({item:o.item,cls:o.cls,tpl:tz.by[o.id].tpl,block,S:tz.by[o.id].S,N:o.N,perStrip:[o.N],B:1}));
