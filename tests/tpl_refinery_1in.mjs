@@ -6,6 +6,8 @@ import {createRequire} from 'module';
 import path from 'path';
 import fs from 'fs';
 import {fileURLToPath, pathToFileURL} from 'url';
+import {checkIface} from './tpl_iface.mjs';
+import {checkPlan} from './tpl_plan.mjs';
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -15,6 +17,7 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=bl');
 await pg.waitForFunction(() => window.__fb && typeof blRow === 'function' && typeof placerTile === 'function' && typeof blMachine === 'function');
+await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/refinery_1in.js'});
 let fails = 0;
 const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } else console.log('ok   ' + msg) };
@@ -93,9 +96,10 @@ const runOne = spec => pg.evaluate(spec => {
       const fo = flow(ox, oy);
       if (!fo.seen.has(po.x + ',' + po.y)) F('row ' + j + ' machine at ' + m.x + ' output does not reach the east port');
       if (fo.mi.size || fo.mo.size) F('row ' + j + ' machine output flows into a machine');
-      if ([...fo.seen].some(k => { const [x, y] = k.split(',').map(Number); return y !== oy })) F('row ' + j + ' collector leaves its row');
+      if ([...fo.seen].some(k => { const [x, y] = k.split(',').map(Number); return y !== oy && (x < T.w - 2 || y < row.yIn || y > oy) })) F('row ' + j + ' collector leaves its row (except the x=W-2 trunk)');
+      if (!its.filter(b => isS(b) && b.y === row.yIn).every(b => b.pr && b.pr[0] === 0 && b.pr[1] === -1)) F('row ' + j + ' splitter without priority to the machine face');
     }
-    if (!row.m) { const stub = its.filter(b => isB(b) && (b.y === row.yIn || b.y === row.yOut)); if (stub.length !== 2) F('row ' + j + ' stub cells ' + stub.length) }
+    if (!row.m) { const stub = its.filter(b => isB(b) && b.y === row.yIn); if (stub.length !== 2) F('row ' + j + ' stub cells ' + stub.length) }
   }
   // wall rule: belts on the vertical edge columns are rot 0 (straight crossings only)
   if (its.some(b => (isB(b) || isS(b)) && (b.x === 0 || b.x === T.w - 1) && !isM(b) && b.rot !== 0)) F('non-rot-0 belt on a west/east edge column');
@@ -137,12 +141,15 @@ for (const blk of BLOCKS) for (const cfg of CFG) {
   const tag0 = `${blk} [${cfg.name}]`;
   if (!nMax) { check(false, tag0 + ' tplMax = 0'); continue }
   const ns = [...new Set([1, 2, nMax - 1, nMax].filter(v => v >= 1 && v <= nMax))];
+  const refB = await pg.evaluate(s => tplBuild(s), {...base, n: 1});
   for (const n of ns) {
     const spec = {...base, n}, tag = `${tag0} n=${n}`;
     const r = await runOne(spec);
     if (!r.built) { check(false, tag + ' not built: ' + r.why); continue }
     check(r.fails.length === 0, tag + (r.fails.length ? ' ' + r.fails.slice(0, 4).join('; ') : ''));
     check(r.stats.machines === n, tag + ' machines ' + r.stats.machines + '==n');
+    const bld = await pg.evaluate(s => tplBuild(s), spec), ci = await checkIface(pg, bld, blk, refB);
+    check(ci.ok, tag + ' checkIface ' + ci.errs.slice(0, 3).join('; '));
     check(r.nMax === nMax, tag + ' nMax stable ' + r.nMax);
     table.push({blk, cfg: cfg.name, n, nMax, mach: r.stats.machines, belts: r.stats.belts, ug: r.stats.ug, spl: r.stats.spl, area: r.area, bpm: r.bpm, rows: r.rows, mrow: r.mrow, lin: r.load.pin + '%', lout: r.load.pout + '%'});
     if (cfg === CFG[0] || cfg === CFG[1]) if (n === 1 || n === nMax || n === ns[1]) await shot(spec, `${blk}_${cfg === CFG[0] ? 'derate' : 'geom'}_n${n}`);
@@ -153,6 +160,8 @@ for (const blk of BLOCKS) for (const cfg of CFG) {
   // negative: nMax+1 refused
   const neg = await pg.evaluate(s => { const t = tplBuild(s); return {ok: t.ok, why: t.why} }, {...base, n: nMax + 1});
   check(!neg.ok, tag0 + ` n=${nMax + 1} refused (${neg.why})`);
+  const negI = await checkIface(pg, await pg.evaluate(s => tplBuild(s), {...base, n: nMax + 1}), blk);
+  check(!negI.ok, tag0 + ' checkIface refuses nMax+1');
 }
 console.log('\nblock | config | n | nMax | machines | belts | ug | spl | area | belts/machine | rows x mrow | in% out% of belt cap');
 for (const t of table) console.log([t.blk, t.cfg, t.n, t.nMax, t.mach, t.belts, t.ug, t.spl, t.area, t.bpm, t.rows + 'x' + t.mrow, t.lin + ' ' + t.lout].join(' | '));
