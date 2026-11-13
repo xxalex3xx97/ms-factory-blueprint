@@ -167,10 +167,9 @@ def build():
             e['confidence'] = 'user 2026-11-12: prop block, no floor, nothing placed inside'
             notes[:] = [x for x in notes if not x.startswith('default machines')]
             # cap building 16x32 (1x2 cells, hull like the Station Adapter), user 2026-11-13: closed ring, only opening W (2 ports at mid height, extra_blocks.json), no floor
-            e.update(w=1, h=2, size=[16, 32], floorOrigin=[-8, -16], hatch='interior', hatchAdd=[[-7, -15, 7, 15]], drop=[0, 1, 2, 3, 4],
+            e.update(w=1, h=2, size=[16, 32], floorOrigin=[-8, -16], hatch='interior', hatchAdd=[[-7, -15, 7, 15], [-8, -11, -7, -1], [-8, 1, -7, 11]], fill=[-8, -1, -6, 1], drop=[0, 1, 2, 3, 4],
                      wallsOverride=[[-8, -16, 8, -15], [-8, 15, 8, 16], [7, -16, 8, 16], [-8, -15, -7, -11], [-8, 11, -7, 15]],
                      entrance={'kind': 'ports', 'evidence': 'user 2026-11-13: only opening on the west side, 2 ports at mid height'})
-            e.pop('fill', None)
         e.update(EXTRA.get(n, {}))
         e['source'] = 'decoded from EA files (BPO %s: colliders, BlockBounds, ItemCost); not tested in game' % n[4:]
         d = desc(n)
