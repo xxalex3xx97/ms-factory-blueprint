@@ -5,6 +5,7 @@ import fs from 'fs';
 import {createRequire} from 'module';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
+import {checkIface} from './tpl_iface.mjs';
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -14,6 +15,7 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=bl');
 await pg.waitForFunction(() => window.__fb && typeof placerCut === 'function' && typeof pfSplOff === 'function');
+await pg.addScriptTag({content: fs.readFileSync(path.join(ROOT, 'js/tpl/iface.js'), 'utf8')});
 await pg.addScriptTag({content: fs.readFileSync(path.join(ROOT, 'js/tpl/growth_2_3_4in.js'), 'utf8').replace(/^const (TPLG_\w+)=/gm, 'var $1=')});
 let fails = 0;
 const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } else console.log('ok   ' + msg) };
@@ -29,7 +31,8 @@ for (const k of [2, 3, 4]) for (const name of RECS[k]) for (const block of BLOCK
     const key = rec.i.map(x => x[0]).join('+') + '>' + rec.o[0];
     const spec = {block, cls: 'DAT_GrowthChamber', rec: key, recObj: rec, mk, spMk: mk, n: 1};
     const nMax = tplMax(spec);
-    const out = {k, name, block, mk, nMax, growth: rec.i.some(([x]) => x === rec.o[0]), runs: []};
+    {const ex = tplGPer(spec); spec._geom = ex.geom; spec._g = ex.g}
+    const out = {k, name, block, mk, nMax, geom: spec._geom, g: spec._g, growth: rec.i.some(([x]) => x === rec.o[0]), runs: []};
     const ns = [...new Set([1, 2, nMax - 1, nMax].filter(n => n >= 1 && n <= nMax))];
     const DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]];
     const cls = plcCls(PLCLS[block]), F = floorRect({cls, x: 0, y: 0, h: 0, rot: 0});
@@ -39,6 +42,8 @@ for (const k of [2, 3, 4]) for (const name of RECS[k]) for (const block of BLOCK
       const g = {n, ok: T.ok, why: T.why, errs: []};
       out.runs.push(g);
       if (!T.ok) continue;
+      g.T = {ok: T.ok, items: T.items, w: T.w, h: T.h, ports: T.ports, iface: T.iface};
+      g.pri = T.items.filter(b => PLC_SPL.includes(b.cls)).every(b => portsOf(b).some(q => q.pr));
       const occ = new Map(); let ov = 0;
       for (const b of T.items) { const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) { const q = x + ',' + y; if (occ.has(q)) ov++; else occ.set(q, b) } }
       g.ov = ov;
@@ -91,7 +96,7 @@ for (const k of [2, 3, 4]) for (const name of RECS[k]) for (const block of BLOCK
       lanes.forEach(l => l.seen && l.seen.forEach(c => { if (laneOf.has(c)) g.errs.push('lanes merge at ' + c); laneOf.set(c, l.i) }));
       // each machine: classify ports
       let outNotEast = 0, portBad = 0, miss = 0;
-      const outFlows = [];
+      const outFlows = [], machSet = [];
       for (const m of T.items.filter(b => b.rec)) {
         const got = {}, outs = [];
         for (const p of portsOf(m)) {
@@ -109,15 +114,17 @@ for (const k of [2, 3, 4]) for (const name of RECS[k]) for (const block of BLOCK
         if (used.some(a => a.length !== 1)) g.errs.push('machine@' + m.x + ',' + m.y + ' port without exactly one lane ' + JSON.stringify(got));
         if (new Set(used.map(a => a[0])).size !== k) g.errs.push('machine@' + m.x + ',' + m.y + ' lanes not all different ' + JSON.stringify(got));
         if (outs.length !== 1) g.errs.push('machine@' + m.x + ',' + m.y + ' output ports ' + outs.length);
-        else outFlows.push(flow(outs[0][0], outs[0][1]));
+        else { outFlows.push(flow(outs[0][0], outs[0][1])); machSet.push(T.iface.sets.findIndex((q, i, a) => m.y - 2 >= q.o && (i + 1 >= a.length || m.y - 2 < a[i + 1].o))) }
+        const insets = new Set(Object.values(got).flat().map(i => T.ports.in[i].set)); if (insets.size !== 1) g.errs.push('machine@' + m.x + ',' + m.y + ' fed from sets ' + [...insets]);
       }
-      const E = T.ports.out[0], endKey = (F.w - 1) + ',' + E.y, eb = occ.get(endKey);
-      g.outEnd = !!eb && isB(eb) && eb.rot === 0;
-      let outBad = 0; const outCells = new Set();
-      outFlows.forEach(f => { f.seen.forEach(c => outCells.add(c)); if (!f.seen.has(endKey)) outBad++ });
+      const endKeys = T.ports.out.map(E => (F.w - 1) + ',' + E.y);
+      g.outEnd = endKeys.every(kk => { const eb = occ.get(kk); return !!eb && isB(eb) && eb.rot === 0 });
+      let outBad = 0; const outCells = new Set(); const endKey = endKeys.join('/');
+      outFlows.forEach((f, i) => { f.seen.forEach(c => outCells.add(c)); if (!f.seen.has(endKeys[machSet[i]])) outBad++ });
       g.outReach = outFlows.length - outBad + '/' + outFlows.length;
       lanes.forEach(l => l.seen && l.seen.forEach(c => { if (outCells.has(c)) g.errs.push('lane cell ' + c + ' is also in the output flow') }));
       if (!g.outEnd) g.errs.push('no rot-0 belt at east out port ' + endKey);
+      if (T.ports.out.length !== T.iface.S) g.errs.push('ports.out count');
       if (outBad) g.errs.push(outBad + ' machine outputs do not reach the east edge');
       // the lane entry cells are rot-0 belts at x=0
       T.ports.in.forEach(p => { const b = occ.get('0,' + p.y); if (!b || !isB(b) || b.rot !== 0) g.errs.push('in port y=' + p.y + ' is not a rot-0 belt at x=0') });
@@ -130,6 +137,7 @@ for (const k of [2, 3, 4]) for (const name of RECS[k]) for (const block of BLOCK
     const F2 = tplBuild({...spec, n: nMax + 1, _force: true});
     let outside = 0;
     if (F2.ok) outside = F2.items.filter(b => { const d = dim(b); return b.x < 0 || b.y < 0 || b.x + d.w > F.w || b.y + d.h > F.h }).length;
+    if (F2.ok) {const occ2 = new Set(); for (const b of F2.items) { const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) { const q = x + ',' + y; if (occ2.has(q)) outside++; else occ2.add(q) } }}   // overlap counts as "does not fit" too
     out.neg = {refused: !neg.ok, why: neg.why, forcedOutside: outside};
     return out;
   }, [k, name, block, mk, PLCLS]);
@@ -142,14 +150,81 @@ for (const k of [2, 3, 4]) for (const name of RECS[k]) for (const block of BLOCK
     const errs2 = g.errs.slice(0, 3).join('; ');
     check(g.ov === 0 && g.outside === 0 && g.machines === g.n, t2 + ` overlap ${g.ov} outside ${g.outside} machines ${g.machines}/${g.n}`);
     check(g.cut.ok && g.cut.ov === 0 && g.cut.span === 0 && g.cut.blocks === 1, t2 + ' placerCut ' + JSON.stringify(g.cut));
+    check(g.pri, t2 + ' every manifold splitter has priority toward its machine');
+    {const I = await checkIface(pg, g.T, block, res.runs[0].T); check(I.ok, t2 + ' checkIface ' + I.errs.slice(0, 3).join('; '))}
     check(g.errs.length === 0, t2 + ' flood (' + (errs2 || 'all lanes reach all machines, one item per port, outputs ' + g.outReach) + ')');
     const R = g.rates;
     check(!R.derateOk || R.capOk, t2 + ` lane loads ${R.load.map(x => x.toFixed(0)).join('/')} out ${R.outLoad.toFixed(0)} cap ${R.cap} (derate g=${R.g}${R.derateOk ? ' ok' : ', n>g: one lane group cannot feed all, see WARN'})`);
     if (!R.derateOk) console.log('WARN ' + t2 + ` n=${g.n} > g=${R.g}: lane over the ${R.cap * 0.5} derate (rates in/out ${R.in.map(x => x.toFixed(0))}/${R.out.toFixed(0)})`);
-    table.push([k, name, block, mk, g.n, g.stats.machines, g.stats.belts, g.stats.ug, g.stats.spl, g.area, g.bpm, 'g=' + R.g, 'in y=' + g.ports.in.map(p => p.y).join(','), 'out y=' + g.ports.out[0].y]);
+    table.push([k, name, block, mk, g.n, g.stats.machines, g.stats.belts, g.stats.ug, g.stats.spl, g.area, g.bpm, 'g=' + R.g, 'sets ' + g.T.iface.S + ' nMax ' + res.nMax + ' (geom/set ' + res.geom + ' g ' + res.g + ')', 'in y=' + g.ports.in.map(p => p.y).join(','), 'out y=' + g.ports.out.map(p => p.y).join(',')]);
   }
-  check(res.neg.refused && res.neg.forcedOutside > 0, `${tag} nMax=${res.nMax}: n=${res.nMax + 1} refused (${res.neg.why}) and forced build leaves the floor (${res.neg.forcedOutside} items)`);
+  {const I = await checkIface(pg, {ok: false}, block); check(!I.ok && res.neg.refused, tag + ' n=nMax+1: ok:false and checkIface ok:false')}
+  check(res.neg.refused && (res.g < res.geom || res.neg.forcedOutside > 0), `${tag} nMax=${res.nMax}: n=${res.nMax + 1} refused (${res.neg.why}) and forced build leaves the floor (${res.neg.forcedOutside} items)`);
 }
+// checkPlan-style gate (local copy of tests/tpl_plan.mjs pageRun, extended for growth: gross seed lane + weighted fill-first injection):
+// planner N / pmach (net), u = rate/pmach-(N-1). N>nMax: copies fill-first (nMax each, remainder last). Machine g (global order) weight 1 (g<N-1) or u (last).
+// Each in port is injected at planner flow * (set weight)/(N-1+u); seed (growth input, no planner edge) at gross cycle rate * set weight.
+// Asserts: machine count N, first N-1 machines fully supplied, last machine supplied u (+-1%), delivered input == planned, net product >= rate, belt util <= 1.
+const planRun = a => {
+  const isLane = c => PLC_BELT.includes(c) || PLC_SPL.includes(c) || PLC_UG.includes(c);
+  const rec = [].concat(...Object.values(RECS)).find(r => rk(r) === a.key), it0 = rec.o[0];
+  const P = plan(it0, a.rate, a.mk, {}, {[it0]: a.key}, {proto: false, enr: false, obs: false}), nd = P.nodes[it0];
+  const N = nd.machines, pm = nd.pmach, u = Math.min(1, a.rate / pm - (N - 1)), tot = N - 1 + u;
+  const flow = Object.fromEntries(P.edges.filter(e => e.to === it0).map(e => [e.from, e.flow]));
+  const gr = rec.i.find(([x]) => x === it0), seed = gr ? gr[1] * 1800 / rec.t : 0;
+  const spec = {block: a.block, cls: 'DAT_GrowthChamber', rec: a.key, mk: a.mk, spMk: a.mk}, nMax = tplMax(spec);
+  if (!(nMax >= 1)) return {skip: 'nMax 0'};
+  const counts = []; for (let left = N; left > 0;) { const nj = Math.min(nMax, left); counts.push(nj); left -= nj }
+  S.blocks = []; S.dm = [];
+  let id = 500000, yoff = 0, gi = 0; const injs = [], outIds = [], errs = [];
+  const idAt = (x, y) => (S.blocks.find(q => q.x === x && q.y === y && isLane(q.cls)) || {}).id;
+  for (const nj of counts) {
+    const b = tplBuild({...spec, n: nj});
+    if (!b.ok) return {errs: ['copy n=' + nj + ': ' + b.why]};
+    for (const q of b.items) S.blocks.push({...q, id: ++id, h: 0, y: q.y + yoff});
+    const ws = b.iface.sets.map(s => { let w = 0; for (let i = 0; i < s.n; i++, gi++) w += gi < N - 1 ? 1 : u; return w });
+    b.ports.in.forEach(p => {
+      const item = rec.i[p.item][0], rate = (item === it0 && gr ? seed : (flow[item] || 0) / tot) * ws[p.set];
+      if (rate > TPLG_CAP[a.mk] + 1e-9) errs.push('lane ' + item + ' needs ' + rate.toFixed(1) + ' > belt cap (need M=2)');
+      if (rate > 0) injs.push({id: idAt(p.x, p.y + yoff), item, rate});
+    });
+    b.ports.out.forEach(p => outIds.push(idAt(p.x, p.y + yoff)));
+    yoff += b.h + 4;
+  }
+  const K = links1(0, injs), ms = S.blocks.filter(q => !isLane(q.cls));
+  const ratios = ms.map(m => { const rows = supplyRows(m, K); return rows.length ? Math.min(...rows.map(r => r.need > 0 ? r.have / r.need : 1)) : 0 });
+  const sumHave = ms.reduce((s, m) => s + supplyRows(m, K).reduce((t, x) => t + x.have, 0), 0);
+  const planned = Object.values(flow).reduce((s, x) => s + x, 0) + seed * tot;
+  let mu = 0; K.load.forEach(e => { if (e.util != null) mu = Math.max(mu, e.util) });
+  return {N, u, nMax, B: counts.length, machines: ms.length, ratios, sumHave, planned, net: ratios.reduce((s, r) => s + r * pm, 0), mu, errs, pm};
+};
+const planTable = [];
+for (const [k, name] of [[2, 'Xenobacteria'], [2, 'Xenoarchaea'], [3, 'Enzyme'], [3, 'Biolattice'], [4, 'Alpha Protein'], [4, 'Beta Protein']]) for (const block of BLOCKS) {
+  const info = await pg.evaluate(([name, block]) => {
+    let rec = null; plnBy(false).forEach((l, it) => l.forEach(({c, r}) => { if (/Growth/.test(c) && plnNm(it) === name) rec = r }));
+    const key = rk(rec), P = plan(rec.o[0], 1, 1, {}, {[rec.o[0]]: key}, {proto: false, enr: false, obs: false});
+    return {key, pm: P.nodes[rec.o[0]].pmach, nMax: tplMax({block, cls: 'DAT_GrowthChamber', rec: key, mk: 1, spMk: 1})};
+  }, [name, block]);
+  if (!info.nMax) { console.log('INFO plan ' + name + ' ' + block + ': nMax 0, skipped'); continue }
+  const nm = info.nMax, pm = info.pm;
+  for (const [tag, rate] of [['R1 pmach', pm], ['R1b .25pm', .25 * pm], ['R2 nMax-1+.3', (nm - 1 + .3) * pm], ['R3 nMax', nm * pm], ['R4 nMax+.4', (nm + .4) * pm], ['R4b 2nMax+.5', (2 * nm + .5) * pm]]) {
+    const r = await pg.evaluate(planRun, {key: info.key, rate, block, mk: 1});
+    if (r.skip) { console.log('INFO plan ' + name + ' ' + block + ' ' + tag + ': ' + r.skip); continue }
+    const e = [...(r.errs || [])];
+    if (!(r.errs && r.errs.length)) {
+      if (r.machines !== r.N) e.push('machine count ' + r.machines + ' != planner N ' + r.N);
+      const full = r.ratios.slice(0, r.N - 1).filter(x => x < 0.99).length; if (full) e.push(full + ' of the first N-1 machines not fully supplied: ' + r.ratios.map(x => x.toFixed(2)).join(','));
+      if (Math.abs(r.ratios[r.N - 1] - r.u) > 0.01) e.push('last machine supply ' + r.ratios[r.N - 1].toFixed(3) + ' != planner util ' + r.u.toFixed(3));
+      if (Math.abs(r.sumHave - r.planned) > 0.01 * r.planned) e.push('delivered input ' + r.sumHave.toFixed(2) + ' != planned ' + r.planned.toFixed(2));
+      if (r.net < rate * 0.99) e.push('net product ' + r.net.toFixed(2) + ' < rate ' + rate.toFixed(2));
+      if (r.mu > 1 + 1e-9) e.push('belt util ' + r.mu.toFixed(4));
+    }
+    check(e.length === 0, `plan k=${k} ${name} ${block} ${tag}: ${e.slice(0, 2).join('; ') || 'N=' + r.N + ' B=' + r.B}`);
+    if (r.N) planTable.push([name, block, tag, rate.toFixed(1), 'N' + r.N, 'B' + r.B, 'nMax' + r.nMax, 'u' + r.u.toFixed(3), 'last ' + (r.ratios[r.N - 1] || 0).toFixed(3), 'maxBelt ' + r.mu.toFixed(3)]);
+  }
+}
+console.log('\nplan gate: recipe | block | set | rate | N | B | nMax | planner util | last machine supply | max belt util');
+for (const r of planTable) console.log(r.join(' | '));
 // screenshots (own canvas render: floor outline, belts with direction ticks, splitters orange, UG purple, machines blue)
 fs.mkdirSync(path.join(ROOT, 'tests/shots'), {recursive: true});
 const shots = [['Xenobacteria', '1x1', 'max'], ['Xenobacteria', '1x2', 'max'], ['Xenobacteria', '2x2', 'max'], ['Xenobacteria', '1x2', 1], ['Enzyme', '1x1', 'max'], ['Enzyme', '1x2', 'max'], ['Enzyme', '2x2', 1], ['Alpha Protein', '1x1', 'max'], ['Alpha Protein', '1x2', 'max'], ['Alpha Protein', '2x2', 1]];
@@ -182,12 +257,12 @@ const same = await pg.evaluate(() => {
   const o = {};
   for (const k of [2, 3, 4]) {
     const key = {2: 'ITEM_A+ITEM_B>ITEM_X', 3: 'ITEM_A+ITEM_B+ITEM_C>ITEM_X', 4: 'ITEM_A+ITEM_B+ITEM_C+ITEM_D>ITEM_X'}[k], set = new Set();
-    for (const b of ['1x1', '1x2', '2x2', '2x2c']) for (let n = 1; n <= tplMax({block: b, rec: key}); n++) { const T = tplBuild({block: b, rec: key, n, mk: 1, spMk: 1}); set.add(JSON.stringify(T.ports)) }
-    o[k] = set.size;
+    for (const b of ['1x1', '1x2', '2x2', '2x2c']) { const bs = new Set(); for (let n = 1; n <= tplMax({block: b, rec: key}); n++) { const T = tplBuild({block: b, rec: key, n, mk: 1, spMk: 1}); bs.add(JSON.stringify(T.ports.in.map(p => [p.x, p.y, p.set]).concat(T.ports.out.map(p => [p.x, p.y])))) } set.add(bs.size) }
+    o[k] = [...set].join();
   }
   return o;
 });
-for (const k of [2, 3, 4]) check(same[k] === 1, `k=${k} ports (lane rows + out row) identical for every n and every block (${same[k]} variant)`);
+for (const k of [2, 3, 4]) check(same[k] === '1', `k=${k} ports (lane rows + out rows) identical for every n within a block (variants per block ${same[k]})`);
 console.log('\nk | recipe | block | mk | n | machines | belts | ug | spl | floor area | (belts+ug+spl)/machine | lane g | in rows | out row');
 for (const r of table) console.log(r.join(' | '));
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
