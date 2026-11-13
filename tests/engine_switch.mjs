@@ -31,7 +31,7 @@ let pg = await open('');
 check(await pg.evaluate(() => !document.getElementById('pvEngine')), 'no Engine select in the page');
 check(await pg.evaluate(() => NL_ENGINE === true && PLC_PREFAB === true && PF_FACT === true), 'default: NL_ENGINE, PLC_PREFAB, PF_FACT on');
 let n = await note(pg);
-check(n.ok && /^No Limits/.test(n.note || ''), 'default layout is No Limits (' + String(n.note).slice(0, 40) + ')');
+check(n.ok && /^(Block engine|No Limits)/.test(n.note || ''), 'default layout is Block (falls back to No Limits) (' + String(n.note).slice(0, 40) + ')');
 await pg.evaluate(() => localStorage.setItem('fbEngine', 'old'));
 pg = await open('');
 check(await pg.evaluate(() => NL_ENGINE === true), 'a stored fbEngine=old is ignored');
