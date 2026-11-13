@@ -27,7 +27,7 @@ const info = a => {
 };
 const BK = {'2x2': 'BPO_Station_02', '2x2c': 'BPO_Station_03', '1x2': 'BPO_Station_2x1', '1x1': 'BPO_Station_01'};
 const cases = [];
-for (const b of ['2x2', '2x2c']) for (const [name, rate, mk, rx] of [['Enzyme', 10, 1], ['Nutrients', 20, 1], ['Capacitor', 100, 1, '>ITEM_Capacitor$'], ['Basic Circuits', 100, 1, 'BasicCircuit$'], ['Nickel Plates', 480, 1, '^ITEM_NickelOre>ITEM_NickelPlates$'], ['Xenobacteria', 10, 1]]) cases.push({name, rate, mk, b, rx});
+for (const b of ['2x2', '2x2c']) for (const [name, rate, mk, rx] of [['Enzyme', 10, 1], ['Nutrients', 20, 1], ['Capacitor', 100, 1, '>ITEM_Capacitor$'], ['Basic Circuits', 100, 1, 'BasicCircuit$'], ['Nickel Plates', 480, 1, '^ITEM_NickelOre>ITEM_NickelPlates$'], ['Xenobacteria', 10, 1], ['Nutrients', 400, 1]]) cases.push({name, rate, mk, b, rx});
 cases.push({name: 'Enzyme', rate: 10, mk: 1, b: '1x2'}, {name: 'Nutrients', rate: 20, mk: 1, b: '1x2'});
 for (const c of cases) {
   const tag = c.name + ' ' + c.rate + ' ' + c.b, dock = {in: 'nrm', out: null};

@@ -54,7 +54,7 @@ function cmpFeed(S){
   for(const s of sets)if(passM+4*nR>s.hs)return cmpNo('feed block too short ('+(passM+4*nR)+' rows needed, set has '+s.hs+')');
   if(!allRaw)for(const y of pass)for(let x=0;x<=W-1;x++)items.push(bt(x,y,0));
   for(const s of sets)for(let r=0;r<nR;r++){
-    const y=s.o+passM+4*r,slot=allRaw?r:r+1;
+    const y=s.o+passM+4*r,slot=allRaw?r:(r<(S.main||0)?r:r+1);
     items.push({cls:bx,x:cx,y,rot:0,h:0,pid:0,ct:[{item:rawItems[r],n:0,inf:!(S.seed!=null&&rawItems[r]===S.seed)}]});
     for(let c=0;c<M;c++){
       const pr=y+c,t=s.t?s.t[slot]+c:s.o+slot*M+c,xj=7+M*r+c;

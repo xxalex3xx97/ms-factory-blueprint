@@ -30,48 +30,48 @@ function cmpDockHub(dk,a){
   return{ca,dock:true,dkx:{r:Math.min(D/use,2*cap),n:use,name:a.name},[a.kind==='in'?'pyOut':'pyIn']:py};
 }
 // apply to the tile T (mutates T.ms, T.blocks, T.ov). c={cls,mk}. fix={nodes,routed} optional (shifted with the tile). -> {ok,raw,oz,shx,sh} | {ok:false,why}
-function cmpDockApply(c,T,fix={}){
+function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*FC;
   const d=dim({cls:c.cls,rot:0}),TW=d.w*FC,TH=d.h*FC,fl=floorRect({cls:c.cls,x:0,y:0,h:0,rot:0}),W=fl.w,bc=PLC_BELT[c.mk],dc=plcCls('BPO_Dock'),ad=c.cls===plcCls('BPO_Station_03')?1:0,A=16*ad,adc=plcCls('BPO_StationAdapter_01'),ads=new Set(),ms=T.ms,blocks=T.blocks,add=[],occ=new Set(),extra=[],miss=[];
   const cells=(b)=>{const e=dim({cls:b.cls,rot:b.rot||0}),r=[];for(let i=0;i<e.w;i++)for(let j=0;j<e.h;j++)r.push((b.x+i)+','+(b.y+j));return r};
   blocks.forEach(b=>cells(b).forEach(k=>occ.add(k)));
   const belt=(x,y,rot)=>add.push({cls:bc,x,y,h:0,rot,pid:0,dk:'p'});
   const slot=ly=>{for(let k=0;k<d.h;k++){const M=16*k+6;if(ly<=M&&ly+3>=M+1)return k}return -1};
   const dockV=(q,side)=>{   // N/S input cells (FEED hubs): nl_dock vertical formulas; door cols 16u+6,7; container y=1 (N) / H-5 (S), belt rows through the wall
-    const gx=Math.floor(q.x/TW),gy=Math.floor(q.y/TH),u=Math.floor((q.x-gx*TW)/16),n=side==='N',M=gx*TW+16*u+6,y0=gy*TH,
-      b={cls:dc,x:gx*d.w+u,y:n?gy*d.h-1-ad:(gy+1)*d.h+ad,rot:n?3:1},ab=ad&&!ads.has(side+gx+'|'+gy)&&{cls:adc,x:gx*d.w,y:n?gy*d.h-1:(gy+1)*d.h,rot:n?3:1};
+    const gx=Math.floor(q.x/TW),gy=Math.floor(q.y/TR),u=Math.floor((q.x-gx*TW)/16),n=side==='N',M=gx*TW+16*u+6,y0=gy*TR,
+      b={cls:dc,x:gx*d.w+u,y:n?gy*P-1-ad:gy*P+d.h+ad,rot:n?3:1},ab=ad&&!ads.has(side+gx+'|'+gy)&&{cls:adc,x:gx*d.w,y:n?gy*P-1:gy*P+d.h,rot:n?3:1};
     if(u>=d.w||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))){extra.push(q);return false}
     cells(b).forEach(z=>occ.add(z));blocks.push(b);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab);ads.add(side+gx+'|'+gy)}
     for(const x of[M,M+1])if(n)for(let y=y0-1-A;y<=y0;y++)belt(x,y,1);else for(let y=y0+fl.h-1;y<=y0+fl.h+A;y++)belt(x,y,3);
-    q.dd={side,gx:gx*d.w,gy:gy*d.h,u,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
+    q.dd={side,gx:gx*d.w,gy:gy*P,u,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
     return true};
   const dock=(q,side)=>{
     if(q.dkx&&q.dkx.side&&q.dkx.side!=='W'&&side==='W')return dockV(q,q.dkx.side);
-    const gx=Math.floor(q.x/TW),gy=Math.floor(q.y/TH),k=slot(q.y-gy*TH),x0=gx*TW,out=side==='E',ok=k>=0&&(out?q.x+4===x0+W-1:q.x-x0<=1);
+    const gx=Math.floor(q.x/TW),gy=Math.floor(q.y/TR),k=slot(q.y-gy*TR),x0=gx*TW,out=side==='E',ok=k>=0&&(out?q.x+4===x0+W-1:q.x-x0<=1);
     // 2x2c (ad=1): Station Adapter (1x2 units, open side) between block and dock, dock one unit further out, belts 16 cells longer
-    const b=ok&&{cls:dc,x:out?(gx+1)*d.w+ad:gx*d.w-1-ad,y:gy*d.h+k,rot:out?0:2},
-      ab=ok&&ad&&!ads.has(side+gx+'|'+gy)&&{cls:adc,x:out?(gx+1)*d.w:gx*d.w-1,y:gy*d.h,rot:out?0:2};
+    const b=ok&&{cls:dc,x:out?(gx+1)*d.w+ad:gx*d.w-1-ad,y:gy*P+k,rot:out?0:2},
+      ab=ok&&ad&&!ads.has(side+gx+'|'+gy)&&{cls:adc,x:out?(gx+1)*d.w:gx*d.w-1,y:gy*P,rot:out?0:2};
     if(!ok||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))){extra.push(q);return false}
     cells(b).forEach(z=>occ.add(z));blocks.push(b);
     if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab);ads.add(side+gx+'|'+gy)}
-    const M=gy*TH+16*k+6;
+    const M=gy*TR+16*k+6;
     for(const y of[M,M+1])if(out){for(let x=x0+W-1;x<=x0+W+A;x++)belt(x,y,0)}else for(let x=x0-1-A;x<=q.x-1;x++)belt(x,y,0);
-    q.dd={side,gx:gx*d.w,gy:gy*d.h,u:k,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
+    q.dd={side,gx:gx*d.w,gy:gy*P,u:k,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
     return true};
   for(const q of ms.filter(q=>q.dk==='in'||q.dk==='out'))if(!dock(q,q.dk==='out'?'E':'W')&&!q.dd){miss.push((q.dk==='out'?'out ':'in ')+q.dkx.name);delete q.dk;delete q.dkx}
   // industrial (hz, d.h=2): one BPO_Dock_2 per hub row, nl_dock.js hz assembly (nlIndAsm transposed) shifted to the row; lanes tagged ie (input, west of block 0) / oe (output, east of the last column)
-  const TR=[1,0,3,2],asm=nlIndAsm(),d2=plcCls('BPO_Dock_2'),indGo=(tag,out)=>{
+  const TRO=[1,0,3,2],asm=nlIndAsm(),d2=plcCls('BPO_Dock_2'),indGo=(tag,out)=>{
     const rows=new Map();
-    for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/TH),ly=q.y-g*TH;if(d.h!==2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out?Math.floor(q.x/TW)<1:Math.floor(q.x/TW)!==0))return'dock slot misaligned';if(!rows.has(g))rows.set(g,[]);rows.get(g).push(q)}
+    for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/TR),ly=q.y-g*TR;if(d.h!==2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out?Math.floor(q.x/TW)<1:Math.floor(q.x/TW)!==0))return'dock slot misaligned';if(!rows.has(g))rows.set(g,[]);rows.get(g).push(q)}
     for(const [g,E] of rows){
-      const oy=g*TH,col=out?Math.floor(E[0].x/TW):-1,ox=out?(col+1)*TW+A:-16-A,dx=out?(col+1)*d.w:-1,db={cls:d2,x:out?dx+ad:-3-ad,y:g*d.h,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*d.h,rot:out?0:2};
+      const oy=g*TR,col=out?Math.floor(E[0].x/TW):-1,ox=out?(col+1)*TW+A:-16-A,dx=out?(col+1)*d.w:-1,db={cls:d2,x:out?dx+ad:-3-ad,y:g*P,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*P,rot:out?0:2};
       if(cells(db).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z))))return'industrial dock overlaps another block';
       cells(db).forEach(z=>occ.add(z));blocks.push(db);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab)}
       const used=[0,1].map(k=>E.filter(q=>(q.y-oy<16?0:1)===k)),dkx=E[0].dx||{},bq=[];
       for(const b of asm.boxes){
         const x=out?ox+10-b.y:ox+b.y,y=oy+(out?26-b.x:b.x),g2=(y-oy<16?0:1),main=b.y===9&&(b.x===4||b.x===22),m={cls:NLD.BOX_I,x,y,h:0,rot:0,pid:0,ct:[],dk:out?'out':'in'};
-        if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:0,gy:g*d.h,u:g2,r:dkx.r,n:1,name:dkx.name,ind:1}}
+        if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:0,gy:g*P,u:g2,r:dkx.r,n:1,name:dkx.name,ind:1}}
         add.push(m)}
-      for(const k of asm.belts)belt(out?ox+13-k.y:ox+k.y,out?oy+29-k.x:oy+k.x,TR[k.rot]);
+      for(const k of asm.belts)belt(out?ox+13-k.y:ox+k.y,out?oy+29-k.x:oy+k.x,TRO[k.rot]);
       for(const q of E)for(let x=out?q.x+1:-3-A;x<=(out?ox:-1);x++)belt(x,q.y,0);
       E.forEach(q=>{delete q.dk;delete q.dx})}
     return null};
@@ -95,14 +95,16 @@ function cmpDockApply(c,T,fix={}){
 // S as cmpFeed + names:[], D:[per raw rate], dh (block units high). Falls back to cmpFeed (infinite containers) + note when the router fails. Seed raw: finite container, no dock.
 function cmpFeedDock(S,dk,dh,D,dw,sides){
   const {W,H,mk,bx,sets,M,rawItems}=S,cap=MKS[dk.mk][1],bc=PLC_BELT[mk],nR=rawItems.length,seed=r=>S.seed!=null&&rawItems[r]===S.seed;
-  const rows=r=>sets.flatMap(s=>Array.from({length:M},(_,c)=>(s.t?s.t[r]:s.o+r*M)+c));
+  const mid=!S.allRaw,pass=mid?S.pass||[]:[],sl=r=>mid&&r>=(S.main||0)?r+1:r,rows=r=>sets.flatMap(s=>Array.from({length:M},(_,c)=>(s.t?s.t[sl(r)]:s.o+sl(r)*M)+c));
   if(H<30)sides=[];   // ponytail: 14-row blocks are too tight for N/S containers (flood mixed items); W slots only
-  const free=[...Array.from({length:dh},(_,k)=>({side:'W',x:0,y:16*k+5})),...(sides||[]).flatMap(sd=>Array.from({length:dw},(_,u)=>({side:sd,x:16*u+5,y:sd==='N'?1:H-5})))],cont=[];   // cont: {r,x,y,docked,side}
+  // mid-chain FEED (D2): the chain lanes pass through (routed as nets so raw lanes can UG-hop them), raws come from N/S side containers only (W edge is not this column's)
+  const free=[...(mid?[]:Array.from({length:dh},(_,k)=>({side:'W',x:0,y:16*k+5}))),...(sides||[]).flatMap(sd=>Array.from({length:dw},(_,u)=>({side:sd,x:16*u+5,y:sd==='N'?1:H-5})))].filter(c=>!mid||!pass.some(y=>y>=c.y-1&&y<=c.y+4)),cont=[];   // cont: {r,x,y,docked,side}
   const use=new Array(nR).fill(0);
   for(let r=0;r<nR;r++){if(seed(r))continue;const left=rawItems.slice(r+1).filter((_,i)=>!seed(r+1+i)).length,n=cmpCellsFor(D[r],cap,rows(r).length,free.length-left).use;
     for(let i=0;i<n&&free.length;i++){cont.push({r,...free.shift(),docked:1});use[r]++}}
   const nt=[],fb=why=>{if(sides&&sides.length)return cmpFeedDock(S,dk,dh,D,dw,[]);dk.notes.push('Dock not built for the raw inputs of this stage ('+why+'): raw containers stay infinite sources');return cmpFeed(S)};
   for(let r=0;r<nR;r++){const L=rows(r).length,need=Math.max(Math.ceil(L/4),seed(r)?1:use[r]||1),have=cont.filter(c=>c.r===r).length;
+    if(mid&&have<need)return fb('no free side unit for '+S.names[r]);
     for(let i=have;i<need;i++){let y=1;while(y<=H-5&&cont.some(c=>c.x<4&&Math.abs(c.y-y)<4))y++;if(y>H-5)return fb('block too short for '+need+' containers');cont.push({r,x:0,y,docked:0})}}
   const items=[],src=[],snk=[],blk=new Set();
   for(let r=0;r<nR;r++){
@@ -114,6 +116,7 @@ function cmpFeedDock(S,dk,dh,D,dw,sides){
     const got=Math.min(D[r],use[r]*2*cap);
     if(!seed(r)&&got<D[r]-1e-6)nt.push('Dock-limited: '+S.names[r]+' '+cmpR1(got)+'/min of '+cmpR1(D[r])+'/min (needs '+Math.ceil(D[r]/(2*cap)-1e-9)+' docks)');
   }
+  for(const y of pass){src.push({x:0,y,item:'§pass'});snk.push({x:W-5,y,item:'§pass'});for(let x=0;x<4;x++)items.push({cls:bc,x,y,rot:0,h:0,pid:0})}
   const rt=cmpRoute({W:W-4,H,rowsN:1,mk,sources:src,sinks:snk,blocked:blk,ugMax:def(PLC_UG[mk]).maxApart,eastStart:true});
   if(!rt.ok)return fb('lane routing failed');
   rt.items.forEach(b=>items.push({...b,x:b.x+4}));dk.notes.push(...nt);

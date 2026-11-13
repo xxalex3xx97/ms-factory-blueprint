@@ -3,14 +3,14 @@
 const CMP_BLOCKS=['1x1','1x2','2x2','2x2c'];
 function cmpAssemble(c){
   const {mk,spMk,bx,bk,sz,stages}=c,dk=c.dk,no=why=>({ok:false,why}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,L=stages.length,K=sz.K;
-  const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],ugc=PLC_UG[mk],ncol=2*L+1,ms=[],blocks=[];let nug=0;
+  const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],ugc=PLC_UG[mk],nMid=stages.filter((g,s)=>s&&g.k>=2).length,ncol=2*L+1+nMid,P=dk&&dk.in&&K>1&&stages.some(g=>g.k>=2)?d.h+1+(bk==='BPO_Station_03'?1:0):d.h,ms=[],blocks=[];let nug=0;   // D2: gap unit row between strips when side docks are needed
   for(let j=0;j<K;j++){
-    const fbs=[],y0=j*d.h*FC;
+    const fbs=[],y0=j*P*FC;
     for(let s=0;s<L;s++){
       const g=stages[s],z=sz.stages[s],st=z.strips[j],pk=tplPick(g.cls,g.k,block);
       if(!pk.ok)return no(pk.why);
       if(s===0&&g.k>=2&&pk.id==='assembler_2in')return no('all-raw 2-input assembler as a chain start is not built yet ('+g.node.rec.i.length+' inputs)');
-      if(g.k!==1&&s>0)return no('composer builds 1-input stages only ('+z.item+' has '+g.k+')');
+      if(g.k!==1&&s>0&&g.k<2)return no('composer builds 1-input stages only ('+z.item+' has '+g.k+')');
       const main=s?g.node.rec.i.findIndex(([it])=>it===stages[s-1].item):0;
       const b=pk.t.build({block,cls:g.cls,rec:g.rec,recObj:g.node.rec,recd:g.node.rec,mk,spMk,S:st.S,n:st.n,main,growth:g.growth,raw:g.k-(s?1:0)});
       if(!b.ok)return no(b.why);
@@ -20,7 +20,8 @@ function cmpAssemble(c){
       const used=b.iface.sets.filter(q=>q.n>0),M=b.iface.M,hs=tplIfSets(block,st.S).hs;
       // first stage with k>=2: all inputs raw -> FEED block (allRaw) instead of SRC
       const feed=s===0&&g.k>=2?{sets:b.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:b.ports&&b.ports.in?b.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0),M,k:g.k}:null;
-      fbs.push({feed,items:b.items,inRows:used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+main*M+i)),outRows:used.map(q=>q.o)});
+      const mid=s&&g.k>=2?{sets:b.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:b.ports&&b.ports.in?b.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0),M,k:g.k,main}:null;
+      fbs.push({feed,mid,items:b.items,inRows:used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+main*M+i)),outRows:used.map(q=>q.o)});
     }
     const f0=fbs[0].feed,g0=stages[0],shr=s=>sz.stages[s].strips[j].n/sz.stages[s].strips.reduce((a,v)=>a+v.n,0);
     let dI=null,dO=null;   // C7: dock cells of the SRC / OZ hub of this strip
@@ -30,11 +31,18 @@ function cmpAssemble(c){
     const hub=(inRows,outRows,raw,item,x)=>cmpPool({W,H,mk,bx,item,raw,inRows,outRows,...x});
     const fS=f0&&{W,H,mk,bx,sets:f0.sets,M:f0.M,k:f0.k,main:0,pass:[],rawItems:g0.node.rec.i.map(q=>q[0]),allRaw:true,seed:g0.growth?g0.item:null};
     if(fS&&dk&&dk.in){const E=Array.isArray(c.P.edges)?c.P.edges:Object.values(c.P.edges||{});fS.names=fS.rawItems.map(cmpName);fS.D=fS.rawItems.map(it=>{const e=E.find(e=>e.from===it&&e.to===g0.item);return(e?e.flow:0)*shr(0)})}
-    const seq=[f0?(fS.D?cmpFeedDock(fS,dk,d.h,fS.D,d.w,[j===0?'N':0,j===K-1?'S':0].filter(Boolean)):cmpFeed(fS)):hub([],fbs[0].inRows,true,g0.node.rec.i[0][0],dI)];
-    for(let s=0;s<L;s++){seq.push({items:fbs[s].items});seq.push(hub(fbs[s].outRows,s<L-1?fbs[s+1].inRows:[],false,0,s===L-1?dO:null))}
+    const seq=[f0?(fS.D?cmpFeedDock(fS,dk,d.h,fS.D,d.w,[j===0||P>d.h?'N':0,j===K-1||P>d.h?'S':0].filter(Boolean)):cmpFeed(fS)):hub([],fbs[0].inRows,true,g0.node.rec.i[0][0],dI)];
+    const E2=Array.isArray(c.P.edges)?c.P.edges:Object.values(c.P.edges||{});
+    for(let s=0;s<L;s++){
+      const m=fbs[s].mid;
+      if(m){   // mid-chain raws: FEED hub before the FB (chain lanes pass, raws from N/S dock containers); D2
+        const g=stages[s],rawItems=g.node.rec.i.map(q=>q[0]).filter((_,i)=>i!==m.main),fm={W,H,mk,bx,sets:m.sets,M:m.M,k:m.k,main:m.main,pass:fbs[s].inRows,rawItems,allRaw:false};
+        if(dk&&dk.in){fm.names=rawItems.map(cmpName);fm.D=rawItems.map(it=>{const e=E2.find(e=>e.from===it&&e.to===g.item);return(e?e.flow:0)*shr(s)})}
+        seq.push(fm.D?cmpFeedDock(fm,dk,d.h,fm.D,d.w,['N','S']):cmpFeed(fm))}
+      seq.push({items:fbs[s].items});seq.push(hub(fbs[s].outRows,s<L-1?fbs[s+1].inRows:[],false,0,s===L-1?dO:null))}
     for(const h of seq)if(h.ok===false)return no(h.why);
     const strip=[];
-    seq.forEach((h,i)=>{h.items.forEach(b=>strip.push({...b,x:b.x+i*TW,y:b.y+y0}));blocks.push({cls,x:i*d.w,y:j*d.h})});
+    seq.forEach((h,i)=>{h.items.forEach(b=>strip.push({...b,x:b.x+i*TW,y:b.y+y0}));blocks.push({cls,x:i*d.w,y:j*P})});
     // wall swap: belts on both sides of a block boundary (A at x=W-1, B at x=0), same row -> UG pair (entrance, exit), same rot
     const at=new Map();strip.forEach(b=>{if(PLC_BELT.includes(b.cls)&&b.rot===0)at.set(b.x+','+b.y,b)});
     for(let i=0;i+1<ncol;i++)for(let y=y0;y<y0+H;y++){
@@ -45,7 +53,7 @@ function cmpAssemble(c){
   }
   const max=def(ugc).maxApart,pairs=ugPairs(ms.filter(b=>PLC_UG.includes(b.cls)));
   const T={ok:true,blocks,ms,ug:nug,cols:ncol,rows:K,max,rc:[],ov:0,span:pairs.filter(p=>p&&p.n>max).length,G:1};
-  if(dk&&(dk.in||dk.out)){const r=cmpDockApply({cls,mk},T);if(!r.ok)return no(r.why);return{ok:true,T,dock:r}}
+  if(dk&&(dk.in||dk.out)){const r=cmpDockApply({cls,mk},T,{P});if(!r.ok)return no(r.why);return{ok:true,T,dock:r}}
   return{ok:true,T};
 }
 
