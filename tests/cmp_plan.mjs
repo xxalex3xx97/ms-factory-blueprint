@@ -134,14 +134,20 @@ const pageStage = a => {
     // links1 drops output belts whose chain reaches no other machine (a lone N=1 machine has none): give each out row an empty sink container just east of the block
     const sk = a.items.find(b => isStore(b)); if (sk) q.outRows.forEach(y => S.blocks.push({...sk, x: q.fb.w, y: y - 1, id: ++id, h: 0, ct: []}));
     const idAt = (x, y) => (S.blocks.find(b => { const d = dim(b); return x >= b.x && x < b.x + d.w && y >= b.y && y < b.y + d.h }) || {}).id;
+    // inject exactly the planner flow: edge flow x this copy's share of the planner node rate x lane share; growth seed lane = planner cycle flow (self input x rate / net)
+    const nd = P.nodes[q.key], sc = nd && nd.rate > 0 ? q.rate / nd.rate : 1, gr = nd.rec.i.find(([x]) => x === q.key), net = gr ? nd.rec.o[1] - gr[1] : 0, selfFlow = net > 0 ? gr[1] * q.rate / net : 0;
+    // a lane whose belt chain reaches no machine (the unused second pool face of a lone machine) takes no flow; a key with no live lane keeps all (it then starves and the check turns red)
+    const K0 = links1(0, []), live = l => (K0.chainMachines(S.blocks.find(b => b.id === idAt(0, l.y)) || {}) || []).length > 0, kl = key => { const a = q.lanes.filter(z => z.key === key), v = a.filter(live); return v.length ? v : a };
     const injs = [];
-    q.lanes.forEach(l => { const e = P.edges.find(e => e.from === l.key && e.to === q.key), rate = (e ? e.flow : l.key === q.key ? 2 * q.rate : 0) * (l.m == null ? 1 / q.lanes.filter(z => z.key === l.key).length : l.m / q.N); if (rate > 0) injs.push({id: idAt(0, l.y), item: l.key, rate}) });
+    q.lanes.forEach(l => { const e = P.edges.find(e => e.from === l.key && e.to === q.key), ll = kl(l.key); if (!ll.includes(l)) return; const rate = (e ? e.flow * sc : l.key === q.key ? selfFlow : 0) * (l.m == null ? 1 / ll.length : l.m / q.N); if (rate > 0) injs.push({id: idAt(0, l.y), item: l.key, rate}) });
+    const injSelf = injs.filter(i => i.item === q.key).reduce((s, i) => s + i.rate, 0);   // injected product-item flow: passes through to the out belts, not produced
     const K = links1(0, injs);
-    let prod = q.outRows.reduce((s, y) => s + ((K.load.get(idAt(q.fb.w - 1, y)) || {}).tot || 0), 0);
-    // links1 does not model growth chamber output (flow dies at the machine): judge growth nodes by input supply ratio x per-machine rate (UNVERIFIED output belts)
-    const gm = S.blocks.filter(b => /GrowthChamber/.test(b.cls));
-    if (gm.length) { const pm = q.rate / (q.N * q.util); prod = gm.reduce((s, m) => { const rows = supplyRows(m, K); return s + (rows.length ? Math.min(1, ...rows.map(x => x.need > 0 ? x.have / x.need : 1)) : 0) * pm }, 0) }
-    res.push({item: q.item, rate: q.rate, prod: +prod.toFixed(2), inj: injs.length});
+    // CAN see: (a) out belts can carry the node rate (links1 makes every live machine a full-speed source, so this is N x pm, minus injected pass-through; it ignores input supply); (b) supply reading = sum over machines of min input ratio x per-machine rate, from the exactly injected flows (non-circular: a lane that starves or over-feeds a machine moves it). CANNOT see: real machine output belts of growth chambers (links1 stops flow at the machine), belt timing, splitter priority at run time.
+    const beltCap = Math.max(0, q.outRows.reduce((s, y) => s + (((K.load.get(idAt(q.fb.w - 1, y)) || {}).items || new Map()).get(q.key) || 0), 0) - injSelf);
+    const pm = q.rate / (q.N * q.util), gm = S.blocks.filter(b => b.rec);
+    const prod = gm.reduce((s, m) => { const rows = supplyRows(m, K); return s + (rows.length ? Math.min(1, ...rows.map(x => x.need > 0 ? x.have / x.need : 1)) : 0) * pm }, 0);
+    const growth = S.blocks.some(b => /GrowthChamber/.test(b.cls));
+    res.push({item: q.item, rate: q.rate, prod: +prod.toFixed(2), beltCap: growth ? null : +beltCap.toFixed(2), inj: injs.length});
   }
   return res;
 };
@@ -173,8 +179,12 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
   if (strict && flow.mu > 1 + 1e-9) errs.push('belt util ' + flow.mu + ' > 1');
   if (r.nodes) {
     const st = await page.evaluate(pageStage, {nodes: r.nodes, items: r.items, mk});
-    st.forEach(z => { if (z.prod < 0.99 * z.rate) errs.push('stage ' + z.item + ': product ' + z.prod + ' < 0.99 x ' + (+z.rate).toFixed(2)) });
-    row.stageProd = st.map(z => z.item.slice(0, 8) + ' ' + z.prod + '/' + (+z.rate).toFixed(1) + ' inj' + z.inj).join('; ');
+    st.forEach(z => {
+      if (z.prod < 0.99 * z.rate) errs.push('stage ' + z.item + ': product ' + z.prod + ' < 0.99 x ' + (+z.rate).toFixed(2));
+      if (z.prod > 1.05 * z.rate) errs.push('stage ' + z.item + ': product ' + z.prod + ' > 1.05 x ' + (+z.rate).toFixed(2) + ' (over-feed or injection artifact)');
+      if (z.beltCap != null && z.beltCap < 0.99 * z.rate) errs.push('stage ' + z.item + ': out belts carry ' + z.beltCap + ' < 0.99 x ' + (+z.rate).toFixed(2));
+    });
+    row.stageProd = st.map(z => z.item.slice(0, 8) + ' ' + z.prod + '/' + (+z.rate).toFixed(1) + (z.beltCap != null ? ' belt' + z.beltCap : '') + ' inj' + z.inj).join('; ');
     if (opts.oz) console.log('  stage-wise: ' + row.stageProd);
   }
   Object.assign(row, {eng: r.L.eng, K: r.K, blocks: r.L.blocks, ug: r.L.ug, stages: r.count.map(c => c.item + ' N' + c.N + '/' + c.built + ' u' + c.util).join('; '), belts: r.belts, machines: r.machines,
