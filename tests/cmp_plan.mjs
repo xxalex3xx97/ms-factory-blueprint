@@ -76,7 +76,9 @@ const pageRun = async a => {
   if (unp) hard.push(unp + ' unpaired UG');
   // containers inside floors (own cells)
   // (3) machine counts per recipe key
-  const stages = Object.values(P.nodes).filter(n => n.rec && n.crafter);
+  const arm = L.bl && L.bl.cmp && L.bl.cmp.arm;   // Armoury: no Armoury machine, one composer sub-factory per component (parts), judged per part
+  window.__cmpL = L;
+  const stages = arm ? [] : Object.values(P.nodes).filter(n => n.rec && n.crafter);
   const cnt = {}; ms.forEach(m => { if (m.rec) cnt[m.rec] = (cnt[m.rec] || 0) + 1 });
   const K = (L.bl && L.bl.cmp && L.bl.cmp.K) || 1;
   const count = [], cerrs = [];
@@ -85,11 +87,17 @@ const pageRun = async a => {
     const built = ms.filter(m => m.rec && m.x >= q.fb.x && m.x < q.fb.x + q.fb.w && m.y >= q.fb.y && m.y < q.fb.y + q.fb.h).length;
     count.push({item: q.item, key: q.rec, N: q.pN, built, util: +(+q.pU).toFixed(3)});
     if (built !== q.N) cerrs.push('node ' + q.item + ': expected N=' + q.N + ' built ' + built);
-    sumN[q.rec] = sumN[q.rec] || {item: q.item, pN: q.pN, n: 0, c: 0}; sumN[q.rec].n += built; sumN[q.rec].c++;
+    const sk = (q.part || 0) + ':' + q.rec; sumN[sk] = sumN[sk] || {item: q.item, pN: q.pN, n: 0, c: 0}; sumN[sk].n += built; sumN[sk].c++;
   });
   // unrolled fan-out copies (shared product built once per consumer): per key the total may exceed the planner N, never fall below; a single copy equals it exactly
   Object.values(sumN).forEach(v => { if (v.c === 1 || a.exactN ? v.n !== v.pN : v.n < v.pN) cerrs.push('node ' + v.item + ': planner N=' + v.pN + ' built ' + v.n + ' in ' + v.c + ' copies'); else if (v.n !== v.pN) console.log('Planner N=' + v.pN + ', built ' + v.n + ' (' + v.item + ', ' + v.c + ' copies)') });
-  } else stages.forEach(n => {
+  }
+  if (arm) L.bl.cmp.parts.filter(p => !p.tree || !tn || !tn.some(q => q.part === L.bl.cmp.parts.indexOf(p))).forEach(p => p.stages.forEach((g, si) => {   // linear-chain components: machines per recipe key inside the part's rows vs the stage N (K strips: N..N+K-1, last stage exact)
+    const built = ms.filter(m => m.rec === g.rec && m.y >= p.y0 && m.y < p.y1).length;
+    count.push({item: p.item + '/' + g.item, key: g.rec, N: g.N, built, util: 0});
+    if (p.K === 1 ? built !== g.N : si === p.stages.length - 1 ? built !== g.N : (built < g.N || built > g.N + p.K - 1)) cerrs.push('component ' + p.item + ' stage ' + g.item + ': planner N=' + g.N + ' built ' + built);
+  }));
+  if (!tn) stages.forEach(n => {
     const key = rk(n.rec), built = cnt[key] || 0;
     count.push({item: plnNm(n.item), key, N: n.machines, built, util: +(+n.util).toFixed(3)});
     const fin = n.item === item;
@@ -98,7 +106,7 @@ const pageRun = async a => {
   // (5) flood
   const fl = a.floodFn ? a.floodFn : null;
   const flood = a.flood;   // set by node side through page function below
-  return {hard, cerrs, count, K, L: {eng: L.eng || null, blocks: T.blocks.length, ug: pairs.length}, items: ms, nodes: tn || null, routed: (L.bl && L.bl.cmp && L.bl.cmp.routed) || null, pm: P.nodes[item].pmach, finalItems: [item], recKey: a.recipeKey, rate: a.rate, belts: ms.filter(b => PLC_BELT.includes(b.cls)).length, machines: ms.filter(b => b.rec).length, planBelts: null};
+  return {arm: !!arm, nParts: arm ? L.bl.cmp.parts.length : 0, hard, cerrs, count, K, L: {eng: L.eng || null, blocks: T.blocks.length, ug: pairs.length}, items: ms, nodes: tn || null, routed: (L.bl && L.bl.cmp && L.bl.cmp.routed) || null, pm: P.nodes[item].pmach, finalItems: arm ? L.bl.cmp.parts.map(p => p.key) : [item], recKey: a.recipeKey, rate: a.rate, belts: ms.filter(b => PLC_BELT.includes(b.cls)).length, machines: ms.filter(b => b.rec).length, planBelts: null};
 };
 
 // links1 stats on the model loaded by pageRun (containers are sources)
@@ -114,8 +122,9 @@ const pageFlow = a => {
 
 // stage-wise links1 (spec 6.6): each node's FB alone, planner edge flows injected at its input lane cells; product on its out belts >= 0.99 x node rate
 const pageStage = a => {
-  const P = window.__cmpP, res = [];
+  const res = [];
   for (const q of a.nodes) {
+    const P = q.part != null ? window.__cmpL.bl.cmp.parts[q.part].P : window.__cmpP;
     const its = a.items.filter(b => b.x >= q.fb.x && b.x < q.fb.x + q.fb.w && b.y >= q.fb.y && b.y < q.fb.y + q.fb.h).map(b => ({...b, x: b.x - q.fb.x, y: b.y - q.fb.y})).map(b => PLC_UG.includes(b.cls) && (b.x === 0 || b.x === q.fb.w - 1) ? {...b, cls: PLC_BELT[a.mk]} : b);   // wall UG ends back to belts (isolated block)
     S.blocks = []; let id = 600000; its.forEach(b => S.blocks.push({...b, id: ++id, h: 0}));
     // links1 drops output belts whose chain reaches no other machine (a lone N=1 machine has none): give each out row an empty sink container just east of the block
@@ -149,12 +158,12 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
   errs.push(...r.hard);
   const fl = await page.evaluate(floodPage, {items: r.items, finalItems: r.finalItems});
   const soft = [...r.cerrs, ...fl.errs];
-  if (strict) { errs.push(...soft); if (!fl.ozReach.length) errs.push('product reaches no container') }
+  if (strict) { errs.push(...soft); if (!fl.ozReach.length) errs.push('product reaches no container'); if (r.arm && fl.ozReach.length < r.nParts) errs.push('Armoury: ' + r.nParts + ' components but only ' + fl.ozReach.length + ' reach a container') }
   else if (soft.length) console.log('  (non-strict) ' + soft.length + ' soft errs, first: ' + soft.slice(0, 2).join(' | '));
   if (r.nodes) {   // every machine output reaches its own node's POOL container
     for (const q of r.nodes) for (const m of fl.outAt.filter(m => m.x >= q.fb.x && m.x < q.fb.x + q.fb.w && m.y >= q.fb.y && m.y < q.fb.y + q.fb.h)) if (!m.c.some(c => q.ct.includes(c))) errs.push('node ' + q.item + ': machine @' + m.x + ',' + m.y + ' output misses its POOL');
     const ozc = r.nodes.find(q => q.row === Math.min(...r.nodes.map(z => z.row)) && q.pool === Math.max(...r.nodes.map(z => z.pool)));
-    if (ozc && !ozc.ct.length) errs.push('no OZ container');
+    if (!r.arm && ozc && !ozc.ct.length) errs.push('no OZ container');
   }
   const flow = await page.evaluate(pageFlow, {recKey: r.recKey, pm: r.pm});
   if (strict && flow.mu > 1 + 1e-9) errs.push('belt util ' + flow.mu + ' > 1');

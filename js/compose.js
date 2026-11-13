@@ -1,7 +1,7 @@
 // CMP C1 (geometry-free sizing, spec sections 2.1-2.3). cmpTree(P,item): linear stage chain, producer first.
 // cmpSize(P,item,mk,spMk,block): per stage template, S (capacity m(S)), K strips, machines per strip n[s][j].
 // Needs planner.js (plnCb, def, rk), js/tpl/iface.js (TPL_IF_SETS, tplIfSets), js/tpl/bundle.js + registry.js (tplPick).
-const CMP_MAXK=4,CMP_MAXKT=12;   // CMP_MAXKT: tree strips
+const CMP_MAXK=4,CMP_MAXKT=40;   // CMP_MAXKT: tree strips
 const CMP_MERGE_OK=['assembler_2in','advassembler_1_2in','growth_2_3_4in','assembler_3in','enrichment_2_3in','advassembler_4in'];
 const cmpErr=why=>({ok:false,why});
 const cmpName=it=>typeof plnNm==='function'?plnNm(it):String(it);
@@ -90,7 +90,7 @@ function cmpSize(P,item,mk,spMk,block){
       if(pick==null)return cmpErr(why);
       strips.push({S:pick,n:need});
     }
-    stages.push({item:cmpName(q.g.item),cls:q.g.cls,tpl:q.pk.id,block,S:q.best.S,N:q.g.N,m:q.best.m,perStrip:n[s].slice(),B:1,strips});
+    stages.push({item:cmpName(q.g.item),rec:q.g.rec,cls:q.g.cls,tpl:q.pk.id,block,S:q.best.S,N:q.g.N,m:q.best.m,perStrip:n[s].slice(),B:1,strips});
   }
   const note=[];
   if(K>1)stages.forEach(q=>{const t=q.perStrip.reduce((a,v)=>a+v,0);if(t!==q.N)note.push('Planner N='+q.N+', built '+t+' ('+K+' strips)')});
@@ -133,6 +133,37 @@ function cmpTreeSize(pl,mk,spMk,block,caps){
   return bad||{ok:true,by};
 }
 
+// CMP H: Armoury items are hand-crafted (the Armoury machine has no belt ports), so the layout holds no Armoury machine: every leaf component (Armoury inputs expanded recursively)
+// is its own composer sub-factory (cmpCompose on a fresh plan at rate N x recipe amount, exact planner N, own OZ container(s)); the sub-tiles are stacked vertically in one tile.
+function cmpArmoury(P,item,mk,spMk,o,bk,BX){
+  const leaf=new Map(),isA=x=>{const T=P.nodes[x];return T&&T.crafter&&/Armoury/i.test(T.crafter)};
+  const walk=(x,rate)=>{const T=P.nodes[x];for(const [y,n] of T.rec.i){const r=rate*n/T.rec.o[1];if(isA(y))walk(y,r);else leaf.set(y,(leaf.get(y)||0)+r)}};
+  walk(item,P.nodes[item].rate);
+  const cls=plcCls(bk),d=dim({cls,rot:0}),ms=[],blocks=[],parts=[],note=[],nodes=[],routed=[],stages=[];let off=0,cols=1,ug=0,span=0;
+  for(const [c,r] of leaf){
+    if(!(P.nodes[c]&&P.nodes[c].crafter))return cmpErr('Armoury input '+cmpName(c)+' is a raw item (no factory to build)');
+    const Pc=plan(c,r,mk,{sp:null,bal:null},PLN_PICK,{proto:false,enr:false}),L=cmpCompose(Pc,c,mk,spMk,{...o,bk});
+    if(!L.ok)return cmpErr(cmpName(c)+' '+(+r.toFixed(2))+'/min: '+L.why);
+    const T=L.tile,ci=L.bl.cmp,i=parts.length,dy=off*FC,ext=Math.max(...T.blocks.map(b=>b.y+dim(b).h)),pid='a'+i;
+    T.ms.forEach(b=>ms.push({...b,y:b.y+dy}));T.blocks.forEach(b=>blocks.push({...b,y:b.y+off}));
+    const sh=s=>s.replace(/^(-?\d+),(-?\d+)$/,(_,x,y)=>x+','+(+y+dy));
+    (ci.nodes||[]).forEach(q=>nodes.push({...q,id:pid+q.id,fb:{...q.fb,y:q.fb.y+dy},gy:q.gy+off,ct:q.ct.map(sh),part:i}));
+    (ci.routed||[]).forEach(q=>routed.push({...q,y:q.y+dy}));
+    stages.push(...ci.stages.map(s=>({...s,part:i})));
+    parts.push({item:cmpName(c),key:c,rate:r,y0:dy,y1:dy+Math.ceil(ext/d.h)*d.h*FC,K:ci.K,tree:!!ci.tree,stages:ci.stages,P:Pc});
+    note.push(cmpName(c)+' '+(+r.toFixed(2))+'/min -> '+L.note.filter(n=>/^Planner N=/.test(n)).concat(['own container(s)']).join('; '));
+    for(const n of L.note)if(/^(Dock|Fill the seed|Dock-limited)/.test(n))note.push(n);
+    off+=Math.ceil(ext/d.h)*d.h;cols=Math.max(cols,T.cols);ug+=T.ug;span+=T.span;
+  }
+  const T={ok:true,blocks,ms,ug,cols,rows:off/d.h,max:def(PLC_UG[mk]).maxApart,rc:[],ov:0,span,G:1},ext=plcExt(T),cnt=f=>ms.filter(f).length;
+  const cmpI={K:1,tree:true,arm:true,stages,nodes,routed,parts};
+  const L={ok:true,eng:'cmp',items:ms,cuts:[],lanes:1,per:[0],makes:0,pitch:ext.h+1,w:ext.w,h:ext.h,tall:true,mod:false,box:BX,mk,ports:[],
+    note:['Armoury '+cmpName(item)+' is hand-crafted (no belt ports): the factory builds its '+parts.length+' components, each into its own container(s)',...note],src:{P,item,mk,spMk,o},prefab:true,
+    stat:{belts:cnt(b=>PLC_BELT.includes(b.cls)),ug:cnt(b=>PLC_UG.includes(b.cls)),spl:cnt(b=>PLC_SPL.includes(b.cls)),blocks:blocks.length,machines:cnt(b=>b.rec),lanes:1,spills:0},
+    dk:o.dock||null,bl:{zoned:true,n:new Array(cols-1).fill(0),cmp:cmpI},tile:T,tileBk:'cmp',fixedTile:true,armoury:parts.map(q=>({item:q.key,rate:q.rate}))};
+  T.L=L;return L;
+}
+
 // CMP C3: cmpCompose(P,item,mk,spMk,o) -> placerLayout result (fixed tile) | {ok:false,why}. Linear chain of 1-input stages, K strips. Docks not built yet.
 function cmpCompose(P,item,mk,spMk,o={}){
   const BX=o.box||PLC_BOX,bk=o.bk||($('plnBk').value==='auto'?'auto':PL_ALL[placerBk().indexOf(true)]);
@@ -151,13 +182,14 @@ function cmpCompose(P,item,mk,spMk,o={}){
     return best.L;
   }
   if(BX!=='DAT_Container_2')return cmpErr('needs Large Container');
+  if(P.nodes[item]&&/Armoury/i.test(P.nodes[item].crafter||''))return cmpArmoury(P,item,mk,spMk,o,bk,BX);
   const tr=cmpTree(P,item),block=CMP_BLOCKS[PL_ALL.indexOf(bk)];
   let A,sz,stages,cmpI,note,per;
   const dkw=o.dock&&(o.dock.in||o.dock.out)?o.dock:null,dkn=[],dk=dkw?{mk,in:!!dkw.in,out:!!dkw.out,notes:dkn,indIn:dkw&&dkw.in==='ind',indOut:dkw&&dkw.out==='ind'}:null;
   if(tr.ok){
     sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;
     A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages,dk});if(!A.ok)return A;
-    stages=sz.stages.map(q=>({item:q.item,cls:q.cls,tpl:q.tpl,block:q.block,S:q.S,N:q.N,perStrip:q.perStrip,B:q.B}));cmpI={K:sz.K,stages};
+    stages=sz.stages.map(q=>({item:q.item,rec:q.rec,cls:q.cls,tpl:q.tpl,block:q.block,S:q.S,N:q.N,perStrip:q.perStrip,B:q.B}));cmpI={K:sz.K,stages};
     note=sz.note.concat(tr.stages[0].growth&&tr.stages[0].k>=2?['Fill the seed container ('+cmpName(item)+')']:[]);per=sz.stages[sz.stages.length-1].perStrip.slice();
   }else if(/^branching/.test(tr.why)){   // S7b: merge tree (K=1)
     let pl=cmpPlan(P,item,mk,{});if(!pl.ok)return pl;
