@@ -1,5 +1,5 @@
 // CMP dock fallbacks gate (docks are never refused). Each fallback is forced by patching the page function that would fail:
-// (1) industrial dock cannot be placed (cmpDockApply -> 'dock slot misaligned') -> rebuilt with normal docks + 'Industrial dock not built' note, no Dock_2.
+// (1) industrial dock cannot be placed (cmpDockApply -> 'dock slot misaligned') -> rebuilt with NO docks on that side (INDONLY: never normal docks) + 'Industrial dock not built' note, no Dock_2.
 // (2) FEED hub router fails once -> a single side / west column still docks; fails always -> infinite containers + exact reason note, never ok:false.
 // (3) cmpDockApply miss reason reaches the note; unaligned container -> miss with reason.
 // Run: node tests/cmp_dockfb.mjs   Exit 1 on FAIL.
@@ -31,9 +31,9 @@ const run = (a) => {
 };
 const BK2 = 'BPO_Station_02';
 let r = await pg.evaluate(run, {name: 'Nickel Plates', rx: '^ITEM_NickelOre>ITEM_NickelPlates$', rate: 31, bk: BK2, dock: {in: 'ind', out: 'ind'}, patch: 'ind'});
-check(r.ok && r.d2 === 0 && r.d1 > 0 && r.note.some(n => /^Industrial dock not built \(dock slot misaligned\): normal docks used/.test(n)) && r.ov === 0, 'ind misaligned -> normal docks + note ' + JSON.stringify(r.ok ? {d2: r.d2, d1: r.d1, n: r.note.filter(n => /Industrial/.test(n))} : r.why));
+check(r.ok && r.d2 === 0 && r.d1 === 0 && r.note.some(n => /^Industrial dock not built \(dock slot misaligned\): no docks on the industrial side/.test(n)) && r.ov === 0, 'ind misaligned -> NO normal docks + note ' + JSON.stringify(r.ok ? {d2: r.d2, d1: r.d1, n: r.note.filter(n => /Industrial/.test(n))} : r.why));
 r = await pg.evaluate(run, {name: 'Capacitor', rx: '>ITEM_Capacitor$', rate: 100, bk: BK2, dock: {in: 'ind', out: 'ind'}, patch: 'ind'});
-check(r.ok && r.d2 === 0 && r.d1 > 0 && r.note.some(n => /^Industrial dock not built/.test(n)), 'ind misaligned on a tree -> normal docks + note ' + JSON.stringify(r.ok ? {d2: r.d2, d1: r.d1} : r.why));
+check(r.ok && r.d2 === 0 && r.d1 === 0 && r.note.some(n => /^Industrial dock not built/.test(n)), 'ind misaligned on a tree -> NO normal docks + note ' + JSON.stringify(r.ok ? {d2: r.d2, d1: r.d1} : r.why));
 const f0 = await pg.evaluate(run, {name: 'Enzyme', rate: 10, bk: BK2, dock: {in: 'nrm', out: null}});
 const f1 = await pg.evaluate(run, {name: 'Enzyme', rate: 10, bk: BK2, dock: {in: 'nrm', out: null}, patch: 'feed1'});
 check(f1.ok && f1.eCalls >= 2 && f1.dd >= 1 && !f1.note.some(n => /stay infinite/.test(n)), 'feed router fails once -> another side/column docks, no infinite note ' + JSON.stringify(f1.ok ? {dd: f1.dd, inf: f1.inf, e: f1.eCalls, base: f0.dd} : f1.why));
