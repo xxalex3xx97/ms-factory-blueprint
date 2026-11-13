@@ -43,6 +43,19 @@ for (const [name, rate] of [['Basic Motor', 60], ['Basic Motor', 6], ['Hull Plat
     if (!ok) fails++;
   }
 }
+// SHAPE3: lanes by rate: Basic Motor 900 Mk2 2x2 builds INDUSTRIAL docks in+out at the full 900/min (output lanes merged to <= 8: partial rails of adjacent sets share a belt), no dock-limited / fallback note
+{
+  const notes = await pg.evaluate(() => {
+    window.CMP_ENGINE = true;
+    const item = [...plnBy(false).keys()].find(x => plnNm(x) === 'Basic Motor');
+    const P = plan(item, 900, 1, {}, PLN_PICK, {proto: false, enr: false, obs: false});
+    const L = placerLayout(P, item, 1, 1, {box: 'DAT_Container_2', mod: false, dock: {in: 'ind', out: 'ind'}, bk: 'BPO_Station_02'});
+    return L.ok ? L.note || [] : ['REFUSED ' + L.why];
+  });
+  const bad = notes.filter(n => /Dock-limited|not possible|REFUSED|not built/.test(n));
+  console.log((bad.length ? 'FAIL ' : 'PASS ') + 'Basic Motor 900 Mk2 2x2 industrial docks full rate' + (bad.length ? ': ' + bad[0] : ''));
+  if (bad.length) fails++;
+}
 if (perrs.length) { console.log('FAIL page errors: ' + perrs[0]); fails++ }
 await br.close();
 process.exit(fails ? 1 : 0);

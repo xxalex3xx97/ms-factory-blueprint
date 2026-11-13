@@ -43,7 +43,7 @@ function tplBuild(spec){
   // fill: S sets first (bottom first), then D sets
   const order=[...P.rows.map((r,i)=>[r,i])].sort((a,b)=>(a[0].t==='S'?0:1)-(b[0].t==='S'?0:1)||b[1]-a[1]).map(q=>q[0]);
   let left=n;const cnt=new Map();for(const r of order){const m=Math.min(left,r.cap);cnt.set(r,m);left-=m}
-  const ports={in:[],out:[]},lanes=[],ex=[],outsOf=[];   // lanes: one entry per in port (planner test weights injection by lanes[p.row].m)
+  const ports={in:[],out:[]},lanes=[],ex=[],outsOf=[],outN=P.rows.map(()=>[]);   // lanes: one entry per in port (planner test weights injection by lanes[p.row].m)
   P.rows.forEach((r,s)=>{
     const m=cnt.get(r),y0=r.y0,D=r.t==='D',yc=y0+(D?7:6),mx=k=>5*k+1,outs=[y0];
     const inP=(y,copy,mm)=>{ports.in.push({x:0,y,item:main,dir:'E',set:s,copy,row:lanes.length});lanes.push({set:s,t:r.t,y0,copy,m:mm,n:mm})};
@@ -69,14 +69,17 @@ function tplBuild(spec){
       inP(yA,0,A.length);inP(yB,1,Bk.length);
     }
     if(m>0&&P.lay){   // rails: group e (east first, gout machines each) on row yc+e; deeper groups drop at their S4 columns; rail 0 jogs up the trunk, rails e>0 leave east on their own row
-      const go=P.R.gout;
-      for(let e=0;e*go<m;e++){
-        const kmin=Math.max(0,m-(e+1)*go),yr=yc+e;
-        if(e)for(let k=kmin;k<=m-1-e*go;k++)for(let yy=yc;yy<yr;yy++)bt(mx(k)+1,yy,1);
-        const xl=mx(m-1-e*go)+1;   // last injection column of this rail: belts up to it, UG hops beyond (SHAPE)
+      const go=P.R.gout,rem=m%go,sz=[];for(let e=0;e*go<m;e++)sz.push(go);
+      if(rem)sz[s%2?0:sz.length-1]=rem;   // SHAPE3: odd sets put the partial rail first (row o): the partial last rail of the set above (row o'-1) and this one are adjacent rows, the hub merges them (outN)
+      let kmax=m-1;
+      for(let e=0;e<sz.length;e++){
+        const kmin=kmax-sz[e]+1,yr=yc+e;
+        if(e)for(let k=kmin;k<=kmax;k++)for(let yy=yc;yy<yr;yy++)bt(mx(k)+1,yy,1);
+        const xl=mx(kmax)+1;   // last injection column of this rail: belts up to it, UG hops beyond (SHAPE)
         for(let x=mx(kmin)+1;x<=xl;x++)bt(x,yr,0);
         tplRun(items,{bc,ug,y:yr,xa:xl+1,xb:e?W-1:W-3});
         if(!e)tplOutTail(items,{bc,W,yc,yo:y0});else{ex.push({x:W-1,y:yr,dir:'E',set:s,rail:e});outs.push(yr)}
+        outN[s].push(sz[e]);kmax=kmin-1;
       }
     }else if(m>0){const xl=mx(m-1)+1;for(let x=2;x<=xl;x++)bt(x,yc,0);tplRun(items,{bc,ug,y:yc,xa:xl+1,xb:W-3});tplOutTail(items,{bc,W,yc,yo:y0})}   // SHAPE: belts from the first injection column to the last, UG hops to the trunk
     else bt(W-1,y0,0);   // stub: the edge cell only
@@ -88,5 +91,5 @@ function tplBuild(spec){
   for(const b of items){if(PLC_BELT.includes(b.cls))stats.belts++;else if(PLC_UG.includes(b.cls))stats.ug++;else if(PLC_SPL.includes(b.cls))stats.spl++;else stats.machines++}
   const hasD=P.rows.some(r=>r.t==='D');
   return{ok:true,items,w:W,h:P.H,ports,nMax:P.nMax,stats,rates:P.R,rows:lanes,
-    iface:{v:1,block:spec.block,S:P.S,M:hasD?2:1,k:1,main,n,sets:P.rows.map((r,i)=>({o:r.y0,n:cnt.get(r),outs:outsOf[i]})),side:[]}};
+    iface:{v:1,block:spec.block,S:P.S,M:hasD?2:1,k:1,main,n,gOut:P.R.gout,sets:P.rows.map((r,i)=>({o:r.y0,n:cnt.get(r),outs:outsOf[i],outN:outN[i].length?outN[i]:null})),side:[]}};
 }

@@ -19,6 +19,13 @@ function cmpRunV(items,mk,x,ya,yb,rot){
   while(rem()>=2){const y=cur+s*Math.min(D,rem()-1);items.push(mkb(ug,cur),mkb(ug,y));cur=y+s}
   for(;rem()>0;cur+=s)items.push(mkb(bc,cur));
 }
+// SHAPE3: lanes by rate. rows = lane rows ascending, N = machines per lane (null: none), g = machines one belt carries. Adjacent rows whose machines fit one belt merge: the hub side-loads the lower row into the upper (column x=1). -> {rows:kept rows, mg:[{ys,yp}], n}
+function cmpMerge(rows,N,g){
+  if(!N||!g||globalThis.CMP_NOMERGE)return{rows,mg:[],n:N};
+  const kr=[],kn=[],mg=[];
+  rows.forEach((y,j)=>{const i=kr.length-1;if(i>=0&&kr[i]===y-1&&!kn[i].m&&kn[i].v+N[j]<=g){kn[i].v+=N[j];kn[i].m=1;mg.push({ys:y,yp:kr[i]})}else{kr.push(y);kn.push({v:N[j],m:0})}});
+  return{rows:kr,mg,n:kn.map(q=>q.v)};
+}
 // largest group of rows that share a flow direction (= columns blHA needs)
 const cmpNg=A=>Math.max(0,...[-1,1].map(d=>A.dir.filter(v=>v===d).length));
 // cmpPool(S): S={W,H,mk,bx,item,raw,inRows,outRows,ind?,ca?,pyOut?,pyIn?,dock?,dkx?}. dock (cmp_dock.js cmpDockHub): ca = container rows (one per dock cell), SRC container flush x=0, OZ container flush east, dk tags. Container(s) 4x4 at (cx,ya+4j); west ports x=cx-1, east ports x=cx+4. raw=true: infinite source container(s).
@@ -28,9 +35,10 @@ function cmpPool(S){
   const ya=Math.min(Math.max(Math.floor(mid-2*c),1),H-1-4*c);
   if(!S.ca&&H-1-4*c<1)return cmpNo('pool block too short (rows)');
   const AW=Ri?blHA(inRows,c,ya,'out',0,S.pyIn):null,ngW=AW?cmpNg(AW):0;
-  let cx=S.dock&&!Ro?W-5:(Ri?ngW+2:S.dock?0:1);   // OZ dock: container flush with the east edge (q.x+4===W-1)
+  const MG=S.mgIn&&S.mgIn.length?S.mgIn:[],xm=MG.length?1:0,mgy=new Set(MG.map(q=>q.yp));   // SHAPE3: merge column x=1 reserved
+  let cx=S.dock&&!Ro?W-5:(Ri?ngW+2+xm:S.dock?0:1);   // OZ dock: container flush with the east edge (q.x+4===W-1)
   if(Ro>Ri&&!S.dock&&!S.ind){const m=W-6-cmpNg(blHA(outRows,c,ya,'in',cx+4,S.pyOut));if(m>cx&&m<=W-5)cx=m}   // F2: more lanes leave than arrive: container east, the long lane run shrinks
-  if((Ri&&cx-1-ngW<1)||cx>W-5)return cmpNo('pool block too narrow (rows)');
+  if((Ri&&cx-1-ngW<1+xm)||cx>W-5)return cmpNo('pool block too narrow (rows)');
   const AE=Ro?blHA(outRows,c,ya,'in',cx+4,S.pyOut):null,ngE=AE?cmpNg(AE):0;
   if(Ro&&cx+4+ngE+1>W-1)return cmpNo('pool block too narrow (rows)');
   const items=[];
@@ -39,15 +47,17 @@ function cmpPool(S){
     const A=blHA(inRows,c,ya,'out',cx-1,S.pyIn),xe=S.ind&&!Ro?W-1:cx-1,tl=(b,x)=>{if(S.ind&&!Ro&&x===xe){b.dk='oe';b.dx=S.dkx}return b};
     for(let j=0;j<Ri;j++){
       const y=inRows[j],py=A.py[j],d=A.dir[j];
-      if(!d){cmpRun(items,mk,y,0,xe,tl);continue}
+      const pre=mgy.has(y)?2:0;if(pre)items.push(bt(0,y,0),bt(1,y,0));
+      if(!d){cmpRun(items,mk,y,pre,xe,tl);continue}
       const xc=A.col[j];
-      cmpRun(items,mk,y,0,xc-1);
+      cmpRun(items,mk,y,pre,xc-1);
       items.push(bt(xc,y,d<0?3:1));
       cmpRunV(items,mk,xc,y,py,d<0?3:1);
       items.push(bt(xc,py,0));
       cmpRun(items,mk,py,xc+1,xe,tl);
     }
   }
+  for(const q of MG)items.push(bt(0,q.ys,0),bt(1,q.ys,q.yp<q.ys?3:1));   // merged lane: belt at the port, turn into the primary row (side-load at x=1)
   if(Ro){   // blHIN loop: from the container E face (or x=0 for industrial input) to x=W-1
     const A=AE,xp=cx+4,x0=S.ind?0:xp,tag=(b,f)=>{if(f&&S.ind){b.dk='ie';b.di=item;b.yb=0;b.dx=S.dkx}return b};
     for(let j=0;j<Ro;j++){
