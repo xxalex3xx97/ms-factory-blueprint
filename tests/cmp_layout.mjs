@@ -41,10 +41,12 @@ for (const [tag, r] of Object.entries(R)) {
   // internal consistency: child POOL = parent IN-1, no cell shared, sibling bands disjoint, sides not on parent row
   const cells = new Map();
   let ok1 = true, ok2 = true, ok3 = true;
+  // raw leaves of a 'feed' node are dock/container descriptors on the parent's row (no block cell, no band of their own): by design, not a layout clash
+  const leaf = o => o.raw && o.parent && byId(o.parent).inKind === 'feed';
   for (const o of r.nodes) {
     if (o.parent) { const p = byId(o.parent); if (o.pool !== p.col - 1) ok1 = false }
-    for (let c = o.col; c <= o.col + 2; c++) { const k = o.row + ':' + c; if (cells.has(k)) ok2 = false; cells.set(k, o.id) }
-    const kids = o.children.map(byId);
+    if (!leaf(o)) for (let c = o.col; c <= o.col + 2; c++) { const k = o.row + ':' + c; if (cells.has(k)) ok2 = false; cells.set(k, o.id) }
+    const kids = o.children.map(byId).filter(c => !leaf(c));
     kids.forEach((c, i) => { if (i && c.row === o.row) ok3 = false; });
     for (let i = 0; i < kids.length; i++) for (let j = i + 1; j < kids.length; j++) {
       const a = rowsOf(r.nodes, kids[i]), b = rowsOf(r.nodes, kids[j]);
