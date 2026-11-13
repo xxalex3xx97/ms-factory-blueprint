@@ -774,7 +774,7 @@ function plcWarn(ser){
   e.textContent=got<pl.rate*0.95?"Simulation returned "+Math.round(got)+"/min, you asked for "+pl.rate+"/min ("+plnNm(pl.item)+")":"";
 }
 const PLC_BKV=PL_ALL;
-const placerBk=()=>PLC_BKV.map(c=>c===$("plnBk").value);
+const placerBk=()=>PLC_BKV.map(c=>c===($("plnBk").value==="auto"?window.CMP_BK||"BPO_Station_02":$("plnBk").value));   // "auto" = composer picks (cmpCompose sets CMP_BK)
 const placerDock=()=>{const i=$("plnDkI").checked,o=$("plnDkO").checked;if(!i&&!o)return null;const t=$("plnDk").value;return{in:i?t:null,out:o?($("plnDkOT").value||t):null}};
 function placerRun(open){
   const dl=$("plnPrev");if(!open&&!dl.open)return;

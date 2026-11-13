@@ -135,8 +135,21 @@ function cmpTreeSize(pl,mk,spMk,block,caps){
 
 // CMP C3: cmpCompose(P,item,mk,spMk,o) -> placerLayout result (fixed tile) | {ok:false,why}. Linear chain of 1-input stages, K strips. Docks not built yet.
 function cmpCompose(P,item,mk,spMk,o={}){
-  const BX=o.box||PLC_BOX,bk=o.bk||PL_ALL[placerBk().indexOf(true)];
+  const BX=o.box||PLC_BOX,bk=o.bk||($('plnBk').value==='auto'?'auto':PL_ALL[placerBk().indexOf(true)]);
   if(!bk)return cmpErr('no block type selected');
+  if(bk==='auto'){   // CMP density: build with every block type, keep the one with the fewest blocks, then the fewest belts
+    let best=null,why=null;
+    for(const b of PL_ALL){
+      if(!plcCls(b))continue;
+      const L=cmpCompose(P,item,mk,spMk,{...o,bk:b});
+      if(!L.ok){why=why||L.why;continue}
+      const k=L.stat.blocks*1e6+L.stat.belts+L.stat.ug;
+      if(!best||k<best.k)best={L,k,b};
+    }
+    if(!best)return cmpErr(why||'no block type builds');
+    window.CMP_BK=best.b;best.L.note=[...best.L.note,'Block type '+CMP_BLOCKS[PL_ALL.indexOf(best.b)]+' (auto: fewest blocks, then fewest belts)'];
+    return best.L;
+  }
   if(BX!=='DAT_Container_2')return cmpErr('needs Large Container');
   const tr=cmpTree(P,item),block=CMP_BLOCKS[PL_ALL.indexOf(bk)];
   let A,sz,stages,cmpI,note,per;

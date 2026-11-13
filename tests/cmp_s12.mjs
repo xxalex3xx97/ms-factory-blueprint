@@ -8,8 +8,8 @@ const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const KEY = {cap: 'ITEM_NickelPlates+ITEM_TitaniumPlates>ITEM_Capacitor', bc: 'ITEM_SiliconWafers+ITEM_MagneticCoils>ITEM_BasicCircuit', enz: 'ITEM_Biomass+ITEM_Xenobacteria+ITEM_Nutrients>ITEM_Enzyme', aa: 'ITEM_DetectorArray+ITEM_BasicCircuit+ITEM_Superalloy+ITEM_Coolant>ITEM_AdvancedCircuits'};
-const BK = {'2x2': 'BPO_Station_02', '2x2c': 'BPO_Station_03', '1x1': 'BPO_Station_01'};
-const cases = process.argv[2] ? [[process.argv[2], +process.argv[3], process.argv[4] || '2x2']] : [['cap', 100, '2x2'], ['bc', 100, '2x2'], ['enz', 10, '2x2'], ['aa', 5, '2x2'], ['cap', 200, '2x2'], ['bc', 200, '2x2'], ['enz', 40, '2x2'], ['cap', 200, '2x2c'], ['cap', 500, '2x2'], ['bc', 500, '2x2'], ['cap', 1000, '2x2']];   // exactN cases (not enz/aa: shared products are built per consumer)
+const BK = {'2x2': 'BPO_Station_02', '2x2c': 'BPO_Station_03', '1x1': 'BPO_Station_01', auto: 'auto'};
+const cases = process.argv[2] ? [[process.argv[2], +process.argv[3], process.argv[4] || '2x2']] : [['cap', 100, '2x2'], ['bc', 100, '2x2'], ['enz', 10, '2x2'], ['aa', 5, '2x2'], ['cap', 200, '2x2'], ['bc', 200, '2x2'], ['enz', 40, '2x2'], ['cap', 200, '2x2c'], ['cap', 500, '2x2'], ['bc', 500, '2x2'], ['cap', 1000, '2x2'], ['cap', 100, 'auto'], ['enz', 10, 'auto'], ['ITEM_EnrichedNickelOre>ITEM_NickelPlates', 31, 'auto']];   // auto = composer picks the block type   // exactN cases (not enz/aa: shared products are built per consumer)
 const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--js-flags=--max-old-space-size=8192']});
 const page = await (await br.newContext()).newPage(); const pe = [];
 page.on('pageerror', e => pe.push(e.message));
