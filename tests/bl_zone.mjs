@@ -166,6 +166,118 @@ for (const [rate, rows, mach] of [[480, 4, 24], [720, 6, 36]]) {
   check(z.tileOk && z.ov === 0 && z.span === 0, `Nickel ${rate} tile ov 0, span 0`);
   check(z.tileOk && z.blocks && z.blocks.length === 2, `Nickel ${rate} 2 blocks`);
 }
+// H4 geometry: 2-stage zone (IZ block 0 | FB_0 block 1 | FB_1 block 2), stage pairs (R=4 -> 6) and (R=6 -> 1). Cell clash 0; every input row floods to its manifold; every stage output row floods to its sink W port; blHIN rows flood from the sink E port to the next manifold; rot-0 belts only on x%30 in {29,0,1}.
+const h4 = await pg.evaluate(() => {
+  const mc = blMachine('DAT_Refinery'), CB = 'DAT_Container_2', MK = 1, SM = 1, REC = 'ITEM_Silica>ITEM_SiliconWafers', w = mc.w, P = mc.h + 2;
+  const DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]], isB = b => PLC_BELT.includes(b.cls) || PLC_SPL.includes(b.cls);
+  const xo = mc.xin === 0 ? 1 : 0;   // manifold start offset inside a block (blHFB X0 = B+1+xo)
+  const out = [];
+  for (const [R0, R1] of [[4, 6], [6, 1]]) {
+    const y0a = R0 * P === 30 ? 0 : 1, y0b = R1 * P === 30 ? 0 : 1, yA = Array.from({length: R0}, (_, j) => y0a + P * j), yB = Array.from({length: R1}, (_, j) => y0b + P * j);
+    const M0 = blRW(R0, w, R1).M, M1 = blRW(R1, w).M, c0 = Math.ceil(Math.max(R0, R1) / 4);
+    const g = {R0, R1, M0, M1, fails: []};
+    out.push(g);
+    if (M0 < 1 || M1 < 1) { g.fails.push('M<1'); continue }
+    const iz = blHIZ({mk: MK, bx: CB, raw: 'ITEM_Silica', R: R0, P, y0: y0a, Y: 0});
+    const f0 = blHFB({mk: MK, spMk: SM, cls: 'DAT_Refinery', rec: REC, mc, M: M0, R: R0, Y: 0, y0: y0a, bx: CB, B: 30, nextR: R1, c: c0});
+    if (!f0.ok) { g.fails.push('f0 ' + f0.why); continue }
+    const hin = blHIN({mk: MK, bx: CB, xc0: f0.xc0, ya: f0.ya, c: f0.c, R: R1, P, y0: y0b, Y: 0, B: 30});
+    const f1 = blHFB({mk: MK, spMk: SM, cls: 'DAT_Refinery', rec: REC, mc, M: M1, R: R1, Y: 0, y0: y0b, bx: CB, B: 60});
+    if (!f1.ok) { g.fails.push('f1 ' + f1.why); continue }
+    const all = [...iz.items, ...f0.items, ...hin.items, ...f1.items], occ = new Map();
+    let clash = 0;
+    for (const b of all) { const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) { const k = x + ',' + y; if (occ.has(k)) clash++; else occ.set(k, b) } }
+    g.clash = clash;
+    g.machines = all.filter(b => b.cls === 'DAT_Refinery').length;
+    g.want = R0 * M0 + R1 * M1;
+    g.wallBad = all.filter(b => PLC_BELT.includes(b.cls) && [29, 0, 1].includes(b.x % 30) && b.rot !== 0).length;
+    const flood = (x, y, stop) => {
+      const path = [];
+      for (let n = 0; n < 400; n++) {
+        path.push(x + ',' + y);
+        if (stop(x, y)) return {hit: true, path};
+        const b = occ.get(x + ',' + y);
+        if (!b || !isB(b)) return {hit: false, path};
+        const [dx, dy] = DIR[b.rot]; x += dx; y += dy;
+      }
+      return {hit: false, path};
+    };
+    const cont = (x, y) => { const b = occ.get(x + ',' + y); return !!b && b.cls === CB };
+    g.inA = iz.py.map((py, j) => { const r = flood(iz.xp, py, x => x === 30); return r.hit && r.path[r.path.length - 1] === '30,' + yA[j] });
+    g.outA = f0.py.map((py, j) => { const r = flood(31 + xo + mc.xout, f0.yOut[j], cont); return r.hit && r.path[r.path.length - 2] === (f0.xc0 - 1) + ',' + py });
+    g.inB = hin.py.map((py, j) => { const r = flood(f0.xc0 + 4, py, x => x === 60); return r.hit && r.path[r.path.length - 1] === '60,' + yB[j] });
+    g.outB = f1.py.map((py, j) => { const r = flood(61 + xo + mc.xout, f1.yOut[j], cont); return r.hit && r.path[r.path.length - 2] === '84,' + py });
+    if (clash) g.fails.push('clash ' + clash);
+    if (g.machines !== g.want) g.fails.push('machines ' + g.machines + '/' + g.want);
+    if (g.wallBad) g.fails.push('non-rot0 belt on wall column ' + g.wallBad);
+    if (!g.inA.every(Boolean)) g.fails.push('stage0 input rows ' + g.inA.map(Number).join(''));
+    if (!g.outA.every(Boolean)) g.fails.push('stage0 output rows ' + g.outA.map(Number).join(''));
+    if (!g.inB.every(Boolean)) g.fails.push('stage1 in rows ' + g.inB.map(Number).join(''));
+    if (!g.outB.every(Boolean)) g.fails.push('stage1 output rows ' + g.outB.map(Number).join(''));
+  }
+  return out;
+});
+for (const g of h4) {
+  console.log('H4 ' + JSON.stringify(g));
+  check(!g.fails.length, `H4 R${g.R0}->R${g.R1} gates (${g.fails.join('; ') || 'all'})`);
+}
+// H4 chains through pfCompose (zoned, Large Container): discover 2-stage (CH2) and 3-stage (CH3) single-input chains at 120 and 1000/min
+const disc = await pg.evaluate(() => {
+  const found = [];
+  for (const rate of [120, 1000]) for (const want of [2, 3]) {
+    let n = 0, name = null;
+    for (const it of plnBy(false).keys()) {
+      if (++n > 400) break;
+      try {
+        const P = plan(it, rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+        const T = P.nodes[it];
+        if (!T || !T.rec || T.rec.i.some(([x]) => x === it)) continue;
+        const Z = pfFactTree(P, it, 1);
+        if (Z.ok === false || Z.nodes.length !== want) continue;
+        const L = pfCompose(P, it, 1, 0, {box: 'DAT_Container_2'});
+        if (L.ok && L.bl && L.bl.zoned) { name = plnNm(it); break }
+      } catch (e) {}
+    }
+    found.push({rate, want, name});
+  }
+  return found;
+});
+console.log('H4 discovered chains: ' + JSON.stringify(disc));
+for (const d of disc) {
+  if (!d.name) { console.log(`H4 no zoned ${d.want}-stage chain at ${d.rate}/min`); continue }
+  const z = await pg.evaluate(([name, rate]) => {
+    const it = [...plnBy(false).keys()].find(i => plnNm(i) === name);
+    const P = plan(it, rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+    const L = pfCompose(P, it, 1, 0, {box: 'DAT_Container_2'});
+    const O = pfCompose(P, it, 1, 0, {box: 'DAT_Container_2', eng: 'tower'});
+    if (!L.ok) return {refused: L.why};
+    const T = placerTile(L, placerBk());
+    const bl = L.bl, occ = new Map(), DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]], isB = b => PLC_BELT.includes(b.cls) || PLC_SPL.includes(b.cls);
+    const isM = b => !isB(b) && !PLC_UG.includes(b.cls) && !b.cls.startsWith('DAT_Container');
+    for (const b of L.items) { const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) occ.set(x + ',' + y, b) }
+    const flood = (x, y) => { for (let n = 0; n < 600; n++) { const c = occ.get(x + ',' + y); if (!c) return false; if (c.cls.startsWith('DAT_Container')) return true; if (!isB(c)) return false; const [dx, dy] = DIR[c.rot]; x += dx; y += dy } return false };
+    let outOk = 0, outFail = 0, inOk = 0, inFail = 0;
+    for (const b of L.items) if (isM(b)) {
+      for (const p of portsOf(b)) {
+        const cx = p.x + p.nx, cy = p.y + p.ny, c = occ.get(cx + ',' + cy);
+        const isIn = p.nx === 0 && p.ny === -1 && p.dir !== 'out' && !(b.off || []).includes(p.key), isOut = p.nx === 0 && p.ny === 1 && p.dir !== 'in';   // machine N face = input (unless toggled off), S face = output (blMachine rule)
+        if (isOut) { if (c && isB(c) && flood(cx, cy)) outOk++; else outFail++ }
+        else if (isIn) { if (c && isB(c)) inOk++; else inFail++ }
+      }
+    }
+    const want = bl.r.reduce((a, v, s) => a + v * bl.M[s], 0);
+    return {rate, name, stages: bl.n.length, K: bl.K, rows: bl.r, M: bl.M, zoned: !!bl.zoned, machines: L.stat.machines, want, belts: L.stat.belts, bpm: +(L.stat.belts / L.stat.machines).toFixed(2), area: L.w * L.h, w: L.w, h: L.h, makes: +L.makes.toFixed(1), request: rate, blocks: L.stat.blocks, blocksWant: bl.K * (bl.n.length + 1), outFail, inFail, outOk, inOk, tileOk: T.ok, tileWhy: T.ok ? null : String(T.why).slice(0, 160), ov: T.ov, span: T.span, tileBlocks: T.blocks ? T.blocks.length : null, oldBpm: O.ok ? +(O.stat.belts / O.stat.machines).toFixed(2) : null, oldArea: O.ok ? O.w * O.h : null, oldBlocks: O.ok ? O.stat.blocks : null};
+  }, [d.name, d.rate]);
+  console.log(`H4 chain ${d.want}-stage ${d.rate}/min: ` + JSON.stringify(z));
+  if (z.refused) { check(false, `H4 ${d.name} ${d.rate} refused: ${z.refused}`); continue }
+  check(z.zoned, `H4 ${d.name} ${d.rate} uses the zoned path`);
+  check(z.machines === z.want, `H4 ${d.name} ${d.rate} machines == sum(r*M) (${z.machines}/${z.want})`);
+  check(z.blocks === z.blocksWant, `H4 ${d.name} ${d.rate} stat.blocks == K*${z.stages + 1} (${z.blocks}/${z.blocksWant})`);
+  check(z.makes >= z.request, `H4 ${d.name} ${d.rate} makes ${z.makes} >= ${z.request}`);
+  check(z.outFail === 0 && z.inFail === 0, `H4 ${d.name} ${d.rate} connectivity (out ok ${z.outOk} fail ${z.outFail}, in ok ${z.inOk} fail ${z.inFail})`);
+  check(z.tileOk, `H4 ${d.name} ${d.rate} placerTile ok` + (z.tileOk ? '' : ' (' + z.tileWhy + ')'));
+  check(z.tileOk && z.ov === 0 && z.span === 0, `H4 ${d.name} ${d.rate} tile ov 0, span 0`);
+}
 await br.close();
 if (errs.length) { console.log('PAGE ERRORS ' + errs.join(' | ')); fails++ }
 console.log(fails ? 'FAILS ' + fails : 'ALL PASS');

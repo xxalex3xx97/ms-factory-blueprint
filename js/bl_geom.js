@@ -231,13 +231,14 @@ function blHIZ(S){
 }
 // blHFB(S): S={mk,spMk,cls,rec,mc,M,R,Y,y0,bx}. Row j: blRow at yIn (collector to column xEx), manifold from x=30; output path: column (rot 1 down / 3 up), corner at py (rot 0), belts to the sink W port xp_o=54. Sink containers at (55, Y+ya+4j).
 function blHFB(S){
-  const {mk,spMk,cls,rec,mc,M,R,Y,y0,bx}=S,P=mc.h+2,bc=PLC_BELT[mk],c=Math.ceil(R/4),xc0=55,xp=54,items=[];
+  const {mk,spMk,cls,rec,mc,M,R,Y,y0,bx,B=30,nextR=0}=S,P=mc.h+2,bc=PLC_BELT[mk],c=S.c||Math.ceil(R/4),items=[];
+  const xc0=nextR?B+24-Math.ceil(nextR/2):B+25,xp=nextR?xc0-1:B+24;   // H4: non-last sink leaves its E face to the next stage's input
   const yR=Array.from({length:R},(_,j)=>y0+P*j),yO=yR.map(y=>y+P-1),yMid=(yO[0]+yO[R-1])/2,ya=Math.min(Math.max(Math.floor(yMid-2*c),1),29-4*c);
-  const A=blHA(yO,c,ya,'out',xp),X0=31+(mc.xin===0?1:0),yOut=[],exCols=[];
+  const A=blHA(yO,c,ya,'out',xp),X0=B+1+(mc.xin===0?1:0),yOut=[],exCols=[];
   for(let j=0;j<c;j++)items.push({cls:bx,x:xc0,y:Y+ya+4*j,rot:0,h:0,pid:0,ct:[]});
   for(let j=0;j<R;j++){
     const d=A.dir[j],xcol=d===0?xp:A.col[j],py=A.py[j];
-    const r=blRow({mk,spMk,cls,rec,mc,m:M,X0,yIn:Y+yR[j],colX:30,xEx:xcol});
+    const r=blRow({mk,spMk,cls,rec,mc,m:M,X0,yIn:Y+yR[j],colX:B,xEx:xcol});
     if(!r.ok)return r;
     const yo=Y+yO[j],last=r.items[r.items.length-1];
     last.rot=d<0?3:d>0?1:0;
@@ -249,5 +250,21 @@ function blHFB(S){
     items.push(bt(xcol,Y+py,0));
     for(let x=xcol+1;x<=xp;x++)items.push(bt(x,Y+py,0));
   }
-  return{ok:true,items,yOut,exCols,ya,py:A.py};
+  return{ok:true,items,yOut,exCols,ya,py:A.py,c,xc0};
+}
+// blHIN(S): H4 input rows of the next stage. S={mk,bx,xc0,ya,c,R,P,y0,Y,B}: rows from the sink containers' E face (xp=xc0+4, sink already placed) to the wall x=B+29 (rot 0), no containers. Same port/column rule as blHIZ.
+function blHIN(S){
+  const {mk,xc0,ya,c,R,P,y0,Y,B}=S,bc=PLC_BELT[mk],xp=xc0+4,items=[],end=B+29;
+  const yR=Array.from({length:R},(_,j)=>y0+P*j),A=blHA(yR,c,ya,'in',xp),bt=(x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});
+  for(let j=0;j<R;j++){
+    const yI=Y+yR[j],py=Y+A.py[j],d=A.dir[j];
+    if(d===0){for(let x=xp;x<=end;x++)items.push(bt(x,yI,0));continue}
+    const xc=A.col[j];
+    for(let x=xp;x<xc;x++)items.push(bt(x,py,0));
+    items.push(bt(xc,py,d<0?3:1));
+    for(let y=py+d;y!==yI;y+=d)items.push(bt(xc,y,d<0?3:1));
+    items.push(bt(xc,yI,0));
+    for(let x=xc+1;x<=end;x++)items.push(bt(x,yI,0));
+  }
+  return{ok:true,items,py:A.py};
 }

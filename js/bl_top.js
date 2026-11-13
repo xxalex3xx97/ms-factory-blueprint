@@ -19,8 +19,8 @@ function blTop(P,item,mk,spMk,o={}){
     if(nodes.filter(n=>!n.ins[0].crafted).length!==1)return no('non-linear (more than one raw input)');
     for(let k=1;k<nodes.length;k++)if(nodes[k].ins[0].item!==nodes[k-1].item)return no('non-linear chain');
     if(dock&&dock.out==='ind')return no('industrial output dock');
-    if(o.eng==='zones'){if(nodes.length!==1)return no('zones build one-stage recipes only');if(dock&&(dock.in||dock.out))return no('zones do not support docks');const Z=blTopZ(P,item,mk,spMk,nodes,BX,o);return Z.ok?Z:{ok:false,why:Z.why}}
-    if(o.eng!=='tower'&&nodes.length===1&&!(dock&&(dock.in||dock.out))){const Z=blTopZ(P,item,mk,spMk,nodes,BX,o);if(Z.ok)return Z}   // Z3: zoned single stage first, old tower on refusal
+    if(o.eng==='zones'){if(dock&&(dock.in||dock.out))return no('zones do not support docks');const Z=blTopZ(P,item,mk,spMk,nodes,BX,o);return Z.ok?Z:{ok:false,why:Z.why}}
+    if(o.eng!=='tower'&&!(dock&&(dock.in||dock.out))){const Z=blTopZ(P,item,mk,spMk,nodes,BX,o);if(Z.ok)return Z}   // Z3: zoned single stage first, old tower on refusal
     const ind=!!(dock&&dock.in==='ind'),cap=MKS[mk][1],bw=dim({cls:BX,rot:0}).w,ps=portsOf({cls:BX,x:0,y:0,rot:0,off:[]});
     const Rmax=Math.min(3,ps.filter(p=>p.f==='S').length,ps.filter(p=>p.f==='N').length);
     const info=nodes.map(n=>{
@@ -100,30 +100,42 @@ function blTopMulti(P,item,mk,spMk,o,Z,nodes,BX,dock){
     note:['Block engine: '+K+' tower(s), '+nodes.length+' stage(s), rows per stage '+B.r.join('/')+' (2-input merge, lane)',...(dock&&dock.out==='nrm'?['Risk: normal output dock has 2 ports (240/min per tower)']:[]),...(P.nofp||[]).map(x=>plnNm(x)+' comes from the Deep Space Observatory block (not placed)')],
     src:{P,item,mk,spMk,o},prefab:true,stat,dk:dock&&(dock.in||dock.out)?dock:null,bl:{K,n:B.n,r:B.r,M:info.map(x=>x.M),Rmax}};
 }
-// blTopZ (H3): zoned single-stage tower. Per stack k (Y=30k): IZ (input containers, west) | FB (machine rows, east, sink containers at its east end). Rows over RB(P) = K stacks. Single raw input, Large Container only, no dock. Refuses {ok:false,why} so blTop falls back to the tower.
+// blTopZ (H3, H4): zoned chain. Stage s (producer first): block 0 = IZ (input containers, west); FB_s = block s+1 (machine rows, sink containers at its east end; the next stage's input rows run from that sink into block s+2). K stacks at Y=30k, each its own strip. Single raw input, Large Container only, no dock. Refuses {ok:false,why} so blTop falls back to the tower.
 function blTopZ(P,item,mk,spMk,nodes,BX,o){
   const no=why=>({ok:false,why:'BL: zone '+why});
   if(BX!=='DAT_Container_2')return no('needs Large Container');
-  const n=nodes[0],mc=blMachine(n.cls);
-  if(!mc.ok)return no('machine ports');
-  const cap=MKS[mk][1],bw=dim({cls:BX,rot:0}).w;
-  const fi=P.edges.filter(e=>e.from===n.ins[0].item&&e.to===n.item).reduce((a,e)=>a+e.flow,0)/n.N;
-  const M=blM(fi,n.fo,mc.w,cap,bw,4);   // zone width at the 4-row cap
-  if(M<1)return no('machine does not fit the zone width or belt cap');
-  const R=Math.ceil(n.N/M),PH=mc.h+2,K=Math.ceil(R/BL.RB(PH)),Rk=Math.ceil(R/K),y0=Rk*PH===30?0:1;   // H3: K stacks of 30-cell blocks (IZ west, FB east), Rk rows per stack
-  if(blRW(Rk,mc.w).M<M)return no('machine does not fit the zone width');
+  const S=nodes.length,cap=MKS[mk][1],bw=dim({cls:BX,rot:0}).w;
+  const st=nodes.map(n=>{const mc=blMachine(n.cls);if(!mc.ok)return null;const fi=P.edges.filter(e=>e.from===n.ins[0].item&&e.to===n.item).reduce((a,e)=>a+e.flow,0)/n.N;return{n,mc,fi,PH:mc.h+2,RB:BL.RB(mc.h+2)}});
+  if(st.some(x=>!x))return no('machine ports');
+  const Mp=st.map((x,s)=>blM(x.fi,x.n.fo,x.mc.w,cap,bw,S===1?4:x.RB,s<S-1?st[s+1].RB:0));   // pass 1: worst-case rows
+  if(Mp.some(m=>m<1))return no('machine does not fit the zone width or belt cap');
+  const B=blNK(nodes.map(n=>n.N),Mp,st.map(x=>x.RB)),K=B.K,r=B.n.map((v,s)=>Math.ceil(v/Mp[s]));
+  const M=Mp,y0=st.map((x,s)=>r[s]*x.PH===30?0:1);
+  for(let s=0;s<S;s++)if(blRW(r[s],st[s].mc.w,s<S-1?r[s+1]:0).M<M[s])return no('machine does not fit the zone width');   // pass 2: exact rows of the next stage
   const items=[];
   for(let k=0;k<K;k++){
-    const iz=blHIZ({mk,bx:BX,raw:n.ins[0].item,R:Rk,P:PH,y0,Y:30*k}),fk=blHFB({mk,spMk,cls:n.cls,rec:n.rec,mc,M,R:Rk,Y:30*k,y0,bx:BX});
-    if(!fk.ok)return no(fk.why);
-    items.push(...iz.items,...fk.items);
+    const Y=30*k,iz=blHIZ({mk,bx:BX,raw:nodes[0].ins[0].item,R:r[0],P:st[0].PH,y0:y0[0],Y});
+    items.push(...iz.items);
+    const sinks=[];
+    for(let s=0;s<S;s++){
+      const c=s<S-1?Math.ceil(Math.max(r[s],r[s+1])/4):undefined;
+      if(s<S-1&&4*c<r[s+1])return no('next stage rows');
+      const fk=blHFB({mk,spMk,cls:nodes[s].cls,rec:nodes[s].rec,mc:st[s].mc,M:M[s],R:r[s],Y,y0:y0[s],bx:BX,B:30*(s+1),nextR:s<S-1?r[s+1]:0,c});
+      if(!fk.ok)return no(fk.why);
+      items.push(...fk.items);sinks.push(fk);
+    }
+    for(let s=0;s<S-1;s++){
+      const fk=sinks[s],nx=blHIN({mk,bx:BX,xc0:fk.xc0,ya:fk.ya,c:fk.c,R:r[s+1],P:st[s+1].PH,y0:y0[s+1],Y,B:30*(s+1)});
+      items.push(...nx.items);
+    }
   }
   let belts=0,spl=0;
   for(const q of items){if(PLC_BELT.includes(q.cls))belts++;else if(PLC_SPL.includes(q.cls))spl++}
-  const machines=Rk*K*M,w=plcMmax(items,q=>q.x+dim(q).w)+1,h=30*K;
+  const machines=K*r.reduce((a,v,s)=>a+v*M[s],0),last=S-1,w=plcMmax(items,q=>q.x+dim(q).w)+1,h=30*K;
+  const cuts=[];for(let s=1;s<=S;s++)cuts.push(30*s);
   const ports=[];   // H3: sink containers sit inside each FB east end; no OZ port list
-  const stat={belts,ug:0,spl,blocks:2*K,machines,lanes:1,spills:0};
-  return{ok:true,eng:'zones',items,cuts:[30],lanes:1,per:[machines],makes:machines*n.fo,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
-    note:['Block engine: zoned tower (IZ west | FB east), 1 stage, '+Rk*K+' rows x '+M+' machines, '+K+' stack(s)'],
-    src:{P,item,mk,spMk,o},prefab:true,stat,dk:null,bl:{K:1,n:[n.N],r:[Rk*K],M:[M],Rmax:4,zoned:true,stacks:K}};
+  const stat={belts,ug:0,spl,blocks:K*(S+1),machines,lanes:1,spills:0};
+  return{ok:true,eng:'zones',items,cuts,lanes:1,per:[machines],makes:K*r[last]*M[last]*nodes[last].fo,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
+    note:['Block engine: zoned tower (IZ west | FB east), '+S+' stage(s), '+r.map(v=>v*K).join('/')+' rows, '+K+' stack(s)'],
+    src:{P,item,mk,spMk,o},prefab:true,stat,dk:null,bl:{K,n:nodes.map(n=>n.N),r:r.map(v=>v*K),M,Rmax:4,zoned:true,stacks:K}};
 }

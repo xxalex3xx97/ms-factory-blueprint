@@ -62,6 +62,14 @@ const r = await pg.evaluate(() => {
   const HT = placerTile(HL, placerBk());
   out.h0L = {cut: {ok: HP.ok, why: HP.why || null, ug: HP.ug, ov: HP.ov, span: HP.span, rc: HP.rc, ugAt: HP.ms ? HP.ms.filter(m => PLC_UG.includes(m.cls)).map(m => [m.x, m.y, m.cls]) : null},
     tile: {ok: HT.ok, why: HT.ok ? null : String(HT.why).slice(0, 200), ov: HT.ov, span: HT.span, blocks: HT.blocks ? HT.blocks.length : null}};
+  // H4 STOP probe: one Large Container with a W-face belt feeding it and E-face belts leaving it (geometry via portsOf, tile via placerTile)
+  const h4W = portsOf({cls: C2, x: 20, y: 8, rot: 0, off: []}).filter(p => p.f === 'W'), h4E = portsOf({cls: C2, x: 20, y: 8, rot: 0, off: []}).filter(p => p.f === 'E');
+  const h4 = [{cls: C2, x: 20, y: 8, rot: 0, h: 0, pid: 0, ct: []}];
+  for (let x = 10; x <= 19; x++) h4.push({cls: PLC_BELT[1], x, y: h4W[0].y, rot: 0, h: 0, pid: 0});
+  for (const p of h4E.slice(0, 2)) for (let x = 24; x <= 45; x++) h4.push({cls: PLC_BELT[1], x, y: p.y, rot: 0, h: 0, pid: 0});
+  const h4L = {ok: true, items: h4, w: 46, h: 30, pitch: 31, cuts: [30], tall: true, mk: 1, lanes: 1};
+  const h4T = placerTile(h4L, placerBk());
+  out.h4 = {nW: h4W.length, nE: h4E.length, tile: {ok: h4T.ok, why: h4T.ok ? null : String(h4T.why).slice(0, 200), ov: h4T.ov, span: h4T.span, blocks: h4T.blocks ? h4T.blocks.length : null}};
   return out;
 });
 console.log(JSON.stringify(r, null, 1));
@@ -72,4 +80,5 @@ if (r.container2.nN < 4 || r.container2.nS < 4) { console.log('STOP Container_2 
 if (r.h0Faces.nW < 4 || r.h0Faces.nE < 4) { console.log('STOP H0 Container_2 W/E faces lack 4 ports'); fail++ }
 if (!r.h0L.cut.ok || r.h0L.cut.ug < 1) { console.log('STOP H0 pair at x=29|30 is not a UG pair'); fail++ }
 if (!r.h0L.tile.ok) { console.log('STOP H0 placerTile refused: ' + r.h0L.tile.why); fail++ }
+if (!r.h4.tile.ok) { console.log('STOP H4 container W-in + E-out placerTile refused: ' + r.h4.tile.why); fail++ }
 process.exit(fail ? 1 : 0);

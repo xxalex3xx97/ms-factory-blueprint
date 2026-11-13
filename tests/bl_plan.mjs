@@ -32,5 +32,8 @@ check(blRW(3, 3).M === 7 && blRW(1, 3).ncol === 1, 'blRW R=3 M 7, R=1 ncol 1');
 r = blNK([30], [3], [9]);
 check(r.K === 2 && eq(r.r, [5]), 'blNK Rm0 passed through: 30 machines, M3, Rm9 -> K2 rows [5]');
 
+// H4: next-stage rows reserve input columns
+check(blRW(4, 3, 4).M === 6, 'H4 blRW(4,3,4).M 6 (18/3)');
+check(blRW(6, 3, 6).M === 5, 'H4 blRW(6,3,6).M 5 (16/3)');
 console.log(fails ? 'FAILS ' + fails : 'ALL PASS');
 process.exit(fails ? 1 : 0);
