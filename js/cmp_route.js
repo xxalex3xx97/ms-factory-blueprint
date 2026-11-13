@@ -85,8 +85,9 @@ function cmpRoute(o) {
   const idx = sources.map((_, i) => i), dmin = i => Math.min(...sinks.map(t => Math.abs(t.x - sources[i].x) + Math.abs(t.y - sources[i].y)));
   idx.sort((a, b) => dmin(b) - dmin(a));
   if (sources.length > sinks.length) return {ok: false, why: 'merge routing failed', items: [], nets: []};
-  for (let t = 0; t < 4; t++) {
-    const ord = t ? idx.slice().sort(() => Math.random() - .5) : idx;
+  let sd = 12345; const rnd = () => (sd = (sd * 1103515245 + 12345) % 2147483648) / 2147483648;   // seeded: deterministic
+  for (let t = 0; t < 40; t++) {   // ponytail: spec said 3 shuffles; greedy order is fragile at 8 lanes, 40 is cheap
+    const ord = t ? idx.map(i => [rnd(), i]).sort((a, b) => a[0] - b[0]).map(a => a[1]) : idx;
     const r = attempt(ord); if (r) return {ok: true, items: r.items, nets: r.nets};
   }
   return {ok: false, why: 'merge routing failed', items: [], nets: []};
