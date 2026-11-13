@@ -58,9 +58,10 @@ function cmpSize(P,item,mk,spMk,block){
     for(const S of Ss){
       const m=pk.t.max({...base,S});
       if(!(m>0)){why=pk.t.build({...base,S}).why||why;continue}
-      const c=cmpBuild(pk.t,{...base,S,n:m},s,last);
+      let c=cmpBuild(pk.t,{...base,S,n:m},s,last),mm=m;
+      while(!c.ok&&mm>1&&/^pool lanes/.test(c.why)){mm--;c=cmpBuild(pk.t,{...base,S,n:mm},s,last)}   // more used sets than the face holds at full n: capacity = largest n whose pool lanes fit
       if(!c.ok){why=c.why;continue}
-      if(!best||m>best.m)best={S,m};
+      if(!best||mm>best.m)best={S,m:mm};
     }
     if(!best)return cmpErr(why);
     info.push({g,pk,base,best});
