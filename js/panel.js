@@ -100,6 +100,7 @@ function panel(){
 $("insp").addEventListener("toggle",e=>{const k=e.target.dataset&&e.target.dataset.sec;if(!k)return;e.target.open?io.add(k):io.delete(k);asv()},true);
 $("insp").addEventListener("change",e=>{
   const t=e.target,bs=S.blocks.filter(b=>sel.has(b.id));
+  if(t.dataset.prio&&bs.length===1){push();togglePrio(bs[0],t.dataset.prio);all();return}
   if(t.dataset.port&&bs.length===1){push();togglePort(bs[0],t.dataset.port);all();return}
   if(t.dataset.nm&&bs.length===1){const v=t.value.trim();if(v===(bs[0].nm||""))return;push();if(v)bs[0].nm=v;else delete bs[0].nm;all();return}
   if(t.dataset.ct&&bs.length===1){

@@ -171,7 +171,7 @@ function portsOf(b){
     let ix=0,iy=0;const is=q.pos==='start'?-1:1;if(fi&1)iy=is;else ix=is;   // elevator io: unit step of a belt entering the port along the wall (N/S: start -1,0 end 1,0; E/W: start 0,-1 end 0,1)
     for(let r=0;r<(b.rot&3);r++){[x,y]=[h-1-y,x];[w,h]=[h,w];[nx,ny]=[-ny,nx];[ix,iy]=[-iy,ix]}
     // splitter input (back) face is not a game port: never toggleable, always enabled
-    const key=f+i,tg=!!L.toggleable&&!(q.dir==="in"&&isSplitterCls(b.cls));o.push({key,f,i,pos:q.pos,dir:q.dir||null,tg,en:!tg||!off.includes(key),wf:(fi+(b.rot&3))%4,x:ox+x,y:oy+y,nx,ny,line:!!L.line,io:d&&d.elevator?[ix,iy]:null});
+    const key=f+i,tg=!!L.toggleable&&!(q.dir==="in"&&isSplitterCls(b.cls));o.push({key,f,i,pos:q.pos,dir:q.dir||null,tg,en:!tg||!off.includes(key),pr:tg&&isSplitterCls(b.cls)&&!!b.pr&&b.pr[0]===SPL_FACES.indexOf(f),wf:(fi+(b.rot&3))%4,x:ox+x,y:oy+y,nx,ny,line:!!L.line,io:d&&d.elevator?[ix,iy]:null});
   });
   return o;
 }
@@ -204,7 +204,10 @@ function linksAll(L,hk){
 }
 // ports drawn as bars: splitter input (back) face is not a port, so no bar (draw.js draws a neutral chevron there)
 const barPorts=b=>portsOf(b).filter(p=>!(p.dir==="in"&&isSplitterCls(b.cls)));
-const togglePort=(b,k)=>{if(!portsOf(b).some(p=>p.key===k&&p.tg))return;const o=b.off||[];b.off=o.includes(k)?o.filter(q=>q!==k):o.concat(k)};
+const togglePort=(b,k)=>{if(!portsOf(b).some(p=>p.key===k&&p.tg))return;const o=b.off||[];b.off=o.includes(k)?o.filter(q=>q!==k):o.concat(k);clrPrio(b)};
+// splitter output priority (exclusive, stored face-based as b.pr=[index in SPL_FACES,-1]); a disabled port cannot keep it. Balancers: untouched.
+const clrPrio=b=>{if(isSplitterCls(b.cls)&&b.pr&&portsOf(b).some(p=>p.pr&&!p.en))delete b.pr};
+const togglePrio=(b,k)=>{const p=isSplitterCls(b.cls)&&portsOf(b).find(p=>p.key===k&&p.tg&&p.en);if(!p)return;if(p.pr)delete b.pr;else b.pr=[SPL_FACES.indexOf(p.f),-1]};
 function portAt(p){
   const s=sc();if(s<14)return null;
   const fx=(p.x-V.ox)/s,fy=(p.y-V.oy)/s;let best=null,bd=9;
