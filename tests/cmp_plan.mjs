@@ -118,6 +118,8 @@ const pageStage = a => {
   for (const q of a.nodes) {
     const its = a.items.filter(b => b.x >= q.fb.x && b.x < q.fb.x + q.fb.w && b.y >= q.fb.y && b.y < q.fb.y + q.fb.h).map(b => ({...b, x: b.x - q.fb.x, y: b.y - q.fb.y})).map(b => PLC_UG.includes(b.cls) && (b.x === 0 || b.x === q.fb.w - 1) ? {...b, cls: PLC_BELT[a.mk]} : b);   // wall UG ends back to belts (isolated block)
     S.blocks = []; let id = 600000; its.forEach(b => S.blocks.push({...b, id: ++id, h: 0}));
+    // links1 drops output belts whose chain reaches no other machine (a lone N=1 machine has none): give each out row an empty sink container just east of the block
+    const sk = a.items.find(b => isStore(b)); if (sk) q.outRows.forEach(y => S.blocks.push({...sk, x: q.fb.w, y: y - 1, id: ++id, h: 0, ct: []}));
     const idAt = (x, y) => (S.blocks.find(b => { const d = dim(b); return x >= b.x && x < b.x + d.w && y >= b.y && y < b.y + d.h }) || {}).id;
     const injs = [];
     q.lanes.forEach(l => { const e = P.edges.find(e => e.from === l.key && e.to === q.key), rate = (e ? e.flow : l.key === q.key ? 2 * q.rate : 0) * (l.m == null ? 1 / q.lanes.filter(z => z.key === l.key).length : l.m / q.N); if (rate > 0) injs.push({id: idAt(0, l.y), item: l.key, rate}) });
