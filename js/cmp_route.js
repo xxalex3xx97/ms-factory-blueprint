@@ -89,7 +89,7 @@ function cmpRoute(o) {
   const ord0 = idx.slice().sort((a, b) => dmin(b) - dmin(a)), ord1 = idx.slice().sort((a, b) => str(b) - str(a) || dmin(b) - dmin(a));
   if (sources.length > sinks.length) return {ok: false, why: 'merge routing failed', items: [], nets: []};
   let sd = 12345; const rnd = () => (sd = (sd * 1103515245 + 12345) % 2147483648) / 2147483648;   // seeded: deterministic
-  for (let t = 0; t < 40; t++) {   // ponytail: spec said 3 shuffles; greedy order is fragile at 8 lanes, 40 is cheap
+  for (let t = 0; t < (W < 20 ? 300 : 40); t++) {   // narrow merge region: more shuffles; ponytail: spec said 3 shuffles; greedy order is fragile at 8 lanes, 40 is cheap
     const ord = t === 1 ? ord1 : t ? idx.map(i => [rnd(), i]).sort((a, b) => a[0] - b[0]).map(a => a[1]) : ord0;
     const r = attempt(ord, t > 1 ? 0.6 : 0); if (r) return {ok: true, items: r.items, nets: r.nets};
   }

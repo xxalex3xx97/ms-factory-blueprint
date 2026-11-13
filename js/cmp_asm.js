@@ -4,7 +4,7 @@ const CMP_BLOCKS=['1x1','1x2','2x2','2x2c'];
 // F2 narrow hubs: a hub column (pool / source / feed / merge) next to a 2x2 factory block is a rotated 1x2 block (floor 14x30), next to a 1x2 block a 1x1 (14x14); shorter lanes, fewer belts. null = no narrower block
 const cmpHubBlk=bk=>bk==='BPO_Station_02'||bk==='BPO_Station_03'?{cls:plcCls('BPO_Station_2x1'),rot:1,W:14,H:30,dw:1}:bk==='BPO_Station_2x1'?{cls:plcCls('BPO_Station_01'),rot:0,W:14,H:14,dw:1}:null;
 // narrow first (docks keep the full-size hubs); a column whose hub does not fit goes full size and the build is retried (r.col = failing column)
-const cmpNarrow=(c,f)=>{if(c.dk||globalThis.CMP_NARROW===false)return f(c,null);const wide=new Set();for(;;){const r=f(c,wide);if(r.ok||!(r.col>=0)||wide.has(r.col))return r;wide.add(r.col)}};
+const cmpNarrow=(c,f)=>{if(c.dk||globalThis.CMP_NARROW===false)return f(c,null);const wide=new Set();for(;;){const r=f(c,wide);if(r.ok||!(r.col>=0)||wide.has(r.col))return r;(globalThis.__nlog=globalThis.__nlog||[]).push(r.col+": "+r.why);wide.add(r.col)}};
 function cmpAssemble(c){return cmpNarrow(c,cmpAssemble1)}
 function cmpAssemble1(c,wide){
   const {mk,spMk,bx,bk,sz,stages}=c,dk=c.dk,no=why=>({ok:false,why,col:badCol}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,L=stages.length,K=sz.K;

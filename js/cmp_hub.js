@@ -15,7 +15,7 @@ function cmpPool(S){
   const cx=S.dock&&!Ro?W-5:(Ri?ngW+2:S.dock?0:1);   // OZ dock: container flush with the east edge (q.x+4===W-1)
   if((Ri&&cx-1-ngW<1)||cx>W-5)return cmpNo('pool block too narrow (rows)');
   const AE=Ro?blHA(outRows,c,ya,'in',cx+4,S.pyOut):null,ngE=AE?cmpNg(AE):0;
-  if(Ro&&cx+4+ngE+1>W-2)return cmpNo('pool block too narrow (rows)');
+  if(Ro&&cx+4+ngE+1>W-1)return cmpNo('pool block too narrow (rows)');
   const items=[];
   for(let j=0;j<(S.ind?0:c);j++)items.push({cls:bx,x:cx,y:S.ca?S.ca[j]:ya+4*j,rot:0,h:0,pid:0,ct:raw?[{item,n:0,inf:true}]:[],...(S.dock?(raw?{dk:'in',dkx:S.dkx}:!Ro?{dk:'out',dkx:S.dkx}:{}):{})});
   if(Ri){   // blHFB 'out' loop: belts to the jog column, vertical, corner at the port row, belts to the container W face (industrial OZ, S.ind: to x=W-1, last belt tagged 'oe')
