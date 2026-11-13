@@ -1,4 +1,4 @@
-// Template gallery: one card per craftable recipe, built with the engine Auto picks at a BASE rate, previewed on a small canvas.
+// Template gallery: one card per craftable recipe, built with the golden-template engine only (zones; vcol later, no fallbacks) at a BASE rate, previewed on a small canvas.
 // BASE rate = one full row: machines-per-Mk2-belt (floor(120 / max input rate per machine), min 1) x output/min of one machine.
 // Everything runs client-side; results are cached per session in GAL.
 const GAL={cards:[],byKey:new Map(),busy:false};
@@ -20,15 +20,15 @@ function galBuild(k){
   try{
     const pk={};if(k.idx>0)pk[k.item]=rk(k.r);
     const P=plan(k.item,k.base,1,{sp:null,bal:null},pk,{proto:false,enr:false});
-    L=placerLayout(P,k.item,1,1,{box:"DAT_Container_2",mod:false,dock:null,eng:"auto"});
+    L=placerLayout(P,k.item,1,1,{box:"DAT_Container_2",mod:false,dock:null,eng:"zones"});
   }catch(e){L={ok:false,why:"internal error ("+e.message+")"}}
   const res={ok:!!L.ok,ms:Math.round(performance.now()-t0)};
   if(L.ok){
     const T=L.tile&&L.tile.ok?L.tile:{blocks:[{cls:plcCls("BPO_Station_02"),x:0,y:0}],ms:L.items},cnt={mach:0,belt:0,spl:0,ug:0,box:0};
     L.items.forEach(b=>cnt[b.rec?"mach":PLC_UG.includes(b.cls)?"ug":PLC_BELT.includes(b.cls)?"belt":PLC_SPL.includes(b.cls)?"spl":"box"]++);
     res.eng=L.eng||"legacy";res.engName=GAL_ENG[L.eng]||"Legacy placer";res.cnt=cnt;res.blocks=L.tile&&L.tile.ok?L.tile.blocks.length:0;res.w=L.w;res.h=L.h;res.T=T;res.items=L.items;res.fb=L.blWhy||"";
-    res.chip=L.eng==="vcol"||(L.eng==="zones"&&k.r.i.length===1)?["g","Golden template"]:L.eng==="tower"||L.eng==="tower-multi"?["w","Old tower (template pending)"]:L.eng==="nl"?["w","Fallback"]:L.eng==="zones"?["w","Zones (template pending)"]:["w","Legacy placer"];
-  }else{res.why=String(L.why||"").replace(/ \(NL used\)$/,"");res.chip=["b","Not supported: "+res.why]}
+    res.chip=["g","Golden template"];
+  }else{res.why=String(L.why||"").replace(/ \(NL used\)$/,"");if(/Assembler/.test(k.cls)&&k.grp==="2-input")res.why="waiting for the 2-input column template";res.chip=["b","Not supported yet: "+res.why]}
   return k.res=res;
 }
 // draw a built result into a canvas: same renderer as placerShot (paint() with PLC_PREV), fitted to the canvas
@@ -49,7 +49,7 @@ const galSnip=k=>{const r=galBuild(k);return r.ok?{n:k.name+" ["+r.engName+"]",b
 const galFile=(snips,name)=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify({v:1,snippets:snips},null,2)],{type:"application/json"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 const galExport=key=>{const s=galSnip(GAL.byKey.get(key));return s?JSON.stringify({v:1,snippets:[s]},null,2):null};
 function galCard(k){
-  const e=k.el||(k.el=Object.assign(document.createElement("div"),{className:"galC"}));e.dataset.key=k.key;
+  const e=k.el||(k.el=Object.assign(document.createElement("div"),{className:"galC"}));e.dataset.key=k.key;e.style.opacity=k.res&&!k.res.ok?.55:1;
   const r=k.res;
   e.innerHTML=`<h4>${galEsc(k.name)}</h4><div class="sub">${galEsc(k.cls)} &middot; ${k.grp} &middot; in/machine ${k.inRate.toFixed(1)}/min &middot; ${k.M}/Mk2 belt &middot; base ${k.base}/min</div>`+
     (r?`<div class="chips">${r.ok?`<span class="gch eng">Built by: ${galEsc(r.engName)}</span>`:""}<span class="gch ${r.chip[0]} stat" title="${galEsc(r.fb||r.why||"")}">${galEsc(r.chip[1])}</span></div>`:`<div class="chips"><span class="gch">not built</span></div>`)+
