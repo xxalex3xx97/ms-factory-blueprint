@@ -217,8 +217,8 @@ const plnSave=(blob,ext)=>{const a=document.createElement("a");a.href=URL.create
 $("plnSv").onclick=async()=>{const r=await plnSnap();if(r)plnSave(new Blob([r.x],{type:"image/svg+xml"}),"svg")};
 // PNG: the same snapshot rasterised at 2x
 $("plnPng").onclick=async()=>{const r=await plnSnap();if(!r)return;
-  const svgFallback=()=>{plnSave(new Blob([r.x],{type:"image/svg+xml"}),"svg");toast("PNG too large/blocked in this browser: saved SVG instead")};
+  const svgFallback=why=>{console.error("planner PNG export:",why,r.W+"x"+r.H,"svg chars:",r.x.length);plnSave(new Blob([r.x],{type:"image/svg+xml"}),"svg");toast("PNG failed ("+why+"): saved SVG instead")};
   const tryPng=(im,s)=>{try{const c=document.createElement("canvas");c.width=Math.floor(r.W*s);c.height=Math.floor(r.H*s);const k=c.getContext("2d");k.scale(s,s);k.drawImage(im,0,0,r.W,r.H);
-    c.toBlob(b=>b?plnSave(b,"png"):s>1?tryPng(im,1):svgFallback(),"image/png")}catch(e){s>1?tryPng(im,1):svgFallback()}};   // big canvas / tainted canvas: retry 1x, then SVG
+    c.toBlob(b=>b?plnSave(b,"png"):s>1?tryPng(im,1):svgFallback("toBlob null"),"image/png")}catch(e){s>1?tryPng(im,1):svgFallback(e.name+": "+e.message)}};   // big canvas / tainted canvas: retry 1x, then SVG
   const im=new Image();im.onload=()=>tryPng(im,Math.max(1,Math.min(2,8192/Math.max(r.W,r.H),Math.sqrt(16e6/(r.W*r.H)))));
-  im.onerror=svgFallback;im.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(r.x)};   // data: URL, a blob: URL taints the canvas (foreignObject)
+  im.onerror=()=>svgFallback("image would not load");im.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(r.x)};   // data: URL, a blob: URL taints the canvas (foreignObject)
