@@ -27,6 +27,16 @@ function tplOutTail(items,o){
   b(W-2,yo,0);b(W-1,yo,0);
   return items;
 }
+// SHAPE: straight run xa..xb on row y (rot 0): both endpoints stay belts, the interior is UG hops of up to maxApart-1 cells (items: belt class bc, UG class ug).
+function tplRun(items,o){
+  const {bc,ug,y,xa,xb}=o,D=def(ug).maxApart-1,b=(c,x)=>items.push({cls:c,x,y,rot:0,h:0,pid:0});
+  if(xb<xa)return items;
+  b(bc,xa);if(xb===xa)return items;
+  let cur=xa+1;
+  while(xb-1-cur>=2){const x=Math.min(cur+D,xb-1);b(ug,cur);b(ug,x);cur=x+1}
+  for(;cur<xb;cur++)b(bc,cur);
+  b(bc,xb);return items;
+}
 // the one derate knob (BL.DERATE). Default 1.0 (flow calc is demand-limited).
 function tplDerate(){return typeof BL!=='undefined'&&BL.DERATE!=null?BL.DERATE:1.0}
 // MULTI-LANE (brief G): recipes with a per-machine input above one belt (item rate > DERATE*cap) get m_i=ceil(rate/cap) parallel lanes per item. Shared by assembler_2in, advassembler_1_2in, enrichment_2_3in:

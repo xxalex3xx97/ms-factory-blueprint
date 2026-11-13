@@ -135,7 +135,9 @@ function tplBuild(spec){
       for(let e=0;e*go<m;e++){
         const kmin=Math.max(0,m-(e+1)*go),yr=yc+e;
         if(e)for(let k=kmin;k<=m-1-e*go;k++)for(let yy=yc;yy<yr;yy++)bt(mx(k)+1,yy,1);
-        for(let x=mx(kmin)+1;x<=(e?W-1:W-3);x++)bt(x,yr,0);
+        const xl=mx(m-1-e*go)+1;   // last injection column of this rail: belts up to it, UG hops beyond (SHAPE)
+        for(let x=mx(kmin)+1;x<=xl;x++)bt(x,yr,0);
+        tplRun(items,{bc,ug,y:yr,xa:xl+1,xb:e?W-1:W-3});
         if(!e)tplOutTail(items,{bc,W,yc,yo:y0});else{ex.push({x:W-1,y:yr,dir:'E',set:s,rail:e});outs.push(yr)}
       }
     }else if(m>0){for(let x=1;x<=W-3;x++)bt(x,yc,0);tplOutTail(items,{bc,W,yc,yo:y0})}
