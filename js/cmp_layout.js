@@ -50,7 +50,7 @@ function cmpPlan(P,item,mk,opts){
   try{
     const root=P.nodes[item];
     if(!root||isRaw(item))refuse('No machine builds this recipe');
-    const r=build(item,root.rate,0,null);
+    const r=build(item,opts&&opts.rate!=null?opts.rate:root.rate,0,null);   // opts.rate: S12 replicated strip (root rate share)
     const D=Math.max(...nodes.map(o=>o.depth));
     // rows: root main down, root sides alternate / greedy balance (largest first); non-root sides far side
     const [m,...sides]=r.children;
@@ -78,4 +78,26 @@ function cmpPlan(P,item,mk,opts){
     const notes=[...new Set(nodes.map(o=>o.note).filter(Boolean))];
     return{ok:true,why:null,nodes:nodes.map(o=>({id:o.id,item:o.item,key:o.key,raw:o.raw,rec:o.rec,cls:o.cls,k:o.k,N:o.N,util:o.util,pm:o.pm,pN:o.pN,pU:o.pU,rate:o.rate,depth:o.depth,col:o.col,fb:o.fb,pool:o.pool,row:o.row,main:o.main,inKind:o.inKind,growth:o.growth,children:o.children.map(c=>c.id),parent:o.parent,note:o.note})),D,rows,cols:3*D+3,notes};
   }catch(e){if(e&&e.cmpWhy!==undefined)return cmpNo(e.cmpWhy);throw e}
+}
+// CMP S12: cmpPlanK(P,item,mk,K) = K replicated tree strips stacked in rows, each a full tree at a share of the root rate (root machines split like cmpDist: floor(N/K) each, partial one last; every
+// other node ceil(share rate/pm) per copy). Each strip has its own OZ. Notes list planner N vs built. -> cmpPlan-shaped result with .K, or {ok:false}.
+function cmpPlanK(P,item,mk,K){
+  const a=cmpPlanK1(P,item,mk,K,1),b=cmpPlanK1(P,item,mk,K,0);   // equal rate shares vs whole machines first: the one with fewer machines wins (ties: equal shares)
+  if(!a.ok||!b.ok)return a.ok?a:b;
+  const t=q=>q.nodes.reduce((s,o)=>s+o.N,0);return t(b)<t(a)?b:a;
+}
+function cmpPlanK1(P,item,mk,K,even){
+  const n=P.nodes[item],eq=n.rate/n.pmach,ex=n.machines-eq,out=[];let row=0,D=0,cols=0;
+  for(let j=0;j<K;j++){
+    const nj=Math.floor(n.machines/K)+(j<n.machines%K?1:0),rate=even?n.rate/K:(nj-(j===K-1?ex:0))/eq*n.rate;
+    if(!(nj>0&&rate>0))return cmpNo('root '+cmpName(item)+' has only '+n.machines+' machines: cannot split into '+K+' strips');
+    const pl=cmpPlan(P,item,mk,{rate});if(!pl.ok)return pl;
+    D=pl.D;cols=pl.cols;
+    pl.nodes.forEach(o=>out.push({...o,id:'s'+j+o.id,children:o.children.map(c=>'s'+j+c),parent:o.parent&&'s'+j+o.parent,row:o.row+row,note:''}));
+    row+=pl.rows;
+  }
+  const built={},notes=[];out.forEach(o=>{if(!o.raw)built[o.key]=(built[o.key]||0)+o.N});
+  out.forEach(o=>{if(o.raw)return;const a='Planner N='+o.pN+', built '+built[o.key]+' ('+o.item+', '+K+' strips)',g='Fill the seed container ('+o.item+')';
+    if(built[o.key]!==o.pN&&!notes.includes(a))notes.push(a);if(o.growth&&!notes.includes(g))notes.push(g)});
+  return{ok:true,why:null,nodes:out,D,rows:row,cols,notes,K};
 }

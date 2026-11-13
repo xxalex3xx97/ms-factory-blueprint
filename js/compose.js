@@ -143,11 +143,16 @@ function cmpCompose(P,item,mk,spMk,o={}){
     stages=sz.stages.map(q=>({item:q.item,cls:q.cls,tpl:q.tpl,block:q.block,S:q.S,N:q.N,perStrip:q.perStrip,B:q.B}));cmpI={K:sz.K,stages};
     note=sz.note.concat(tr.stages[0].growth&&tr.stages[0].k>=2?['Fill the seed container ('+cmpName(item)+')']:[]);per=sz.stages[sz.stages.length-1].perStrip.slice();
   }else if(/^branching/.test(tr.why)){   // S7b: merge tree (K=1)
-    const pl=cmpPlan(P,item,mk,{});if(!pl.ok)return pl;
-    const tz=cmpTreeSize(pl,mk,spMk,block);if(!tz.ok)return tz;
+    let pl=cmpPlan(P,item,mk,{});if(!pl.ok)return pl;
+    let tz=cmpTreeSize(pl,mk,spMk,block);
+    if(!tz.ok){   // S12: a node needs more machines than one block holds -> K replicated tree strips (each its own OZ), root machines split like cmpDist
+      const why1=tz.why;let k=2,last=why1;
+      for(;k<=CMP_MAXK+1&&!tz.ok;k++){const q=cmpPlanK(P,item,mk,k);if(!q.ok){last=q.why;break}pl=q;tz=cmpTreeSize(pl,mk,spMk,block);if(!tz.ok)last=tz.why}
+      if(!tz.ok)return cmpErr(why1+(last!==why1?' (replicated strips x2..x'+(CMP_MAXK+1)+': '+last+')':''));
+    }
     A=cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by,dk});if(!A.ok)return A;
     stages=pl.nodes.filter(o=>!o.raw).map(o=>({item:o.item,cls:o.cls,tpl:tz.by[o.id].tpl,block,S:tz.by[o.id].S,N:o.N,perStrip:[o.N],B:1}));
-    cmpI={K:1,tree:true,stages,nodes:A.nodes,routed:A.routed};note=pl.notes.slice();per=[P.nodes[item].machines];
+    cmpI={K:pl.K||1,tree:true,stages,nodes:A.nodes,routed:A.routed};note=pl.notes.slice();per=[P.nodes[item].machines];
   }else return tr;
   if(A.dock){   // C7: raw/oz container descriptors + 'Dock n: assign ...' notes
     cmpI.raw=A.dock.raw;cmpI.oz=A.dock.oz;let n=0;
