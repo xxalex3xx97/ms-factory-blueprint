@@ -21,7 +21,7 @@ function cmpPlan(P,item,mk,opts){
     if(/Armoury/i.test(n.crafter))refuse('Armoury');
     const exact=Math.abs(rate-n.rate)<1e-9;   // single original copy: planner N and util kept exactly
     const N=exact?n.machines:Math.ceil(rate/n.pmach-1e-9);
-    const util=exact?n.util:rate/n.pmach-(N-1);
+    const util=exact?n.util:rate/n.pmach/N;   // planner convention: average utilisation over the N machines
     const o={id,item:cmpName(it),key:it,raw:false,rec:n.rec,cls:def(plnCb(n.crafter).id).key,k:n.rec.i.length,N,util,pm:n.pmach,pN:n.machines,pU:n.util,rate,depth:d,col:null,row:null,main:false,inKind:null,growth:n.rec.i.some(([q])=>q===it),children:[],parent:parent?parent.id:null,note:'',sub:0};
     nodes.push(o);
     for(const [q] of n.rec.i){

@@ -17,7 +17,7 @@ await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp');
 await page.waitForFunction(() => window.__fb && typeof cmpCompose === 'function' && typeof cmpAssembleTree === 'function');
 let fails = 0;
 for (const [n, rate, b] of cases) {
-  const r = await checkCompose(page, KEY[n] || n, rate, 1, BK[b], {strict: true, mutate: 'any'});
+  const r = await checkCompose(page, KEY[n] || n, rate, 1, BK[b], {strict: true, mutate: 'any', dock: process.env.DOCK ? {in: true, out: true} : null});
   console.log((r.ok ? 'PASS ' : 'FAIL ') + n + ' ' + rate + ' ' + b + (r.ok ? ' ' + JSON.stringify(r.row.stages) : ': ' + (r.refused || r.errs.slice(0, 4).join('; '))));
   if (!r.ok) fails++;
 }
