@@ -15,6 +15,10 @@ function cfgKind(cls){
 }
 // game splitter (DAT_Splitter, _2, _3): 1 input (back) face, never a game port; 3 controllable outputs = config bytes [right, front, left] at rot 0 (N=left confirmed in game; byte0=right S, byte1=front E from Main_Base (6) test; rot 1-3 inferred) (local faces, see io.js SPL_FACES). Balancers keep the generic 4-port model.
 const isSplitterCls=c=>/^DAT_Splitter(_\d+)?$/.test(String(c||""));
+const isBalCls=c=>/^DAT_BeltBalancer_\d+$/.test(String(c||""));
+const hasPrio=c=>isSplitterCls(c)||isBalCls(c);
+// priority output index in the game config (prioA): splitter = index of the face in SPL_FACES; balancer = E-face output, start(smaller y at rot 0)=1, end=0 (local pos, so it rotates with the block)
+const prIdx=(b,p)=>isBalCls(b.cls)?(+p.pos===1?1:0):SPL_FACES.indexOf(p.f);
 function cfgEnc(k,d){
   const o=[1,0],i32=v=>{for(let i=0;i<4;i++)o.push((v>>(8*i))&255)},fs=s=>{if(!s)return i32(0);if(/[^\x00-\x7f]/.test(s)){i32(-(s.length+1));for(let i=0;i<s.length;i++)o.push(s.charCodeAt(i)&255,s.charCodeAt(i)>>8);o.push(0,0);return}i32(s.length+1);for(let i=0;i<s.length;i++)o.push(s.charCodeAt(i)&255);o.push(0)},bl=a=>{i32(a.length);a.forEach(p=>o.push(p?1:0))};
   if(k==="recipe"){fs(d.recipe||"");bl(d.ports)}

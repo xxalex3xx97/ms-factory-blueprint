@@ -44,7 +44,7 @@ cv.addEventListener("pointerdown",e=>{
       if(noBuild([mItem(b)])){toast(NOBUILD);return}
       push();cutBelts([b]);S.blocks.push(b);sel=new Set();ugPend={id:b.id,cls:active,c0:c,cur:c};all();return}
     const b={id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:placeRot,pid:0};if(isM(b)&&noBuild([mItem(b)])){toast(NOBUILD);return}push();if(isBelt(b))cutBelts([b]);S.blocks.push(b);sel=new Set();all();return}
-  if(view==="F"){const q=portAt(p);if(q){push();(e.shiftKey&&isSplitterCls(q.b.cls)?togglePrio:togglePort)(q.b,q.p.key);all();return}}
+  if(view==="F"){const q=portAt(p);if(q){push();(e.shiftKey&&hasPrio(q.b.cls)?togglePrio:togglePort)(q.b,q.p.key);all();return}}
   const b=hit(c);
   if(b){
     if(e.shiftKey){sel.has(b.id)?sel.delete(b.id):sel.add(b.id)}
@@ -80,7 +80,7 @@ cv.addEventListener("pointermove",e=>{
     cv.title=w?WARN:"";
     {const b=view==="F"&&!active?hit(c):null,belt=b&&isBelt(b),pl=b&&LK&&(HLK(layer).nb.get(b.id)||[]).some(e=>e.k==="port");
       if(belt)btip(b,pl,e,w);else{btip(null);if(pl&&!w)cv.title=PORTLINK}}
-    if(view==="F"&&!active){const q=portAt(p);if(q){btip(null);cv.title=`Port ${q.p.key} (faces ${FN[q.p.wf]}): ${q.p.en?"enabled":"disabled"}${q.p.pr?", priority output (overflow goes to the others)":""}. Click to toggle.${isSplitterCls(q.b.cls)?" Shift+click: set/clear priority.":""}`}}
+    if(view==="F"&&!active){const q=portAt(p);if(q){btip(null);cv.title=`Port ${q.p.key} (faces ${FN[q.p.wf]}): ${q.p.en?"enabled":"disabled"}${q.p.pr?", priority output (overflow goes to the others)":""}. Click to toggle.${hasPrio(q.b.cls)?" Shift+click: set/clear priority.":""}`}}
   }
   if(drag){
     if(drag.k==="pan"){drag.d+=Math.abs(p.x-drag.px)+Math.abs(p.y-drag.py);V.ox+=p.x-drag.px;V.oy+=p.y-drag.py;drag.px=p.x;drag.py=p.y}
