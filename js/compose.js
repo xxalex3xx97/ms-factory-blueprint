@@ -169,13 +169,22 @@ function cmpArmoury(P,item,mk,spMk,o,bk,BX){
 
 // CMP C3: cmpCompose(P,item,mk,spMk,o) -> placerLayout result (fixed tile) | {ok:false,why}. Linear chain of 1-input stages, K strips. Docks not built yet.
 // POOL: build with the physical lane cap (CMP_LANES) and with the old 4-lane cap; keep the smaller (floor area, then belts). Never worse than the 4-lane build, and a refused 4-lane build is still tried wide.
+// COMPACT: every variant also with the old one-block-per-column layout (CMP_NOFUSE, docks always use it). The old layout's best build H is the reference: a packed build is kept only if it has no more blocks and no more belts than H
+// (so a smaller-floor Auto pick can never cost blocks / belts); among the allowed builds the least floor area, then fewest belts wins.
+// build ranking: floor area (block units), then belts; block count first (CMP_BLK=false: area first)
+function cmpKey(L){const ar=L.tile.blocks.reduce((a,q)=>{const e=dim({cls:q.cls,rot:q.rot||0});return a+e.w*e.h},0);return(globalThis.CMP_BLK===false?0:L.tile.blocks.length*1e11)+ar*1e6+L.stat.belts+L.stat.ug}
 function cmpCompose(P,item,mk,spMk,o={}){
-  if(globalThis.CMP_CAP4)return cmpCompose1(P,item,mk,spMk,o);
-  const bk0=window.CMP_BK,A=cmpCompose1(P,item,mk,spMk,o),bkA=window.CMP_BK;
-  globalThis.CMP_CAP4=true;let B;try{B=cmpCompose1(P,item,mk,spMk,o)}finally{globalThis.CMP_CAP4=false}
-  if(!B.ok||!A.ok){if(A.ok||!B.ok)window.CMP_BK=bkA;return A.ok?A:B}
-  const k=L=>L.tile.blocks.reduce((a,q)=>{const e=dim({cls:q.cls,rot:q.rot||0});return a+e.w*e.h},0)*1e6+L.stat.belts+L.stat.ug;
-  if(k(B)<k(A))return B;window.CMP_BK=bkA;return A;
+  if(globalThis.CMP_CAP4||globalThis.CMP_IN)return cmpCompose1(P,item,mk,spMk,o);
+  const nf0=globalThis.CMP_NOFUSE,dk=!!(o.dock&&(o.dock.in||o.dock.out)),C=[];
+  globalThis.CMP_IN=true;
+  try{for(const nf of nf0||dk?[true]:[true,false])for(const c4 of[false,true]){globalThis.CMP_NOFUSE=nf;globalThis.CMP_CAP4=c4;const L=cmpCompose1(P,item,mk,spMk,o);C.push({L,nf,bk:window.CMP_BK})}}
+  finally{globalThis.CMP_IN=false;globalThis.CMP_CAP4=false;globalThis.CMP_NOFUSE=nf0}
+  const ok=C.filter(c=>c.L.ok);
+  if(!ok.length){window.CMP_BK=C[0].bk;return C[0].L}
+  const k=cmpKey,bl=L=>L.tile.blocks.length,be=L=>L.stat.belts+L.stat.ug;
+  const H=ok.filter(c=>c.nf).sort((a,b)=>k(a.L)-k(b.L))[0],pool=H?ok.filter(c=>c===H||bl(c.L)<=bl(H.L)&&be(c.L)<=be(H.L)):ok;
+  let best=pool[0];for(const c of pool)if(k(c.L)<k(best.L))best=c;
+  window.CMP_BK=best.bk;return best.L;
 }
 function cmpCompose1(P,item,mk,spMk,o={}){
   if(!o.bk||o.bk==='auto')window.CMP_BK=undefined;   // a failed Auto build must not leave the previous pick behind
@@ -187,11 +196,11 @@ function cmpCompose1(P,item,mk,spMk,o={}){
       if(!plcCls(b))continue;
       const L=cmpCompose(P,item,mk,spMk,{...o,bk:b});
       if(!L.ok){why=why||L.why;continue}
-      const k=L.tile.blocks.reduce((a,q)=>{const e=dim({cls:q.cls,rot:q.rot||0});return a+e.w*e.h},0)*1e6+L.stat.belts+L.stat.ug+(L.note.some(n=>/^Dock-limited|^Dock not built|cannot be docked/.test(n))?1e12:0);   // a build that lost a dock never beats one that kept all; then floor area (block units), then belts
+      const k=cmpKey(L)+(L.note.some(n=>/^Dock-limited|^Dock not built|cannot be docked/.test(n))?1e15:0);   // a build that lost a dock never beats one that kept all; then floor area (block units), then belts
       if(!best||k<best.k)best={L,k,b};
     }
     if(!best)return cmpErr(why||'no block type builds');
-    window.CMP_BK=best.b;best.L.note=[...best.L.note,'Block type '+CMP_BLOCKS[PL_ALL.indexOf(best.b)]+' (auto: least floor area, then fewest belts)'];
+    window.CMP_BK=best.b;best.L.note=[...best.L.note,'Block type '+CMP_BLOCKS[PL_ALL.indexOf(best.b)]+' (auto: fewest blocks, then least floor area, then fewest belts)'];
     return best.L;
   }
   if(BX!=='DAT_Container_2')return cmpErr('needs Large Container');
