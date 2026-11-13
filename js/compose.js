@@ -1,0 +1,97 @@
+// CMP C1 (geometry-free sizing, spec sections 2.1-2.3). cmpTree(P,item): linear stage chain, producer first.
+// cmpSize(P,item,mk,spMk,block): per stage template, S (capacity m(S)), K strips, machines per strip n[s][j].
+// Needs planner.js (plnCb, def, rk), js/tpl/iface.js (TPL_IF_SETS, tplIfSets), js/tpl/bundle.js + registry.js (tplPick).
+const CMP_MAXK=4;
+const cmpNo=why=>({ok:false,why});
+const cmpName=it=>typeof plnNm==='function'?plnNm(it):String(it);
+
+function cmpTree(P,item){
+  const chain=[];let x=item;
+  for(;;){
+    const n=P.nodes[x];
+    if(!n||!n.crafter||!n.rec||!plnCb(n.crafter))return cmpNo('No machine builds this recipe');
+    if(/Armoury/i.test(n.crafter))return cmpNo('Armoury');
+    const cr=n.rec.i.filter(([it])=>P.nodes[it]&&P.nodes[it].crafter);
+    if(cr.length>1)return cmpNo('branching tree (merge/branch not built yet)');
+    chain.push({item:x,node:n,cls:def(plnCb(n.crafter).id).key,k:n.rec.i.length,rec:rk(n.rec),N:n.machines,pm:n.pmach,rate:n.rate,util:n.util,growth:n.rec.i.some(([it])=>it===x),craftedIn:cr.length?cr[0][0]:null});
+    if(!cr.length)break;
+    x=cr[0][0];
+  }
+  return{ok:true,stages:chain.reverse()};
+}
+
+// one build + Edge Interface checks: <=4 lanes per pooled face, feed height. Returns {ok,b} | {ok:false,why}
+function cmpBuild(t,spec,s,last){
+  const b=t.build(spec);
+  if(!b||!b.ok)return cmpNo(b&&b.why||'build failed');
+  const f=b.iface;
+  if(!f||!f.sets)return cmpNo('template lacks iface.sets');
+  if(f.v!==1)return cmpNo('template not on Edge Interface v1');
+  const used=f.sets.map((q,i)=>q.n>0?i:-1).filter(i=>i>=0);
+  if(s>0&&used.length*f.M>4)return cmpNo('pool lanes > 4');
+  if(s<last&&used.length>4)return cmpNo('pool lanes > 4');
+  const hs=tplIfSets(spec.block,spec.S).hs,need=(s>0?f.M:0)+4*spec.raw;
+  if(used.some(i=>need>hs[i]))return cmpNo('feed height');
+  return{ok:true,b};
+}
+
+// n[s][j]: final stage split evenly (partial machine in the last strip); upstream = rate share (spec 2.3)
+function cmpDist(info,K,last,eq,ex){
+  const n=info.map(()=>new Array(K).fill(0)),Nl=info[last].g.N;
+  for(let j=0;j<K;j++)n[last][j]=Math.floor(Nl/K)+(j<Nl%K?1:0);
+  const phi=j=>(n[last][j]-(j===K-1?ex:0))/eq;
+  for(let s=0;s<last;s++){const g=info[s].g;for(let j=0;j<K;j++)n[s][j]=Math.max(1,Math.ceil(phi(j)*g.rate/g.pm-1e-9))}
+  return n;
+}
+
+function cmpSize(P,item,mk,spMk,block){
+  const T=cmpTree(P,item);if(!T.ok)return T;
+  const st=T.stages,L=st.length,last=L-1,Ss=TPL_IF_SETS[block]?Object.keys(TPL_IF_SETS[block]).map(Number):[];
+  if(!Ss.length)return cmpNo('no block '+block);
+  const info=[];
+  for(let s=0;s<L;s++){
+    const g=st[s],pk=tplPick(g.cls,g.k,block);
+    if(!pk.ok)return cmpNo(pk.why);
+    const base={block,cls:g.cls,rec:g.rec,recObj:g.node.rec,recd:g.node.rec,mk,spMk,main:s?g.node.rec.i.findIndex(([it])=>it===st[s-1].item):0,growth:g.growth,raw:g.k-(s?1:0)};
+    let best=null,why='no size fits '+block;
+    for(const S of Ss){
+      const m=pk.t.max({...base,S});
+      if(!(m>0)){why=pk.t.build({...base,S}).why||why;continue}
+      const c=cmpBuild(pk.t,{...base,S,n:m},s,last);
+      if(!c.ok){why=c.why;continue}
+      if(!best||m>best.m)best={S,m};
+    }
+    if(!best)return cmpNo(why);
+    info.push({g,pk,base,best});
+  }
+  const fin=info[last].g,eq=fin.rate/fin.pm,ex=fin.N-eq;   // ex = missing share of the partial machine (1-u)
+  const minN=Math.min(...info.map(q=>q.g.N));
+  let K=Math.max(...info.map(q=>Math.ceil(q.g.N/q.best.m-1e-9))),n;
+  for(let extra=0;;extra++){
+    if(K>minN){const q=info.find(q=>q.g.N<K);return cmpNo('K strips needed ('+K+') but stage '+cmpName(q.g.item)+' has only '+q.g.N+' machines (cross-strip merge not built)')}
+    n=cmpDist(info,K,last,eq,ex);
+    const bad=info.findIndex((q,s)=>n[s].some(v=>v>q.best.m));
+    if(bad<0)break;
+    if(extra>=CMP_MAXK)return cmpNo('stage '+cmpName(info[bad].g.item)+' needs more than '+CMP_MAXK+' extra strips');
+    K++;
+  }
+  const stages=[];
+  for(let s=0;s<L;s++){
+    const q=info[s],strips=[];
+    for(let j=0;j<K;j++){
+      const need=n[s][j];let pick=null,why='no size fits '+block;
+      for(const S of Ss){
+        if(!(q.pk.t.max({...q.base,S})>=need))continue;
+        const c=cmpBuild(q.pk.t,{...q.base,S,n:need},s,last);
+        if(c.ok){pick=S;break}
+        why=c.why;
+      }
+      if(pick==null)return cmpNo(why);
+      strips.push({S:pick,n:need});
+    }
+    stages.push({item:cmpName(q.g.item),cls:q.g.cls,tpl:q.pk.id,block,S:q.best.S,N:q.g.N,m:q.best.m,perStrip:n[s].slice(),B:1,strips});
+  }
+  const note=[];
+  if(K>1)stages.forEach(q=>{const t=q.perStrip.reduce((a,v)=>a+v,0);if(t!==q.N)note.push('Planner N='+q.N+', built '+t+' ('+K+' strips)')});
+  return{ok:true,K,stages,note};
+}
