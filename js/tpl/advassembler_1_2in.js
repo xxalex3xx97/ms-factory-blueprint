@@ -28,8 +28,9 @@ function tplLimits(S){
   const gin=Math.floor(der*cap/rmax+1e-9),gout=Math.floor(der*cap/rout+1e-9),nMax=Math.min(G.geom,gin,gout);
   return{ok:true,k,r,G,mk,cap,der,rin,rout,gin,gout,nMax};
 }
-function tplMax(S){const L=tplLimits(S);return L.ok?L.nMax:0}
+function tplMax(S){const LN=tplLanesPlan(S);if(LN)return tplLanesMax(LN);const L=tplLimits(S);return L.ok?L.nMax:0}
 function tplBuild(S){
+  const LN=tplLanesPlan(S);if(LN)return tplLanesBuild(LN,S.n);   // multi-lane (js/tpl/iface.js): item rate above one belt
   const L=tplLimits(S);if(!L.ok)return{ok:false,why:L.why};
   const {G,k,r,mk}=L,n=S.n,spMk=S.spMk==null?mk:S.spMk;
   if(!(n>=1))return{ok:false,why:'tpl: n<1'};

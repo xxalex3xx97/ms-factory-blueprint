@@ -23,7 +23,7 @@ function tplEnrGeom(spec){
   if(rt&&(rt.g<1||nOut<1))return{ok:false,why:'rate'};   // one lane belt cannot feed one machine (g<1) / product > belt
   return{ok:true,k,rows,H,W:f[0],Fh:f[1],slots,o,nMax:Math.min(rows*Math.min(slots,rt?rt.g:slots),nOut),yM:[o+k,o+k+10],yOut:o+k+9};
 }
-function tplMax(spec){const g=tplEnrGeom(spec);return g.ok?g.nMax:0}
+function tplMax(spec){const LN=tplLanesPlan(spec);if(LN)return tplLanesMax(LN);const g=tplEnrGeom(spec);return g.ok?g.nMax:0}
 // rates: spec.recd = {i:[[item,qty],..],o:[item,qty],t}. per min = qty*1800/t. g = machines per lane group (row) the derated belt feeds (min over lanes).
 function tplRates(spec){
   const r=spec.recd;if(!r)return null;
@@ -31,6 +31,7 @@ function tplRates(spec){
   return{cap,der,ins,out,g:Math.floor(der*cap/mx),gRaw:Math.floor(cap/mx),mxIn:mx};
 }
 function tplBuild(spec){
+  const LN=tplLanesPlan(spec);if(LN)return tplLanesBuild(LN,spec.n);   // multi-lane (js/tpl/iface.js): item rate above one belt
   const G=tplEnrGeom(spec);if(!G.ok)return G;
   const {k,rows,H,W,slots,o}=G,n=spec.n,cls=spec.cls||'DAT_EnrichmentChamber',rec=spec.rec,mk=spec.mk||0,spMk=spec.spMk!=null?spec.spMk:mk,xo=1;
   if(!(n>=1&&n<=G.nMax))return{ok:false,why:'TPL: n '+n+' outside 1..'+G.nMax};

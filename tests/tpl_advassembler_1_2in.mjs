@@ -137,7 +137,7 @@ for (const block of BLK) {
       const sp = {block, cls: 'DAT_AdvancedAssembler', rec: REC[rk], mk, spMk: mk};
       const L = await pg.evaluate(s => { const r = tplBuild({...s, n: 1}); return {nMax: tplMax(s), ok: r.ok, why: r.why} }, sp);
       mx.push(L.nMax + (L.ok ? '' : '(' + (L.why || '').replace(/^tpl: /, '').slice(0, 40) + ')'));
-      if (rk === 'maglev') { check(!L.ok && /unsupported/.test(L.why), `${block} maglev Mk${mk + 1} reported unsupported (${L.why})`); continue }
+      if (rk === 'maglev') { check(L.ok ? L.nMax >= 1 : /lane/.test(L.why), `${block} maglev Mk${mk + 1} multi-lane builds (nMax ${L.nMax}) or reports a lane reason (${L.why}); gate: tests/tpl_lanes.mjs`); continue }
       for (const n of [...new Set([1, L.nMax])].filter(v => v >= 1)) await report(`${block} ${rk} Mk${mk + 1} n=${n}`, {...sp, n}, await runCase({...sp, n}));
     }
     console.log(`   ${block} ${rk}: nMax Mk1/Mk2/Mk3 = ${mx.join(' / ')}`);

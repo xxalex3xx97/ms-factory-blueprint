@@ -23,8 +23,9 @@ function tplA2Lim(spec){
   if(g<1)return{ok:false,why:'one machine needs '+rmax+'/min > DERATE*cap '+der*cap};
   return{ok:true,B,mk,cap,rc,g,rin,rout,geom,oc,nRow:Math.min(geom,2*g,oc),warn:rout>cap?'one machine output exceeds belt cap':null};
 }
-function tplMax(spec){const L=tplA2Lim(spec);return L.ok?L.nRow*L.B.S:0}
+function tplMax(spec){const LN=tplLanesPlan(spec);if(LN)return tplLanesMax(LN);const L=tplA2Lim(spec);return L.ok?L.nRow*L.B.S:0}
 function tplBuild(spec){
+  const LN=tplLanesPlan(spec);if(LN)return tplLanesBuild(LN,spec.n);   // multi-lane (js/tpl/iface.js): item rate above one belt
   const L=tplA2Lim(spec);if(!L.ok)return{ok:false,why:L.why};
   const {B,mk}=L,nMax=L.nRow*B.S,n=spec.n|0;
   if(n<1)return{ok:false,why:'n<1',nMax};

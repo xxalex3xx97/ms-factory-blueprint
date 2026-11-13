@@ -182,6 +182,7 @@ for (const rc of recs) {
   for (const block of blocks) {
     const spec = {...base(block), rec: rc.k}, nMax = await pg.evaluate(s => tplMax(s), spec);
     line.push(block + '=' + nMax);
+    if (await pg.evaluate(s => !!tplLanesPlan(s), spec)) { line.push('(multi-lane: tests/tpl_lanes.mjs)'); continue }
     if (nMax && (block === '1x2' || block === '2x2')) {
       const r = await run({...spec, n: nMax});
       check(!r.refused && r.ov === 0 && r.outside === 0 && r.noBuild === false && r.tile.ok && r.portErr === 0 && r.outErr === 0 && r.bad === 0 && r.laneLoad <= r.laneLim + 1e-9, rc.name + ' ' + block + ' n=' + nMax + ' ok' + (r.refused ? ' ' + r.refused : '') + ' lane ' + r.laneLoad + '/' + r.laneLim + ' out ' + r.outLoad + '/' + r.outCap);
