@@ -53,7 +53,8 @@ const pageCase = a => {
   const cand = blocks.filter(b => { const e = dim({cls: b.cls, rot: 0}); return e.w !== e.h && floorRect({cls: b.cls, x: 0, y: 0, h: 0, rot: 0}) }).sort((p, q) => cnt(q) - cnt(p))[0];
   let mut = null;
   if (cand) { window.__cand = [cand.cls, cand.rot, dim(cand), floorRect(cand) && floorRect(cand).w]; const r0 = cand.rot || 0; cand.rot = (r0 + 1) & 3; mut = areaCheck(); cand.rot = r0 }
-  else { const b = blocks[0]; b.x += 1; mut = areaCheck(); b.x -= 1 }
+  // COMPACT: packed layouts may hold no turn-sensitive narrow block (its items can sit inside the turned floor): then shift every block by a unit, the most sensitive one must turn the area check red
+  if (!mut || mut.off + mut.out <= base.off + base.out) for (const b of blocks.slice().sort((p, q) => cnt(q) - cnt(p)).slice(0, 4)) { b.x += 1; const m = areaCheck(); b.x -= 1; if (!mut || m.off + m.out > mut.off + mut.out) mut = m }
   S.blocks = keep;
   if (mut.off + mut.out <= base.off + base.out) errs.push('mutation (one block turned) did not turn the area check red');
   return {cand: window.__cand, errs, placed, tileItems, finalItems: [item], row: {blocks: nB, rotated, items: its.length, mutRed: mut.off + mut.out}};
