@@ -61,18 +61,18 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
   // industrial (hz, d.h=2): one BPO_Dock_2 per hub row, nl_dock.js hz assembly (nlIndAsm transposed) shifted to the row; lanes tagged ie (input, west of block 0) / oe (output, east of the last column)
   const TRO=[1,0,3,2],asm=nlIndAsm(),d2=plcCls('BPO_Dock_2'),indGo=(tag,out)=>{
     const rows=new Map(),S=d.h===1?2:1;   // d.h=1: one Dock_2 serves two adjacent strips (group A even strip, group B odd strip)
-    for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/(S*TR)),ly=q.y-g*S*TR;if(d.h>2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out?Math.floor(q.x/TW)<1:Math.floor(q.x/TW)!==0))return'dock slot misaligned';if(!rows.has(g))rows.set(g,[]);rows.get(g).push(q)}
-    for(const [g,E] of rows){
-      const oy=g*S*TR,col=out?Math.floor(E[0].x/TW):-1,ox=out?(col+1)*TW+A:-16-A,dx=out?(col+1)*d.w:-1,db={cls:d2,x:out?dx+ad:-3-ad,y:g*S*P,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*S*P,rot:out?0:2};
+    for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/(S*TR)),ly=q.y-g*S*TR;if(d.h>2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out&&Math.floor(q.x/TW)<1))return'dock slot misaligned';const kk=g+':'+(out?0:Math.floor(q.x/TW));if(!rows.has(kk))rows.set(kk,[]);rows.get(kk).push(q)}   // SHAPE2: input hubs at any block column (dock on their west face)
+    for(const [kk,E] of rows){
+      const g=+kk.split(':')[0],oy=g*S*TR,col=out?Math.floor(E[0].x/TW):Math.floor(E[0].x/TW)-1,ox=out?(col+1)*TW+A:(col+1)*TW-16-A,dx=out?(col+1)*d.w:col*d.w+d.w-1,db={cls:d2,x:out?dx+ad:(col+1)*d.w-3-ad,y:g*S*P,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*S*P,rot:out?0:2};
       if(cells(db).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z))))return'industrial dock overlaps another block';
       cells(db).forEach(z=>occ.add(z));blocks.push(db);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab)}
       const used=[0,1].map(k=>E.filter(q=>(q.y-oy<16?0:1)===k)),dkx=E[0].dx||{},bq=[];
       for(const b of asm.boxes){
         const x=out?ox+10-b.y:ox+b.y,y=oy+(out?26-b.x:b.x),g2=(y-oy<16?0:1),main=b.y===9&&(b.x===4||b.x===22),m={cls:NLD.BOX_I,x,y,h:0,rot:0,pid:0,ct:[],dk:out?'out':'in'};
-        if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:0,gy:g*S*P,u:g2,r:(used[g2][0].dx||dkx).r,n:1,name:(used[g2][0].dx||dkx).name,ind:1};if(out&&fix.nodes)fix.nodes.filter(q=>q.pool===col&&q.row>=g*S&&q.row<(g+1)*S).forEach(q=>q.ct.push(x+','+y))}
+        if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:out?0:(col+1)*d.w,gy:g*S*P,u:g2,r:(used[g2][0].dx||dkx).r,n:1,name:(used[g2][0].dx||dkx).name,ind:1};if(out&&fix.nodes)fix.nodes.filter(q=>q.pool===col&&q.row>=g*S&&q.row<(g+1)*S).forEach(q=>q.ct.push(x+','+y))}
         add.push(m)}
       for(const k of asm.belts)belt(out?ox+13-k.y:ox+k.y,out?oy+29-k.x:oy+k.x,TRO[k.rot]);
-      for(const q of E)for(let x=out?q.x+1:-3-A;x<=(out?ox:-1);x++)belt(x,q.y,0);
+      for(const q of E)for(let x=out?q.x+1:(col+1)*TW-3-A;x<=(out?ox:(col+1)*TW-1);x++)belt(x,q.y,0);
       E.forEach(q=>{delete q.dk;delete q.dx})}
     return null};
   const ierr=indGo('ie',false)||indGo('oe',true);if(ierr)return{ok:false,why:ierr};

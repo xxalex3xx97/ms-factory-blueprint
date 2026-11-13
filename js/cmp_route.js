@@ -55,7 +55,7 @@ function cmpRoute(o) {
             // new span must not contain a same-axis UG end
             let bad = false; for (let j = 1; j < k; j++) if (ugEnd.has(key(x + dx * j, y + dy * j))) bad = true;
             if (bad) continue;
-            relax(i, c + 3 + k, ex, ey, nd, 1, 2);
+            relax(i, c + 2.5, ex, ey, nd, 1, 2);   // SHAPE2: flat hop cost (items count, not length): a straight run is a chain of long hops
           }
         }
       }

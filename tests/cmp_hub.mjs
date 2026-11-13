@@ -149,7 +149,7 @@ const ref = await pg.evaluate(() => {
   const b = {mk: 1, bx: 'DAT_Container_2', item: 1};
   const rows = n => Array.from({length: n}, (_, i) => i * 2);
   return {
-    pool6_1x1: cmpPool({...b, W: 14, H: 14, raw: false, inRows: rows(6), outRows: rows(6)}),
+    pool6_1x1: cmpPool({...b, W: 14, H: 14, raw: false, inRows: rows(14), outRows: rows(14)}),
     pool4_1x1: cmpPool({...b, W: 14, H: 14, raw: false, inRows: [0, 3, 6, 9], outRows: [0, 3, 6, 9]}),
     pool4_w10: cmpPool({...b, W: 10, H: 14, raw: false, inRows: [0, 3, 6, 9], outRows: [0, 3, 6, 9]}),
     feed3_1x1: cmpFeed({...b, W: 14, H: 14, sets: [{o: 0, hs: 14}], M: 3, k: 4, main: 0, pass: [0, 1, 2], rawItems: [1, 2, 3], allRaw: false}),
@@ -157,7 +157,7 @@ const ref = await pg.evaluate(() => {
   };
 });
 console.log('\nrefusals:'); for (const k in ref) console.log('  ' + k + ': ' + (ref[k].ok ? 'OK' : ref[k].why));
-check(!ref.pool6_1x1.ok && /<=4 lanes/.test(ref.pool6_1x1.why), '1x1 pool R=6 refused with a clear why');
+check(!ref.pool6_1x1.ok && /pool block too (short|narrow)/.test(ref.pool6_1x1.why), '1x1 pool R=14 (> CMP_LANES 12) refused with a clear why');
 check(!ref.pool4_w10.ok && /too narrow/.test(ref.pool4_w10.why), 'W=10 pool R=4 refused too narrow');
 check(!ref.feed3_1x1.ok && /too narrow/.test(ref.feed3_1x1.why), 'feed M=3 x3 raw in 14 wide refused too narrow');
 check(!ref.feedTall.ok && /too short/.test(ref.feedTall.why), 'feed taller than set refused');
