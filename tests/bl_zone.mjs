@@ -125,26 +125,46 @@ for (const g of h1) {
   if (!g.ok) continue;
   check(!g.fails.length, `H1 R=${g.R} gates (${g.fails.join('; ') || 'all'})`);
 }
-// Z3: S1 Nickel Plates 480 through pfCompose (zoned tower), tiled with placerTile
-const z = await pg.evaluate(() => {
-  const it = [...plnBy(false).keys()].find(i => plnNm(i) === 'Nickel Plates');
-  const P = plan(it, 480, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
-  const L = pfCompose(P, it, 1, 0, {box: 'DAT_Container_2'});   // zones need the Large Container (Z3 condition)
-  if (!L.ok) return {refused: L.why};
-  const T = placerTile(L, placerBk());
-  const bl = L.bl || {};
-  return {note: String(L.note[0]), zoned: !!bl.zoned, rows: bl.r, M: bl.M, machines: L.stat.machines, belts: L.stat.belts, bpm: L.stat.belts / L.stat.machines,
-    tileOk: T.ok, tileWhy: T.ok ? null : String(T.why).slice(0, 160), ov: T.ov, span: T.span, blocks: T.blocks ? T.blocks.map(b => [b.cls, b.x, b.y]) : null, cols: T.cols, tileRows: T.rows, ug: T.ug};
-});
-console.log('Z3 S1 Nickel Plates 480: ' + JSON.stringify(z));
-if (z.refused) { console.log('FAIL Nickel 480 refused: ' + z.refused); fails++ }
-else {
-  check(z.zoned, 'Nickel 480 uses the zoned tower');
-  check(z.machines === 24, 'Nickel 480 24 machines (' + z.machines + ')');
-  check(z.rows && z.rows[0] === 4, 'Nickel 480 rows 4 (' + z.rows + ')');
-  check(z.tileOk, 'Nickel 480 placerTile ok' + (z.tileOk ? '' : ' (' + z.tileWhy + ')'));
-  check(z.tileOk && z.ov === 0 && z.span === 0, 'Nickel 480 tile ov 0, span 0');
-  check(z.tileOk && z.blocks && z.blocks.length === 3, 'Nickel 480 3 blocks');
+// Z3 (H3): S1 Nickel Plates 480 (R=4) and 720 (R=6) through pfCompose (zoned single-stage tower: IZ west | FB east, 2 blocks), tiled with placerTile. Connectivity = rows whose input or output flood fails.
+for (const [rate, rows, mach] of [[480, 4, 24], [720, 6, 36]]) {
+  const z = await pg.evaluate(rate => {
+    const it = [...plnBy(false).keys()].find(i => plnNm(i) === 'Nickel Plates');
+    const P = plan(it, rate, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+    const L = pfCompose(P, it, 1, 0, {box: 'DAT_Container_2'});   // zones need the Large Container (Z3 condition)
+    if (!L.ok) return {refused: L.why};
+    const T = placerTile(L, placerBk());
+    const bl = L.bl || {};
+    // connectivity: each IZ container port with a belt must flood to x=30; each refinery output must flood to a container
+    const occ = new Map(), DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]], isB = b => PLC_BELT.includes(b.cls) || PLC_SPL.includes(b.cls);
+    for (const b of L.items) { const d = dim(b); for (let x = b.x; x < b.x + d.w; x++) for (let y = b.y; y < b.y + d.h; y++) occ.set(x + ',' + y, b) }
+    const flood = (x, y, stop) => {
+      for (let n = 0; n < 400; n++) {
+        if (stop(x, y)) return true;
+        const b = occ.get(x + ',' + y);
+        if (!b || !isB(b)) return false;
+        const [dx, dy] = DIR[b.rot]; x += dx; y += dy;
+      }
+      return false;
+    };
+    let connFail = 0, inOk = 0, outOk = 0;
+    for (const b of L.items) if (b.cls === 'DAT_Container_2' && b.ct) for (const p of portsOf(b)) if (p.f === 'E' && occ.get((p.x + p.nx) + ',' + (p.y + p.ny)) && isB(occ.get((p.x + p.nx) + ',' + (p.y + p.ny)))) {
+      if (flood(p.x + p.nx, p.y + p.ny, x => x === 30)) inOk++; else connFail++;
+    }
+    for (const b of L.items) if (b.cls === 'DAT_Refinery') {
+      if (flood(b.x + 1, b.y + 3, (x, y) => { const c = occ.get(x + ',' + y); return !!c && c.cls === 'DAT_Container_2' })) outOk++; else connFail++;
+    }
+    return {note: String(L.note[0]), zoned: !!bl.zoned, rows: bl.r, M: bl.M, stacks: bl.stacks, machines: L.stat.machines, belts: L.stat.belts, bpm: +(L.stat.belts / L.stat.machines).toFixed(2), connFail, inOk, outOk,
+      tileOk: T.ok, tileWhy: T.ok ? null : String(T.why).slice(0, 160), ov: T.ov, span: T.span, blocks: T.blocks ? T.blocks.map(b => [b.cls, b.x, b.y]) : null, cols: T.cols, tileRows: T.rows, ug: T.ug};
+  }, rate);
+  console.log(`Z3 S1 Nickel Plates ${rate}: ` + JSON.stringify(z));
+  if (z.refused) { console.log(`FAIL Nickel ${rate} refused: ` + z.refused); fails++; continue }
+  check(z.zoned, `Nickel ${rate} uses the zoned tower`);
+  check(z.machines === mach, `Nickel ${rate} ${mach} machines (${z.machines})`);
+  check(z.rows && z.rows[0] === rows, `Nickel ${rate} rows ${rows} (${z.rows})`);
+  check(z.connFail === 0, `Nickel ${rate} connectivity 0 (fail ${z.connFail}, in ${z.inOk}, out ${z.outOk})`);
+  check(z.tileOk, `Nickel ${rate} placerTile ok` + (z.tileOk ? '' : ' (' + z.tileWhy + ')'));
+  check(z.tileOk && z.ov === 0 && z.span === 0, `Nickel ${rate} tile ov 0, span 0`);
+  check(z.tileOk && z.blocks && z.blocks.length === 2, `Nickel ${rate} 2 blocks`);
 }
 await br.close();
 if (errs.length) { console.log('PAGE ERRORS ' + errs.join(' | ')); fails++ }

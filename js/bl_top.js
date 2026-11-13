@@ -100,7 +100,7 @@ function blTopMulti(P,item,mk,spMk,o,Z,nodes,BX,dock){
     note:['Block engine: '+K+' tower(s), '+nodes.length+' stage(s), rows per stage '+B.r.join('/')+' (2-input merge, lane)',...(dock&&dock.out==='nrm'?['Risk: normal output dock has 2 ports (240/min per tower)']:[]),...(P.nofp||[]).map(x=>plnNm(x)+' comes from the Deep Space Observatory block (not placed)')],
     src:{P,item,mk,spMk,o},prefab:true,stat,dk:dock&&(dock.in||dock.out)?dock:null,bl:{K,n:B.n,r:B.r,M:info.map(x=>x.M),Rmax}};
 }
-// blTopZ (Z3): zoned single-stage tower. IZ (input containers, Y0) over FB (machine rows, Y30) over OZ (sink containers, Y60), one canvas at cx 0. Single raw input, Large Container only, no dock. Refuses {ok:false,why} so blTop falls back to the tower.
+// blTopZ (H3): zoned single-stage tower. Per stack k (Y=30k): IZ (input containers, west) | FB (machine rows, east, sink containers at its east end). Rows over RB(P) = K stacks. Single raw input, Large Container only, no dock. Refuses {ok:false,why} so blTop falls back to the tower.
 function blTopZ(P,item,mk,spMk,nodes,BX,o){
   const no=why=>({ok:false,why:'BL: zone '+why});
   if(BX!=='DAT_Container_2')return no('needs Large Container');
@@ -110,18 +110,20 @@ function blTopZ(P,item,mk,spMk,nodes,BX,o){
   const fi=P.edges.filter(e=>e.from===n.ins[0].item&&e.to===n.item).reduce((a,e)=>a+e.flow,0)/n.N;
   const M=blM(fi,n.fo,mc.w,cap,bw,4);   // zone width at the 4-row cap
   if(M<1)return no('machine does not fit the zone width or belt cap');
-  const R=Math.ceil(n.N/M);
-  if(R>BL.RB(mc.h+2))return no('rows over the zone cap');
-  const iz=blIZ({mk,bx:BX,cx:0,Y:0,R,raw:n.ins[0].item}),fb=blFB({mk,spMk,cls:n.cls,rec:n.rec,mc,M,R,cx:0,Y:30});
-  if(!fb.ok)return no(fb.why);
-  const oz=blOZ({mk,bx:BX,Y:60,R,E0:fb.E0});
-  const items=[...iz.items,...fb.items,...oz.items];
+  const R=Math.ceil(n.N/M),PH=mc.h+2,K=Math.ceil(R/BL.RB(PH)),Rk=Math.ceil(R/K),y0=Rk*PH===30?0:1;   // H3: K stacks of 30-cell blocks (IZ west, FB east), Rk rows per stack
+  if(blRW(Rk,mc.w).M<M)return no('machine does not fit the zone width');
+  const items=[];
+  for(let k=0;k<K;k++){
+    const iz=blHIZ({mk,bx:BX,raw:n.ins[0].item,R:Rk,P:PH,y0,Y:30*k}),fk=blHFB({mk,spMk,cls:n.cls,rec:n.rec,mc,M,R:Rk,Y:30*k,y0,bx:BX});
+    if(!fk.ok)return no(fk.why);
+    items.push(...iz.items,...fk.items);
+  }
   let belts=0,spl=0;
   for(const q of items){if(PLC_BELT.includes(q.cls))belts++;else if(PLC_SPL.includes(q.cls))spl++}
-  const machines=R*M,w=plcMmax(items,q=>q.x+dim(q).w)+1,h=plcMmax(items,q=>q.y+dim(q).h);
-  const ports=oz.xs.map(x=>({edge:'S',off:x,dir:'out',belts:fb.exCols.filter(ex=>ex>=x&&ex<=x+3).length,slot:-1,mk}));
-  const stat={belts,ug:0,spl,blocks:3,machines,lanes:1,spills:0};
-  return{ok:true,eng:'zones',items,cuts:[],lanes:1,per:[machines],makes:R*M*n.fo,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
-    note:['Block engine: zoned tower (IZ/FB/OZ), 1 stage, '+R+' rows x '+M+' machines'],
-    src:{P,item,mk,spMk,o},prefab:true,stat,dk:null,bl:{K:1,n:[n.N],r:[R],M:[M],Rmax:4,zoned:true}};
+  const machines=Rk*K*M,w=plcMmax(items,q=>q.x+dim(q).w)+1,h=30*K;
+  const ports=[];   // H3: sink containers sit inside each FB east end; no OZ port list
+  const stat={belts,ug:0,spl,blocks:2*K,machines,lanes:1,spills:0};
+  return{ok:true,eng:'zones',items,cuts:[30],lanes:1,per:[machines],makes:machines*n.fo,pitch:h+1,w,h,tall:true,mod:false,box:BX,mk,ports,
+    note:['Block engine: zoned tower (IZ west | FB east), 1 stage, '+Rk*K+' rows x '+M+' machines, '+K+' stack(s)'],
+    src:{P,item,mk,spMk,o},prefab:true,stat,dk:null,bl:{K:1,n:[n.N],r:[Rk*K],M:[M],Rmax:4,zoned:true,stacks:K}};
 }
