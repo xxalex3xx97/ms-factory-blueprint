@@ -28,8 +28,9 @@ function cmpAssemble(c){
     if(dk&&dk.out)dO=cmpDockHub(dk,{kind:'out',name:cmpName(c.item),D:c.P.nodes[c.item].rate*shr(L-1),rows:fbs[L-1].outRows,H,dh:d.h});
     if(dI&&dI.ok===false)return no(dI.why);if(dO&&dO.ok===false)return no(dO.why);
     const hub=(inRows,outRows,raw,item,x)=>cmpPool({W,H,mk,bx,item,raw,inRows,outRows,...x});
-    if(dk&&dk.in&&f0&&j===0)dk.notes.push('Dock for '+g0.node.rec.i.length+' raw inputs of the first stage is not built yet: the raw containers stay infinite sources');
-    const seq=[f0?cmpFeed({W,H,mk,bx,sets:f0.sets,M:f0.M,k:f0.k,main:0,pass:[],rawItems:g0.node.rec.i.map(q=>q[0]),allRaw:true,seed:g0.growth?g0.item:null}):hub([],fbs[0].inRows,true,g0.node.rec.i[0][0],dI)];
+    const fS=f0&&{W,H,mk,bx,sets:f0.sets,M:f0.M,k:f0.k,main:0,pass:[],rawItems:g0.node.rec.i.map(q=>q[0]),allRaw:true,seed:g0.growth?g0.item:null};
+    if(fS&&dk&&dk.in){const E=Array.isArray(c.P.edges)?c.P.edges:Object.values(c.P.edges||{});fS.names=fS.rawItems.map(cmpName);fS.D=fS.rawItems.map(it=>{const e=E.find(e=>e.from===it&&e.to===g0.item);return(e?e.flow:0)*shr(0)})}
+    const seq=[f0?(fS.D?cmpFeedDock(fS,dk,d.h,fS.D,d.w,[j===0?'N':0,j===K-1?'S':0].filter(Boolean)):cmpFeed(fS)):hub([],fbs[0].inRows,true,g0.node.rec.i[0][0],dI)];
     for(let s=0;s<L;s++){seq.push({items:fbs[s].items});seq.push(hub(fbs[s].outRows,s<L-1?fbs[s+1].inRows:[],false,0,s===L-1?dO:null))}
     for(const h of seq)if(h.ok===false)return no(h.why);
     const strip=[];
@@ -87,8 +88,10 @@ function cmpAssembleTree(c){
     let e=hubAt(cmpPool({W,H,mk,bx,item:0,raw:false,inRows:NB[o.id].outRows,outRows:OR[o.id],...dO}),o.pool,o.row,NB[o.id]);if(e)return no(e);
     if(o.inKind==='feed'){   // all-raw k>=2 node: FEED block at the IN column (growth: seed container finite); raw docks not built here
       const bz=NB[o.id].b,hs=tplIfSets(block,sz[o.id].S).hs,sets=bz.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0);
-      e=hubAt(cmpFeed({W,H,mk,bx,sets,M:bz.iface.M,k:o.k,main:0,pass:[],rawItems:o.rec.i.map(q=>q[0]),allRaw:true,seed:o.growth?o.key:null}),o.col,o.row,NB[o.id]);if(e)return no(e);
-      if(dk&&dk.in&&!dk.fn){dk.fn=1;dk.notes.push('Dock for the raw inputs of an all-raw multi-input stage is not built yet: those raw containers stay infinite sources')}
+      const fS={W,H,mk,bx,sets,M:bz.iface.M,k:o.k,main:0,pass:[],rawItems:o.rec.i.map(q=>q[0]),allRaw:true,seed:o.growth?o.key:null};
+      if(dk&&dk.in&&o.col===0){fS.names=fS.rawItems.map(cmpName);fS.D=fS.rawItems.map(it=>{const q=o.children.map(i=>byId[i]).find(q=>q.key===it);return q?q.rate:0})}
+      e=hubAt(fS.D?cmpFeedDock(fS,dk,d.h,fS.D,d.w,['N','S']):cmpFeed(fS),o.col,o.row,NB[o.id]);if(e)return no(e);
+      if(dk&&dk.in&&!fS.D&&!dk.fn){dk.fn=1;dk.notes.push('Dock-limited: the raw inputs of an all-raw multi-input stage away from the west edge cannot be docked (containers stay infinite)')}
       continue}
     if(o.inKind==='src'){const rc=byId[o.children[0]],dI=dk&&dk.in?cmpDockHub(dk,{kind:'in',name:rc.item,D:rc.rate,rows:NB[o.id].inR[0],H,dh:d.h,col:o.col}):null;if(dI&&dI.ok===false)return no(dI.why);
       e=hubAt(cmpPool({W,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB[o.id].inR[0],...dI}),o.col,o.row);if(e)return no(e);continue}

@@ -152,7 +152,7 @@ function cmpCompose(P,item,mk,spMk,o={}){
   if(A.dock){   // C7: raw/oz container descriptors + 'Dock n: assign ...' notes
     cmpI.raw=A.dock.raw;cmpI.oz=A.dock.oz;let n=0;
     const lines=[...A.dock.raw,...A.dock.oz].map(q=>'Dock '+(++n)+': assign '+q.dd.name+' ('+cmpR1(q.dd.r)+'/min, '+(q.dd.ind?'industrial dock lane group '+(q.dd.u+1):q.dd.n+' dock'+(q.dd.n>1?'s':''))+')');
-    note=[...note,...dkn,...lines];
+    note=[...note,...dkn,...(A.dock.miss||[]).map(n=>'Dock-limited: '+n.replace(/^\w+ /,'')+' cannot be docked at this position (container stays infinite)'),...lines];
   }else if(dkn.length)note=[...note,...dkn];
   const T=A.T,ext=plcExt(T),ms=T.ms,cnt=f=>ms.filter(f).length;
   const L={ok:true,eng:'cmp',items:ms,cuts:[],lanes:cmpI.K,per,makes:P.nodes[item].rate,pitch:ext.h+1,w:ext.w,h:ext.h,tall:true,mod:false,box:BX,mk,ports:[],note,src:{P,item,mk,spMk,o},prefab:true,
