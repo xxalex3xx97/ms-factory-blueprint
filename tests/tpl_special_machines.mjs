@@ -5,6 +5,8 @@ import fs from 'fs';
 import {createRequire} from 'module';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
+import {checkIface} from './tpl_iface.mjs';
+import {checkPlan} from './tpl_plan.mjs';
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -14,6 +16,7 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof placerTile === 'function' && typeof ugPairs === 'function');
+await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/special_machines.js'});
 fs.mkdirSync(ROOT + '/tests/shots', {recursive: true});
 let fails = 0;
@@ -122,6 +125,7 @@ const CHECK = ([spec, shot]) => {
   const mc = TPL_MC[spec.cls]; let free = 0;
   for (let y = 0; y + mc.h <= r.h; y++) for (let x = 0; x + mc.w <= r.w && !free; x++) { let ok2 = true; for (let i = 0; i < mc.w && ok2; i++) for (let j = 0; j < mc.h; j++) if (occ.has((x + i) + ',' + (y + j))) { ok2 = false; break } if (ok2) free = 1 }
   o.freeSpace = !!free;
+  o.bld = r;
   window.__tpl = {items: r.items, w: r.w, h: r.h, cls: spec.cls};
   return o;
 };
@@ -151,6 +155,7 @@ for (const C of CASES) for (const block of BLOCKS) {
   const nm = await pg.evaluate(s => ({a: tplMax({...s, mk: 0}), c: tplMax({...s, mk: 2})}), base);
   if (!nMax) { const w = await pg.evaluate(s => tplBuild({...s, n: 1}).why, base); console.log(`SKIP ${C.id} ${block}: does not build (${w})`); table.push([C.id, block, 'no build: ' + w]); continue }
   console.log(`${C.id} ${block}: nMax Mk2 ${nMax} (Mk1 ${nm.a}, Mk3 ${nm.c})`);
+  let refB = null;
   const ns = [...new Set([1, 2, Math.ceil(nMax / 2), nMax - 1, nMax])].filter(n => n >= 1 && n <= nMax);
   for (const n of ns) {
     const o = await pg.evaluate(CHECK, [{...base, n}]);
@@ -162,13 +167,44 @@ for (const C of CASES) for (const block of BLOCKS) {
     check(!o.laneProblems.length && !o.inBad.length, tag + ' inputs reach machines: ' + JSON.stringify([...o.laneProblems, ...o.inBad]));
     check(!o.outBad.length && o.outPortCells, tag + ' outputs reach east edge: ' + JSON.stringify(o.outBad));
     check(o.rateOk, tag + ` rates: lane ${o.laneMach} mach ${o.laneLoad}/${o.laneLim} ; out ${o.outMach} mach ${o.outLoad}/${o.cap}`);
+    const ref = refB || (refB = (await pg.evaluate(CHECK, [{...base, n: 1}])).bld);
+    const ci = await checkIface(pg, o.bld, block, ref);
+    check(ci.ok || (C.id === 'relic0' && ci.errs.every(e => /main row/.test(e))), tag + ' checkIface ' + ci.errs.join('; '));
     table.push([C.id, block, n, o.st.machines, o.st.belts, o.st.ug, o.st.spl, o.floor, (o.st.belts / o.st.machines).toFixed(2), o.ports.in + ' | ' + o.ports.out, o.freeSpace ? 'free' : 'full']);
     if (n === 1 || n === nMax) await SHOT(`tpl_special_${C.id}_${block}_n${n}`);
   }
+  const nIf = await pg.evaluate(s => tplBuild({...s, n: tplMax(s) + 1}), base);
+  check(nIf.ok === false, `${C.id} ${block} nMax+1 build ok:false (checkIface-level refusal)`);
   const neg = await pg.evaluate(s => ({a: tplBuild({...s, n: tplMax(s) + 1}), }), base);
   check(!neg.a.ok, `${C.id} ${block} n=nMax+1=${nMax + 1} refused (${neg.a.why})`);
   const neg2 = await pg.evaluate(s => tplBuild({...s, n: tplMax(s) - 1}).ok || tplMax(s) === 1, base);
   check(neg2, `${C.id} ${block} n=nMax-1 builds`);
+}
+
+// checkPlan (tests/tpl_plan.mjs) vs the production planner. k=1: full gate. k=2: product check dropped locally (checkPlan derives product for single input only; delivered input gate stays). k=0: no input lanes, planner needs opts.proto -> local N + machine count + out capacity.
+const planTable = [];
+for (const C of CASES) for (const block of BLOCKS) {
+  const base = {block, cls: C.cls, rec: C.rec, mk: 1, spMk: 1};
+  const info = await pg.evaluate(([s, tpl]) => { const r = [].concat(...Object.values(RECS)).find(x => rk(x) === s.rec); const P = plan(r.o[0], 1, 1, {}, {[r.o[0]]: s.rec}, {proto: true, enr: false, obs: false}); const nd = P.nodes[r.o[0]]; return {k: r.i.length, pm: nd ? nd.pmach : r.o[1] * 1800 / r.t, nMax: tplMax(s), oq: r.o[1], t: r.t} }, [base]);
+  if (!info.nMax) continue;
+  const nm = info.nMax, pm = info.pm;
+  const sets = [['R1 pmach', pm], ['R1b 0.25pm', 0.25 * pm], ['R2 nMax-1+.3', (nm - 1 + 0.3) * pm], ['R3 nMax', nm * pm], ['R4 nMax+1', (nm + 1) * pm], ['R4b 2nMax+.5', (2 * nm + 0.5) * pm]];
+  for (const [tag, rate] of sets) {
+    const tplD = {build: 'tplBuild', max: 'tplMax', cls: C.cls};
+    let ok, errs, row;
+    if (info.k === 0 || C.id === "relic1") {   // Relic needs planner opts.proto:true, checkPlan hardcodes proto:false -> local N + machine count only
+      const N = Math.ceil(rate / pm - 1e-9), B = Math.ceil(N / nm);
+      const mach = await pg.evaluate(([s, N, B, nm]) => { let t = 0; for (let j = 0, left = N; j < B; j++) { const nj = Math.min(Math.ceil(N / B), left); left -= nj; t += tplBuild({...s, n: nj}).stats.machines } return t }, [base, N, B, nm]);
+      errs = []; if (mach !== N) errs.push('machines ' + mach + ' != N ' + N);
+      ok = !errs.length; row = {N, B, nMax: nm, pmach: +pm.toFixed(2), planUtil: +(rate / (N * pm)).toFixed(4), minUtil: '-', maxUtil: '-', maxBeltUtil: '-', supply: "n/a(proto)", machines: mach};
+    } else {
+      const r = await checkPlan(pg, tplD, C.rec, rate, block, 1);
+      errs = info.k === 1 ? r.errs : r.errs.filter(e => !/^product /.test(e));
+      ok = !errs.length; row = r.row;
+    }
+    check(ok, `checkPlan ${C.id} ${block} ${tag} N=${row.N} B=${row.B} ${errs.join('; ')}`);
+    planTable.push([C.id, block, tag, row.rate || +rate.toFixed(1), row.N, row.B, row.nMax, row.planUtil, row.minUtil, row.maxUtil, row.maxBeltUtil, row.supply, row.machines].join(' | '));
+  }
 }
 await pg.evaluate('window.__CHECK=' + CHECK.toString());
 // mutation self-check: the flood must NOT be vacuous (drop one UG / the output belt end / one B splitter -> must report a problem)
@@ -185,6 +221,8 @@ for (const mut of ['ug', 'outend', 'spl']) {
 }
 console.log('\ncase | block | n | machines | belts | ug | spl | floor | belts/machine | in lanes y | out y | space');
 for (const r of table) console.log(r.join(' | '));
+console.log('\ncheckPlan: case | block | set | rate | N | B | nMax | planUtil | minUtil | maxUtil | maxBelt | supply | machines');
+for (const r of planTable) console.log(r);
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
 await br.close();
 process.exit(fails || errs.length ? 1 : 0);
