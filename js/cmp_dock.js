@@ -46,33 +46,33 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
     return true};
   const dock=(q,side)=>{
     if(q.dkx&&q.dkx.side&&q.dkx.side!=='W'&&side==='W')return dockV(q,q.dkx.side);
-    const gx=Math.floor(q.x/TW),gy=Math.floor(q.y/TR),k=slot(q.y-gy*TR),x0=gx*TW,out=side==='E',ok=k>=0&&(out?q.x+4===x0+W-1:q.x-x0<=1);
+    const gy=Math.floor(q.y/TR),k=slot(q.y-gy*TR),x0=q.hx!=null?q.hx:Math.floor(q.x/TW)*TW,hw=q.hw||W,u0=x0/FC,hu=q.hu||d.w,gx=u0/d.w,out=side==='E',ok=k>=0&&(out?q.x+4===x0+hw-1:q.x-x0<=1);   // SHAPE2: hub block origin / width / units from the hx,hw,hu tags (narrow hubs)
     // 2x2c (ad=1): Station Adapter (1x2 units, open side) between block and dock, dock one unit further out, belts 16 cells longer
-    const b=ok&&{cls:dc,x:out?(gx+1)*d.w+ad:gx*d.w-1-ad,y:gy*P+k,rot:out?0:2},
-      ab=ok&&ad&&!ads.has(side+gx+'|'+gy)&&{cls:adc,x:out?(gx+1)*d.w:gx*d.w-1,y:gy*P,rot:out?0:2};
+    const b=ok&&{cls:dc,x:out?u0+hu+ad:u0-1-ad,y:gy*P+k,rot:out?0:2},
+      ab=ok&&ad&&!ads.has(side+u0+'|'+gy)&&{cls:adc,x:out?u0+hu:u0-1,y:gy*P,rot:out?0:2};
     if(!ok||cells(b).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z)))){q.why=!ok?(out?'the output container is not flush with the east wall':'the container is not on a dock slot'):'the dock cells overlap another block';extra.push(q);return false}
     cells(b).forEach(z=>occ.add(z));blocks.push(b);
-    if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab);ads.add(side+gx+'|'+gy)}
+    if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab);ads.add(side+u0+'|'+gy)}
     const M=gy*TR+16*k+6;
-    for(const y of[M,M+1])if(out){for(let x=x0+W-1;x<=x0+W+A;x++)belt(x,y,0)}else for(let x=x0-1-A;x<=q.x-1;x++)belt(x,y,0);
-    q.dd={side,gx:gx*d.w,gy:gy*P,u:k,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
+    for(const y of[M,M+1])if(out){for(let x=x0+hw-1;x<=x0+hw+A;x++)belt(x,y,0)}else for(let x=x0-1-A;x<=q.x-1;x++)belt(x,y,0);
+    q.dd={side,gx:u0,gy:gy*P,u:k,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
     return true};
   for(const q of ms.filter(q=>q.dk==='in'||q.dk==='out'))if(!dock(q,q.dk==='out'?'E':'W')&&!q.dd){miss.push((q.dk==='out'?'out ':'in ')+q.dkx.name+'|'+q.why);delete q.dk;delete q.dkx}
   // industrial (hz, d.h=2): one BPO_Dock_2 per hub row, nl_dock.js hz assembly (nlIndAsm transposed) shifted to the row; lanes tagged ie (input, west of block 0) / oe (output, east of the last column)
   const TRO=[1,0,3,2],asm=nlIndAsm(),d2=plcCls('BPO_Dock_2'),indGo=(tag,out)=>{
     const rows=new Map(),S=d.h===1?2:1;   // d.h=1: one Dock_2 serves two adjacent strips (group A even strip, group B odd strip)
-    for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/(S*TR)),ly=q.y-g*S*TR;if(d.h>2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out&&Math.floor(q.x/TW)<1))return'dock slot misaligned';const kk=g+':'+(out?0:Math.floor(q.x/TW));if(!rows.has(kk))rows.set(kk,[]);rows.get(kk).push(q)}   // SHAPE2: input hubs at any block column (dock on their west face)
+    for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/(S*TR)),ly=q.y-g*S*TR;if(d.h>2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out&&(q.hx!=null?q.hx:Math.floor(q.x/TW)*TW)<1))return'dock slot misaligned';const kk=g+':'+(q.hx!=null?q.hx:Math.floor(q.x/TW)*TW);if(!rows.has(kk))rows.set(kk,[]);rows.get(kk).push(q)}   // SHAPE2: input hubs at any block column (dock on their west face)
     for(const [kk,E] of rows){
-      const g=+kk.split(':')[0],oy=g*S*TR,col=out?Math.floor(E[0].x/TW):Math.floor(E[0].x/TW)-1,ox=out?(col+1)*TW+A:(col+1)*TW-16-A,dx=out?(col+1)*d.w:col*d.w+d.w-1,db={cls:d2,x:out?dx+ad:(col+1)*d.w-3-ad,y:g*S*P,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*S*P,rot:out?0:2};
+      const g=+kk.split(':')[0],oy=g*S*TR,e0=E[0],x0=+kk.split(':')[1],hw=e0.hw||W,hu=e0.hu||d.w,u0=x0/FC,col=e0.hc!=null?e0.hc:Math.floor(e0.x/TW),ox=out?x0+hu*16+A:x0-16-A,dx=out?u0+hu:u0-1,db={cls:d2,x:out?dx+ad:u0-3-ad,y:g*S*P,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*S*P,rot:out?0:2};
       if(cells(db).some(z=>occ.has(z))||(ab&&cells(ab).some(z=>occ.has(z))))return'industrial dock overlaps another block';
       cells(db).forEach(z=>occ.add(z));blocks.push(db);if(ab){cells(ab).forEach(z=>occ.add(z));blocks.push(ab)}
       const used=[0,1].map(k=>E.filter(q=>(q.y-oy<16?0:1)===k)),dkx=E[0].dx||{},bq=[];
       for(const b of asm.boxes){
         const x=out?ox+10-b.y:ox+b.y,y=oy+(out?26-b.x:b.x),g2=(y-oy<16?0:1),main=b.y===9&&(b.x===4||b.x===22),m={cls:NLD.BOX_I,x,y,h:0,rot:0,pid:0,ct:[],dk:out?'out':'in'};
-        if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:out?0:(col+1)*d.w,gy:g*S*P,u:g2,r:(used[g2][0].dx||dkx).r,n:1,name:(used[g2][0].dx||dkx).name,ind:1};if(out&&fix.nodes)fix.nodes.filter(q=>q.pool===col&&q.row>=g*S&&q.row<(g+1)*S).forEach(q=>q.ct.push(x+','+y))}
+        if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:out?0:u0,gy:g*S*P,u:g2,r:(used[g2][0].dx||dkx).r,n:1,name:(used[g2][0].dx||dkx).name,ind:1};if(out&&fix.nodes)fix.nodes.filter(q=>q.pool===col&&q.row>=g*S&&q.row<(g+1)*S).forEach(q=>q.ct.push(x+','+y))}
         add.push(m)}
       for(const k of asm.belts)belt(out?ox+13-k.y:ox+k.y,out?oy+29-k.x:oy+k.x,TRO[k.rot]);
-      for(const q of E)for(let x=out?q.x+1:(col+1)*TW-3-A;x<=(out?ox:(col+1)*TW-1);x++)belt(x,q.y,0);
+      for(const q of E)for(let x=out?q.x+1:x0-3-A;x<=(out?ox:x0-1);x++)belt(x,q.y,0);
       E.forEach(q=>{delete q.dk;delete q.dx})}
     return null};
   const ierr=indGo('ie',false)||indGo('oe',true);if(ierr)return{ok:false,why:ierr};

@@ -36,14 +36,14 @@ const dockPage = a => {
   const all = [...raw.map(q => ({...q, k: 'in'})), ...oz.map(q => ({...q, k: 'out'}))], list = [], slots = new Set();
   const beltAt = (x, y) => { if (a.del === x + ',' + y) return null; const b = cell.get(x + ',' + y); return b && PLC_BELT.includes(b.cls) && b.rot === 0 ? b : null };
   for (const q of all) {
-    const c = ms.find(m => m.x === q.x && m.y === q.y && m.dd), x0 = c.dd.gx * 16, y0 = c.dd.gy * 16, M = y0 + 16 * c.dd.u + 6;
+    const c = ms.find(m => m.x === q.x && m.y === q.y && m.dd), x0 = c.dd.gx * 16, y0 = c.dd.gy * 16, M = y0 + 16 * c.dd.u + 6, hb = T.blocks.find(b => b.x === c.dd.gx && b.y === c.dd.gy && b.cls !== dc && b.cls !== adc), hu = dim({cls: hb.cls, rot: hb.rot || 0}).w, Wh = hu * 16 - 2;
     if (!(c.y <= M && c.y + 3 >= M + 1)) errs.push('container does not cover its door cells @' + c.x + ',' + c.y);
-    const dkb = docks.find(b => q.k === 'in' ? b.x === c.dd.gx - 1 - ad && b.y === c.dd.gy + c.dd.u : b.x === c.dd.gx + d.w + ad && b.y === c.dd.gy + c.dd.u);
+    const dkb = docks.find(b => q.k === 'in' ? b.x === c.dd.gx - 1 - ad && b.y === c.dd.gy + c.dd.u : b.x === c.dd.gx + hu + ad && b.y === c.dd.gy + c.dd.u);
     if (!dkb) errs.push('no dock block for container @' + c.x + ',' + c.y);
-    if (ad && !T.blocks.some(b => b.cls === adc && b.y === c.dd.gy && b.x === (q.k === 'in' ? c.dd.gx - 1 : c.dd.gx + d.w) && b.rot === (q.k === 'in' ? 2 : 0))) errs.push('no station adapter between block and dock @' + c.x + ',' + c.y);
+    if (ad && !T.blocks.some(b => b.cls === adc && b.y === c.dd.gy && b.x === (q.k === 'in' ? c.dd.gx - 1 : c.dd.gx + hu) && b.rot === (q.k === 'in' ? 2 : 0))) errs.push('no station adapter between block and dock @' + c.x + ',' + c.y);
     const sk = q.k + c.dd.gx + ',' + c.dd.gy + ',' + c.dd.u; if (slots.has(sk)) errs.push('two docks in slot ' + sk); slots.add(sk);
-    const xs = q.k === 'in' ? Array.from({length: c.x - x0 + 1 + A}, (_, i) => x0 - 1 - A + i) : Array.from({length: 2 + A}, (_, i) => x0 + W - 1 + i);
-    if (q.k === 'out' && c.x + 4 !== x0 + W - 1) errs.push('output container not flush @' + c.x);
+    const xs = q.k === 'in' ? Array.from({length: c.x - x0 + 1 + A}, (_, i) => x0 - 1 - A + i) : Array.from({length: 2 + A}, (_, i) => x0 + Wh - 1 + i);
+    if (q.k === 'out' && c.x + 4 !== x0 + Wh - 1) errs.push('output container not flush @' + c.x);
     list.push({cells: [M, M + 1].flatMap(y => xs.map(x => x + ',' + y)), r: c.dd.r, n: c.dd.n});
   }
   let bad = 0; for (const z of list) for (const k of z.cells) { const [x, y] = k.split(',').map(Number); if (!beltAt(x, y)) bad++ }

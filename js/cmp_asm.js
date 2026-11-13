@@ -4,11 +4,13 @@ const CMP_BLOCKS=['1x1','1x2','2x2','2x2c'];
 // F2 narrow hubs: a hub column (pool / source / feed / merge) next to a 2x2 factory block is a rotated 1x2 block (floor 14x30), next to a 1x2 block a 1x1 (14x14); shorter lanes, fewer belts. null = no narrower block
 const cmpHubBlk=bk=>bk==='BPO_Station_02'||bk==='BPO_Station_03'?{cls:plcCls('BPO_Station_2x1'),rot:1,W:14,H:30,dw:1}:bk==='BPO_Station_2x1'?{cls:plcCls('BPO_Station_01'),rot:0,W:14,H:14,dw:1}:null;
 // narrow first (docks keep the full-size hubs); a column whose hub does not fit goes full size and the build is retried (r.col = failing column)
-const cmpNarrow=(c,f)=>{if(c.dk||globalThis.CMP_NARROW===false)return f(c,null);const wide=new Set();for(;;){const r=f(c,wide);if(r.ok||!(r.col>=0)||wide.has(r.col))return r;wide.add(r.col)}};
+// SHAPE2: with docks narrow hubs only on 2x2 (hubs carry hx/hw/hu tags for cmp_dock.js), no FEED hubs; a narrow build that fails or misses a dock is rebuilt full-size (as before)
+const cmpNarrow=(c,f)=>{if(globalThis.CMP_NARROW===false||c.dk&&c.bk!=='BPO_Station_02')return f(c,null);const n0=c.dk&&c.dk.notes.length,go=()=>{const wide=new Set();for(;;){if(c.dk)c.dk.notes.length=n0;const r=f(c,wide);if(r.ok||!(r.col>=0)||wide.has(r.col))return r;wide.add(r.col)}};
+  const r=go();if(!c.dk||r.ok&&!(r.dock&&r.dock.miss&&r.dock.miss.length))return r;c.dk.notes.length=n0;return f(c,null)};
 function cmpAssemble(c){return cmpNarrow(c,cmpAssemble1)}
 function cmpAssemble1(c,wide){
   const {mk,spMk,bx,bk,sz,stages}=c,dk=c.dk,no=why=>({ok:false,why,col:badCol}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,L=stages.length,K=sz.K;
-  const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],nb=wide?cmpHubBlk(bk):null,hW=nb?nb.W:W,cwd=i=>nb&&!wide.has(i)?hW:W,ugc=PLC_UG[mk],nMid=stages.filter((g,s)=>s&&g.k>=2).length,ncol=2*L+1+nMid,P=dk&&dk.in&&K>1&&stages.some(g=>g.k>=2)?d.h+1+(bk==='BPO_Station_03'?1:0):d.h,ms=[],blocks=[];let nug=0,badCol=-1;   // D2: gap unit row between strips when side docks are needed
+  const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],nb=wide&&!(dk&&stages.some(g=>g.k>=2))?cmpHubBlk(bk):null,hW=nb?nb.W:W,cwd=i=>nb&&!wide.has(i)?hW:W,ugc=PLC_UG[mk],nMid=stages.filter((g,s)=>s&&g.k>=2).length,ncol=2*L+1+nMid,P=dk&&dk.in&&K>1&&stages.some(g=>g.k>=2)?d.h+1+(bk==='BPO_Station_03'?1:0):d.h,ms=[],blocks=[];let nug=0,badCol=-1;   // D2: gap unit row between strips when side docks are needed
   for(let j=0;j<K;j++){
     const fbs=[],y0=j*P*FC;
     for(let s=0;s<L;s++){
@@ -49,7 +51,7 @@ function cmpAssemble1(c,wide){
     const strip=[];
     const nh=(h,i)=>nb&&!h.fb&&!wide.has(i),cu=[],cx=[],cw=[];let ux=0;   // per column: unit x, cell x, floor width
     seq.forEach((h,i)=>{cu.push(ux);cx.push(ux*FC);cw.push(nh(h,i)?hW:W);ux+=nh(h,i)?nb.dw:d.w});
-    seq.forEach((h,i)=>{h.items.forEach(b=>strip.push({...b,x:b.x+cx[i],y:b.y+y0}));blocks.push(nh(h,i)?{cls:nb.cls,x:cu[i],y:j*P,...(nb.rot?{rot:nb.rot}:{})}:{cls,x:cu[i],y:j*P})});
+    seq.forEach((h,i)=>{h.items.forEach(b=>strip.push({...b,x:b.x+cx[i],y:b.y+y0,...(b.dk?{hx:cx[i],hw:cw[i],hu:nh(h,i)?nb.dw:d.w,hc:i}:{})}));blocks.push(nh(h,i)?{cls:nb.cls,x:cu[i],y:j*P,...(nb.rot?{rot:nb.rot}:{})}:{cls,x:cu[i],y:j*P})});
     // wall swap: belts on both sides of a block boundary (A at x=W-1, B at x=0), same row -> UG pair (entrance, exit), same rot
     const at=new Map();strip.forEach(b=>{if(PLC_BELT.includes(b.cls)&&b.rot===0)at.set(b.x+','+b.y,b)});
     for(let i=0;i+1<ncol;i++)for(let y=y0;y<y0+H;y++){
@@ -69,11 +71,11 @@ function cmpAssemble1(c,wide){
 // node's subtree, routed by cmpRoute (child POOL/SRC east lanes at x=0 -> parent slot rows at x=W-1). Raw children of a merge node are SRC supplier blocks in their own strip row.
 function cmpAssembleTree(c){return cmpNarrow(c,cmpAssembleTree1)}
 function cmpAssembleTree1(c,wide){
-  const {mk,spMk,bx,bk,pl,sz}=c,dk=c.dk,no=why=>({ok:false,why,col:badCol}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk],nb=wide?cmpHubBlk(bk):null,hW=nb?nb.W:W;
+  const {mk,spMk,bx,bk,pl,sz}=c,dk=c.dk,no=why=>({ok:false,why,col:badCol}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk],nb=wide&&!(dk&&pl.nodes.some(o=>o.inKind==='feed'))?cmpHubBlk(bk):null,hW=nb?nb.W:W;
   let badCol=-1;
   const nc=col=>nb&&col%3!==1&&!wide.has(col),colU=[],colX=[],colW=[];{let u=0;for(let q=0;q<pl.cols;q++){colU.push(u);colX.push(u*FC);colW.push(nc(q)?hW:W);u+=nc(q)?nb.dw:d.w}}   // F2: IN / POOL columns narrow, FB columns (col%3==1) full size
   const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),NB={},ms=[],routed=[],OR={};
-  const put=(items,col,row,tag)=>items.forEach(b=>{const q={...b,x:b.x+colX[col],y:b.y+row*TH};ms.push(q);if(tag)tag.push(q)});
+  const put=(items,col,row,tag)=>items.forEach(b=>{const q={...b,x:b.x+colX[col],y:b.y+row*TH,...(b.dk?{hx:colX[col],hw:colW[col],hu:nc(col)?nb.dw:d.w,hc:col}:{})};ms.push(q);if(tag)tag.push(q)});
   const hubAt=(h,col,row,nb)=>{if(h.ok===false){badCol=col;return h.why}put(h.items,col,row);if(nb)h.items.filter(q=>q.ct).forEach(q=>nb.ct.push((q.x+colX[col])+','+(q.y+row*TH)))};
   for(const o of pl.nodes){   // 1 FB blocks
     if(o.raw)continue;
