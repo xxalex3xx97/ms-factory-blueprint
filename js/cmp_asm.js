@@ -1,5 +1,5 @@
 // CMP C3 assembler (composer): strips of blocks [SRC][FB1][POOL][FB2]...[OZ], template + hub items at block origins, wall UG swap, tile result. Spec: vault main-sequence/tasks/2026-11-13-composer-spec.md 2.4-2.6.
-// cmpAssemble(c) c={P,item,mk,spMk,bx,bk (name of the Blocks select class),sz (cmpSize result),stages (cmpTree stages)} -> {ok:true,T} | {ok:false,why}. Linear chain of 1-input stages (k=1); K strips stacked vertically.
+// cmpAssemble(c) c={P,item,mk,spMk,bx,bk (name of the Blocks select class),sz (cmpSize result),stages (cmpTree stages)} -> {ok:true,T} | {ok:false,why}. Linear chain of 1-input stages (k=1), first stage may have k>=2 all raw (FEED block, allRaw, seed container); K strips stacked vertically.
 const CMP_BLOCKS=['1x1','1x2','2x2','2x2c'];
 function cmpAssemble(c){
   const {mk,spMk,bx,bk,sz,stages}=c,no=why=>({ok:false,why}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,L=stages.length,K=sz.K;
@@ -9,18 +9,21 @@ function cmpAssemble(c){
     for(let s=0;s<L;s++){
       const g=stages[s],z=sz.stages[s],st=z.strips[j],pk=tplPick(g.cls,g.k,block);
       if(!pk.ok)return no(pk.why);
-      if(g.k!==1)return no('composer builds 1-input stages only ('+z.item+' has '+g.k+')');
+      if(g.k!==1&&s>0)return no('composer builds 1-input stages only ('+z.item+' has '+g.k+')');
       const main=s?g.node.rec.i.findIndex(([it])=>it===stages[s-1].item):0;
       const b=pk.t.build({block,cls:g.cls,rec:g.rec,recObj:g.node.rec,recd:g.node.rec,mk,spMk,S:st.S,n:st.n,main,growth:g.growth,raw:g.k-(s?1:0)});
       if(!b.ok)return no(b.why);
       if(!b.iface||b.iface.v!==1)return no('template not on Edge Interface v1');
       if(b.w!==W||b.h!==H)return no('template floor '+b.w+'x'+b.h+' differs from the block floor '+W+'x'+H);
       if(b.items.some(q=>{const e=dim(q);return q.x<0||q.y<0||q.x+e.w>W||q.y+e.h>H}))return no('template items outside the block floor ('+z.item+', '+block+')');
-      const used=b.iface.sets.filter(q=>q.n>0),M=b.iface.M;
-      fbs.push({items:b.items,inRows:used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+main*M+i)),outRows:used.map(q=>q.o)});
+      const used=b.iface.sets.filter(q=>q.n>0),M=b.iface.M,hs=tplIfSets(block,st.S).hs;
+      // first stage with k>=2: all inputs raw -> FEED block (allRaw) instead of SRC
+      const feed=s===0&&g.k>=2?{sets:b.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:b.ports&&b.ports.in?b.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0),M,k:g.k}:null;
+      fbs.push({feed,items:b.items,inRows:used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+main*M+i)),outRows:used.map(q=>q.o)});
     }
     const hub=(inRows,outRows,raw,item)=>cmpPool({W,H,mk,bx,item,raw,inRows,outRows});
-    const seq=[hub([],fbs[0].inRows,true,stages[0].node.rec.i[0][0])];
+    const f0=fbs[0].feed,g0=stages[0];
+    const seq=[f0?cmpFeed({W,H,mk,bx,sets:f0.sets,M:f0.M,k:f0.k,main:0,pass:[],rawItems:g0.node.rec.i.map(q=>q[0]),allRaw:true,seed:g0.growth?g0.item:null}):hub([],fbs[0].inRows,true,g0.node.rec.i[0][0])];
     for(let s=0;s<L;s++){seq.push({items:fbs[s].items});seq.push(hub(fbs[s].outRows,s<L-1?fbs[s+1].inRows:[],false,0))}
     for(const h of seq)if(h.ok===false)return no(h.why);
     const strip=[];

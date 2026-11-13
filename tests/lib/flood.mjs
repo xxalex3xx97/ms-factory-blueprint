@@ -60,7 +60,8 @@ export const floodPage = a => {
   const outBelt = p => { const b = occ.get((p.x + p.nx) + ',' + (p.y + p.ny)); return b && away(b, p.nx, p.ny) ? b : null };
   // sources: raw containers
   stores.forEach(c => {
-    const it = (c.ct || []).find(x => x.inf || x.n > 0); if (!it) return;
+    const it = (c.ct || []).find(x => x.inf || x.n > 0 || (x.item && x.n === 0));   // n:0 finite with an item = primed seed container (CMP S7a)
+    if (!it) return;
     ports.get(c).forEach(p => { if (p.en && outBelt(p)) flood(p.x + p.nx, p.y + p.ny, it.item) });
   });
   // sources: crafter outputs (a belt on a port pointing away)

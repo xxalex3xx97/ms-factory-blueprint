@@ -46,7 +46,7 @@ function cmpPool(S){
   }
   return{ok:true,why:'',items,cx,ya,c};
 }
-// cmpFeed(S): S={W,H,mk,bx,sets:[{o,hs}],M,k,main,pass:[rows],rawItems:[item per raw container],allRaw}. Per set: the chain lane (M rows) passes straight; raw container r at (2, o+passM+4r) feeds slot r+1 (r if allRaw) through a jog column xj=7+M*r+c.
+// cmpFeed(S): S={W,H,mk,bx,sets:[{o,hs,t?}] (t = target row per slot when the template has side-native lane rows, e.g. growth k=3 o+8),M,k,main,pass:[rows],rawItems:[item per raw container],allRaw,seed?}. seed = item whose container is finite (primed by the user). Per set: the chain lane (M rows) passes straight; raw container r at (2, o+passM+4r) feeds slot r+1 (r if allRaw) through a jog column xj=7+M*r+c.
 function cmpFeed(S){
   const {W,H,mk,bx,sets,M,pass=[],rawItems}=S,allRaw=!!S.allRaw,bc=PLC_BELT[mk],bt=(x,y,rot)=>cmpBt(bc,x,y,rot),nR=rawItems.length,passM=allRaw?0:M,cx=2,items=[];
   if(M<1||M>4)return cmpNo('feed block needs 1..4 copies per slot (M '+M+')');
@@ -55,9 +55,9 @@ function cmpFeed(S){
   if(!allRaw)for(const y of pass)for(let x=0;x<=W-1;x++)items.push(bt(x,y,0));
   for(const s of sets)for(let r=0;r<nR;r++){
     const y=s.o+passM+4*r,slot=allRaw?r:r+1;
-    items.push({cls:bx,x:cx,y,rot:0,h:0,pid:0,ct:[{item:rawItems[r],n:0,inf:true}]});
+    items.push({cls:bx,x:cx,y,rot:0,h:0,pid:0,ct:[{item:rawItems[r],n:0,inf:!(S.seed!=null&&rawItems[r]===S.seed)}]});
     for(let c=0;c<M;c++){
-      const pr=y+c,t=s.o+slot*M+c,xj=7+M*r+c;
+      const pr=y+c,t=s.t?s.t[slot]+c:s.o+slot*M+c,xj=7+M*r+c;
       if(pr===t){for(let x=cx+4;x<=W-1;x++)items.push(bt(x,pr,0));continue}
       for(let x=cx+4;x<xj;x++)items.push(bt(x,pr,0));
       items.push(bt(xj,pr,3));

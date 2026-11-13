@@ -160,6 +160,35 @@ if (isMain) {
         if (!r.ok) fails++;
       }
       console.table(rows);
+    } else if (mode === 'c7a') {   // composer S7a gate: all-raw multi-input stages (growth chambers), 2 rates x blocks, strict; seed container finite + note
+      await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp');
+      await page.waitForFunction(() => window.__fb && typeof cmpCompose === 'function' && typeof placerLayout === 'function');
+      const recs = await page.evaluate(() => {
+        const r = [];
+        for (const rec of [].concat(...Object.values(RECS))) {
+          if (rec.i.length < 2) continue;
+          const item = rec.o[0], key = rk(rec);
+          let P; try { P = plan(item, 60, 1, {}, {[item]: key}, {proto: false, enr: false, obs: false}) } catch (e) { continue }
+          const n = P.nodes[item];
+          if (!n || !n.rec || !n.crafter || !plnCb(n.crafter)) continue;
+          if (rec.i.some(([it]) => it !== item && P.nodes[it] && P.nodes[it].crafter)) continue;
+          r.push({key, name: plnNm(item), cls: def(plnCb(n.crafter).id).key, k: rec.i.length, pm: n.pmach, growth: rec.i.some(([it]) => it === item)});
+        }
+        return r;
+      });
+      console.log('all-raw k>=2 recipes:'); recs.forEach(r => console.log('  ' + JSON.stringify(r)));
+      const BK = {'1x1': 'BPO_Station_01', '1x2': 'BPO_Station_2x1', '2x2': 'BPO_Station_02'}, rows = [];
+      for (const rc of recs) for (const mult of [0.5, 7.5]) for (const b in BK) {
+        const rate = rc.pm * mult;
+        const r = await checkCompose(page, rc.key, rate, 1, BK[b], {strict: true, mutate: true});
+        const cs = await page.evaluate(() => { const c = S.blocks.filter(q => q.ct && q.ct.length); return {fin: c.filter(q => q.ct[0].inf === false && q.ct[0].n === 0).length, inf: c.filter(q => q.ct[0].inf).length} });
+        if (!r.refused && rc.growth && (cs.fin < 1 || cs.fin >= cs.inf + 1 && rc.k > 1 && cs.inf < cs.fin)) { r.ok = false; r.errs.push('seed containers: ' + JSON.stringify(cs)) }
+        rows.push({block: b, tpl: rc.cls, k: rc.k, ...r.row});
+        if (r.refused) { console.log('REFUSED ' + rc.name + ' ' + rate.toFixed(1) + ' ' + b + ': ' + r.refused); continue }
+        console.log((r.ok ? 'PASS ' : 'FAIL ') + rc.name + ' ' + rate.toFixed(1) + ' ' + b + (r.ok ? '' : ': ' + r.errs.join('; ')));
+        if (!r.ok) fails++;
+      }
+      console.table(rows);
     } else if (mode === 'tree') {
       for (const [n, r] of [['Nickel Plates', 31], ['Nickel Plates', 480], ['Basic Circuits', 100], ['Capacitor', 100], ['Enzyme', 10], ['Advanced Circuits', 5]]) console.log(await printTree(page, n, r, 1) + '\n');
     } else {

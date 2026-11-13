@@ -11,7 +11,7 @@ function cmpTree(P,item){
     const n=P.nodes[x];
     if(!n||!n.crafter||!n.rec||!plnCb(n.crafter))return cmpErr('No machine builds this recipe');
     if(/Armoury/i.test(n.crafter))return cmpErr('Armoury');
-    const cr=n.rec.i.filter(([it])=>P.nodes[it]&&P.nodes[it].crafter);
+    const cr=n.rec.i.filter(([it])=>it!==x&&P.nodes[it]&&P.nodes[it].crafter);   // growth: the self input is the seed, not a child
     if(cr.length>1)return cmpErr('branching tree (merge/branch not built yet)');
     chain.push({item:x,node:n,cls:def(plnCb(n.crafter).id).key,k:n.rec.i.length,rec:rk(n.rec),N:n.machines,pm:n.pmach,rate:n.rate,util:n.util,growth:n.rec.i.some(([it])=>it===x),craftedIn:cr.length?cr[0][0]:null});
     if(!cr.length)break;
@@ -106,7 +106,7 @@ function cmpCompose(P,item,mk,spMk,o={}){
   const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;
   const A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages});if(!A.ok)return A;
   const T=A.T,ext=plcExt(T),ms=T.ms,cnt=f=>ms.filter(f).length,last=sz.stages[sz.stages.length-1];
-  const L={ok:true,eng:'cmp',items:ms,cuts:[],lanes:sz.K,per:last.perStrip.slice(),makes:P.nodes[item].rate,pitch:ext.h+1,w:ext.w,h:ext.h,tall:true,mod:false,box:BX,mk,ports:[],note:sz.note.slice(),src:{P,item,mk,spMk,o},prefab:true,
+  const L={ok:true,eng:'cmp',items:ms,cuts:[],lanes:sz.K,per:last.perStrip.slice(),makes:P.nodes[item].rate,pitch:ext.h+1,w:ext.w,h:ext.h,tall:true,mod:false,box:BX,mk,ports:[],note:sz.note.concat(tr.stages[0].growth&&tr.stages[0].k>=2?['Fill the seed container ('+cmpName(item)+')']:[]),src:{P,item,mk,spMk,o},prefab:true,
     stat:{belts:cnt(b=>PLC_BELT.includes(b.cls)),ug:cnt(b=>PLC_UG.includes(b.cls)),spl:cnt(b=>PLC_SPL.includes(b.cls)),blocks:T.blocks.length,machines:cnt(b=>b.rec),lanes:sz.K,spills:0},
     dk:o.dock||null,bl:{zoned:true,n:new Array(T.cols-1).fill(0),cmp:{K:sz.K,stages:sz.stages.map(q=>({item:q.item,cls:q.cls,tpl:q.tpl,block:q.block,S:q.S,N:q.N,perStrip:q.perStrip,B:q.B}))}},tile:T,tileBk:'cmp',fixedTile:true};
   T.L=L;
