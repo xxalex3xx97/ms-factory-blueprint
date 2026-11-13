@@ -93,7 +93,7 @@ function tplLanesBuild(L,n){
     }
     for(let l=a+b;l<a+b+cW;l++)for(let x=0;x<xm(0);x++)Bt(x,rowOf(l),0);   // W-face lanes (single machine set): straight into the W port
     const xo0=xm(0)+w,yE=yM+PE[0].y;
-    for(let i=0;i<k;i++){const xo=xm(i)+w;for(let y=yM+PE[0].y;y<yc;y++)Bt(xo,y,3)}
+    for(let i=0;i<k;i++){const xo=xm(i)+w;for(let y=yM+PE[0].y;y<yc;y++)Bt(xo,y,1)}
     for(let x=xo0;x<=W-3;x++)Bt(x,yc,0);
     const tl=[];tplOutTail(tl,{bc,W,yc,yo:y0});tl.forEach(q=>items.push(q));
   }

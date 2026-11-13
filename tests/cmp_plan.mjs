@@ -168,24 +168,24 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
     beltsPerMach: r.machines ? +(r.belts / r.machines).toFixed(1) : null, floodErrs: fl.errs.length, containers: fl.containers, ozReach: fl.ozReach.length, full: flow.full, partial: flow.partial, maxBelt: flow.mu});
   if (opts.mutate) {
     const reach = new Set(fl.reach), cand = r.items.filter(b => PLC_BELT_NAMES.includes(b.cls) && reach.has(b.x + ',' + b.y));
-    const pick = cand[Math.floor(cand.length / 2)];
-    const gone = pick ? r.items.filter(b => b !== pick) : null;
-    if (!gone) errs.push('mutation: no belt reached by the flood');
-    else { const m2 = await page.evaluate(floodPage, {items: gone, finalItems: r.finalItems}); row.mutErrs = m2.errs.length; row.mutOz = m2.ozReach.length; if (!(m2.errs.length > fl.errs.length || m2.ozReach.length < fl.ozReach.length)) errs.push('mutation (deleted belt @' + pick.x + ',' + pick.y + ') did not turn the flood red') }
+    // opts.mutate === 'any' (multi-lane: parallel lanes of one item are redundant for an item-level flood): try up to 12 evenly spaced belts, at least one must turn the flood red
+    const picks = opts.mutate === 'any' ? Array.from({length: Math.min(12, cand.length)}, (_, i) => cand[Math.floor((i + .5) * cand.length / Math.min(12, cand.length))]) : [cand[Math.floor(cand.length / 2)]];
+    if (!picks[0]) errs.push('mutation: no belt reached by the flood');
+    else { let red = false; for (const pick of picks) { const m2 = await page.evaluate(floodPage, {items: r.items.filter(b => b !== pick), finalItems: r.finalItems}); row.mutErrs = m2.errs.length; row.mutOz = m2.ozReach.length; if (m2.errs.length > fl.errs.length || m2.ozReach.length < fl.ozReach.length) { red = true; break } } if (!red) errs.push('mutation (deleted belt @' + picks[0].x + ',' + picks[0].y + (picks.length > 1 ? ' +' + (picks.length - 1) + ' more' : '') + ') did not turn the flood red') }
   }
   if (opts.mutate && r.routed && r.routed.length) {   // router mutations: delete one routed belt, then one routed UG exit
     const isUg = b => b.cls.includes('Underground') || b.cls.includes('UG');
     for (const kind of ['belt', 'exit']) {
-      const gone = await page.evaluate(({items, routed, kind}) => {
+      const gone = await page.evaluate(({items, routed, kind, any}) => {
         const ugs = items.filter(b => PLC_UG.includes(b.cls)), ex = new Set(ugPairs(ugs).map(p => p.t.x + ',' + p.t.y)), rs = new Set(routed.map(q => q.x + ',' + q.y));
         const c = items.filter(b => rs.has(b.x + ',' + b.y) && (kind === 'exit' ? ex.has(b.x + ',' + b.y) : PLC_BELT.includes(b.cls)));
-        const pick = c[Math.floor(c.length / 2)];
-        return pick ? {x: pick.x, y: pick.y} : null;
-      }, {items: r.items, routed: r.routed, kind});
-      if (!gone) { if (kind === 'belt') errs.push('mutation: no routed belt'); continue }
-      const m2 = await page.evaluate(floodPage, {items: r.items.filter(b => !(b.x === gone.x && b.y === gone.y)), finalItems: r.finalItems});
-      row['mut' + kind] = m2.errs.length;
-      if (!(m2.errs.length > fl.errs.length || m2.ozReach.length < fl.ozReach.length)) errs.push('mutation (deleted routed ' + kind + ' @' + gone.x + ',' + gone.y + ') did not turn the flood red');
+        const nn = any ? Math.min(12, c.length) : 1;
+        return Array.from({length: nn}, (_, i) => c[any ? Math.floor((i + .5) * c.length / nn) : Math.floor(c.length / 2)]).filter(Boolean).map(pick => ({x: pick.x, y: pick.y}));
+      }, {items: r.items, routed: r.routed, kind, any: opts.mutate === 'any'});
+      if (!gone.length) { if (kind === 'belt') errs.push('mutation: no routed belt'); continue }
+      let red = false;
+      for (const g of gone) { const m2 = await page.evaluate(floodPage, {items: r.items.filter(b => !(b.x === g.x && b.y === g.y)), finalItems: r.finalItems}); row['mut' + kind] = m2.errs.length; if (m2.errs.length > fl.errs.length || m2.ozReach.length < fl.ozReach.length) { red = true; break } }
+      if (!red) errs.push('mutation (deleted routed ' + kind + ' @' + gone[0].x + ',' + gone[0].y + ') did not turn the flood red');
     }
   }
   return {ok: errs.length === 0, errs, row, nodes: r.nodes, count: r.count};

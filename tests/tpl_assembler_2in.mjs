@@ -15,7 +15,6 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof placerTile === 'function' && typeof noBuild === 'function' && typeof blVC === 'function');
-await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/assembler_2in.js'});
 import {checkIface, checkChain} from './tpl_iface.mjs';
 import {checkPlan} from './tpl_plan.mjs';

@@ -17,7 +17,7 @@ let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
 fs.mkdirSync(ROOT + '/tests/shots', {recursive: true});
 // [item name, rate, planner Mk index, expect build]
-for (const [name, rate, mk, build] of (process.argv[2] ? [[process.argv[2], +process.argv[3], +process.argv[4], true]] : [['Hull Repair Kit', 5, 1, true], ['Electrical Repair Kit', 5, 2, true], ['UpgradeShipSpeed_1', 2, 1, true], ['Electrical Repair Kit', 5, 1, false]])) {
+for (const [name, rate, mk, build] of (process.argv[2] ? [[process.argv[2], +process.argv[3], +process.argv[4], true]] : [['Hull Repair Kit', 5, 1, true], ['Electrical Repair Kit', 5, 2, true], ['UpgradeShipSpeed_1', 2, 1, true], ['Maglev Coupling', 2, 1, true], ['Electrical Repair Kit', 5, 1, false]])) {
   const a = await pg.evaluate(async ([name, rate, mk]) => {
     const item = [...plnBy(false).keys()].find(i => plnNm(i) === name);
     if (!item) return {err: 'item not found ' + name};
@@ -39,9 +39,9 @@ if (!process.argv[2]) {
   const {checkCompose} = await import('./cmp_plan.mjs');
   await pg.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp');
   await pg.waitForFunction(() => window.__fb && typeof placerLayout === 'function' && typeof links1 === 'function');
-  for (const [name, rate, mk] of [['Hull Repair Kit', 5, 1], ['Electrical Repair Kit', 5, 2], ['UpgradeShipSpeed_1', 2, 1]]) {
+  for (const [name, rate, mk] of [['Hull Repair Kit', 5, 1], ['Electrical Repair Kit', 5, 2], ['UpgradeShipSpeed_1', 2, 1], ['Maglev Coupling', 2, 1]]) {
     const key = await pg.evaluate(n => { const i = [...plnBy(false).keys()].find(x => plnNm(x) === n); return rk([].concat(...Object.values(RECS)).find(r => r.o[0] === i)) }, name);
-    const r = await checkCompose(pg, key, rate, mk, 'BPO_Station_02', {strict: true, mutate: false});
+    const r = await checkCompose(pg, key, rate, mk, 'BPO_Station_02', {strict: true, mutate: 'any'});
     check(r.ok, 'checkCompose ' + name + ' ' + rate + ' Mk' + (mk + 1) + ' ' + JSON.stringify(r.row).slice(0, 200) + ' ' + r.errs.slice(0, 3).join('; '));
   }
 }
