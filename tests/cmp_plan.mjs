@@ -89,8 +89,12 @@ const pageRun = async a => {
     if (built !== q.N) cerrs.push('node ' + q.item + ': expected N=' + q.N + ' built ' + built);
     const sk = (q.part || 0) + ':' + q.rec; sumN[sk] = sumN[sk] || {item: q.item, pN: q.pN, n: 0, c: 0}; sumN[sk].n += built; sumN[sk].c++;
   });
-  // unrolled fan-out copies (shared product built once per consumer): per key the total may exceed the planner N, never fall below; a single copy equals it exactly
-  Object.values(sumN).forEach(v => { if (v.c === 1 || a.exactN ? v.n !== v.pN : v.n < v.pN) cerrs.push('node ' + v.item + ': planner N=' + v.pN + ' built ' + v.n + ' in ' + v.c + ' copies'); else if (v.n !== v.pN) console.log('Planner N=' + v.pN + ', built ' + v.n + ' (' + v.item + ', ' + v.c + ' copies)') });
+  // unrolled fan-out copies (shared product built once per consumer / K strips): total never below the planner N, excess <= (copies-1)*pN and announced by a 'Planner N=.., built ..' note; a single copy equals it exactly
+  Object.values(sumN).forEach(v => {
+    const ex = v.n - v.pN;
+    if (v.c === 1 || a.exactN ? ex !== 0 : ex < 0 || ex > (v.c - 1) * v.pN) cerrs.push('node ' + v.item + ': planner N=' + v.pN + ' built ' + v.n + ' in ' + v.c + ' copies');
+    else if (ex > 0 && !L.note.some(n => n.includes('Planner N=' + v.pN + ', built ' + v.n))) cerrs.push('node ' + v.item + ': built ' + v.n + ' > planner N=' + v.pN + ' but no "Planner N=' + v.pN + ', built ' + v.n + '" note');
+  });
   }
   if (arm) L.bl.cmp.parts.filter(p => !p.tree || !tn || !tn.some(q => q.part === L.bl.cmp.parts.indexOf(p))).forEach(p => p.stages.forEach((g, si) => {   // linear-chain components: machines per recipe key inside the part's rows vs the stage N (K strips: N..N+K-1, last stage exact)
     const built = ms.filter(m => m.rec === g.rec && m.y >= p.y0 && m.y < p.y1).length;
