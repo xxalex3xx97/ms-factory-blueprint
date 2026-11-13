@@ -149,7 +149,9 @@ function cmpAssembleTree1(c,wide,fz){
     NB[o.id].bi=b.items;
   }
   const par=o=>o.parent&&byId[o.parent];
+  const LA=pl.g?cmpGAssign(pl,NB,H):null;if(LA&&LA.why)return no(LA.why);   // GROUPS: lane assignment between producer / consumer group members (cmp_groups.js)
   const outRowsOf=o=>{   // east lanes of o's POOL / SRC: local rows in o's block row
+    if(LA)return LA.out[o.id];
     const p=par(o);if(!p)return[];
     const j=p.rec.i.findIndex(([it])=>it===o.key),R=NB[p.id].inR[j].length;
     if(o.main)return NB[p.id].inR[j].slice();
@@ -159,14 +161,17 @@ function cmpAssembleTree1(c,wide,fz){
   // COMPACT (no docks): logical columns IN/FB/POOL of every depth are packed left to right into physical blocks. Each column gets its minimum width (shrunk template tail / hub / merge region); consecutive columns share ONE block
   // while they fit the floor (DP: fewest blocks over the rows each group occupies, then area); a lone hub column <=14 wide takes the narrow block. Lanes meet at piece edges (no wall inside a block). Docks keep one block per column (west dock edge).
   const nc0=q=>nb&&q%3!==1&&!wide.has(q),D=pl.D,byD=dp=>pl.nodes.filter(o=>o.depth===dp&&(!o.raw||byId[o.parent].inKind==='merge'));
-  const subRows=o=>{const r=[],walk=v=>{r.push(v.row);v.children.forEach(i=>walk(byId[i]))};walk(o);return[Math.min(...r),Math.max(...r)]};
+  const subRows=o=>{if(LA)return LA.reg[o.id].r;const r=[],walk=v=>{r.push(v.row);v.children.forEach(i=>walk(byId[i]))};walk(o);return[Math.min(...r),Math.max(...r)]};
   const mrg=(o,w)=>{const [r0,r1]=subRows(o),sources=[],sinks=[],Y=(row,y)=>(row-r0)*(H+2)+y;
+    if(LA){const R=LA.reg[o.id];R.src.forEach(s=>sources.push({x:0,y:Y(s.row,s.y),item:s.item}));R.snk.forEach(s=>sinks.push({x:w-1,y:Y(s.row,s.y),item:s.item}));
+      if(w<W&&sources.length>w-3)return{r0,r1,sources,sinks,rt:{ok:false,why:"region too narrow"}};   // GROUPS: cheap refusal for the width search
+      return{r0,r1,sources,sinks,rt:cmpRoute({W:w,H,rowsN:r1-r0+1,mk,sources,sinks,ugMax:def(ugc).maxApart,eastStart:true})}}
     o.children.map(i=>byId[i]).forEach(q=>OR[q.id].forEach(y=>sources.push({x:0,y:Y(q.row,y),item:q.key})));
     NB[o.id].inR.forEach((rows,j)=>rows.forEach(y=>sinks.push({x:w-1,y:Y(o.row,y),item:o.rec.i[j][0]})));
     return{r0,r1,sources,sinks,rt:cmpRoute({W:w,H,rowsN:r1-r0+1,mk,sources,sinks,ugMax:def(ugc).maxApart,eastStart:true})}};
   const feedS=(o,w)=>{const bz=NB[o.id].b,hs=tplIfSets(block,sz[o.id].S).hs,sets=bz.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0);return{W:w,H,mk,bx,sets,M:bz.iface.M,k:o.k,main:0,pass:[],rawItems:o.rec.i.map(q=>q[0]),allRaw:true,seed:o.growth?o.key:null}};
-  const poolOf=(o,w)=>o.raw?cmpPool({W:w,H,mk,bx,item:o.key,raw:true,inRows:[],outRows:OR[o.id]}):(m=>cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:m.rows,mgIn:m.mg,outRows:OR[o.id]}))(cmpMerge(NB[o.id].outRows,NB[o.id].outN,NB[o.id].gOut));
-  const inOf=(o,w)=>{if(o.inKind==='merge'){const m=mrg(o,w);return m.rt.ok?{items:m.rt.items}:null}return o.inKind==='src'?cmpPool({W:w,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB[o.id].inR[0]}):cmpFeed(feedS(o,w))};
+  const poolOf=(o,w)=>o.raw?cmpPool({W:w,H,mk,bx,item:o.key,raw:true,inRows:[],outRows:OR[o.id]}):(m=>cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:m.rows,mgIn:m.mg,outRows:OR[o.id],bal:!!LA}))(cmpMerge(NB[o.id].outRows,NB[o.id].outN,NB[o.id].gOut));
+  const inOf=(o,w)=>{if(o.join)return{items:[]};if(o.inKind==='merge'){const m=mrg(o,w);return m.rt.ok?{items:m.rt.items}:null}return o.inKind==='src'?cmpPool({W:w,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB[o.id].inR[0]}):cmpFeed(feedS(o,w))};
   const mw={},memo=new Map();
   const cnt=(q,w)=>{   // items of column q's pieces at width w (Infinity: some piece does not build)
     const k=q+','+w;if(memo.has(k))return memo.get(k);
@@ -182,7 +187,7 @@ function cmpAssembleTree1(c,wide,fz){
     if(s===1){real.forEach(o=>{rs.add(o.row);mw[o.id]=cmpShr(NB[o.id].b,mk);w=Math.max(w,mw[o.id])})}
     else{
       if(s===2)ns.forEach(o=>rs.add(o.row));
-      else real.forEach(o=>{if(o.inKind==='merge'){const [r0,r1]=subRows(o);for(let r=r0;r<=r1;r++)rs.add(r)}else rs.add(o.row)});
+      else real.forEach(o=>{if(o.join)return;if(o.inKind==='merge'){const [r0,r1]=subRows(o);for(let r=r0;r<=r1;r++)rs.add(r)}else rs.add(o.row)});
       if(rs.size){   // narrowest width whose items do not exceed the old column width's (a squeezed merge region / hub detours: more belts)
         const ref=cnt(q,hW);w=8;
         if(ref<Infinity){while(w<hW&&cnt(q,w)>ref)w++}else{while(w<W&&cnt(q,w)===Infinity)w++}
@@ -227,7 +232,7 @@ function cmpAssembleTree1(c,wide,fz){
     }
     const dO=dk&&dk.out&&!p?cmpDockHub(dk,{kind:'out',name:o.item,D:o.rate,rows:cmpMerge(NB[o.id].outRows,NB[o.id].outN,NB[o.id].gOut).rows,H,dh:d.h,tree:1,j:o.row}):null;if(dO&&dO.ok===false)return no(dO.why);
     const mm=cmpMerge(NB[o.id].outRows,NB[o.id].outN,NB[o.id].gOut);
-    let e=hubAt(cmpPool({W:colW[o.pool],H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows:OR[o.id],...dO}),o.pool,o.row,NB[o.id]);if(e)return no(e);
+    let e=hubAt(cmpPool({W:colW[o.pool],H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows:OR[o.id],bal:!!LA,...dO}),o.pool,o.row,NB[o.id]);if(e)return no(e);
     if(o.inKind==='feed'){   // all-raw k>=2 node: FEED block at the IN column (growth: seed container finite); raw docks not built here
       const bz=NB[o.id].b,hs=tplIfSets(block,sz[o.id].S).hs,sets=bz.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0);
       const fS={W:colW[o.col],H,mk,bx,sets,M:bz.iface.M,k:o.k,main:0,pass:[],rawItems:o.rec.i.map(q=>q[0]),allRaw:true,seed:o.growth?o.key:null,j:o.row,K:1+Math.max(...pl.nodes.map(q=>q.row||0))};
@@ -237,6 +242,7 @@ function cmpAssembleTree1(c,wide,fz){
       continue}
     if(o.inKind==='src'){const rc=byId[o.children[0]],dI=dk&&dk.in?cmpDockHub(dk,{kind:'in',name:rc.item,D:rc.rate,rows:NB[o.id].inR[0],H,dh:d.h,j:o.row}):null;if(dI&&dI.ok===false)return no(dI.why);
       e=bank(cmpPool({W:colW[o.col],H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB[o.id].inR[0],...dI}),o.col,o.row,NB[o.id].inR[0],null,bcol(o,1));if(e)return no(e);continue}
+    if(o.join)continue;   // GROUPS: members after the first share the owner's merge region
     if(o.inKind!=='merge')return no('IN kind '+o.inKind+' not built in trees');
     const {r0,r1,sources,sinks,rt}=mrg(o,colW[o.col]);
     if(!rt.ok){badCol=o.col;return no('merge routing failed ('+o.item+': '+sources.length+' lanes, rows '+r0+'..'+r1+')'+(rt.why?': '+rt.why:'')+(globalThis.__rtdbg?JSON.stringify({sources,sinks}):''))}

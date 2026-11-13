@@ -174,7 +174,7 @@ function cmpArmoury(P,item,mk,spMk,o,bk,BX){
 // build ranking: floor area (block units), then belts; block count first (CMP_BLK=false: area first)
 function cmpKey(L){const ar=L.tile.blocks.reduce((a,q)=>{const e=dim({cls:q.cls,rot:q.rot||0});return a+e.w*e.h},0);return(globalThis.CMP_BLK===false?0:L.tile.blocks.length*1e11)+ar*1e6+L.stat.belts+L.stat.ug}
 function cmpCompose(P,item,mk,spMk,o={}){
-  if(globalThis.CMP_CAP4||globalThis.CMP_IN)return cmpCompose1(P,item,mk,spMk,o);
+  if(globalThis.CMP_CAP4||globalThis.CMP_IN||globalThis.CMP_GROUPS&&!(o.dock&&(o.dock.in||o.dock.out)))return cmpCompose1(P,item,mk,spMk,o);
   const nf0=globalThis.CMP_NOFUSE,dk=!!(o.dock&&(o.dock.in||o.dock.out)),C=[];
   globalThis.CMP_IN=true;
   try{for(const nf of nf0||dk?[true]:[true,false])for(const c4 of[false,true]){globalThis.CMP_NOFUSE=nf;globalThis.CMP_CAP4=c4;const L=cmpCompose1(P,item,mk,spMk,o);C.push({L,nf,bk:window.CMP_BK})}}
@@ -211,7 +211,8 @@ function cmpCompose1(P,item,mk,spMk,o={}){
   const dkw=o.dock&&(o.dock.in||o.dock.out)?o.dock:null,dkn=[],dk=dkw?{mk,in:!!dkw.in,out:!!dkw.out,notes:dkn,indIn:dkw&&dkw.in==='ind',indOut:dkw&&dkw.out==='ind'}:null;
   const indFb=A=>{if(!dk||!(dk.indIn||dk.indOut)||!/^(dock slot misaligned|industrial dock overlaps)/.test(A.why||''))return A;   // docks are never refused: industrial dock cannot be placed -> rebuild with normal docks + note
     const L=cmpCompose(P,item,mk,spMk,{...o,dock:{in:dkw.in==='ind'?null:dkw.in,out:dkw.out==='ind'?null:dkw.out}});if(L.ok)L.note=['Industrial dock not built ('+A.why+'): no docks on the industrial side (never normal docks)',...dkn.filter(n=>/not possible/.test(n)),...L.note];return L};   // INDONLY: industrial selected = never a normal dock; unsolved case -> that side gets no dock (plain containers) + note
-  if(tr.ok){
+  if(globalThis.CMP_GROUPS&&!dkw){const g=cmpGroupsRun(P,item,mk,spMk,BX,bk,block);if(!g.ok)return g;A=g.A;stages=g.stages;cmpI=g.cmpI;note=g.note;per=g.per}   // GROUPS prototype (cmp_groups.js), no docks
+  else if(tr.ok){
     sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;
     A=cmpAssemble({P,item,mk,spMk,bx:BX,bk,sz,stages:tr.stages,dk});if(!A.ok)return indFb(A);
     stages=sz.stages.map(q=>({item:q.item,rec:q.rec,cls:q.cls,tpl:q.tpl,block:q.block,S:q.S,N:q.N,perStrip:q.perStrip,B:q.B}));cmpI={K:sz.K,stages};

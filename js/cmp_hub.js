@@ -34,6 +34,14 @@ function cmpPool(S){
   const c=S.ca?S.ca.length:Math.ceil(Math.max(Ri,Ro,1)/4),all=[...inRows,...outRows],mid=all.length?(Math.min(...all)+Math.max(...all))/2:(H-1)/2;
   const ya=Math.min(Math.max(Math.floor(mid-2*c),1),H-1-4*c);
   if(!S.ca&&H-1-4*c<1)return cmpNo('pool block too short (rows)');
+  if(S.bal&&c>1&&Ri&&Ro&&!S.ca){   // GROUPS: stacked containers are separate pools: every container gets input lanes in proportion to its output lanes (default blHA ports are centred and can leave a container without input)
+    if(Ri<c)return cmpNo('pool has fewer input lanes than containers');
+    const e=Array.from({length:c},(_,j)=>Math.floor(Ro/c)+(j<Ro%c?1:0)),q=e.map(v=>Math.max(1,Math.min(4,v*Ri/Ro))),w=q.map(v=>Math.max(1,Math.floor(v)));
+    let rem=Ri-w.reduce((a,b)=>a+b,0);
+    while(rem!==0){let k=-1,best=-9;for(let j=0;j<c;j++){const d=rem>0?q[j]-w[j]:w[j]-q[j];if((rem>0?w[j]<4:w[j]>1)&&d>best){best=d;k=j}}if(k<0)break;w[k]+=rem>0?1:-1;rem+=rem>0?-1:1}
+    const ports=(n,j)=>Array.from({length:n},(_,i)=>ya+4*j+Math.floor((4-n)/2)+i);
+    S={...S,pyIn:w.flatMap((n,j)=>ports(n,j)),pyOut:e.flatMap((n,j)=>ports(n,j))};
+  }
   const AW=Ri?blHA(inRows,c,ya,'out',0,S.pyIn):null,ngW=AW?cmpNg(AW):0;
   const MG=S.mgIn&&S.mgIn.length?S.mgIn:[],xm=MG.length?1:0,mgy=new Set(MG.map(q=>q.yp));   // SHAPE3: merge column x=1 reserved
   let cx=S.dock&&!Ro?W-5:(Ri?ngW+2+xm:S.dock?0:1);   // OZ dock: container flush with the east edge (q.x+4===W-1)
