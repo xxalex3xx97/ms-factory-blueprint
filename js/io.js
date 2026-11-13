@@ -104,7 +104,7 @@ function parseSav(buf){
     dm.sort((a,b)=>a.MachineID-b.MachineID);
     return{Version:2,DisplayName:A.name,Blocks:blocks,DefaultMachines:dm};
   };
-  if(I(0)!==0||I(4)!==30)throw new Error(BAD);
+  if(I(0)!==0||I(4)<30)throw new Error(BAD);
   let o=12;const top=[];
   for(let n=I(8);n>0;n--){const r=fstr(o);if(!r)throw new Error(BAD);top.push(r[0]);o=r[1]}
   const sidx=top.indexOf("/Game/Blueprints/Stations/BP_StationObject.BP_StationObject_C");

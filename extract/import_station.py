@@ -35,7 +35,7 @@ def fstr(d, I, o):
     return b.decode('ascii'), o + 4 + n
 
 def top_table(d, I):
-    assert I(0) == 0 and I(4) == 30, 'unexpected header'
+    assert I(0) == 0 and I(4) >= 30, 'unexpected header'
     n = I(8); o = 12; t = []
     for _ in range(n):
         s, o = fstr(d, I, o); t.append(s)
