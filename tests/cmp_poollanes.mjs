@@ -23,6 +23,16 @@ for (const [name, rate] of [['Basic Motor', 60], ['Basic Motor', 6], ['Hull Plat
     if (!r.ok) fails++;
   }
 }
+// POOL: lane cap is physical (stacked containers), not 4: Basic Motor 480 Mk2 on 2x2 = ONE strip, exact planner N (8 Basic Motor + 12 Titanium Plates), 5 blocks
+{
+  const key = await pg.evaluate(() => { const i = [...plnBy(false).keys()].find(x => plnNm(x) === 'Basic Motor'); return rk([].concat(...Object.values(RECS)).find(r => r.o[0] === i)) });
+  for (const [dn, dock] of DK) {
+    const r = await checkCompose(pg, key, 480, 1, BK, {strict: true, mutate: 'any', dock, exactN: true});
+    const ok = r.ok && r.row.K === 1 && r.row.machines === 20;
+    console.log((ok ? 'PASS ' : 'FAIL ') + 'Basic Motor 480 Mk2 2x2 one strip ' + dn + ' K=' + r.row.K + ' blocks=' + r.row.blocks + ' belts/mach=' + r.row.beltsPerMach + (r.ok ? '' : ': ' + r.errs.slice(0, 3).join('; ')));
+    if (!ok) fails++;
+  }
+}
 if (perrs.length) { console.log('FAIL page errors: ' + perrs[0]); fails++ }
 await br.close();
 process.exit(fails ? 1 : 0);

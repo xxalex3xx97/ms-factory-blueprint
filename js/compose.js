@@ -3,6 +3,7 @@
 // Needs planner.js (plnCb, def, rk), js/tpl/iface.js (TPL_IF_SETS, tplIfSets), js/tpl/bundle.js + registry.js (tplPick).
 const CMP_MAXK=4,CMP_MAXKT=40;   // CMP_MAXKT: tree strips
 const CMP_MERGE_OK=['assembler_2in','advassembler_1_2in','growth_2_3_4in','assembler_3in','enrichment_2_3in','advassembler_4in'];
+const CMP_LANES={'1x1':12,'1x2':12,'2x2':28,'2x2c':28};   // max lanes per pooled face = 4*floor((H-2)/4) (c stacked containers, ya>=1, bottom row free); H = 14 / 30
 const cmpErr=why=>({ok:false,why});
 const cmpName=it=>typeof plnNm==='function'?plnNm(it):String(it);
 
@@ -29,8 +30,9 @@ function cmpBuild(t,spec,s,last){
   if(!f||!f.sets)return cmpErr('template lacks iface.sets');
   if(f.v!==1)return cmpErr('template not on Edge Interface v1');
   const used=f.sets.map((q,i)=>q.n>0?i:-1).filter(i=>i>=0);
-  if(s>0&&used.length*f.M>4)return cmpErr('pool lanes > 4');
-  if(s<last&&used.length>4)return cmpErr('pool lanes > 4');
+  const lim=globalThis.CMP_CAP4?4:CMP_LANES[spec.block]||4;   // physical: a pool stacks 4x4 containers (4 port rows each) in the block height, see CMP_LANES
+  if(s>0&&used.length*f.M>lim)return cmpErr('pool lanes > '+lim);
+  if(s<last&&used.length>lim)return cmpErr('pool lanes > '+lim);
   const hs=tplIfSets(spec.block,spec.S).hs,need=(s>0?f.M:0)+4*spec.raw;
   if(used.some(i=>need>hs[i]))return cmpErr('feed height');
   return{ok:true,b};
@@ -166,7 +168,16 @@ function cmpArmoury(P,item,mk,spMk,o,bk,BX){
 }
 
 // CMP C3: cmpCompose(P,item,mk,spMk,o) -> placerLayout result (fixed tile) | {ok:false,why}. Linear chain of 1-input stages, K strips. Docks not built yet.
+// POOL: build with the physical lane cap (CMP_LANES) and with the old 4-lane cap; keep the smaller (floor area, then belts). Never worse than the 4-lane build, and a refused 4-lane build is still tried wide.
 function cmpCompose(P,item,mk,spMk,o={}){
+  if(globalThis.CMP_CAP4)return cmpCompose1(P,item,mk,spMk,o);
+  const bk0=window.CMP_BK,A=cmpCompose1(P,item,mk,spMk,o),bkA=window.CMP_BK;
+  globalThis.CMP_CAP4=true;let B;try{B=cmpCompose1(P,item,mk,spMk,o)}finally{globalThis.CMP_CAP4=false}
+  if(!B.ok||!A.ok){if(A.ok||!B.ok)window.CMP_BK=bkA;return A.ok?A:B}
+  const k=L=>L.tile.blocks.reduce((a,q)=>{const e=dim({cls:q.cls,rot:q.rot||0});return a+e.w*e.h},0)*1e6+L.stat.belts+L.stat.ug;
+  if(k(B)<k(A))return B;window.CMP_BK=bkA;return A;
+}
+function cmpCompose1(P,item,mk,spMk,o={}){
   if(!o.bk||o.bk==='auto')window.CMP_BK=undefined;   // a failed Auto build must not leave the previous pick behind
   const sel=$('plnBk'),BX=o.box||PLC_BOX,bk=o.bk||(sel?(sel.value==='auto'?'auto':PL_ALL[placerBk().indexOf(true)]):null);
   if(!bk)return cmpErr('no block type selected');

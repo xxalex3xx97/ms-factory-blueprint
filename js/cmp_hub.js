@@ -7,7 +7,6 @@ const cmpNg=A=>Math.max(0,...[-1,1].map(d=>A.dir.filter(v=>v===d).length));
 // cmpPool(S): S={W,H,mk,bx,item,raw,inRows,outRows,ind?,ca?,pyOut?,pyIn?,dock?,dkx?}. dock (cmp_dock.js cmpDockHub): ca = container rows (one per dock cell), SRC container flush x=0, OZ container flush east, dk tags. Container(s) 4x4 at (cx,ya+4j); west ports x=cx-1, east ports x=cx+4. raw=true: infinite source container(s).
 function cmpPool(S){
   const {W,H,mk,bx,item,raw,inRows,outRows}=S,bc=PLC_BELT[mk],Ri=inRows.length,Ro=outRows.length,bt=(x,y,rot)=>cmpBt(bc,x,y,rot);
-  if(Ri&&Ro&&(Ri>4||Ro>4))return cmpNo('pool needs <=4 lanes per face (in '+Ri+', out '+Ro+')');
   const c=S.ca?S.ca.length:Math.ceil(Math.max(Ri,Ro,1)/4),all=[...inRows,...outRows],mid=all.length?(Math.min(...all)+Math.max(...all))/2:(H-1)/2;
   const ya=Math.min(Math.max(Math.floor(mid-2*c),1),H-1-4*c);
   if(!S.ca&&H-1-4*c<1)return cmpNo('pool block too short (rows)');
