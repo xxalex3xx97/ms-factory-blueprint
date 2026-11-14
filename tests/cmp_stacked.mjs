@@ -13,7 +13,7 @@ const BK = {'2x2': 'BPO_Station_02', '2x2c': 'BPO_Station_03', '1x1': 'BPO_Stati
 // Mode exo: Exosuit at 1/min through cmpCompose (cmpArmoury), per case ok/why, machines, blocks, belts, ug, ms, per-leaf ms (cmpCompose wrapped in the page).
 // Usage: node tests/cmp_stacked.mjs exo [block 2x2|2x2c] [dock off|nrm|ind]   (no args = all 6 cases, sequential; caller kills on timeout, e.g. `timeout 480 node ...`)
 const mode = process.argv[2] || 'table';
-if (mode !== 'table' && mode !== 'exo') { console.log('usage: node tests/cmp_stacked.mjs table | exo [2x2|2x2c] [off|nrm|ind]'); process.exit(1) }
+if (mode !== 'table' && mode !== 'exo' && mode !== 'leaf') { console.log('usage: node tests/cmp_stacked.mjs table | leaf | exo [2x2|2x2c] [off|nrm|ind]'); process.exit(1) }
 
 const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--js-flags=--max-old-space-size=8192']});
 const page = await (await br.newContext()).newPage(); const pe = [];
@@ -43,6 +43,39 @@ const pageTable = ({key, rate, bk}) => {
 };
 
 let fails = 0;
+if (mode === 'leaf') {
+  for (const bl of ['2x2', '2x2c']) {
+    const r = await page.evaluate(({key, bk}) => {
+      const out = [], rec = [].concat(...Object.values(RECS)).find(r => rk(r) === key), item = rec.o[0], block = CMP_BLOCKS[PL_ALL.indexOf(bk)];
+      const P = plan(item, 30, 1, {}, {[item]: key}, {proto: false, enr: false, obs: false});
+      const t0 = performance.now(), pl = cmpPlan(P, item, 1, {}), tPlan = Math.round(performance.now() - t0);
+      if (!pl.ok) return {out: ['cmpPlan: ' + pl.why]};
+      const caps = {}, t1 = performance.now(), tz = cmpTreeSize(pl, 1, 1, block, caps), tSize = Math.round(performance.now() - t1);
+      out.push('cmpPlan ' + tPlan + 'ms, cmpTreeSize ' + tSize + 'ms, tree ' + (tz.ok ? 'ok' : 'refused: ' + tz.why));
+      let km = 0, worst = '';
+      for (const o of pl.nodes.filter(o => !o.raw)) {
+        const cap = caps[o.key] || 0, need = cap ? Math.ceil((o.rate / o.pm) / cap - 1e-9) : 0;
+        out.push('  ' + cmpName(o.key) + ' N=' + o.N + ' rate/pm=' + (o.rate / o.pm).toFixed(2) + ' cap=' + cap + ' need=' + need);
+        if (need > km) { km = need; worst = cmpName(o.key) }
+      }
+      out.push('Kmin=' + km + ' worst=' + worst);
+      for (let K = 2; K <= 60; K++) {
+        const q = cmpPlanK(P, item, 1, K, caps);
+        if (!q.ok) { out.push('K=' + K + ' cmpPlanK: ' + String(q.why).slice(0, 120)); break }
+        const z = cmpTreeSize(q, 1, 1, block);
+        if (z.ok) { out.push('K=' + K + ' sizes ok'); break }
+        out.push('K=' + K + ' ' + String(z.why).slice(0, 120));
+      }
+      const tm = dock => { const t = performance.now(), L = cmpCompose(P, item, 1, 1, {box: 'DAT_Container_2', dock, bk}), ms = Math.round(performance.now() - t); return ms + 'ms ' + (L.ok ? 'ok blocks ' + L.stat.blocks : 'fail ' + String(L.why).slice(0, 100)) + (L.ok ? '' : '') };
+      const c0 = performance.now(); const a = tm(null); out.push('cmpCompose dock off: ' + a);
+      if (performance.now() - c0 < 60000) out.push('cmpCompose dock nrm: ' + tm({in: 'nrm', out: 'nrm'}));
+      return {out};
+    }, {key: ADV, bk: BK[bl]});
+    console.log('== LEAF AdvancedPlates 30/min on ' + bl); r.out.forEach(l => console.log(l));
+  }
+  if (pe.length) { console.log('page errors: ' + pe[0]); fails++ }
+  await br.close(); process.exit(fails ? 1 : 0);
+}
 if (mode === 'exo') {
   const DK = {off: null, nrm: {in: 'nrm', out: 'nrm'}, ind: {in: 'ind', out: 'ind'}};
   const [ab, ad] = [process.argv[3], process.argv[4]];
