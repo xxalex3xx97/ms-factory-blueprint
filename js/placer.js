@@ -774,19 +774,35 @@ function plcWarn(ser){
   e.textContent=got<pl.rate*0.95?"Simulation returned "+Math.round(got)+"/min, you asked for "+pl.rate+"/min ("+plnNm(pl.item)+")":"";
 }
 const PLC_BKV=PL_ALL;
-const placerBk=()=>PLC_BKV.map(c=>c===($("plnBk").value==="auto"?window.CMP_BK||"BPO_Station_02":$("plnBk").value));   // "auto" = composer picks (cmpCompose sets CMP_BK)
+const placerBk=()=>PLC_BKV.map(c=>c===($("plnBk").value==="auto"?"BPO_Station_02":$("plnBk").value));   // "auto" = composer picks (cmpCompose sets CMP_BK)
 const placerDock=()=>{const i=$("plnDkI").checked,o=$("plnDkO").checked;if(!i&&!o)return null;const t=$("plnDk").value;return{in:i?t:null,out:o?($("plnDkOT").value||t):null}};
-function placerRun(open){
-  const dl=$("plnPrev");if(!open&&!dl.open)return;
-  const dk=placerDock();plcFb=null;
-  const x=placerPlan(),L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk}):{ok:false,why:"Pick an item and a rate first"};
+// UI speed: result cache (last 8 layouts), coalesced + deferred compute with a "Building..." paint first (composer only: older engines stay synchronous for their tests)
+let plcRunTok=0,plcBusyF=false,plcDebT=0;const plcLC=new Map();
+const plcAsync=()=>typeof CMP_ENGINE!=="undefined"&&CMP_ENGINE;
+const plcKey=(x,dk)=>JSON.stringify([x.it,x.rate,x.mk,x.sp,$("plnBal").value,plnProto(),$("plnEnr").checked,PLN_PICK,$("plnBk").value,$("plnBuf").value,dk,["CMP_ENGINE","CMP_GROUPS","CMP_GROUPS_AUTO","CMP_BLK","CMP_MEMO"].map(k=>window[k])]);
+function plcApply(L){
+  const dl=$("plnPrev");plcBusyF=false;$("plnPrevMap").style.opacity="";
   $("plnEngBadge").textContent=L.ok?(L.eng==="cmp"?"Template: Composer":L.eng==="vcol"?"Template: Columns":"Template: Zones"):"";
   if(!L.ok){plcL=null;plcT=null;placerClear();$("pvLine").textContent="";$("plnPrevErr").textContent=/^(Pick an item|internal error)/.test(L.why)?L.why:"Not supported yet: "+String(L.why).replace(/^BL: /,"").replace(/ \(NL used\)$/,"").replace(/^Engine zones built a layout but /,"");$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
-function placerGo(){$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;$("pvRate").value=$("plnRate").value;placerRun(true)}
+function placerRun(open,defer){
+  const dl=$("plnPrev");if(!open&&!dl.open)return;
+  const dk=placerDock(),x=placerPlan();let key=null;try{if(x)key=plcKey(x,dk)}catch(_){}
+  const hit=key&&plcLC.get(key);
+  if(hit){plcLC.delete(key);plcLC.set(key,hit);++plcRunTok;window.CMP_BK=hit.bk;plcFb=hit.fb;return plcApply(hit.L)}   // seen state: instant
+  if(defer&&plcAsync()){   // paint first, compute after; a newer request makes this one stale
+    const tok=++plcRunTok;plcBusyF=true;if(!dl.open)dl.showModal();
+    $("plnPlace").disabled=true;$("pvLine").textContent="Building...";$("plnPrevMap").style.opacity=".45";
+    requestAnimationFrame(()=>setTimeout(()=>{if(tok===plcRunTok)placerRun(open)},0));return}
+  ++plcRunTok;plcFb=null;
+  const L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk}):{ok:false,why:"Pick an item and a rate first"};
+  if(key){plcLC.set(key,{L,bk:window.CMP_BK,fb:plcFb});if(plcLC.size>8)plcLC.delete(plcLC.keys().next().value)}
+  plcApply(L);
+}
+function placerGo(){$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;$("pvRate").value=$("plnRate").value;placerRun(true,true)}
 // live modal: build settings re-run the preview; errors show inside the modal with Place off
-const placerLive=()=>placerRun(false);
+const placerLive=()=>{clearTimeout(plcDebT);placerRun(false,true)};
 let plcFb=null;const PLC_ENG={zones:"Zones",tower:"Tower","tower-multi":"Tower (multi-input)",nl:"No Limits"};   // names only: still read by gallery/old tests
 function placerClear(){
   ["pvMach","pvBelt","pvSpl","pvBox","pvUg","pvBlk","pvCell","pvIO"].forEach(i=>{if($(i))$(i).textContent="-"});
@@ -874,7 +890,7 @@ function plcFinish(L){
   $("plnPrevErr").textContent=plcT&&!plcT.ok?plcT.why:"";const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}$("plnPlace").disabled=!!(plcT&&!plcT.ok);placerFitView();
 }
 function placerPlace(){
-  const L=plcL;if(!L)return;
+  const L=plcL;if(!L||plcBusyF)return;
   const ok=placerBk();
   if(ok.some(Boolean)){
     const T=plcT||placerTile(L,ok);
@@ -896,7 +912,7 @@ const plcDo=()=>{if(!plcRaf)plcRaf=requestAnimationFrame(()=>{plcRaf=0;placerSho
 const plcP=e=>{const r=$("plnPrevMap").getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}};
 const plcZ=(p,f)=>{const z0=plcV.z,z=Math.min(60,Math.max(.01,z0*f));plcV.ox=p.x-(p.x-plcV.ox)*(z/z0);plcV.oy=p.y-(p.y-plcV.oy)*(z/z0);plcV.z=z;plcDo()};
 $("plnBuild").onclick=placerGo;$("plnPlace").onclick=placerPlace;
-$("plnCancel").onclick=()=>$("plnPrev").close();$("plnPrev").addEventListener("close",()=>{plcL=null;plcT=null;plcTok++;plcProgHide()});
+$("plnCancel").onclick=()=>$("plnPrev").close();$("plnPrev").addEventListener("close",()=>{plcL=null;plcT=null;plcTok++;plcRunTok++;plcBusyF=false;$("plnPrevMap").style.opacity="";clearTimeout(plcDebT);plcProgHide()});
 $("plnPrevMap").addEventListener("wheel",e=>{e.preventDefault();plcZ(plcP(e),e.deltaY<0?1.12:1/1.12)},{passive:false});
 let plcSt=null;
 const plcM=$("plnPrevMap");
@@ -918,6 +934,7 @@ const plcSync=()=>{if(!$("plnPrev").open)return;$("pvMk").value=$("plnMk").value
 $("plnMk").addEventListener("change",plcSync);$("plnSp").addEventListener("change",plcSync);$("plnRate").addEventListener("change",plcSync);
 // rate in the modal: same field the planner reads (placerPlan), kept in sync both ways
 $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;placerLive()});
+$("pvRate").addEventListener("input",()=>{clearTimeout(plcDebT);plcDebT=setTimeout(()=>{if(+$("pvRate").value>0){$("plnRate").value=$("pvRate").value;placerLive()}},300)});   // typing: one compute 300 ms after the last key (Enter/blur = change = at once)
 // Engine switch: Old = the original placer (default), New = prefab factory builder (pfFact2 > pfBands > pfChain, falls back to the old path when it refuses). Remembered once chosen.
 // No Limits is the only engine in the UI (always on). plcEngine stays for tests: ?engine=old|new|nl in the page URL pins an older engine, default bl (Block engine, falls back to NL per case).
 const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl"||v==="bl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl"||v==="bl");if(typeof BL_ENGINE!=="undefined")BL_ENGINE=(v==="bl")};
