@@ -783,7 +783,7 @@ function tplBuild(spec){
   const cnt={belts:0,ug:0,spl:0,machines:0};
   items.forEach(b=>{if(b.cls===cls)cnt.machines++;else if(PLC_BELT.includes(b.cls))cnt.belts++;else if(PLC_UG.includes(b.cls))cnt.ug++;else if(PLC_SPL.includes(b.cls))cnt.spl++});
   return{ok:true,why:'',items,w:Fw,h:f[1],used:{w:Math.max(...items.map(b=>b.x+dim(b).w)),h:Math.max(...items.map(b=>b.y+dim(b).h))},
-    ports,rows:cnt0.map(m=>({m})),iface:{v:1,block:spec.block,S:S_,M:1,k,main,n,sets:ST.o.map((o,s)=>({o,n:cnt0[s]})),side},nMax,rates,stats:cnt,pitch:p,rowsH:TPLG_H[k]};
+    ports,rows:ports.in.map(p=>({m:cnt0[p.set]})),iface:{v:1,block:spec.block,S:S_,M:1,k,main,n,sets:ST.o.map((o,s)=>({o,n:cnt0[s]})),side},nMax,rates,stats:cnt,pitch:p,rowsH:TPLG_H[k]};
 }
 
 ;return {build:tplBuild,max:tplMax};})();
@@ -921,7 +921,7 @@ function tplBuild(spec){
   const cnt={belts:0,ug:0,spl:0,machines:0};
   items.forEach(b=>{if(b.cls===cls)cnt.machines++;else if(PLC_BELT.includes(b.cls))cnt.belts++;else if(PLC_UG.includes(b.cls))cnt.ug++;else if(PLC_SPL.includes(b.cls))cnt.spl++});
   return{ok:true,why:'',items,w:Fw,h:f[1],used:{w:Math.max(...items.map(b=>b.x+dim(b).w)),h:Math.max(...items.map(b=>b.y+dim(b).h))},
-    ports,rows:cnt0.map(m=>({m})),iface:{v:1,block:spec.block,S:S_,M:1,k,main,n,sets:ST.o.map((o,s)=>({o,n:cnt0[s]})),side},nMax,rates,stats:cnt,pitch:p,rowsH:TPLG_H[k]};
+    ports,rows:ports.in.map(p=>({m:cnt0[p.set]})),iface:{v:1,block:spec.block,S:S_,M:1,k,main,n,sets:ST.o.map((o,s)=>({o,n:cnt0[s]})),side},nMax,rates,stats:cnt,pitch:p,rowsH:TPLG_H[k]};
 }
 
 ;return {build:tplBuild,max:tplMax};})();
