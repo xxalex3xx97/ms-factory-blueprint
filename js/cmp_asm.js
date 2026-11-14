@@ -131,7 +131,7 @@ function cmpShr(b,mk,Wt){
 // node's subtree, routed by cmpRoute (child POOL/SRC east lanes at x=0 -> parent slot rows at x=W-1). Raw children of a merge node are SRC supplier blocks in their own strip row.
 function cmpAssembleTree(c){return cmpNarrow(c,(c,w)=>{const n0=c.dk&&c.dk.notes.length,r=cmpAssembleTree1(c,w,1);if(!r.fz||r.ok&&!(r.dock&&r.dock.miss&&r.dock.miss.length))return r;if(c.dk)c.dk.notes.length=n0;return cmpAssembleTree1(c,w,0)})}   // packed build first; a refused / dock-missing packed build retries one block per column
 // COMPACT with docks needs every raw hub (supplier SRC pool / src-node IN) in logical column 0 (the west dock edge) and no FEED node (N/S docks) and no GROUPS plan (pl.g); otherwise the one-block-per-column layout
-const cmpTreeDockOk=pl=>!pl.g&&pl.nodes.every(o=>o.inKind!=='feed'&&(o.raw?(pl.nodes.find(p=>p.id===o.parent).inKind!=='merge'||o.pool===0):o.inKind!=='src'||o.col===0));
+const cmpTreeDockOk=pl=>!pl.g&&pl.nodes.every(o=>o.inKind!=='feed'||o.col===0);
 function cmpAssembleTree1(c,wide,fz){
   const {mk,spMk,bx,bk,pl,sz}=c,dk=c.dk,nof=!fz||!!globalThis.CMP_NOFUSE||!!dk&&!cmpTreeDockOk(pl),no=why=>({ok:false,why,col:badCol,fz:!nof}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk],nb=wide&&!(dk&&(!nof||pl.nodes.some(o=>o.inKind==='feed')))?cmpHubBlk(bk):null,hW=nb?nb.W:W;
   let badCol=-1;
@@ -163,6 +163,7 @@ function cmpAssembleTree1(c,wide,fz){
   // COMPACT (no docks): logical columns IN/FB/POOL of every depth are packed left to right into physical blocks. Each column gets its minimum width (shrunk template tail / hub / merge region); consecutive columns share ONE block
   // while they fit the floor (DP: fewest blocks over the rows each group occupies, then area); a lone hub column <=14 wide takes the narrow block. Lanes meet at piece edges (no wall inside a block). Docks keep one block per column (west dock edge).
   const nc0=q=>nb&&q%3!==1&&!wide.has(q),D=pl.D,byD=dp=>pl.nodes.filter(o=>o.depth===dp&&(!o.raw||byId[o.parent].inKind==='merge'));
+  const hubQ=new Set();if(dk&&dk.in&&!nof)pl.nodes.forEach(o=>{if(o.raw){if(byId[o.parent].inKind==='merge')hubQ.add(o.pool)}else if(o.inKind==='src'||o.inKind==='feed')hubQ.add(o.col)});
   const subRows=o=>{if(LA)return LA.reg[o.id].r;const r=[],walk=v=>{r.push(v.row);v.children.forEach(i=>walk(byId[i]))};walk(o);return[Math.min(...r),Math.max(...r)]};
   const mrg=(o,w)=>{const [r0,r1]=subRows(o),sources=[],sinks=[],Y=(row,y)=>(row-r0)*(H+2)+y;
     if(LA){const R=LA.reg[o.id];R.src.forEach(s=>sources.push({x:0,y:Y(s.row,s.y),item:s.item,j:s.j}));R.snk.forEach(s=>sinks.push({x:w-1,y:Y(s.row,s.y),item:s.item}));
@@ -195,14 +196,14 @@ function cmpAssembleTree1(c,wide,fz){
         if(ref<Infinity){while(w<hW&&cnt(q,w)>ref)w++}else{while(w<W&&cnt(q,w)===Infinity)w++}
       }
     }
-    if(wide&&wide.has(q)&&w)w=W;
+    if((wide&&wide.has(q)||hubQ.size&&s===0&&real.some(o=>o.inKind==='feed'))&&w)w=W;
     ww.push(w);rw.push(rs);
   }
   const grp=[];   // [[q..]] physical columns
   if(nof)for(let q=0;q<pl.cols;q++)grp.push([q]);
   else{
     const qs=ww.map((w,q)=>q).filter(q=>ww[q]>0),n=qs.length,cost=Array(n+1).fill(Infinity),prv=Array(n+1).fill(0);cost[0]=0;
-    for(let i=1;i<=n;i++){let sum=0;const rs=new Set();for(let j=i-1;j>=0;j--){sum+=ww[qs[j]];if(sum>W)break;rw[qs[j]].forEach(r=>rs.add(r));const c=cost[j]+rs.size*1000+rs.size*(nb&&sum<=hW?nb.dw:d.w);if(c<cost[i]){cost[i]=c;prv[i]=j}}}
+    for(let i=1;i<=n;i++){let sum=0;const rs=new Set();for(let j=i-1;j>=0;j--){sum+=ww[qs[j]];if(sum>W)break;rw[qs[j]].forEach(r=>rs.add(r));const c=cost[j]+rs.size*1000+rs.size*(nb&&sum<=hW?nb.dw:d.w);if(c<cost[i]){cost[i]=c;prv[i]=j}if(hubQ.has(qs[j]))break}}
     for(let i=n;i>0;i=prv[i])grp.unshift(qs.slice(prv[i],i));
   }
   if(globalThis.__cmpDbg)globalThis.__cmpDbg.push({ww,rw:rw.map(r=>r.size),grp:grp.map(g=>g.join('+'))});
