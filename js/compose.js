@@ -186,7 +186,7 @@ function cmpCompose0(P,item,mk,spMk,o={}){
   if(globalThis.CMP_CAP4||globalThis.CMP_IN||globalThis.CMP_GROUPS&&!(o.dock&&(o.dock.in||o.dock.out)))return cmpCompose1(P,item,mk,spMk,o);
   const nf0=globalThis.CMP_NOFUSE,dk=!!(o.dock&&(o.dock.in||o.dock.out)),C=[];
   globalThis.CMP_IN=true;
-  try{for(const nf of nf0||dk?[true]:[true,false])for(const c4 of[false,true]){globalThis.CMP_NOFUSE=nf;globalThis.CMP_CAP4=c4;if(c4&&!globalThis.CMP_WIDE)continue;if(!c4)globalThis.CMP_WIDE=false;const L=cmpCompose1(P,item,mk,spMk,o);C.push({L,nf,bk:window.CMP_BK})}}
+  try{for(const nf of nf0?[true]:[true,false])for(const c4 of[false,true]){globalThis.CMP_NOFUSE=nf;globalThis.CMP_CAP4=c4;if(c4&&!globalThis.CMP_WIDE)continue;if(!c4)globalThis.CMP_WIDE=false;const L=cmpCompose1(P,item,mk,spMk,o);C.push({L,nf,bk:window.CMP_BK})}}
   finally{globalThis.CMP_IN=false;globalThis.CMP_CAP4=false;globalThis.CMP_WIDE=false;globalThis.CMP_NOFUSE=nf0}
   const ok=C.filter(c=>c.L.ok);
   if(!ok.length){window.CMP_BK=C[0].bk;return C[0].L}

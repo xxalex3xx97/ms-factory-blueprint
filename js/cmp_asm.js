@@ -8,10 +8,10 @@ const cmpHubBlk=bk=>bk==='BPO_Station_02'||bk==='BPO_Station_03'?{cls:plcCls('BP
 const cmpNarrow=(c,f)=>{if(globalThis.CMP_NARROW===false||c.dk&&c.bk!=='BPO_Station_02')return f(c,null);const n0=c.dk&&c.dk.notes.length,go=()=>{const wide=new Set();for(;;){if(c.dk)c.dk.notes.length=n0;const r=f(c,wide);if(r.ok&&c.dk&&r.dock){const dh=r.dock.nar.filter(h=>!wide.has(h));if(dh.length){dh.forEach(h=>wide.add(h));continue}}   // ROT: a dock needs a door; the rot-1 1x2 hub is solid on its long sides, so a hub column carrying dock containers stays full size
       if(r.ok||!(r.col>=0)||wide.has(r.col))return r;wide.add(r.col)}};
   const r=go();if(!c.dk||r.ok&&!(r.dock&&r.dock.miss&&r.dock.miss.length))return r;c.dk.notes.length=n0;return f(c,null)};
-function cmpAssemble(c){return cmpNarrow(c,(c,w)=>{const r=cmpAssemble1(c,w,1);return r.ok||!r.fz?r:cmpAssemble1(c,w,0)})}
+function cmpAssemble(c){return cmpNarrow(c,(c,w)=>{const n0=c.dk&&c.dk.notes.length,r=cmpAssemble1(c,w,1);if(!r.fz||r.ok&&!(r.dock&&r.dock.miss&&r.dock.miss.length))return r;if(c.dk)c.dk.notes.length=n0;return cmpAssemble1(c,w,0)})}
 function cmpAssemble1(c,wide,fz){
   const {mk,spMk,bx,bk,sz,stages}=c,dk=c.dk,no=why=>({ok:false,why,col:badCol,fz:!!fu}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,L=stages.length,K=sz.K;
-  const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],nb=wide&&!(dk&&stages.some(g=>g.k>=2))?cmpHubBlk(bk):null,hW=nb?nb.W:W,cwd=i=>nb&&!wide.has(i)?hW:W,ugc=PLC_UG[mk],nMid=stages.filter((g,s)=>s&&g.k>=2).length,ncol=2*L+1+nMid,P=dk&&dk.in&&K>1&&stages.some(g=>g.k>=2)?d.h+1+(bk==='BPO_Station_03'?1:0):d.h,ms=[],blocks=[],fu=fz&&!dk&&K===1&&!globalThis.CMP_NOFUSE;let nug=0,badCol=-1;   // D2: gap unit row between strips when side docks are needed
+  const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],nb=wide&&!(dk&&stages.some(g=>g.k>=2))?cmpHubBlk(bk):null,hW=nb?nb.W:W,cwd=i=>nb&&!wide.has(i)?hW:W,ugc=PLC_UG[mk],nMid=stages.filter((g,s)=>s&&g.k>=2).length,ncol=2*L+1+nMid,P=dk&&dk.in&&K>1&&stages.some(g=>g.k>=2)?d.h+1+(bk==='BPO_Station_03'?1:0):d.h,ms=[],blocks=[],fu=fz&&K===1&&!globalThis.CMP_NOFUSE&&(!dk||!stages.some(g=>g.k>=2));let nug=0,badCol=-1;   // D2: gap unit row between strips when side docks are needed
   for(let j=0;j<K;j++){
     const fbs=[],y0=j*P*FC;
     for(let s=0;s<L;s++){
@@ -41,29 +41,29 @@ function cmpAssemble1(c,wide,fz){
     if(fS&&dk&&dk.in){const E=Array.isArray(c.P.edges)?c.P.edges:Object.values(c.P.edges||{});fS.names=fS.rawItems.map(cmpName);fS.D=fS.rawItems.map(it=>{const e=E.find(e=>e.from===it&&e.to===g0.item);return(e?e.flow:0)*shr(0)})}
     if(fu){   // COMPACT (K=1, no docks): pieces [hub][FB][POOL]... get minimum widths (shrunk template tail, hub min width) and are packed into shared blocks (DP: fewest blocks, then area), lanes meet at piece edges
       const Bl=[],fi=[],E3=Array.isArray(c.P.edges)?c.P.edges:Object.values(c.P.edges||{});
-      Bl.push(f0?w=>cmpFeed({...fS,W:w}):w=>cmpPool({W:w,H,mk,bx,item:g0.node.rec.i[0][0],raw:true,inRows:[],outRows:fbs[0].inRows}));fi.push(-1);
+      Bl.push(f0?w=>cmpFeed({...fS,W:w}):w=>cmpPool({W:w,H,mk,bx,item:g0.node.rec.i[0][0],raw:true,inRows:[],outRows:fbs[0].inRows,...dI}));fi.push(-1);
       for(let s=0;s<L;s++){
         const m=fbs[s].mid;
         if(m){const rawItems=stages[s].node.rec.i.map(q=>q[0]).filter((_,i)=>i!==m.main),fm={H,mk,bx,sets:m.sets,M:m.M,k:m.k,main:m.main,pass:fbs[s].inRows,rawItems,allRaw:false};Bl.push(w=>cmpFeed({...fm,W:w}));fi.push(-1)}
         Bl.push(null);fi.push(s);
         const mm=cmpMerge(fbs[s].outRows,fbs[s].outN,fbs[s].gOut),nx=s<L-1?fbs[s+1].inRows:[];
-        Bl.push(w=>cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows:nx}));fi.push(-1);
+        Bl.push(w=>cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows:nx,...(s===L-1?dO:null)}));fi.push(-1);
       }
-      const n=Bl.length,mwi=fi.map((s,i)=>s>=0?cmpShr(fbs[s].b,mk):0),cnt=(i,w)=>{const f=Bl[i];if(f){const r=f(w);return r.ok===false?Infinity:r.items.length}const bq=fbs[fi[i]].b;if(w>=bq.w)return fbs[fi[i]].items.length;const it=w>=mwi[i]?cmpShr(bq,mk,w):null;return it?it.length:Infinity};   // items of piece i at width w
+      const nbx=dk?null:nb,n=Bl.length,mwi=fi.map((s,i)=>s>=0?cmpShr(fbs[s].b,mk):0),cnt=(i,w)=>{const f=Bl[i];if(f){const r=f(w);return r.ok===false?Infinity:r.items.length}const bq=fbs[fi[i]].b;if(w>=bq.w)return fbs[fi[i]].items.length;const it=w>=mwi[i]?cmpShr(bq,mk,w):null;return it?it.length:Infinity};   // items of piece i at width w
       const ww=Bl.map((f,i)=>{if(!f)return mwi[i];const ref=cnt(i,hW);let w=8;if(ref<Infinity){while(w<hW&&cnt(i,w)>ref)w++}else{while(w<W&&cnt(i,w)===Infinity)w++}return w}),cost=Array(n+1).fill(Infinity),prv=Array(n+1).fill(0);cost[0]=0;
-      for(let i=1;i<=n;i++){let sum=0;for(let j=i-1;j>=0;j--){sum+=ww[j];if(sum>W)break;const q=cost[j]+1000+(nb&&sum<=hW?nb.dw:d.w);if(q<cost[i]){cost[i]=q;prv[i]=j}}}
+      for(let i=1;i<=n;i++){let sum=0;for(let j=i-1;j>=0;j--){sum+=ww[j];if(sum>W)break;const q=cost[j]+1000+(nbx&&sum<=hW?nbx.dw:d.w);if(q<cost[i]){cost[i]=q;prv[i]=j}}}
       const grp=[];for(let i=n;i>0;i=prv[i])grp.unshift([prv[i],i]);
-      const cu=[],cx=[],cw=[],pe=new Set();let ux=0;
-      for(const [a,z] of grp){const sum=ww.slice(a,z).reduce((t,v)=>t+v,0),nar=!!(nb&&sum<=hW),Wb=nar?hW:W;let off=0;
+      const cu=[],cx=[],cw=[],pgi=[],pe=new Set();let ux=0,gi=0;
+      for(const [a,z] of grp){const sum=ww.slice(a,z).reduce((t,v)=>t+v,0),nar=!!(nbx&&sum<=hW),Wb=nar?hW:W;let off=0;
         const sl=Wb-sum;let r=z-1;if(sl>0){let bd=Infinity;for(let i=a;i<z;i++){const dl=cnt(i,ww[i]+sl)-cnt(i,ww[i]);if(dl<bd){bd=dl;r=i}}}
-        for(let i=a;i<z;i++){const w=ww[i]+(i===r?sl:0);cu.push(ux);cx.push(ux*FC+off);cw.push(w);off+=w}
+        for(let i=a;i<z;i++){const w=ww[i]+(i===r?sl:0);cu.push(ux);cx.push(ux*FC+off);cw.push(w);pgi.push(gi);off+=w}gi++;
         pe.add(z-1);blocks.push(nar?{cls:nb.cls,x:ux,y:j*P,...(nb.rot?{rot:nb.rot}:{})}:{cls,x:ux,y:j*P});ux+=nar?nb.dw:d.w}
       const strip=[];
       for(let i=0;i<n;i++){
         let h;
         if(Bl[i])h=Bl[i](cw[i]);else{const bq=fbs[fi[i]].b,it=cw[i]===bq.w?fbs[fi[i]].items:cmpShr(bq,mk,cw[i]);h=it?{items:it}:{ok:false,why:'shrink failed'}}
         if(h.ok===false)return no(h.why);
-        h.items.forEach(b=>strip.push({...b,x:b.x+cx[i],y:b.y+y0}));
+        h.items.forEach(b=>strip.push({...b,x:b.x+cx[i],y:b.y+y0,...(b.dk?{hx:cu[i]*FC,hw:W,hu:d.w,hc:pgi[i]}:{})}));
       }
       const at=new Map();strip.forEach(b=>{if(PLC_BELT.includes(b.cls)&&b.rot===0)at.set(b.x+','+b.y,b)});
       for(let i=0;i+1<n;i++)if(pe.has(i))for(let y=y0;y<y0+H;y++){const A=at.get((cx[i]+cw[i]-1)+','+y),B=at.get(cx[i+1]+','+y);if(A&&B){A.cls=B.cls=ugc;nug+=2}}
@@ -93,8 +93,8 @@ function cmpAssemble1(c,wide,fz){
   }
   const max=def(ugc).maxApart,pairs=ugPairs(ms.filter(b=>PLC_UG.includes(b.cls)));
   const T={ok:true,blocks,ms,ug:nug,cols:ncol,rows:K,max,rc:[],ov:0,span:pairs.filter(p=>p&&p.n>max).length,G:1};
-  if(dk&&(dk.in||dk.out)){const r=cmpDockApply({cls,mk},T,{P});if(!r.ok)return no(r.why);return{ok:true,T,dock:r}}
-  return{ok:true,T};
+  if(dk&&(dk.in||dk.out)){const r=cmpDockApply({cls,mk},T,{P});if(!r.ok)return no(r.why);return{ok:true,T,dock:r,fz:!!fu}}
+  return{ok:true,T,fz:!!fu};
 }
 
 // COMPACT: template tail shrink. A built template (floor b.w) keeps its machines at the west and only straight rot-0 collector runs (belts / UG hops) + the east trunk (x>=W-2) beyond the last machine, so for small n the tail is mostly empty.
