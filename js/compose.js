@@ -163,7 +163,7 @@ function cmpArmoury(P,item,mk,spMk,o,bk,BX){
   const cls=plcCls(bk),d=dim({cls,rot:0}),ms=[],blocks=[],parts=[],note=[],nodes=[],routed=[],stages=[];let off=0,cols=1,ug=0,span=0;
   for(const [c,r] of leaf){
     if(!(P.nodes[c]&&P.nodes[c].crafter))return cmpErr('Armoury input '+cmpName(c)+' is a raw item (no factory to build)');
-    const Pc=plan(c,r,mk,{sp:null,bal:null},PLN_PICK,{proto:false,enr:false}),L=cmpCompose(Pc,c,mk,spMk,{...o,bk});
+    const t0=performance.now(),Pc=plan(c,r,mk,{sp:null,bal:null},PLN_PICK,{proto:false,enr:false}),L=cmpCompose(Pc,c,mk,spMk,{...o,bk}),t1=performance.now();
     if(!L.ok)return cmpErr(cmpName(c)+' '+(+r.toFixed(2))+'/min: '+L.why);
     const T=L.tile,ci=L.bl.cmp,i=parts.length,dy=off*FC,ext=Math.max(...T.blocks.map(b=>b.y+dim(b).h)),pid='a'+i;
     T.ms.forEach(b=>ms.push({...b,y:b.y+dy}));T.blocks.forEach(b=>blocks.push({...b,y:b.y+off}));
@@ -171,7 +171,7 @@ function cmpArmoury(P,item,mk,spMk,o,bk,BX){
     (ci.nodes||[]).forEach(q=>nodes.push({...q,id:pid+q.id,fb:{...q.fb,y:q.fb.y+dy},gy:q.gy+off,ct:q.ct.map(sh),part:i}));
     (ci.routed||[]).forEach(q=>routed.push({...q,y:q.y+dy}));
     stages.push(...ci.stages.map(s=>({...s,part:i})));
-    parts.push({item:cmpName(c),key:c,rate:r,y0:dy,y1:dy+Math.ceil(ext/d.h)*d.h*FC,K:ci.K,tree:!!ci.tree,stages:ci.stages,P:Pc});
+    parts.push({item:cmpName(c),key:c,rate:r,y0:dy,y1:dy+Math.ceil(ext/d.h)*d.h*FC,K:ci.K,tree:!!ci.tree,stages:ci.stages,P:Pc,ms:Math.round(t1-t0),rb:!!ci.rb,blocks:T.blocks.length});
     note.push(cmpName(c)+' '+(+r.toFixed(2))+'/min -> '+L.note.filter(n=>/^Planner N=/.test(n)).concat(['own container(s)']).join('; '));
     for(const n of L.note)if(/^(Dock|Fill the seed|Dock-limited)/.test(n))note.push(n);
     off+=Math.ceil(ext/d.h)*d.h;cols=Math.max(cols,T.cols);ug+=T.ug;span+=T.span;
