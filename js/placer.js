@@ -779,7 +779,7 @@ const placerDock=()=>{const i=$("plnDkI").checked,o=$("plnDkO").checked;if(!i&&!
 // UI speed: result cache (last 8 layouts), coalesced + deferred compute with a "Building..." paint first (composer only: older engines stay synchronous for their tests)
 let plcRunTok=0,plcBusyF=false,plcDebT=0;const plcLC=new Map();
 const plcAsync=()=>typeof CMP_ENGINE!=="undefined"&&CMP_ENGINE;
-const plcKey=(x,dk)=>JSON.stringify([x.it,x.rate,x.mk,x.sp,$("plnBal").value,plnProto(),$("plnEnr").checked,PLN_PICK,$("plnBk").value,$("plnBuf").value,dk,["CMP_ENGINE","CMP_GROUPS","CMP_GROUPS_AUTO","CMP_BLK","CMP_MEMO"].map(k=>window[k])]);
+const plcKey=(x,dk)=>JSON.stringify([x.it,x.rate,x.mk,x.sp,$("plnBal").value,plnProto(),$("plnEnr").checked,PLN_PICK,$("plnBk").value,$("plnBuf").value,dk,["CMP_ENGINE","CMP_GROUPS","CMP_GROUPS_AUTO","CMP_BLK","CMP_MEMO","RB_ENGINE"].map(k=>window[k])]);
 function plcApply(L){
   const dl=$("plnPrev");plcBusyF=false;$("plnPrevMap").style.opacity="";
   $("plnEngBadge").textContent=L.ok?(L.eng==="cmp"?"Template: Composer":"Template: Zones"):"";
@@ -937,7 +937,7 @@ $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;
 $("pvRate").addEventListener("input",()=>{clearTimeout(plcDebT);plcDebT=setTimeout(()=>{if(+$("pvRate").value>0){$("plnRate").value=$("pvRate").value;placerLive()}},300)});   // typing: one compute 300 ms after the last key (Enter/blur = change = at once)
 // Engine switch: Old = the original placer (default), New = prefab factory builder (pfFact2 > pfBands > pfChain, falls back to the old path when it refuses). Remembered once chosen.
 // Composer is the default. ?engine=old in the page URL pins the legacy placer (prefab flags off); any other value = composer.
-const plcEngine=v=>{CMP_ENGINE=PLC_PREFAB=PF_FACT=(v!=="old")};
+const plcEngine=v=>{CMP_ENGINE=PLC_PREFAB=PF_FACT=(v!=="old");globalThis.RB_ENGINE=v==="rb"};   // ?engine=rb = recursive builder (js/rb_*.js, dev flag)
 if(!plcCls("BPO_Station_03"))$("plnBk").querySelector('option[value="BPO_Station_03"]')?.remove();
 try{const v=localStorage.getItem("msfb.block");if(PLC_BKV.includes(v))$("plnBk").value=v}catch(_){}
 $("plnBk").addEventListener("change",()=>{try{localStorage.setItem("msfb.block",$("plnBk").value)}catch(_){}});
