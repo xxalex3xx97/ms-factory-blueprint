@@ -122,5 +122,7 @@ window.HAND=(function(){
   function lane(a,pa,b,pb,path,label){commit(path,a,pa,b,pb,label);return path.length}
   // prune(): drop every block that holds nothing (no machine and no belt piece)
   function prune(){const keep=new Set();S.occ.forEach((_,kk)=>{const [x,y]=kk.split(',').map(Number);keep.add(k(Math.floor(x/TW),Math.floor(y/TW)))});[...S.blocks.keys()].forEach(kk=>{if(!keep.has(kk))S.blocks.delete(kk)})}
-  return{reset,block,put,link,reserve,lane,prune,setMk,D:()=>MAXA-1,result,check,verify,S,TW,FW,CLS,free,inFloor};
+  // piece(p): drop one ready-made piece (belt, underground, splitter) on a free cell; false if the cell is taken or off the floor
+  function piece(p){const kk=k(p.x,p.y);if(!inFloor(p.x,p.y)||S.occ.has(kk))return false;S.occ.set(kk,'p');S.pcs.push({h:0,pid:0,...p});return true}
+  return{reset,block,put,link,reserve,lane,prune,piece,setMk,D:()=>MAXA-1,result,check,verify,S,TW,FW,CLS,free,inFloor};
 })();
