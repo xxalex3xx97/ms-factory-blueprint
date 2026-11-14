@@ -22,12 +22,14 @@ window.exoBuild=function(opts){
   const FAM=['Nutrients','Xenobacteria','Xenoeukarya','Xenoarchaea','Enzyme','AlphaProtein','BetaProtein','Biolattice','ChitinComposite','TitaniumPlates','NickelPlates','CobaltPlates','IridiumPlates','SiliconWafers','Graphene','ReinforcedGlass','EnrichedTitaniumOre','EnrichedNickelOre','EnrichedCobaltOre','Coolant'];
   const M={};
   // ---- one module per product; columns by depth, rows ordered by the mean row of the producers (fewer crossings)
+  const MAXR=opts.maxRows||12;let gx=0;   // a depth column taller than MAXR blocks wraps into side-by-side sub-columns (same depth = no belts between them, flow stays west -> east)
   for(let c=0;c<=maxD;c++){
     const col=names.filter(p=>depth[p]===c);
     const key=p=>{const rows=SP[p].ins.map(short).filter(q=>SP[q]&&q!==p&&M[q]).map(q=>M[q].gy0+M[q].blocks/2);return rows.length?rows.reduce((a,b)=>a+b,0)/rows.length:(FAM.includes(p)?FAM.indexOf(p):50)};
     col.sort((a,b)=>key(a)-key(b));
     let gy=0;
-    for(const p of col){const s=SP[p],cap=capOf(s.cls),blocks=Math.ceil(s.n/cap);M[p]={p,s,col:c,gy0:gy,blocks,cap,mach:[],raw:{},hubs:[]};gy+=blocks}
+    for(const p of col){const s=SP[p],cap=capOf(s.cls),blocks=Math.ceil(s.n/cap);if(gy>0&&gy+blocks>MAXR){gx++;gy=0}M[p]={p,s,col:gx,gy0:gy,blocks,cap,mach:[],raw:{},hubs:[]};gy+=blocks}
+    gx++;
   }
   // ---- consumers per producer (machine level): every consumer machine gets its own belt from the producer's output hub
   const eusers={};   // producer -> [{c,flow}]
@@ -73,7 +75,7 @@ window.exoBuild=function(opts){
     if(!n){HAND.S.fails.pop();const mx=HAND.maxStates;HAND.maxStates=4000000;n=HAND.link(j.a,j.b,j.l,null);HAND.maxStates=mx;if(n)fell.push(j.l+' (any route)')}   // last resort: no street preference, any ports, bigger search
     if(n)ok++}
   const T=HAND.result();
-  T.links=all.length;T.linksOk=ok;T.cols=maxD+1;T.fell=fell;
+  T.links=all.length;T.linksOk=ok;T.cols=gx;T.fell=fell;
   T.modules=names.map(p=>({p,col:M[p].col,gy0:M[p].gy0,blocks:M[p].blocks,n:M[p].s.n,raw:Object.keys(M[p].raw),hubs:M[p].hubs.length}));
   return T;
 };
