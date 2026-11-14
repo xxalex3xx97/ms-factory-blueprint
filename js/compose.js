@@ -214,7 +214,7 @@ function cmpCompose0(P,item,mk,spMk,o={}){
   window.CMP_BK=best.bk;return best.L;
 }
 function cmpCompose1(P,item,mk,spMk,o={}){
-  if(!o._retry){globalThis.CMP_NODK=new Set();globalThis.CMP_DKFAIL=[]}   // DOCKCLEAR: per-hub dock degrade state (W:j = no west face, X:kind:j = no dock)
+  if(!o._retry){globalThis.CMP_NODK=new Set();globalThis.CMP_DKFAIL=[];globalThis.CMP_T1=(typeof performance!=='undefined'?performance:Date).now()}   // DOCKCLEAR: per-hub dock degrade state (W:j = no west face, X:kind:j = no dock)
   if(!o.bk||o.bk==='auto')window.CMP_BK=undefined;   // a failed Auto build must not leave the previous pick behind
   const sel=$('plnBk'),BX=o.box||PLC_BOX,bk=o.bk||(sel?(sel.value==='auto'?'auto':PL_ALL[placerBk().indexOf(true)]):null);
   if(!bk)return cmpErr('no block type selected');
@@ -244,7 +244,7 @@ function cmpCompose1(P,item,mk,spMk,o={}){
   const indFb=A=>{if(!dk||!(dk.indIn||dk.indOut)||!/^(dock slot misaligned|industrial dock overlaps)/.test(A.why||''))return A;
     {const F=CMP_DKFAIL||[],N=CMP_NODK,n0=N.size;CMP_DKFAIL=[];   // DOCKCLEAR: first try the hub on another face (N/S), only then drop the hub's dock
       for(const f of F)for(const j of f.js){const w='W:'+j;if(f.tag==='ie'&&!N.has(w))N.add(w);else{N.add('X:'+(f.tag==='oe'?'out':'in')+':'+j);N.add('M:'+j+'|'+A.why.slice(0,160))}}
-      if(N.size>n0&&(o._retry|0)<12){const L=cmpCompose(P,item,mk,spMk,{...o,_retry:(o._retry|0)+1});if(L.ok)return L}}   // docks are never refused: industrial dock cannot be placed -> rebuild with normal docks + note
+      if(N.size>n0&&(o._retry|0)<2&&(typeof performance!=='undefined'?performance:Date).now()-globalThis.CMP_T1<12000){const L=cmpCompose(P,item,mk,spMk,{...o,_retry:(o._retry|0)+1});if(L.ok)return L}}   // docks are never refused: industrial dock cannot be placed -> rebuild with normal docks + note
     const L=cmpCompose(P,item,mk,spMk,{...o,dock:{in:dkw.in==='ind'?null:dkw.in,out:dkw.out==='ind'?null:dkw.out}});if(L.ok)L.note=['Industrial dock not built ('+A.why+'): no docks on the industrial side (never normal docks)',...dkn.filter(n=>/not possible/.test(n)),...L.note];return L};   // INDONLY: industrial selected = never a normal dock; unsolved case -> that side gets no dock (plain containers) + note
   if(globalThis.CMP_GROUPS&&!dkw){const g=cmpGroupsRun(P,item,mk,spMk,BX,bk,block);if(!g.ok)return g;A=g.A;stages=g.stages;cmpI=g.cmpI;note=g.note;per=g.per}   // GROUPS prototype (cmp_groups.js), no docks
   else if(tr.ok){
