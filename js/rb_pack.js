@@ -49,11 +49,15 @@ function rbNodeNB(o,z,block,W,H){
   return{ok:true,b,bi:b.items,outRows:used.flatMap(q=>q.outs||[q.o]),outN:used.every(q=>q.outN)?used.flatMap(q=>q.outN):null,gOut:b.iface.gOut,
     inR:o.rec.i.map((_,j)=>o.k>=2?b.ports.in.filter(p=>p.item===j&&b.iface.sets[p.set].n>0).map(p=>p.y):used.flatMap(q=>Array.from({length:M},(_,i)=>q.o+i)))};
 }
+// IN piece builder of one src / feed planner node: -> w=>hub result (cmpPool raw / cmpFeed allRaw, growth seed = finite primed container). x={block,bx,H,mk}; z = cmpTreeSize .by[o.id]
+function rbNodeIn(o,z,NB,x){
+  const {block,bx,H,mk}=x,bz=NB.b,hs=tplIfSets(block,z.S).hs,sets=bz.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0);
+  const fS={H,mk,bx,sets,M:bz.iface.M,k:o.k,main:0,pass:[],rawItems:o.rec.i.map(q=>q[0]),allRaw:true,seed:o.growth?o.key:null};
+  return o.inKind==='src'?w=>cmpPool({W:w,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB.inR[0]}):o.inKind==='feed'?w=>cmpFeed({...fS,W:w}):null;
+}
 // pack one src / feed planner node as a module (merge nodes: pass inF yourself via rbPack). x = {block,bx,W,H,mk,Rout,dw}; sz = z.S
 function rbPackNode(o,z,NB,x){
-  const {block,bx,W,H,mk}=x,bz=NB.b,hs=tplIfSets(block,z.S).hs,sets=bz.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0);
-  const fS={H,mk,bx,sets,M:bz.iface.M,k:o.k,main:0,pass:[],rawItems:o.rec.i.map(q=>q[0]),allRaw:true,seed:o.growth?o.key:null};
-  const inF=o.inKind==='src'?w=>cmpPool({W:w,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB.inR[0]}):o.inKind==='feed'?w=>cmpFeed({...fS,W:w}):null;
+  const {W,H,mk,bx}=x,inF=rbNodeIn(o,z,NB,x);
   const poolF=(w,outRows)=>{const mm=outRows.length>4?{rows:NB.outRows,mg:[]}:cmpMerge(NB.outRows,NB.outN,NB.gOut);return cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows,bal:true})};   // more than 4 lanes out = several containers (ports per face 4): keep every FB row as its own input lane (no merge) so each container gets one (bal)
   return rbPack({W,H,mk,dw:x.dw,fb:{b:NB.b,bi:NB.bi},inF,poolF,Rout:x.Rout,outRows:x.outRows});
 }

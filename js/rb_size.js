@@ -19,5 +19,8 @@ function rbSize(pl,mk,spMk,block,W,H){
     n.lanes=n.b.ports.in.map((p,t)=>({y:p.y,key:q.rec.i[typeof p.item==='number'?p.item:0][0],m:n.b.rows&&n.b.rows[t]&&n.b.rows[t].m!=null?n.b.rows[t].m:null})).filter(l=>l.m!==0);
     NB[q.id]=n;
   }
+  const byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o]));   // raw suppliers of a merge node = own SRC module (one block, deferred next to the consumer's IN column); no member / NB / tz entry
+  for(const o of pl.nodes)if(o.raw&&o.parent&&byId[o.parent].inKind==='merge')G[o.id]={o,B:1,cap:1,raw:true,mem:[{...o,id:o.id+'.0',N:0,b:0,gid:o.id,children:[]}],kids:[]};
+  for(const g of Object.values(G))if(!g.raw)g.kids=g.o.children.map(i=>G[i]).filter(Boolean);
   return{ok:true,G,mem,tz,NB};
 }

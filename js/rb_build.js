@@ -4,8 +4,9 @@
 // -> {ok:true,T,nodes,routed,rb:{mods,ascii}} | {ok:false,why}.  Page globals: cmpRoute, cmpPool, cmpMerge, cmpShr, rbPack, rbPackNode, rbGrid, rbCandidates, plcCls, dim, def, PLC_UG, PLC_BELT, ugPairs, rk.
 function rbBuild(x){
   const {pl,G,NB,tz,mk,bx,bk,block,W,H}=x,cls=plcCls(bk),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk],t0=Date.now(),g=rbGrid(),no=why=>({ok:false,why}),byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),asc=(a,b)=>a-b;
+  pl.nodes.forEach(o=>{if(o.raw&&o.parent)o.parents=[o.parent]});
   const root=pl.nodes.find(o=>!o.raw&&!(o.parents&&o.parents.length)),order=[],M={};
-  const seen=new Set(),visit=o=>{if(seen.has(o.id))return;seen.add(o.id);o.children.map(i=>byId[i]).filter(c=>!c.raw).forEach(visit);order.push(o)};visit(root);   // shared product: visited (built) once
+  const seen=new Set(),visit=o=>{if(seen.has(o.id))return;seen.add(o.id);o.children.map(i=>byId[i]).filter(c=>!c.raw||G[c.id]).forEach(visit);order.push(o)};visit(root);   // shared product: visited (built) once
   const poolOf=(q,w,rows,wt)=>{const n=NB[q.id],mm=rows.length>4?{rows:n.outRows,mg:[]}:cmpMerge(n.outRows,n.outN,n.gOut);return cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows:rows,bal:true,wt,wi:mm.n})};
   // IN region of a merge module: producer lanes (x=0) -> member port rows (x=w-1), rows hull of both modules; consumer first row r
   const fr=(p,l)=>l.from!=null?l.from:p.c+p.pk.nPhys-1,   // block column the lane (so far) reaches
@@ -32,6 +33,7 @@ function rbBuild(x){
       m.outRows=ix.map(i=>m.lanes[i].ya);
       m.wt=ix.map(i=>{const l=m.lanes[i];return(((NB[G[l.par].mem[l.ci].id].lanes.find(q=>q.y===l.y&&q.key===o.key)||{}).m)||1)/mu.get(pk0(l))});
     }
+    if(o.raw){const h=cmpPool({W,H,mk,bx,item:o.key,raw:true,inRows:[],outRows:m.outRows});if(h.ok===false)return no('rb: '+o.item+' supplier: '+h.why);m.pk={ok:true,nPhys:1,colP:[0],colX:[0],colW:[W]};m.defer=true;continue}   // raw supplier of a merge node: one SRC block
     const o0=m.mem[0],NB0=NB[o0.id],z0=tz.by[o0.id];let pk;
     const dk=m.kids.filter(p=>p.defer&&p.c==null),kp=m.kids.filter(p=>p.c!=null);   // dk: leaf producers (raw supplier, one consumer) are placed WITH this module, adjacent west of its IN column
     const rowWant=(kp.length?Math.round(kp.reduce((s,p)=>s+p.r*p.o.N,0)/kp.reduce((s,p)=>s+p.o.N,0)):0)+(x.bias|0);   // flow-weighted mean block row of the placed producers
@@ -63,8 +65,8 @@ function rbBuild(x){
       if(rg&&!rg.rt.ok)continue;
       const cells=[];
       for(let pc=0;pc<pk.nPhys;pc++){const rs=new Set();for(let b=0;b<m.B;b++)rs.add(r+b);if(rg&&pc===pk.colP[0])for(let y=rg.r0;y<=rg.r1;y++)rs.add(y);rs.forEach(y=>cells.push({gx:c+pc,gy:y,dx:pc,dy:y-r}))}
-      const lan=own.map(a=>[fr(a.p,a.l),c,a.p.r+a.pb,a.l.ya]);
-      if(!g.free(cells,okIds)||!lan.every(a=>g.laneFree(...a)))continue;
+      const lan=own.map(a=>[fr(a.p,a.l),c,a.p.r+a.pb,a.l.ya]).concat(th.map(t=>[fr(t.p,t.l),c,t.p.r+t.pb,t.l.ya]));   // crossing lanes also claim the corridor blocks between their last reached column and this module
+      if(!g.free(cells,okIds)||!lan.every(a=>g.laneFree(...a)&&![...Array(Math.max(0,a[1]-a[0]-1)).keys()].some(i=>taken.has((a[0]+1+i)+','+a[2]))))continue;   // a lane must not run through a block just taken by a leaf supplier
       g.claim(m,cells,okIds);lan.forEach(a=>g.laneClaim(...a));ownIds.forEach(i=>g.unreserve(i));
       lcells.forEach(({p,cs})=>{g.claim(p,cs,okIds);p.c=c-p.pk.nPhys;p.cells=cs});
       th.forEach(t=>{t.l.from=c});
@@ -81,10 +83,11 @@ function rbBuild(x){
     const put=(items,X,Y,ct,tag)=>items.forEach(b=>{const q={...b,x:b.x+X,y:b.y+Y};ms.push(q);if(tag)tag.push(q);if(ct&&b.ct)ct.push(q.x+','+q.y)});
     if(m.rg)put(m.rg.rt.items,pX(0),(m.rg.r0-gy0)*TH,null,routed);
     (m.thr||[]).forEach(t=>{for(let xx=pk.colW[0];xx<W;xx++)ms.push({cls:PLC_BELT[mk],x:m.c*TW+xx,y:(t.row-gy0)*TH+t.y,h:0,rot:0,pid:0})});   // tail of a crossing lane east of the IN piece
+    if(m.o.raw){put(cmpPool({W,H,mk,bx,item:m.o.key,raw:true,inRows:[],outRows:m.outRows}).items,pX(0),(m.r-gy0)*TH);continue}
     for(let b=0;b<m.mem.length;b++){
       const q=m.mem[b],Y=(m.r+b-gy0)*TH,n=NB[q.id],ct=[],bz=n.b,w=pk.colW[1],fit=w===W||w===bz.w?n.bi:cmpShr(bz,mk,w);
       if(!fit)return no('rb: shrink failed ('+m.o.item+')');
-      if(!m.kids.length){const h=cmpPool({W:pk.colW[0],H,mk,bx,item:q.rec.i[0][0],raw:true,inRows:[],outRows:n.inR[0]});if(h.ok===false)return no(h.why);put(h.items,pX(0),Y)}
+      if(!m.kids.length){const h=rbNodeIn(q,tz.by[q.id],n,{block,bx,H,mk})(pk.colW[0]);if(h.ok===false)return no(h.why);put(h.items,pX(0),Y,ct)}
       put(fit,pX(1),Y);
       const h=poolOf(q,pk.colW[2],m.outRows,m.wt);if(h.ok===false)return no(h.why);put(h.items,pX(2),Y,ct);
       nodes.push({id:q.id,item:q.item,key:q.key,rate:q.rate,lanes:n.lanes,outRows:n.outRows,rec:rk(q.rec),N:q.N,pN:m.o.N,util:q.util,pU:q.util,gx:m.c+pk.colP[1],gy:(m.r+b-gy0)*d.h,inCol:m.c+pk.colP[0],pool:m.c+pk.colP[2],row:m.r+b-gy0,fb:{x:pX(1),y:Y,w,h:H},ct,kind:q.inKind});

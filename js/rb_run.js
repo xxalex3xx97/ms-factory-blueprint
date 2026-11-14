@@ -3,8 +3,6 @@
 function rbRun(P,item,mk,spMk,BX,bk,block){
   const pl=cmpPlan(P,item,mk,{share:true});if(!pl.ok)return pl;
   const by=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),cr=pl.nodes.filter(o=>!o.raw);
-  const bad=cr.find(o=>{const kids=o.children.filter(i=>!by[i].raw).length;return kids?kids!==o.children.length:(o.k!==1||o.children.length!==1)});
-  if(bad)return cmpErr('rb: '+bad.item+': '+(bad.children.some(i=>!by[i].raw&&by[i])?'raw inputs next to crafted ones (merge supplier)':'raw feed / growth node')+' not yet');
   const cls=plcCls(bk),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h;
   const sz=rbSize(pl,mk,spMk,block,W,H);if(!sz.ok)return sz;
   let A;for(const bias of[0,1,-1,2,-2]){A=rbBuild({pl,G:sz.G,NB:sz.NB,tz:sz.tz,mk,bx:BX,bk,block,W,H,bias});if(A.ok)break}   // retry: shift the wanted block row when a spot search fails
