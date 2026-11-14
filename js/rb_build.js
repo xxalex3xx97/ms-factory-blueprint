@@ -6,7 +6,7 @@ function rbBuild(x){
   const {pl,G,NB,tz,mk,bx,bk,block,W,H}=x,cls=plcCls(bk),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk],t0=Date.now(),g=rbGrid(),no=why=>({ok:false,why}),byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),asc=(a,b)=>a-b;
   const root=pl.nodes.find(o=>!o.raw&&!(o.parents&&o.parents.length)),order=[],M={};
   const seen=new Set(),visit=o=>{if(seen.has(o.id))return;seen.add(o.id);o.children.map(i=>byId[i]).filter(c=>!c.raw).forEach(visit);order.push(o)};visit(root);   // shared product: visited (built) once
-  const poolOf=(q,w,rows)=>{const n=NB[q.id],mm=rows.length>4?{rows:n.outRows,mg:[]}:cmpMerge(n.outRows,n.outN,n.gOut);return cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows:rows,bal:true})};
+  const poolOf=(q,w,rows,wt)=>{const n=NB[q.id],mm=rows.length>4?{rows:n.outRows,mg:[]}:cmpMerge(n.outRows,n.outN,n.gOut);return cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows:rows,bal:true,wt,wi:mm.n})};
   // IN region of a merge module: producer lanes (x=0) -> member port rows (x=w-1), rows hull of both modules; consumer first row r
   const fr=(p,l)=>l.from!=null?l.from:p.c+p.pk.nPhys-1,   // block column the lane (so far) reaches
     thru=m=>{const o=[];m.kids.forEach(p=>p.mem.forEach((pm,pb)=>p.lanes.forEach(l=>{if(l.par!==m.id&&!(M[l.par]&&M[l.par].c!=null))o.push({p,pm,pb,l})})));return o};
@@ -27,7 +27,10 @@ function rbBuild(x){
       const used=new Set(),near=y0=>{for(let q=0;q<H;q++)for(const y of[y0-q,y0+q])if(y>=0&&y<=H-1&&!used.has(y)){used.add(y);return y}};
       o.parents.forEach(pid=>{const pj=m.pj[pid]=G[pid].o.rec.i.findIndex(([it])=>it===o.key);G[pid].mem.forEach((cm,ci)=>NB[cm.id].inR[pj].slice().sort(asc).forEach(y=>m.lanes.push({ci,y,ya:near(y),par:pid,id:o.id+'#'+m.lanes.length})))});
       if(m.lanes.length>H-2)return no('rb: '+o.item+' pool needs '+m.lanes.length+' lanes, a block holds '+(H-2));
-      m.outRows=m.lanes.map(l=>l.ya).sort(asc);
+      const mu=new Map(),pk0=l=>l.ci+','+l.y+','+l.par;m.lanes.forEach(l=>mu.set(pk0(l),(mu.get(pk0(l))||0)+1));   // lane demand weight as cmp_groups.js 71: machines on its port / lanes sharing the port
+      const ix=m.lanes.map((l,i)=>i).sort((a,b)=>m.lanes[a].ya-m.lanes[b].ya);
+      m.outRows=ix.map(i=>m.lanes[i].ya);
+      m.wt=ix.map(i=>{const l=m.lanes[i];return(((NB[G[l.par].mem[l.ci].id].lanes.find(q=>q.y===l.y&&q.key===o.key)||{}).m)||1)/mu.get(pk0(l))});
     }
     const o0=m.mem[0],NB0=NB[o0.id],z0=tz.by[o0.id];let pk;
     const dk=m.kids.filter(p=>p.defer&&p.c==null),kp=m.kids.filter(p=>p.c!=null);   // dk: leaf producers (raw supplier, one consumer) are placed WITH this module, adjacent west of its IN column
@@ -35,7 +38,7 @@ function rbBuild(x){
     const tent=r=>{let y=r+m.B;dk.forEach(p=>{p.r=y;y+=p.B})};
     const th0=m.kids.length?thru(m):[],clash=(r,t)=>t.p.r+t.pb>=r&&t.p.r+t.pb<=r+m.B-1;let rP=rowWant;while(th0.some(t=>clash(rP,t)))rP++;   // pack sizing at a row that does not collide with crossing lanes
     tent(rP);
-    if(m.kids.length)pk=rbPack({W,H,mk,dw:d.w,fb:{b:NB0.b,bi:NB0.bi},inF:w=>{const r=reg(m,w,rP);return r.rt.ok?{ok:true,items:r.rt.items}:{ok:false,why:r.rt.why||'merge routing failed'}},poolF:(w,rows)=>poolOf(o0,w,rows),outRows:m.outRows});
+    if(m.kids.length)pk=rbPack({W,H,mk,dw:d.w,fb:{b:NB0.b,bi:NB0.bi},inF:w=>{const r=reg(m,w,rP);return r.rt.ok?{ok:true,items:r.rt.items}:{ok:false,why:r.rt.why||'merge routing failed'}},poolF:(w,rows)=>poolOf(o0,w,rows,m.wt),outRows:m.outRows});
     else pk=rbPackNode(o0,z0,NB0,{block,bx,W,H,mk,outRows:m.outRows,dw:d.w});
     if(!pk.ok)return no('rb: '+o.item+': '+pk.why);
     m.pk=pk;
@@ -83,7 +86,7 @@ function rbBuild(x){
       if(!fit)return no('rb: shrink failed ('+m.o.item+')');
       if(!m.kids.length){const h=cmpPool({W:pk.colW[0],H,mk,bx,item:q.rec.i[0][0],raw:true,inRows:[],outRows:n.inR[0]});if(h.ok===false)return no(h.why);put(h.items,pX(0),Y)}
       put(fit,pX(1),Y);
-      const h=poolOf(q,pk.colW[2],m.outRows);if(h.ok===false)return no(h.why);put(h.items,pX(2),Y,ct);
+      const h=poolOf(q,pk.colW[2],m.outRows,m.wt);if(h.ok===false)return no(h.why);put(h.items,pX(2),Y,ct);
       nodes.push({id:q.id,item:q.item,key:q.key,rate:q.rate,lanes:n.lanes,outRows:n.outRows,rec:rk(q.rec),N:q.N,pN:m.o.N,util:q.util,pU:q.util,gx:m.c+pk.colP[1],gy:(m.r+b-gy0)*d.h,inCol:m.c+pk.colP[0],pool:m.c+pk.colP[2],row:m.r+b-gy0,fb:{x:pX(1),y:Y,w,h:H},ct,kind:q.inKind});
     }
   }
