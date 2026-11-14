@@ -10,6 +10,7 @@
 //    w = nPhys*W (the unused tail of a block is given to the piece whose item count grows least, so every block is full), used = sum of piece widths before slack
 //    | {ok:false,why} (cmpPool / cmpFeed why when a hub does not fit)
 function rbPack(c){
+  if(c.inF){const f=c.inF,mi=new Map();c={...c,inF:w=>{if(!mi.has(w))mi.set(w,f(w));return mi.get(w)}}}   // S8: one IN route per width per pack
   const {W,H,mk}=c,b=c.fb.b,bi=c.fb.bi,hW=W,dw=c.dw||1,Inf=Infinity;
   const R=c.Rout|0,top=Array.from({length:R},(_,k)=>1+2*k),bot=Array.from({length:R},(_,k)=>H-2-2*(R-1-k));
   const vars=c.outRows?[c.outRows]:R?[top,bot]:[[]];
@@ -21,6 +22,7 @@ function rbPack(c){
   };
   const cnt=(i,w)=>{const key=i+','+w;if(memo.has(key))return memo.get(key);const t=i===2?Math.max(...vars.map((_,v)=>cntV(2,w,v))):cntV(i,w,0);memo.set(key,t);return t};
   const srch=f=>{const ref=f(hW);let w=8;if(ref<Inf){while(w<hW&&f(w)>ref)w++}else{while(w<W&&f(w)===Inf)w++}return w};   // narrowest width whose item count does not exceed the one at the full width
+  if(c.inF&&cnt(0,W)===Inf)return{ok:false,why:c.inF(W).why||'hub does not fit'};   // S8: IN region unroutable at the full width = unroutable at any narrower width, skip the failing scan
   const ww=[c.inF?srch(w=>cnt(0,w)):0,mw,0],pwv=vars.map((_,v)=>srch(w=>cntV(2,w,v)));
   ww[2]=Math.max(...pwv);
   for(const i of [0,2]){if(i===0&&!c.inF)continue;if(cnt(i,ww[i])===Inf){const r=i===0?c.inF(W):c.poolF(W,vars[0]);return{ok:false,why:r.why||'hub does not fit'}}}
