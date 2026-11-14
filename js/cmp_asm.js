@@ -129,13 +129,15 @@ function cmpShr(b,mk,Wt){
 // CMP S7b: tree assembler. cmpAssembleTree({mk,spMk,bx,bk,pl (cmpPlan),sz (cmpTreeSize .by)}) -> {ok,T,nodes,routed} | {ok:false,why}.
 // Per node [IN][FB][POOL] at block columns o.col..o.col+2, block row o.row. IN = SRC block (k=1 raw), or a MERGE region (any crafted input): one block column of belts spanning the strip rows of the
 // node's subtree, routed by cmpRoute (child POOL/SRC east lanes at x=0 -> parent slot rows at x=W-1). Raw children of a merge node are SRC supplier blocks in their own strip row.
-function cmpAssembleTree(c){return cmpNarrow(c,(c,w)=>{const r=cmpAssembleTree1(c,w,1);return r.ok||!r.fz?r:cmpAssembleTree1(c,w,0)})}   // packed build first; a refused packed build retries one block per column
+function cmpAssembleTree(c){return cmpNarrow(c,(c,w)=>{const n0=c.dk&&c.dk.notes.length,r=cmpAssembleTree1(c,w,1);if(!r.fz||r.ok&&!(r.dock&&r.dock.miss&&r.dock.miss.length))return r;if(c.dk)c.dk.notes.length=n0;return cmpAssembleTree1(c,w,0)})}   // packed build first; a refused / dock-missing packed build retries one block per column
+// COMPACT with docks needs every raw hub (supplier SRC pool / src-node IN) in logical column 0 (the west dock edge) and no FEED node (N/S docks) and no GROUPS plan (pl.g); otherwise the one-block-per-column layout
+const cmpTreeDockOk=pl=>!pl.g&&pl.nodes.every(o=>o.inKind!=='feed'&&(o.raw?(pl.nodes.find(p=>p.id===o.parent).inKind!=='merge'||o.pool===0):o.inKind!=='src'||o.col===0));
 function cmpAssembleTree1(c,wide,fz){
-  const {mk,spMk,bx,bk,pl,sz}=c,dk=c.dk,no=why=>({ok:false,why,col:badCol,fz:!nof}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk],nb=wide&&!(dk&&pl.nodes.some(o=>o.inKind==='feed'))?cmpHubBlk(bk):null,hW=nb?nb.W:W;
-  let badCol=-1;const nof=!fz||!!dk||!!globalThis.CMP_NOFUSE;
+  const {mk,spMk,bx,bk,pl,sz}=c,dk=c.dk,nof=!fz||!!globalThis.CMP_NOFUSE||!!dk&&!cmpTreeDockOk(pl),no=why=>({ok:false,why,col:badCol,fz:!nof}),cls=plcCls(bk),d=dim({cls,rot:0}),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h,TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk],nb=wide&&!(dk&&(!nof||pl.nodes.some(o=>o.inKind==='feed')))?cmpHubBlk(bk):null,hW=nb?nb.W:W;
+  let badCol=-1;
   let colU=[],colX=[],colW=[],colP=[],pU=[],pX=[],pW=[],pN=[];const nc=col=>pN[colP[col]];   // physical block columns (pU unit x, pX cell x, pW floor width, pN narrow) and logical IN/FB/POOL columns (piece x colX, width colW)
   const block=CMP_BLOCKS[PL_ALL.indexOf(bk)],byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),NB={},ms=[],routed=[],OR={};
-  const put=(items,col,row,tag)=>items.forEach(b=>{const q={...b,x:b.x+colX[col],y:b.y+row*TH,...(b.dk?{hx:colX[col],hw:colW[col],hu:nc(col)?nb.dw:d.w,hc:col}:{})};ms.push(q);if(tag)tag.push(q)});
+  const put=(items,col,row,tag)=>items.forEach(b=>{const q={...b,x:b.x+colX[col],y:b.y+row*TH,...(b.dk?{hx:pX[colP[col]],hw:pW[colP[col]],hu:nc(col)?nb.dw:d.w,hc:col}:{})};ms.push(q);if(tag)tag.push(q)});
   const hubAt=(h,col,row,nb)=>{if(h.ok===false){badCol=col;return h.why}put(h.items,col,row);if(nb)h.items.filter(q=>q.ct).forEach(q=>nb.ct.push((q.x+colX[col])+','+(q.y+row*TH)))};
   for(const o of pl.nodes){   // 1 FB blocks
     if(o.raw)continue;
@@ -193,7 +195,7 @@ function cmpAssembleTree1(c,wide,fz){
         if(ref<Infinity){while(w<hW&&cnt(q,w)>ref)w++}else{while(w<W&&cnt(q,w)===Infinity)w++}
       }
     }
-    if(wide.has(q)&&w)w=W;
+    if(wide&&wide.has(q)&&w)w=W;
     ww.push(w);rw.push(rs);
   }
   const grp=[];   // [[q..]] physical columns
@@ -261,6 +263,6 @@ function cmpAssembleTree1(c,wide,fz){
   if(globalThis.__cmpDbg)globalThis.__cmpDbg.push({cb:colX.map((x,q)=>ms.filter(b=>b.x>=x&&b.x<x+colW[q]&&(PLC_BELT.includes(b.cls)||PLC_UG.includes(b.cls)||PLC_SPL.includes(b.cls))).length)});
   const nodes=pl.nodes.filter(o=>!o.raw).map(o=>({id:o.id,item:o.item,key:o.key,rate:o.rate,lanes:NB[o.id].lanes,outRows:NB[o.id].outRows,rec:rk(o.rec),N:o.N,pN:o.pN,util:o.util,pU:o.pU,gx:colU[o.fb],gy:o.row*d.h,inCol:o.col,pool:o.pool,row:o.row,fb:{x:colX[o.fb],y:o.row*TH,w:colW[o.fb],h:H},ct:NB[o.id].ct,kind:o.inKind}));
   const T={ok:true,blocks:[...bs.values()],ms,ug:ugs.length,cols:pl.cols,rows:pl.rows,max,rc:[],ov:0,span:pairs.filter(p=>p&&p.n>max).length,G:1};
-  if(dk&&(dk.in||dk.out)){const r=cmpDockApply({cls,mk},T,{nodes,routed});if(!r.ok)return no(r.why);return{ok:true,nodes,routed,T,dock:r}}
-  return{ok:true,nodes,routed,T};
+  if(dk&&(dk.in||dk.out)){const r=cmpDockApply({cls,mk},T,{nodes,routed});if(!r.ok)return no(r.why);return{ok:true,nodes,routed,T,dock:r,fz:!nof}}
+  return{ok:true,nodes,routed,T,fz:!nof};
 }
