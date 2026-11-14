@@ -3,6 +3,8 @@ Layouts: recipe (Assembler/Refinery/Enrichment/...): 01 00, FString recipe, i32 
 splitter/balancer: 01 00, i32 n, n*FString filter, i32 -1, i32 -1, i32 n, n*u8 ports
 dock: 01 00, FString name, i32 n, n*{FString item, i32 bLoading}   dronebay: 01 00, FString resource
 underground: 01 00, i32 Length (cells entrance..exit inclusive)
+named (elevator/teleporter): 01 00, FText name: u32 2|i8 -1|u32 1|FString (named), empty = u32 0|i8 -1|u32 0;
+  history form 0 on decode: u32 flags|i8 0|FString ns|FString key|FString source (name = source)
 """
 import struct
 
@@ -12,6 +14,7 @@ def kind(cls):
     if 'splitter' in c or 'beltbalancer' in c: return 'splitter'
     if 'underground' in c: return 'underground'
     if 'miningdronebay' in c: return 'dronebay'
+    if ('elevator' in c and 'itemelevator' not in c) or 'teleporter' in c: return 'named'
     if 'dock' in c and 'docking' not in c: return 'dock'
     if any(k in c for k in ('assembler', 'refinery', 'enrichment', 'growth', 'supercomputer', 'relicsynth')): return 'recipe'
     return None
@@ -34,6 +37,7 @@ def encode(k, d):
     elif k == 'dock': o += fs(d.get('name', '')) + struct.pack('<i', len(d['filters'])) + b''.join(fs(f['item']) + struct.pack('<i', f['bLoading']) for f in d['filters'])
     elif k == 'dronebay': o += fs(d.get('resource', ''))
     elif k == 'underground': o += struct.pack('<i', d['length'])
+    elif k == 'named': o += (struct.pack('<ibi', 2, -1, 1) + fs(d['name'])) if d.get('name') else struct.pack('<ibi', 0, -1, 0)
     else: raise ValueError(k)
     return o
 
@@ -63,6 +67,11 @@ def decode(cls, b):
         elif k == 'splitter': d['filters'] = [fstr() for _ in range(i32())]; d['prioA'] = i32(); d['prioB'] = i32(); d['ports'] = bools()
         elif k == 'dock': d['name'] = fstr(); d['filters'] = [{'item': fstr(), 'bLoading': i32()} for _ in range(i32())]
         elif k == 'dronebay': d['resource'] = fstr()
+        elif k == 'named':
+            i32(); h = take(1)[0]
+            if h == 255: d['name'] = fstr() if i32() else ''
+            elif h == 0: fstr(); fstr(); d['name'] = fstr()
+            else: return None
         else: d['length'] = i32()
         return d if p[0] == len(b) else None
     except Exception:
@@ -73,4 +82,7 @@ if __name__ == '__main__':
     r = bytes.fromhex('0100' '0f000000' + b'titaniumplates\0'.hex() + '04000000' '01010101')
     d = decode('BP_RefineryObject_C', r)
     assert d['recipe'] == 'titaniumplates' and encode('recipe', d) == r
+    n = bytes.fromhex('010000000000ff00000000')
+    assert decode('BPO_Elevator_02', n)['name'] == '' and encode('named', {'name': ''}) == n
+    assert decode('BPO_Teleporter', encode('named', {'name': 'Lift A'}))['name'] == 'Lift A'
     print('ok')

@@ -202,6 +202,7 @@ def site_json(A, ug=None):
                     if 'ports' in d: e['PortsEnabled'] = d['ports']
                     if 'filters' in d: e['Filters'] = d['filters']
                     if 'length' in d: e['Length'] = d['length']   # underground: cells entrance..exit inclusive, ONE machine at the entrance
+                    if d.get('name'): e['Name'] = d['name']   # dock/elevator/teleporter name (ConfigHex stays authoritative)
             if m['MachineID'] in dup: e.pop('ConfigHex', None); e.pop('Length', None)   # mod-built exit record: a tile, not a second tunnel
             elif m['MachineID'] in ug: e['Length'] = ug[m['MachineID']]   # world record wins (config is empty unless reconfigured)
             out_m.append(e)
