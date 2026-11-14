@@ -1,7 +1,7 @@
 // CMP C1 (geometry-free sizing, spec sections 2.1-2.3). cmpTree(P,item): linear stage chain, producer first.
 // cmpSize(P,item,mk,spMk,block): per stage template, S (capacity m(S)), K strips, machines per strip n[s][j].
 // Needs planner.js (plnCb, def, rk), js/tpl/iface.js (TPL_IF_SETS, tplIfSets), js/tpl/bundle.js + registry.js (tplPick).
-const CMP_MAXK=4,CMP_MAXKT=40;   // CMP_MAXKT: tree strips
+const CMP_MAXK=4,CMP_MAXKT=64;   // CMP_MAXKT: tree strips
 const CMP_MERGE_OK=['assembler_2in','advassembler_1_2in','growth_2_3_4in','supercomputer_2in','assembler_3in','enrichment_2_3in','advassembler_4in'];
 const CMP_LANES={'1x1':12,'1x2':12,'2x2':28,'2x2c':28};   // max lanes per pooled face = 4*floor((H-2)/4) (c stacked containers, ya>=1, bottom row free); H = 14 / 30
 const cmpErr=why=>({ok:false,why});
@@ -258,7 +258,9 @@ function cmpCompose1(P,item,mk,spMk,o={}){
     if(!tz.ok){   // S12: a node needs more machines than one block holds -> K replicated tree strips (each its own OZ), root machines split like cmpDist
       const why1=tz.why,ex=q=>{const t={};q.nodes.forEach(o=>{if(!o.raw)t[o.key]=(t[o.key]||0)+o.N});return Object.keys(t).reduce((s,k)=>s+t[k]-P.nodes[k].machines,0)};
       let last=why1,bp=null,bz=null,bx=1e9;   // first K whose strips build exactly the planner machines; else the K with the fewest extra machines
-      for(let k=2;k<=CMP_MAXKT;k++){
+      let kmin=2,wn=null;for(const o of pl.nodes){if(o.raw||!(caps[o.key]>0))continue;const q=Math.ceil((o.pm>0&&o.rate>0?o.rate/o.pm:o.N)/caps[o.key]-1e-9);if(q>kmin){kmin=q;wn=o}}
+      if(kmin>CMP_MAXKT)return cmpErr(why1+' (needs >= '+kmin+' replicated strips for '+wn.item+', a block holds '+caps[wn.key]+'; planner N cannot be kept)');
+      for(let k=kmin;k<=CMP_MAXKT;k++){
         const q=cmpPlanK(P,item,mk,k,caps);if(!q.ok){last=q.why;break}
         const z=cmpTreeSize(q,mk,spMk,block);if(!z.ok){last=z.why;continue}
         const e=ex(q);if(e<bx){bp=q;bz=z;bx=e}if(!e)break;
