@@ -17,7 +17,6 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=bl');
 await pg.waitForFunction(() => window.__fb && typeof blRow === 'function' && typeof placerTile === 'function' && typeof blMachine === 'function');
-await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/refinery_1in.js'});
 let fails = 0;
 const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } else console.log('ok   ' + msg) };

@@ -15,7 +15,6 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=bl');
 await pg.waitForFunction(() => window.__fb && typeof placerCut === 'function' && typeof pfSplOff === 'function');
-await pg.addScriptTag({content: fs.readFileSync(path.join(ROOT, 'js/tpl/iface.js'), 'utf8')});
 await pg.addScriptTag({content: fs.readFileSync(path.join(ROOT, 'js/tpl/growth_2_3_4in.js'), 'utf8').replace(/^const (TPLG_\w+)=/gm, 'var $1=')});
 let fails = 0;
 const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } else console.log('ok   ' + msg) };

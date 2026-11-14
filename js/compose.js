@@ -31,6 +31,7 @@ function cmpBuild(t,spec,s,last){
   if(f.v!==1)return cmpErr('template not on Edge Interface v1');
   const used=f.sets.map((q,i)=>q.n>0?i:-1).filter(i=>i>=0);
   const lim=globalThis.CMP_CAP4?4:CMP_LANES[spec.block]||4;   // physical: a pool stacks 4x4 containers (4 port rows each) in the block height, see CMP_LANES
+  if(!globalThis.CMP_CAP4&&(s>0&&used.length*f.M>4||s<last&&used.reduce((a,i)=>a+(f.sets[i].outs?f.sets[i].outs.length:1),0)>4))globalThis.CMP_WIDE=true;   // FAST: the 4-lane variant differs only if some build asked for more than 4 lanes
   if(s>0&&used.length*f.M>lim)return cmpErr('pool lanes > '+lim);
   if(s<last&&used.reduce((a,i)=>a+(f.sets[i].outs?f.sets[i].outs.length:1),0)>lim)return cmpErr('pool lanes > '+lim);
   const hs=tplIfSets(spec.block,spec.S).hs,need=(s>0?f.M:0)+4*spec.raw;
@@ -173,12 +174,20 @@ function cmpArmoury(P,item,mk,spMk,o,bk,BX){
 // (so a smaller-floor Auto pick can never cost blocks / belts); among the allowed builds the least floor area, then fewest belts wins.
 // build ranking: floor area (block units), then belts; block count first (CMP_BLK=false: area first)
 function cmpKey(L){const ar=L.tile.blocks.reduce((a,q)=>{const e=dim({cls:q.cls,rot:q.rot||0});return a+e.w*e.h},0);return(globalThis.CMP_BLK===false?0:L.tile.blocks.length*1e11)+ar*1e6+L.stat.belts+L.stat.ug}
+// FAST memo (tests only: window.CMP_MEMO=true, set by tests/cmp_plan.mjs checkCompose): same case composed again (checkCompose + dock/info recompose) returns the first result; key = plan signature + args + engine flags
 function cmpCompose(P,item,mk,spMk,o={}){
+  if(!globalThis.CMP_MEMO)return cmpCompose0(P,item,mk,spMk,o);
+  const M=globalThis.__cmpMemo=globalThis.__cmpMemo||new Map(),sel=$('plnBk'),g=globalThis,
+    key=JSON.stringify([item,mk,spMk,o,sel&&sel.value,['CMP_GROUPS','CMP_IN','CMP_CAP4','CMP_NOFUSE','CMP_BLK','CMP_GROUPS_AUTO','CMP_ENGINE'].map(k=>g[k]),Object.keys(P.nodes).map(k=>{const n=P.nodes[k];return[k,n.machines,n.rate,n.util,n.rec?rk(n.rec):'']})]);
+  let e=M.get(key);if(e){window.CMP_BK=e.bk;return e.L}
+  const L=cmpCompose0(P,item,mk,spMk,o);M.set(key,{L,bk:window.CMP_BK});return L;
+}
+function cmpCompose0(P,item,mk,spMk,o={}){
   if(globalThis.CMP_CAP4||globalThis.CMP_IN||globalThis.CMP_GROUPS&&!(o.dock&&(o.dock.in||o.dock.out)))return cmpCompose1(P,item,mk,spMk,o);
   const nf0=globalThis.CMP_NOFUSE,dk=!!(o.dock&&(o.dock.in||o.dock.out)),C=[];
   globalThis.CMP_IN=true;
-  try{for(const nf of nf0||dk?[true]:[true,false])for(const c4 of[false,true]){globalThis.CMP_NOFUSE=nf;globalThis.CMP_CAP4=c4;const L=cmpCompose1(P,item,mk,spMk,o);C.push({L,nf,bk:window.CMP_BK})}}
-  finally{globalThis.CMP_IN=false;globalThis.CMP_CAP4=false;globalThis.CMP_NOFUSE=nf0}
+  try{for(const nf of nf0||dk?[true]:[true,false])for(const c4 of[false,true]){globalThis.CMP_NOFUSE=nf;globalThis.CMP_CAP4=c4;if(c4&&!globalThis.CMP_WIDE)continue;if(!c4)globalThis.CMP_WIDE=false;const L=cmpCompose1(P,item,mk,spMk,o);C.push({L,nf,bk:window.CMP_BK})}}
+  finally{globalThis.CMP_IN=false;globalThis.CMP_CAP4=false;globalThis.CMP_WIDE=false;globalThis.CMP_NOFUSE=nf0}
   const ok=C.filter(c=>c.L.ok);
   if(!ok.length){window.CMP_BK=C[0].bk;return C[0].L}
   const k=cmpKey,bl=L=>L.tile.blocks.length,be=L=>L.stat.belts+L.stat.ug+L.stat.spl;

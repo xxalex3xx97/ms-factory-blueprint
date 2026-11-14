@@ -159,14 +159,18 @@ export async function printTree(page, name, rate, mk = 1) {
 }
 
 // node side: asserts. bk: class of the Blocks select (optional). Returns {ok, errs, row}.
+export const PROF = {n: 0, build: 0, flood: 0, flow: 0, stage: 0, mut: 0};   // PROF=1: per-phase ms summed over checkCompose calls (printed on exit)
+const tm = async (k, f) => { const t = Date.now(); try { return await f() } finally { PROF[k] += Date.now() - t } };
+if (process.env.PROF) process.on('exit', () => console.log('PROF ' + JSON.stringify(PROF)));
 export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opts = {}) {
-  const strict = opts.strict !== false;
-  const r = await page.evaluate(pageRun, {recipeKey, rate, mk, bk, strict, dock: opts.dock || null, exactN: !!opts.exactN});
+  const strict = opts.strict !== false; PROF.n++;
+  if (!process.env.NOMEMO) await page.evaluate(() => { window.CMP_MEMO = true });   // page compose memo (js/compose.js): the dock/info recompose of the same case is free
+  const r = await tm('build', () => page.evaluate(pageRun, {recipeKey, rate, mk, bk, strict, dock: opts.dock || null, exactN: !!opts.exactN}));
   const errs = [...(r.errs || [])];
   const row = {recipe: recipeKey, rate: +(+rate).toFixed(2)};
   if (r.errs) return {ok: false, errs, row, refused: r.refused};
   errs.push(...r.hard);
-  const fl = await page.evaluate(floodPage, {items: r.items, finalItems: r.finalItems});
+  const fl = await tm('flood', () => page.evaluate(floodPage, {items: r.items, finalItems: r.finalItems}));
   const soft = [...r.cerrs, ...fl.errs];
   if (strict) { errs.push(...soft); if (!fl.ozReach.length) errs.push('product reaches no container'); if (r.arm && fl.ozReach.length < r.nParts) errs.push('Armoury: ' + r.nParts + ' components but only ' + fl.ozReach.length + ' reach a container') }
   else if (soft.length) console.log('  (non-strict) ' + soft.length + ' soft errs, first: ' + soft.slice(0, 2).join(' | '));
@@ -175,10 +179,10 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
     const ozc = r.nodes.find(q => q.row === Math.min(...r.nodes.map(z => z.row)) && q.pool === Math.max(...r.nodes.map(z => z.pool)));
     if (!r.arm && ozc && !ozc.ct.length) errs.push('no OZ container');
   }
-  const flow = await page.evaluate(pageFlow, {recKey: r.recKey, pm: r.pm});
+  const flow = await tm('flow', () => page.evaluate(pageFlow, {recKey: r.recKey, pm: r.pm}));
   if (strict && flow.mu > 1 + 1e-9) errs.push('belt util ' + flow.mu + ' > 1');
   if (r.nodes) {
-    const st = await page.evaluate(pageStage, {nodes: r.nodes, items: r.items, mk});
+    const st = await tm('stage', () => page.evaluate(pageStage, {nodes: r.nodes, items: r.items, mk}));
     st.forEach(z => {
       if (z.prod < 0.99 * z.rate) errs.push('stage ' + z.item + ': product ' + z.prod + ' < 0.99 x ' + (+z.rate).toFixed(2));
       if (z.prod > 1.05 * z.rate) errs.push('stage ' + z.item + ': product ' + z.prod + ' > 1.05 x ' + (+z.rate).toFixed(2) + ' (over-feed or injection artifact)');
@@ -189,10 +193,11 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
   }
   Object.assign(row, {eng: r.L.eng, K: r.K, blocks: r.L.blocks, ug: r.L.ug, stages: r.count.map(c => c.item + ' N' + c.N + '/' + c.built + ' u' + c.util).join('; '), belts: r.belts, machines: r.machines,
     beltsPerMach: r.machines ? +(r.belts / r.machines).toFixed(1) : null, floodErrs: fl.errs.length, containers: fl.containers, ozReach: fl.ozReach.length, full: flow.full, partial: flow.partial, maxBelt: flow.mu});
+  const t0m = Date.now();
   if (opts.mutate) {
     const reach = new Set(fl.reach), cand = r.items.filter(b => PLC_BELT_NAMES.includes(b.cls) && reach.has(b.x + ',' + b.y));
     // opts.mutate === 'any' (multi-lane: parallel lanes of one item are redundant for an item-level flood): try up to 12 evenly spaced belts, at least one must turn the flood red
-    const picks = opts.mutate === 'any' ? Array.from({length: Math.min(12, cand.length)}, (_, i) => cand[Math.floor((i + .5) * cand.length / Math.min(12, cand.length))]) : [cand[Math.floor(cand.length / 2)]];
+    const picks = opts.mutate === 'any' ? Array.from({length: Math.min(MUT, cand.length)}, (_, i) => cand[Math.floor((i + .5) * cand.length / Math.min(MUT, cand.length))]) : [cand[Math.floor(cand.length / 2)]];
     if (!picks[0]) errs.push('mutation: no belt reached by the flood');
     else { let red = false; for (const pick of picks) { const m2 = await page.evaluate(floodPage, {items: r.items.filter(b => b !== pick), finalItems: r.finalItems}); row.mutErrs = m2.errs.length; row.mutOz = m2.ozReach.length; if (m2.errs.length > fl.errs.length || m2.ozReach.length < fl.ozReach.length) { red = true; break } } if (!red) errs.push('mutation (deleted belt @' + picks[0].x + ',' + picks[0].y + (picks.length > 1 ? ' +' + (picks.length - 1) + ' more' : '') + ') did not turn the flood red') }
   }
@@ -202,7 +207,7 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
       const gone = await page.evaluate(({items, routed, kind, any}) => {
         const ugs = items.filter(b => PLC_UG.includes(b.cls)), ex = new Set(ugPairs(ugs).map(p => p.t.x + ',' + p.t.y)), rs = new Set(routed.map(q => q.x + ',' + q.y));
         const c = items.filter(b => rs.has(b.x + ',' + b.y) && (kind === 'exit' ? ex.has(b.x + ',' + b.y) : PLC_BELT.includes(b.cls)));
-        const nn = any ? Math.min(12, c.length) : 1;
+        const nn = any ? Math.min(MUT, c.length) : 1;
         return Array.from({length: nn}, (_, i) => c[any ? Math.floor((i + .5) * c.length / nn) : Math.floor(c.length / 2)]).filter(Boolean).map(pick => ({x: pick.x, y: pick.y}));
       }, {items: r.items, routed: r.routed, kind, any: opts.mutate === 'any'});
       if (!gone.length) { if (kind === 'belt') errs.push('mutation: no routed belt'); continue }
@@ -211,8 +216,10 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
       if (!red) errs.push('mutation (deleted routed ' + kind + ' @' + gone[0].x + ',' + gone[0].y + ') did not turn the flood red');
     }
   }
+  PROF.mut += Date.now() - t0m;
   return {ok: errs.length === 0, errs, row, nodes: r.nodes, count: r.count, items: r.items};
 }
+const MUT = +process.env.MUT || 4;   // belts tried per 'any' mutation (red needs only one); MUT=12 = full pass
 const PLC_BELT_NAMES = ['DAT_ConveyorBelt', 'DAT_ConveyorBelt2', 'DAT_ConveyorBelt3'];
 
 const isMain = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;

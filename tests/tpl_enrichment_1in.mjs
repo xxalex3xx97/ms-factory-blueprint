@@ -17,7 +17,6 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof placerTile === 'function' && typeof pfSplOff === 'function');
-if (!(await pg.evaluate(() => typeof tplIfSets === 'function'))) await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});   // index.html may already load iface.js
 await pg.addScriptTag({path: ROOT + '/js/tpl/enrichment_1in.js'});   // fresh copy (const redeclare is fine only if bundle lacks it)
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };

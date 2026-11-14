@@ -16,7 +16,6 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof placerTile === 'function' && typeof ugPairs === 'function');
-await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/special_machines.js'});
 fs.mkdirSync(ROOT + '/tests/shots', {recursive: true});
 let fails = 0;

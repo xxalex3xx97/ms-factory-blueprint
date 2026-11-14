@@ -17,7 +17,6 @@ const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
 await pg.goto(pathToFileURL(ROOT + '/index.html').href);
 await pg.waitForFunction(() => window.__fb && typeof placerCut === 'function' && typeof pfSplOff === 'function');
-await pg.addScriptTag({path: ROOT + '/js/tpl/iface.js'});
 await pg.addScriptTag({path: ROOT + '/js/tpl/assembler_3in.js'});
 let fails = 0;
 const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } };
