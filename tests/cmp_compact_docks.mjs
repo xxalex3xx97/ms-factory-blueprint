@@ -32,7 +32,7 @@ const info = a => {
   const L = placerLayout(P, item, a.mk, a.mk, {box: 'DAT_Container_2', mod: false, dock: a.dock, bk: a.bk});
   if (!L.ok) return {err: L.why, notes: [], dkfail: 0};
   const T = L.tile, dockCls = [plcCls('BPO_Dock'), plcCls('BPO_Dock_2'), plcCls('BPO_StationAdapter_01')];
-  return {factory: T.blocks.filter(b => !dockCls.includes(b.cls)).length, nrm: T.blocks.filter(b => b.cls === plcCls('BPO_Dock')).length, ind: T.blocks.filter(b => b.cls === plcCls('BPO_Dock_2')).length, notes: L.note.filter(n => /Dock-limited|not possible/.test(n)), dkfail: (globalThis.CMP_DKFAIL || []).length};
+  return {pcs: L.stat.belts + L.stat.ug + L.stat.spl, factory: T.blocks.filter(b => !dockCls.includes(b.cls)).length, nrm: T.blocks.filter(b => b.cls === plcCls('BPO_Dock')).length, ind: T.blocks.filter(b => b.cls === plcCls('BPO_Dock_2')).length, notes: L.note.filter(n => /Dock-limited|not possible/.test(n)), dkfail: (globalThis.CMP_DKFAIL || []).length};
 };
 for (const [label, re, rate, bk, dn, win, tree] of CASES) {
   const key = await pg.evaluate(r => [].concat(...Object.values(RECS)).map(rk).find(k => new RegExp(r).test(k)), re);
@@ -50,10 +50,10 @@ for (const [label, re, rate, bk, dn, win, tree] of CASES) {
   check(n.r.ok, label + ' packed layout strict' + (n.r.ok ? '' : ': ' + (n.r.errs || []).slice(0, 2).join(' ; ')));
   if (!o.r.ok || !n.r.ok) continue;
   const a = o.r.row, b = n.r.row, ab = a.belts + a.ug, bb = b.belts + b.ug;
-  console.log('  ' + label + ': blocks ' + o.a.factory + ' -> ' + n.a.factory + ', belts+ug ' + ab + ' -> ' + bb + ', docks ' + o.a.nrm + '/' + o.a.ind + ' -> ' + n.a.nrm + '/' + n.a.ind);
+  console.log('  ' + label + ': blocks ' + o.a.factory + ' -> ' + n.a.factory + ', belts+ug ' + ab + ' -> ' + bb + ', pieces ' + o.a.pcs + ' -> ' + n.a.pcs + ', docks ' + o.a.nrm + '/' + o.a.ind + ' -> ' + n.a.nrm + '/' + n.a.ind);
   check(b.machines === a.machines, label + ': machines equal');
   check(n.a.factory <= o.a.factory, label + ': factory blocks new<=old');
-  check(bb <= ab * 1.01, label + ': belts+ug new<=old*1.01');
+  check(n.a.pcs <= o.a.pcs, label + ': placed pieces (belts+ug+spl) new<=old');
   check(n.a.nrm === o.a.nrm && n.a.ind === o.a.ind, label + ': dock counts equal');
   check(n.a.notes.every(x => o.a.notes.includes(x)), label + ': no new dock notes');
   check(n.a.dkfail <= o.a.dkfail, label + ': no new CMP_DKFAIL (' + o.a.dkfail + ' -> ' + n.a.dkfail + ')');

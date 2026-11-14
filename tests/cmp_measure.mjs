@@ -23,10 +23,10 @@ const info = a => {
   const L = placerLayout(P, item, a.mk, a.mk, {box: 'DAT_Container_2', mod: false, dock: a.dock, bk: a.bk});
   if (!L.ok) return {err: L.why};
   const T = L.tile, dockCls = [plcCls('BPO_Dock'), plcCls('BPO_Dock_2'), plcCls('BPO_StationAdapter_01')];
-  return {err: '', factory: T.blocks.filter(b => !dockCls.includes(b.cls)).length, nrm: T.blocks.filter(b => b.cls === plcCls('BPO_Dock')).length, ind: T.blocks.filter(b => b.cls === plcCls('BPO_Dock_2')).length, notes: L.note.filter(n => /Dock-limited|not possible/.test(n))};
+  return {err: '', pcs: L.stat.belts + L.stat.ug + L.stat.spl, factory: T.blocks.filter(b => !dockCls.includes(b.cls)).length, nrm: T.blocks.filter(b => b.cls === plcCls('BPO_Dock')).length, ind: T.blocks.filter(b => b.cls === plcCls('BPO_Dock_2')).length, notes: L.note.filter(n => /Dock-limited|not possible/.test(n))};
 };
 const flt = process.env.CASE && new RegExp(process.env.CASE);
-console.log('label | block | dock | NOFUSE | ok | factoryBlocks | docks(n/i) | belts+ug | machines | notes');
+console.log('label | block | dock | NOFUSE | ok | factoryBlocks | docks(n/i) | belts+ug | pieces | machines | notes');
 for (const [label, re, rate] of CASES) {
   if (flt && !flt.test(label)) continue;
   const k = await findKey(re);
@@ -41,7 +41,7 @@ for (const [label, re, rate] of CASES) {
     if (r.refused) { console.log(tag + ' | SKIP refused: ' + String(r.refused).slice(0, 90)); continue }
     const notes = a.err ? 'layout: ' + a.err : ([...a.notes].join('; ') || '-');
     const errTxt = r.errs.length ? ' errs: ' + r.errs.slice(0, 2).join(' | ') : '';
-    console.log([tag, r.ok ? 'ok' : 'FAIL', a.factory ?? '-', (a.nrm ?? '-') + '/' + (a.ind ?? '-'), (r.row.belts ?? '-') + '+' + (r.row.ug ?? '-'), r.row.machines ?? '-', notes + mode + errTxt].join(' | '));
+    console.log([tag, r.ok ? 'ok' : 'FAIL', a.factory ?? '-', (a.nrm ?? '-') + '/' + (a.ind ?? '-'), (r.row.belts ?? '-') + '+' + (r.row.ug ?? '-'), a.pcs ?? '-', r.row.machines ?? '-', notes + mode + errTxt].join(' | '));
   }
 }
 await pg.evaluate(() => { window.CMP_NOFUSE = false });
