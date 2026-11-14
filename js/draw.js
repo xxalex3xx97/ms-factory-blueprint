@@ -502,6 +502,7 @@ function paint0(){
   }
   if(F&&smOn())drawBeltItems(s);
   if(F&&smOn())drawSimRouters(s);
+  if(F&&window.EXO_LANES)drawExoLanes(s);
   if(F){drawPorts(s);drawBadges(s)}
   if(F){
     cx.save();cx.setLineDash([5,3]);cx.lineWidth=1.5;cx.strokeStyle="hsl(45,95%,62%)";cx.fillStyle="hsl(45,95%,62%)";cx.font="11px system-ui,sans-serif";cx.textBaseline="bottom";

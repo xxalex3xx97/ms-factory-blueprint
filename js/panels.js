@@ -75,6 +75,13 @@ function drawSimRouters(s){
       cx.fillStyle="rgba(0,0,0,.72)";cx.fillRect(px-pw/2,py-7,pw,14);cx.fillStyle="hsl(190,80%,78%)";cx.fillText(t,px,py+.5)})});
   cx.restore();
 }
+// item labels on the Exosuit bus lanes (window.EXO_LANES, set by tools/hand/exosuit.js)
+function drawExoLanes(s){
+  if(s<8||!window.EXO_LANES)return;
+  cx.save();cx.font="bold 10px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";
+  EXO_LANES.forEach(l=>{const px=V.ox+(l.x+.5)*s,py=V.oy+(l.y+.5)*s;if(!vis(px-40,py-8,80,16))return;const w=cx.measureText(l.t).width+6;cx.fillStyle="rgba(0,0,0,.72)";cx.fillRect(px-w/2,py-7,w,14);cx.fillStyle="hsl(45,90%,70%)";cx.fillText(l.t,px,py+.5)});
+  cx.restore();
+}
 function simLiveHtml(one){
   const Z=SIM,st=Z&&smS();if(!st)return"";
   const nm=id=>{const b=S.blocks.find(q=>q.id===id);return b?esc(nameOf(b)):"?"},row=(a,b)=>`<div class="kv">${a}: <b>${b}</b></div>`;

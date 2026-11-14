@@ -10,7 +10,9 @@ window.HAND=(function(){
   function reset(){S.blocks=new Map();S.occ=new Map();S.res=new Map();S.door=new Map();S.M=[];S.pcs=[];S.span=new Map();S.fails=[];S.paths=[]}
   function block(gx,gy){S.blocks.set(k(gx,gy),{gx,gy})}
   function inFloor(x,y){const gx=Math.floor(x/TW),gy=Math.floor(y/TW);if(!S.blocks.has(k(gx,gy)))return false;return x-gx*TW<FW&&y-gy*TW<FW}
-  const free=(x,y)=>{const kk=k(x,y);return inFloor(x,y)&&!S.occ.has(kk)&&!S.res.has(kk)};
+  let cur=null;   // owner label of the link being routed: it may use cells reserved for itself
+  const free=(x,y)=>{const kk=k(x,y);if(!inFloor(x,y)||S.occ.has(kk))return false;const r=S.res.get(kk);return r===undefined||r===cur};
+  function reserve(cells,owner){cells.forEach(([x,y])=>{const kk=k(x,y);if(inFloor(x,y)&&!S.occ.has(kk)&&!S.res.has(kk))S.res.set(kk,owner)})}
   // put({cls,gx,gy,lx,ly,rec,ct,name}) -> machine record, or null when the spot is taken / outside the floor
   function put(o){
     const x=o.gx*TW+o.lx,y=o.gy*TW+o.ly,d=dim({cls:o.cls,rot:0});
@@ -60,7 +62,8 @@ window.HAND=(function(){
     a.used.add(pa.key);b.used.add(pb.key);
   }
   // link(a,b): belt from an unused port of a to an unused port of b. Returns path length or 0 (and logs the failure).
-  function link(a,b,label,opt){
+  function link(a,b,label,opt){cur=(opt&&opt.own)||null;try{return link0(a,b,label,opt)}finally{cur=null}}
+  function link0(a,b,label,opt){
     const ca=cands(a,cx(b),cy(b),opt&&opt.pa).slice(0,5);
     for(const A of ca){
       const cb=cands(b,A.o[0],A.o[1],opt&&opt.pb).slice(0,5);
@@ -114,5 +117,5 @@ window.HAND=(function(){
     const bl=[...S.blocks.values()].map(b=>({cls:CLS,x:b.gx*D0.w,y:b.gy*D0.h}));
     return{ok:true,blocks:bl,ms:items,fails:S.fails.slice(),machines:S.M.length,belts:S.pcs.length};
   }
-  return{reset,block,put,link,result,check,verify,S,TW,FW,CLS,free,inFloor};
+  return{reset,block,put,link,reserve,result,check,verify,S,TW,FW,CLS,free,inFloor};
 })();
