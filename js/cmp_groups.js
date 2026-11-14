@@ -9,14 +9,13 @@ if(typeof location!=='undefined'&&/[?&]groups=1/.test(location.search))globalThi
 function cmpPlanG(P,item,mk,spMk,block){
   const pl0=cmpPlan(P,item,mk,{});if(!pl0.ok)return pl0;
   const by0=Object.fromEntries(pl0.nodes.map(o=>[o.id,o]));
-  if(pl0.nodes.some(o=>o.inKind==='feed'))return cmpNo('groups prototype: all-raw multi-input node not built');
   const caps={},z0=cmpTreeSize(pl0,mk,spMk,block,caps),crafted=pl0.nodes.filter(o=>!o.raw);
   if(crafted.some(o=>!(caps[o.key]>0)))return z0.ok?cmpErr('no block capacity'):z0;
   const kids=o=>o.children.map(i=>by0[i]).filter(c=>!c.raw),G={};
   const nodes=[],D=pl0.D;
   for(const o of crafted){const g=G[o.id]={o,B:Math.ceil(o.N/caps[o.key]),mem:[]},m=caps[o.key];
     for(let b=0;b<g.B;b++){const n=b<g.B-1?m:o.N-m*(g.B-1);
-      const q={...o,id:o.id+'.'+b,N:n,rate:o.rate*n/o.N,row:0,children:[],parent:null,main:false,inKind:kids(o).length?'merge':o.inKind,join:b>0,gid:o.id,b,note:''};
+      const q={...o,id:o.id+'.'+b,N:n,rate:o.rate*n/o.N,row:0,children:[],parent:null,main:false,inKind:kids(o).length?'merge':o.inKind,join:b>0&&o.inKind!=='feed',gid:o.id,b,note:''};
       g.mem.push(q);nodes.push(q)}}
   const ge=[];
   for(const o of crafted){const g=G[o.id];
