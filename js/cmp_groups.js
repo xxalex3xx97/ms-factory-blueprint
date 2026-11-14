@@ -9,18 +9,19 @@ if(typeof location!=='undefined'&&/[?&]groups=1/.test(location.search))globalThi
 function cmpPlanG(P,item,mk,spMk,block){
   const pl0=cmpPlan(P,item,mk,{});if(!pl0.ok)return pl0;
   const by0=Object.fromEntries(pl0.nodes.map(o=>[o.id,o]));
-  if(pl0.nodes.some(o=>o.raw&&by0[o.parent].inKind==='merge'))return cmpNo('groups prototype: raw supplier of a merge node not built');
   if(pl0.nodes.some(o=>o.inKind==='feed'))return cmpNo('groups prototype: all-raw multi-input node not built');
   const caps={},z0=cmpTreeSize(pl0,mk,spMk,block,caps),crafted=pl0.nodes.filter(o=>!o.raw);
   if(crafted.some(o=>!(caps[o.key]>0)))return z0.ok?cmpErr('no block capacity'):z0;
   const kids=o=>o.children.map(i=>by0[i]).filter(c=>!c.raw),G={};
-  const nodes=[],D=Math.max(...crafted.map(o=>o.depth));
+  const nodes=[],D=pl0.D;
   for(const o of crafted){const g=G[o.id]={o,B:Math.ceil(o.N/caps[o.key]),mem:[]},m=caps[o.key];
     for(let b=0;b<g.B;b++){const n=b<g.B-1?m:o.N-m*(g.B-1);
       const q={...o,id:o.id+'.'+b,N:n,rate:o.rate*n/o.N,row:0,children:[],parent:null,main:false,inKind:kids(o).length?'merge':o.inKind,join:b>0,gid:o.id,b,note:''};
       g.mem.push(q);nodes.push(q)}}
   const ge=[];
   for(const o of crafted){const g=G[o.id];
+    for(const c of o.children.map(i=>by0[i]).filter(c=>c.raw&&o.inKind==='merge'))g.mem.forEach(q=>{   // raw supplier of a merge node: one SRC per consumer member, own lanes
+      const r={...c,id:c.id+'.'+q.b,parent:q.id,rate:c.rate*q.N/o.N,row:0,children:[],gid:c.id,b:0};q.children.push(r.id);nodes.push(r);ge.push({c:[r.id],p:[q.id],f:[[r.rate]]})});
     for(const c of kids(o)){const gc=G[c.id];
       const s=gc.mem.map(q=>q.rate),d=g.mem.map(q=>c.rate*q.N/o.N),f=s.map(()=>d.map(()=>0));
       for(let b=0;b<d.length;b++){let need=d[b];for(let a=0;a<s.length&&need>1e-9;a++){const t=Math.min(s[a],need);f[a][b]=t;s[a]-=t;need-=t}}
@@ -64,7 +65,7 @@ function cmpGAssign(pl,NB,H){
     else B.forEach((b,bi)=>A.forEach((a,ai)=>{if(e.f[ai][bi]>1e-6)sr[bi].forEach((ys,k)=>{L[ai].push({bi,ys});pt.add(bi+','+k)})}));   // LANEMERGE: every producer feeding a consumer gets a lane to EVERY port of it (router side-loads them): each pool splits its output evenly over its lanes and a full consumer back-pressures its lanes, so the sim/game settles on the planner flows (a single port per producer pair starved ports: fair merge alternation)
     const mu=new Map(),mc=(bi,ys)=>bi+','+ys,tg=(ai,bi,ys)=>mu.get(mc(bi,ys))>1?B[bi].id+'@'+ys:A[ai].id+'>'+B[bi].id;   // a port fed by one lane: lane and ports of that pair share a tag (router picks any); fed by several: own tag per port, lanes side-load (j)
     L.forEach(l=>l.forEach(q=>mu.set(mc(q.bi,q.ys),(mu.get(mc(q.bi,q.ys))||0)+1)));
-    const own=by[e.p[0]];reg[own.id]=reg[own.id]||{src:[],snk:[]};
+    const own=by[pl.g.G[by[e.p[0]].gid].mem[0].id];reg[own.id]=reg[own.id]||{src:[],snk:[]};
     A.forEach((a,ai)=>{
       if(L[ai].length>H-2)return;
       const used=new Set(),near=y0=>{for(let d=0;d<H;d++)for(const y of[y0-d,y0+d])if(y>=0&&y<=H-1&&!used.has(y)){used.add(y);return y}};   // lane leaves the pool at its sink's own row when free (same-row lanes stay straight), else the nearest free row
@@ -86,6 +87,6 @@ function cmpGroupsRun(P,item,mk,spMk,BX,bk,block){
   const mkA=()=>cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by,dk:null});let A=mkA();
   if(!A.ok&&/merge routing/.test(A.why)){globalThis.__gFF=1;try{A=mkA()}finally{globalThis.__gFF=0}}   // all-to-all lanes did not route: fill-first ports
   if(!A.ok)return A;
-  const stages=pl.nodes.map(o=>({item:o.item,cls:o.cls,tpl:tz.by[o.id].tpl,block,S:tz.by[o.id].S,N:o.N,perStrip:[o.N],B:1}));
+  const stages=pl.nodes.filter(o=>!o.raw).map(o=>({item:o.item,cls:o.cls,tpl:tz.by[o.id].tpl,block,S:tz.by[o.id].S,N:o.N,perStrip:[o.N],B:1}));
   return{ok:true,A,stages,cmpI:{K:1,tree:true,groups:true,stages,nodes:A.nodes,routed:A.routed},note:pl.notes.slice(),per:[P.nodes[item].machines]};
 }
