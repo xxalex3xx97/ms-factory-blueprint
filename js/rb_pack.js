@@ -54,7 +54,6 @@ function rbPackNode(o,z,NB,x){
   const {block,bx,W,H,mk}=x,bz=NB.b,hs=tplIfSets(block,z.S).hs,sets=bz.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0);
   const fS={H,mk,bx,sets,M:bz.iface.M,k:o.k,main:0,pass:[],rawItems:o.rec.i.map(q=>q[0]),allRaw:true,seed:o.growth?o.key:null};
   const inF=o.inKind==='src'?w=>cmpPool({W:w,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB.inR[0]}):o.inKind==='feed'?w=>cmpFeed({...fS,W:w}):null;
-  const mm=cmpMerge(NB.outRows,NB.outN,NB.gOut);
-  const poolF=(w,outRows)=>cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows});
+  const poolF=(w,outRows)=>{const mm=outRows.length>4?{rows:NB.outRows,mg:[]}:cmpMerge(NB.outRows,NB.outN,NB.gOut);return cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows,bal:true})};   // more than 4 lanes out = several containers (ports per face 4): keep every FB row as its own input lane (no merge) so each container gets one (bal)
   return rbPack({W,H,mk,dw:x.dw,fb:{b:NB.b,bi:NB.bi},inF,poolF,Rout:x.Rout,outRows:x.outRows});
 }
