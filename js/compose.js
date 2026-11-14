@@ -193,6 +193,7 @@ function cmpCompose0(P,item,mk,spMk,o={}){
   const k=cmpKey,bl=L=>L.tile.blocks.length,be=L=>L.stat.belts+L.stat.ug+L.stat.spl;
   const H=ok.filter(c=>c.nf).sort((a,b)=>k(a.L)-k(b.L))[0],pool=H?ok.filter(c=>c===H||bl(c.L)<=bl(H.L)&&be(c.L)<=be(H.L)):ok;
   let best=pool[0];for(const c of pool)if(k(c.L)<k(best.L))best=c;
+  best.L.old=H?{L:H.L,bk:H.bk}:null;
   window.CMP_BK=best.bk;return best.L;
 }
 function cmpCompose1(P,item,mk,spMk,o={}){
@@ -201,14 +202,18 @@ function cmpCompose1(P,item,mk,spMk,o={}){
   const sel=$('plnBk'),BX=o.box||PLC_BOX,bk=o.bk||(sel?(sel.value==='auto'?'auto':PL_ALL[placerBk().indexOf(true)]):null);
   if(!bk)return cmpErr('no block type selected');
   if(bk==='auto'){   // CMP density: build with every block type, keep the one with the least floor area (blocks x block area), then the fewest belts
-    let best=null,why=null;
+    let best=null,why=null;const all=[];
     for(const b of PL_ALL){
       if(!plcCls(b))continue;
       const L=cmpCompose(P,item,mk,spMk,{...o,bk:b});
       if(!L.ok){why=why||L.why;continue}
       const k=cmpKey(L)+(L.note.some(n=>/^Dock-limited|^Dock not built|cannot be docked/.test(n))?1e15:0);   // a build that lost a dock never beats one that kept all; then floor area (block units), then belts
+      all.push({L,k,b,bk:b});
       if(!best||k<best.k)best={L,k,b};
     }
+    {const bl=L=>L.tile.blocks.length,be=L=>L.stat.belts+L.stat.ug+L.stat.spl,olds=all.filter(c=>c.L.old);   // never worse than the old layout of any block type
+    if(olds.length){const ref=olds.reduce((a,c)=>cmpKey(c.L.old.L)<cmpKey(a.L.old.L)?c:a),R=ref.L.old,ok=all.filter(c=>bl(c.L)<=bl(R.L)&&be(c.L)<=be(R.L));
+      best=ok.length?ok.reduce((a,c)=>c.k<a.k?c:a):{L:R.L,b:R.bk,k:0}}}
     if(!best)return cmpErr(why||'no block type builds');
     window.CMP_BK=best.b;best.L.note=[...best.L.note,'Block type '+CMP_BLOCKS[PL_ALL.indexOf(best.b)]+' (auto: fewest blocks, then least floor area, then fewest belts)'];
     return best.L;
