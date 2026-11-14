@@ -18,6 +18,7 @@ function expCt(b,e){if(!isStore(b)||!b.ct)return;const m=new Map(),inf=new Map()
 function expCfg(b,d,e,ugn){
   cfgModel(b,d,e,ugn);
   if(b.cfgKeep&&b.cfgKeep.sig===cfgSig(b)&&cfgKind(d.id)!=="underground")e.ConfigHex=b.cfgKeep.hex;   // imported bytes kept bit-for-bit while recipe/ports/filters are unchanged
+  if(e.ConfigHex){const n=cfgDec(d.id,e.ConfigHex);if(n&&n.name)e.Name=n.name}
 }
 function cfgModel(b,d,e,ugn){
   const k=cfgKind(d.id);if(!k)return;
@@ -199,7 +200,8 @@ function importJson0(txt,quiet){
     const d=matchM(m),t=m&&m.Transform,g=t&&t.GridLocation;
     if(d&&g){nm++;const mi=n(m.MachineID),b={id:uid++,cls:d.id,x:n(g.X),y:n(g.Y),h:n(t.Height),rot:rot(t.GridRotation),pid:n(m.PaletteID),mid:mi>0?mi:0};
       if(v2){const f=dim(b);b.x=cell(g.X,2,f.w-14);b.y=cell(g.Y,2,f.h-14);b.h=Math.round(n(t.Height)/MZ)}   // floor cell = (raw-W)/2+7 (fit: 2021/2290 on floors, refinery/splitter/assembler/elevator 100%)
-      impCfg(b,d,m);impPorts(b,m.Ports);if(typeof m.Recipe==="string"&&m.Recipe){b.rec=m.Recipe;delete b.recn}
+      impCfg(b,d,m);if(typeof m.Name==="string"&&m.Name&&cfgKind(d.id)==="named"){const cur=cfgDec(d.id,m.ConfigHex);if(!cur||cur.name!==m.Name)b.cfgKeep={hex:cfgEnc("named",{name:m.Name}),sig:cfgSig(b)}}   // Name wins over ConfigHex
+      impPorts(b,m.Ports);if(typeof m.Recipe==="string"&&m.Recipe){b.rec=m.Recipe;delete b.recn}
       if(Array.isArray(m.Contents))b.ct=m.Contents.filter(x=>x&&typeof x.Item==="string"&&x.Item).map(x=>({item:x.Item,n:Math.max(0,Math.round(Number(x.Count))||0),inf:x.Infinite===true}));
       if(m.SiteOnly&&Array.isArray(m.SiteOnly.Infinite))b.ct=(b.ct||[]).concat(m.SiteOnly.Infinite.filter(x=>x&&typeof x.Item==="string"&&x.Item).map(x=>({item:x.Item,n:Math.max(0,Math.round(Number(x.Count))||0),inf:true})));   // site-only infinite sources
       S.blocks.push(b)}
