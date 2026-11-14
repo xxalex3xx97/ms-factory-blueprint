@@ -204,12 +204,12 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
   if (opts.mutate && r.routed && r.routed.length) {   // router mutations: delete one routed belt, then one routed UG exit
     const isUg = b => b.cls.includes('Underground') || b.cls.includes('UG');
     for (const kind of ['belt', 'exit']) {
-      const gone = await page.evaluate(({items, routed, kind, any}) => {
+      const gone = await page.evaluate(({items, routed, kind, any, mut}) => {
         const ugs = items.filter(b => PLC_UG.includes(b.cls)), ex = new Set(ugPairs(ugs).map(p => p.t.x + ',' + p.t.y)), rs = new Set(routed.map(q => q.x + ',' + q.y));
         const c = items.filter(b => rs.has(b.x + ',' + b.y) && (kind === 'exit' ? ex.has(b.x + ',' + b.y) : PLC_BELT.includes(b.cls)));
-        const nn = any ? Math.min(MUT, c.length) : 1;
+        const nn = any ? Math.min(mut, c.length) : 1;
         return Array.from({length: nn}, (_, i) => c[any ? Math.floor((i + .5) * c.length / nn) : Math.floor(c.length / 2)]).filter(Boolean).map(pick => ({x: pick.x, y: pick.y}));
-      }, {items: r.items, routed: r.routed, kind, any: opts.mutate === 'any'});
+      }, {items: r.items, routed: r.routed, kind, any: opts.mutate === 'any', mut: MUT});
       if (!gone.length) { if (kind === 'belt') errs.push('mutation: no routed belt'); continue }
       let red = false;
       for (const g of gone) { const m2 = await page.evaluate(floodPage, {items: r.items.filter(b => !(b.x === g.x && b.y === g.y)), finalItems: r.finalItems}); row['mut' + kind] = m2.errs.length; if (m2.errs.length > fl.errs.length || m2.ozReach.length < fl.ozReach.length) { red = true; break } }
@@ -219,7 +219,7 @@ export async function checkCompose(page, recipeKey, rate, mk = 1, bk = null, opt
   PROF.mut += Date.now() - t0m;
   return {ok: errs.length === 0, errs, row, nodes: r.nodes, count: r.count, items: r.items};
 }
-const MUT = +process.env.MUT || 4;   // belts tried per 'any' mutation (red needs only one); MUT=12 = full pass
+const MUT = +process.env.MUT || 12;   // belts tried per 'any' mutation, stops at the first red (cases that go red early cost nothing); MUT=4 for a cheaper run (can miss redundant-lane cases, e.g. Maglev)
 const PLC_BELT_NAMES = ['DAT_ConveyorBelt', 'DAT_ConveyorBelt2', 'DAT_ConveyorBelt3'];
 
 const isMain = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url;
