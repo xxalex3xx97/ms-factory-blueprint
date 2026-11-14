@@ -182,6 +182,52 @@ function savEntry(proto, path, x, y, h, r, pal, idName, id) {
   return e;
 }
 
+// Icon from the site's own block drawing (browser only): paintFloorBase (shape floors, walls, hatch, port bars) of the
+// scene's non-machine blocks on an offscreen 256x256 canvas. cx/V/W/H/layer are swapped and restored in finally.
+// Pass 1 at 0.5 px/floor cell finds the drawn bbox; pass 2 scales it so the longest side is 250 px, centred.
+// Grey: g=round(.299r+.587g+.114b); v = |g-bg|<6 ? 0 : g>=90 ? 255 : max(20,g). Returns Uint8Array(65536) or null (caller falls back to savIcon).
+function savIconCanvas() {
+  try {
+    if (typeof document === 'undefined' || typeof paintFloorBase !== 'function') return null;
+    const bl = S.blocks.filter(b => !isM(b));
+    if (!bl.length) return null;
+    const lays = [...new Set(bl.map(b => b.h))];
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const b of bl) { const d = dim(b); x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + d.w); y1 = Math.max(y1, b.y + d.h); }
+    const g = document.createElement('canvas'); g.width = g.height = 256;
+    const cg = g.getContext('2d', {willReadFrequently: true});
+    const sv = {cx, V, W, H, layer};
+    const pass = (s, ox, oy) => {
+      cx = cg; W = H = 256; V = {ox, oy, z: 1};
+      cg.setTransform(1, 0, 0, 1, 0, 0); cg.fillStyle = '#000'; cg.fillRect(0, 0, 256, 256);
+      for (const L of lays) { layer = L; paintFloorBase(s); }
+      return cg.getImageData(0, 0, 256, 256).data;
+    };
+    let d1, d2;
+    try {
+      const s0 = 0.5, cxm = (x0 + x1) / 2 * FC, cym = (y0 + y1) / 2 * FC;   // paintFloorBase works in floor cells (FC per block cell)
+      d1 = pass(s0, 128 - cxm * s0, 128 - cym * s0);
+      let mnx = 256, mny = 256, mxx = -1, mxy = -1;
+      for (let i = 0; i < 65536; i++) if (d1[4 * i] + d1[4 * i + 1] + d1[4 * i + 2] > 0) {
+        const x = i & 255, y = i >> 8;
+        if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y;
+      }
+      if (mxx < 0) return null;
+      const longest = Math.max(mxx - mnx + 1, mxy - mny + 1);
+      const s1 = s0 * 250 / longest;
+      const ccx = ((mnx + mxx + 1) / 2 - (128 - cxm * s0)) / s0, ccy = ((mny + mxy + 1) / 2 - (128 - cym * s0)) / s0;
+      d2 = pass(s1, 127.5 - ccx * s1, 127.5 - ccy * s1);
+    } finally { ({cx, V, W, H, layer} = sv); }
+    const bgG = Math.round(.299 * d2[0] + .587 * d2[1] + .114 * d2[2]);
+    const out = new Uint8Array(65536);
+    for (let i = 0; i < 65536; i++) {
+      const q = 4 * i, gr = Math.round(.299 * d2[q] + .587 * d2[q + 1] + .114 * d2[q + 2]);
+      out[i] = Math.abs(gr - bgG) < 6 ? 0 : gr >= 90 ? 255 : Math.max(20, gr);   // 90: outline grey (~98) -> 255, dock/prop fills (~45..70) stay dark
+    }
+    return out;
+  } catch (e) { return null; }
+}
+
 function savExport(j, opts) {
   const o = savLoad(Uint8Array.from(atob(SAV_TPL), c => c.charCodeAt(0)));
   const bp = savFind(o.props, 'Blueprint').val[1];
@@ -193,7 +239,7 @@ function savExport(j, opts) {
   dn.val = ['raw', savCat([dn.val[1].slice(0, 9), savFstrW(name)])];
 
   // Screenshot: 65536 greyscale ints from the pure icon renderer (count i32, then i32 per pixel).
-  const ic = savIcon(j, opts && opts.size), px = new Uint8Array(4 + 65536 * 4), dv = savDV(px);
+  const ic = opts && opts.icon && opts.icon.length === 65536 ? opts.icon : savIcon(j, opts && opts.size), px = new Uint8Array(4 + 65536 * 4), dv = savDV(px);
   dv.setInt32(0, 65536, true);
   for (let i = 0; i < 65536; i++) dv.setInt32(4 + 4 * i, ic[i], true);
   savFind(savFind(bp, 'Screenshot').val[1], 'GreyscaleValues').val = ['raw', px];
@@ -268,7 +314,7 @@ if(typeof document!=="undefined"&&document.getElementById("expSav")){
     let nm=String(S.name||"blueprint").replace(/[<>:"/\|?*]+/g,"_");
     if(nm.toLowerCase()==="presets")nm="Presets BP";
     const j=build();j.DisplayName=nm;
-    const r=savExport(j,{size:b=>{const f=dim({cls:b.Class,rot:b.GridRotation});return[f.w,f.h]}});
+    const r=savExport(j,{size:b=>{const f=dim({cls:b.Class,rot:b.GridRotation});return[f.w,f.h]},icon:savIconCanvas()});
     const a=document.createElement("a");
     a.href=URL.createObjectURL(new Blob([r.bytes],{type:"application/octet-stream"}));
     a.download=nm+".sav";a.click();

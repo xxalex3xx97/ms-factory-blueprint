@@ -150,7 +150,7 @@ function beltCells(g){
 }
 
 // ---- canvas
-const cv=$("cv"),cx=cv.getContext("2d");
+const cv=$("cv");let cx=cv.getContext("2d");   // let: savIconCanvas (sav_export.js) swaps in its offscreen ctx for the .sav icon
 let W=0,H=0,dpr=1,RCT=null;
 function resize(){const r=cv.getBoundingClientRect();dpr=window.devicePixelRatio||1;W=r.width;H=r.height;cv.width=Math.max(1,W*dpr);cv.height=Math.max(1,H*dpr);paint()}
 new ResizeObserver(resize).observe(cv);
