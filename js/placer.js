@@ -786,6 +786,19 @@ function plcApply(L){
   if(!L.ok){plcL=null;plcT=null;placerClear();$("pvLine").textContent="";$("plnPrevErr").textContent=/^(Pick an item|internal error)/.test(L.why)?L.why:"Not supported yet: "+String(L.why).replace(/^BL: /,"").replace(/ \(NL used\)$/,"").replace(/^Engine zones built a layout but /,"");$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
+// worker: the deferred compute runs in a Blob worker (file:// cannot load worker files); any failure falls back to the synchronous placerRun
+var plcNoWorker=false;let plcW=null,plcWId=0;
+const plcKill=()=>{if(plcW){plcW.terminate();plcW=null}};
+const plcSpawn=()=>{if(plcW)return plcW;if(typeof Worker==="undefined"||typeof FB_WORKER_SRC==="undefined"||window.plcNoWorker)return null;try{plcW=new Worker(URL.createObjectURL(new Blob(["self.__OV="+JSON.stringify(localStorage.getItem(OVK))+";"+FB_WORKER_SRC])))}catch(_){plcNoWorker=true;return null}return plcW};
+function plcRunW(open,x,dk,key,tok){
+  plcKill();const w=plcSpawn();if(!x||!w)return placerRun(open);
+  const id=++plcWId;
+  w.onmessage=ev=>{if(ev.data.id!==id||tok!==plcRunTok)return;plcKill();const d=ev.data;if(d.err){plcNoWorker=true;return placerRun(open)}
+    window.CMP_BK=d.bk;plcFb=d.fb;if(key){plcLC.set(key,{L:d.L,bk:d.bk,fb:d.fb});if(plcLC.size>8)plcLC.delete(plcLC.keys().next().value)}plcApply(d.L)};
+  w.onerror=ev=>{ev.preventDefault();plcKill();plcNoWorker=true;if(tok===plcRunTok)placerRun(open)};
+  const flags={};for(const k of Object.keys(window)){if(/^(CMP_|RB_)/.test(k)){const v=window[k];if(v==null||typeof v!=="object"&&typeof v!=="function")flags[k]=v}}
+  try{w.postMessage({id,P:x.P,it:x.it,mk:x.mk,spMk:x.sp??x.mk,o:{box:$("plnBuf").value,mod:false,dock:dk},pick:PLN_PICK,bkval:$("plnBk").value,flags})}catch(_){plcKill();plcNoWorker=true;placerRun(open)}
+}
 function placerRun(open,defer){
   const dl=$("plnPrev");if(!open&&!dl.open)return;
   const dk=placerDock(),x=placerPlan();let key=null;try{if(x)key=plcKey(x,dk)}catch(_){}
@@ -794,7 +807,7 @@ function placerRun(open,defer){
   if(defer&&plcAsync()){   // paint first, compute after; a newer request makes this one stale
     const tok=++plcRunTok;plcBusyF=true;if(!dl.open)dl.showModal();
     $("plnPlace").disabled=true;$("pvLine").textContent="Building...";$("plnPrevMap").style.opacity=".45";
-    requestAnimationFrame(()=>setTimeout(()=>{if(tok===plcRunTok)placerRun(open)},0));return}
+    plcKill();requestAnimationFrame(()=>setTimeout(()=>{if(tok===plcRunTok)plcRunW(open,x,dk,key,tok)},0));return}
   ++plcRunTok;plcFb=null;
   const L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk}):{ok:false,why:"Pick an item and a rate first"};
   if(key){plcLC.set(key,{L,bk:window.CMP_BK,fb:plcFb});if(plcLC.size>8)plcLC.delete(plcLC.keys().next().value)}

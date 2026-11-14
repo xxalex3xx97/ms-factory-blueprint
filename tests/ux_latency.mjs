@@ -13,7 +13,7 @@ const page = await (await br.newContext({viewport: {width: 1400, height: 900}}))
 let bad = 0; page.on('pageerror', e => { console.log('PAGEERR', e.message); bad++ });
 await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp');
 await page.evaluate(() => {
-  window.__n = 0; const f = placerLayout; placerLayout = function () { window.__n++; return f.apply(this, arguments) };
+  window.__n = 0; window.plcNoWorker = true; /* count computes on the main thread: worker path covered by worker_build.mjs */ const f = placerLayout; placerLayout = function () { window.__n++; return f.apply(this, arguments) };
   const s = $('plnItem'); s.value = [...s.options].find(o => o.textContent.trim() === 'Nickel Plates').value; s.dispatchEvent(new Event('change'));
   $('plnRate').value = 31; $('plnRate').dispatchEvent(new Event('change')); $('plnDkI').checked = false; $('plnDkO').checked = false;
 });
