@@ -30,7 +30,7 @@ function rbPack(c){
   const colP=[],colX=[],colW=[],cols=[];
   grp.forEach((g,idx)=>{
     const sum=g.reduce((a,q)=>a+ww[q],0),sl=W-sum;let r=g.length-1;
-    if(sl>0){let bd=Inf;g.forEach((q,k)=>{const dl=cnt(q,ww[q]+sl)-cnt(q,ww[q]);if(dl<bd){bd=dl;r=k}})}
+    if(sl>0&&!(c.flush&&g.includes(2))){let bd=Inf;g.forEach((q,k)=>{const dl=cnt(q,ww[q]+sl)-cnt(q,ww[q]);if(dl<bd){bd=dl;r=k}})}   // c.flush (OZ dock): the POOL is the last piece of its block and takes the slack, container flush east
     let off=0;const x=[],w=[];
     g.forEach((q,k)=>{const wq=ww[q]+(k===r?sl:0);colP[q]=idx;colX[q]=idx*FC+off;colW[q]=wq;x.push(off);w.push(wq);off+=wq});
     cols.push({pieces:g,x,w,Wb:W});
@@ -53,11 +53,14 @@ function rbNodeNB(o,z,block,W,H){
 function rbNodeIn(o,z,NB,x){
   const {block,bx,H,mk}=x,bz=NB.b,hs=tplIfSets(block,z.S).hs,sets=bz.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0);
   const fS={H,mk,bx,sets,M:bz.iface.M,k:o.k,main:0,pass:[],rawItems:o.rec.i.map(q=>q[0]),allRaw:true,seed:o.growth?o.key:null};
+  const dx=x.dkx;   // docks (NORMAL): x.dkx={dk,D:[rate per raw of o.rec.i],dh,dw,row,sides:()=>['N','S'] subset}; hub = own block at gx=0, built by cmp_dock.js cmpDockHub / cmpFeedDock (never fused)
+  if(dx&&o.inKind==='src'){const dI=cmpDockHub(dx.dk,{kind:'in',name:cmpName(fS.rawItems[0]),D:dx.D[0],rows:NB.inR[0],H,dh:dx.dh,j:dx.row});return dI.ok===false?()=>dI:w=>cmpPool({W:w,H,mk,bx,item:fS.rawItems[0],raw:true,inRows:[],outRows:NB.inR[0],...dI})}
+  if(dx&&o.inKind==='feed')return w=>cmpFeedDock({...fS,W:w,names:fS.rawItems.map(cmpName),D:dx.D,j:dx.row},dx.dk,dx.dh,dx.D,dx.dw,dx.sides());
   return o.inKind==='src'?w=>cmpPool({W:w,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB.inR[0]}):o.inKind==='feed'?w=>cmpFeed({...fS,W:w}):null;
 }
 // pack one src / feed planner node as a module (merge nodes: pass inF yourself via rbPack). x = {block,bx,W,H,mk,Rout,dw}; sz = z.S
 function rbPackNode(o,z,NB,x){
-  const {W,H,mk,bx}=x,inF=rbNodeIn(o,z,NB,x);
-  const poolF=(w,outRows)=>{const mm=outRows.length>4?{rows:NB.outRows,mg:[]}:cmpMerge(NB.outRows,NB.outN,NB.gOut);return cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows,bal:true})};   // more than 4 lanes out = several containers (ports per face 4): keep every FB row as its own input lane (no merge) so each container gets one (bal)
-  return rbPack({W,H,mk,dw:x.dw,fb:{b:NB.b,bi:NB.bi},inF,poolF,Rout:x.Rout,outRows:x.outRows});
+  const {W,H,mk,bx}=x,inF=x.noIn?null:rbNodeIn(o,z,NB,x);   // x.noIn (docks): the raw hub is its own block at gx=0, the module packs [FB | POOL] only
+  const poolF=(w,outRows)=>{const mm=outRows.length>4?{rows:NB.outRows,mg:[]}:cmpMerge(NB.outRows,NB.outN,NB.gOut);return cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows,bal:true,...(x.dO||{})})};   // more than 4 lanes out = several containers (ports per face 4): keep every FB row as its own input lane (no merge) so each container gets one (bal); x.dO = OZ dock hub (root)
+  return rbPack({W,H,mk,dw:x.dw,fb:{b:NB.b,bi:NB.bi},inF,poolF,Rout:x.Rout,outRows:x.outRows,flush:x.flush});
 }

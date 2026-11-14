@@ -201,6 +201,10 @@ function cmpCompose(P,item,mk,spMk,o={}){
 }
 function cmpCompose0(P,item,mk,spMk,o={}){
   if(globalThis.CMP_CAP4||globalThis.CMP_IN||(globalThis.CMP_GROUPS||globalThis.RB_ENGINE)&&!(o.dock&&(o.dock.in||o.dock.out)))return cmpCompose1(P,item,mk,spMk,o);
+  if(globalThis.RB_ENGINE&&!globalThis.CMP_GROUPS&&o.dock&&(o.dock.in||o.dock.out)){   // RB S6a: NORMAL docks go to the recursive builder (rbDockOk: not industrial); INDUSTRIAL docks (S6b/S6c) stay on the old path. A refused rb build falls back to the old path (docks are never refused)
+    const sel=$('plnBk'),b0=o.bk||(sel?(sel.value==='auto'?'auto':PL_ALL[placerBk().indexOf(true)]):null);
+    if(b0==='auto'||rbDockOk(o,b0)){const L=cmpCompose1(P,item,mk,spMk,o);if(L.ok||b0==='auto')return L}
+  }
   const nf0=globalThis.CMP_NOFUSE,dk=!!(o.dock&&(o.dock.in||o.dock.out)),C=[];
   globalThis.CMP_IN=true;
   try{for(const nf of nf0?[true]:[true,false])for(const c4 of[false,true]){globalThis.CMP_NOFUSE=nf;globalThis.CMP_CAP4=c4;if(c4&&!globalThis.CMP_WIDE)continue;if(!c4)globalThis.CMP_WIDE=false;const L=cmpCompose1(P,item,mk,spMk,o);C.push({L,nf,bk:window.CMP_BK})}}
@@ -246,7 +250,7 @@ function cmpCompose1(P,item,mk,spMk,o={}){
       for(const f of F)for(const j of f.js){const w='W:'+j;if(f.tag==='ie'&&!N.has(w))N.add(w);else{N.add('X:'+(f.tag==='oe'?'out':'in')+':'+j);N.add('M:'+j+'|'+A.why.slice(0,160))}}
       if(N.size>n0&&(o._retry|0)<2&&(typeof performance!=='undefined'?performance:Date).now()-globalThis.CMP_T1<12000){const L=cmpCompose(P,item,mk,spMk,{...o,_retry:(o._retry|0)+1});if(L.ok)return L}}   // docks are never refused: industrial dock cannot be placed -> rebuild with normal docks + note
     const L=cmpCompose(P,item,mk,spMk,{...o,dock:{in:dkw.in==='ind'?null:dkw.in,out:dkw.out==='ind'?null:dkw.out}});if(L.ok)L.note=['Industrial dock not built ('+A.why+'): no docks on the industrial side (never normal docks)',...dkn.filter(n=>/not possible/.test(n)),...L.note];return L};   // INDONLY: industrial selected = never a normal dock; unsolved case -> that side gets no dock (plain containers) + note
-  if(globalThis.RB_ENGINE&&!dkw){const g=rbRun(P,item,mk,spMk,BX,bk,block);if(!g.ok)return g;A=g.A;stages=g.stages;cmpI=g.cmpI;note=g.note;per=g.per}   // RB recursive builder (rb_*.js, ?engine=rb), no docks yet
+  if(globalThis.RB_ENGINE&&(!dkw||rbDockOk(o,bk)&&!globalThis.CMP_IN)){const g=rbRun(P,item,mk,spMk,BX,bk,block,dkw?dk:null);if(!g.ok)return g;A=g.A;stages=g.stages;cmpI=g.cmpI;note=g.note;per=g.per}   // RB recursive builder (rb_*.js, ?engine=rb); docks: NORMAL only (S6a), dk = {mk,in,out,notes}
   else if(globalThis.CMP_GROUPS&&!dkw){const g=cmpGroupsRun(P,item,mk,spMk,BX,bk,block);if(!g.ok)return g;A=g.A;stages=g.stages;cmpI=g.cmpI;note=g.note;per=g.per}   // GROUPS prototype (cmp_groups.js), no docks
   else if(tr.ok){
     sz=cmpSize(P,item,mk,spMk,block);if(!sz.ok)return sz;
