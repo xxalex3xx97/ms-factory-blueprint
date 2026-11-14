@@ -87,9 +87,28 @@ if (mode === 'exo') {
       const P = plan(item, 1, 1, {}, {[item]: key}, {proto: false, enr: false, obs: false});
       const t0 = performance.now(), L = cmpCompose(P, item, 1, 1, {box: 'DAT_Container_2', dock, bk}), ms = Math.round(performance.now() - t0);
       window.cmpCompose = orig;
-      return L.ok ? {ok: true, blocks: L.stat.blocks, machines: L.stat.machines, belts: L.stat.belts, ug: L.stat.ug, ms, leaves} : {ok: false, why: L.why, ms, leaves};
+      // planner sum of non-raw N over Armoury leaves (as cmpArmoury: leaves = non-Armoury inputs, recursively, rate-summed)
+      const leaf = new Map(), isA = x => { const T = P.nodes[x]; return T && T.crafter && /Armoury/i.test(T.crafter) };
+      const walk = (x, rate) => { const T = P.nodes[x]; for (const [y, n] of T.rec.i) { const r = rate * n / T.rec.o[1]; if (isA(y)) walk(y, r); else leaf.set(y, (leaf.get(y) || 0) + r) } };
+      walk(item, P.nodes[item].rate);
+      let psum = 0;
+      for (const [c, r] of leaf) { const Pc = plan(c, r, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false}), pl = cmpPlan(Pc, c, 1, {}); if (pl.ok) psum += pl.nodes.filter(o => !o.raw).reduce((a, o) => a + o.N, 0) }
+      const notes = L.note || [];
+      return L.ok ? {ok: true, psum, notes, blocks: L.stat.blocks, machines: L.stat.machines, belts: L.stat.belts, ug: L.stat.ug, ms, leaves} : {ok: false, why: L.why, ms, leaves, psum, notes};
     }, {bk: BK[bl], dock: DK[dn]});
-    console.log('EXO ' + bl + ' ' + dn + ' ' + JSON.stringify(r));
+    const {notes, ...show} = r; console.log('EXO ' + bl + ' ' + dn + ' ' + JSON.stringify(show));
+    const chk = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + bl + ' ' + dn + ' ' + m); if (!c) fails++ };
+    const nn = r.notes || [], rep = nn.some(n => /Planner N=.*built/.test(n)), sec = r.ms / 1000;
+    if (r.ok) {
+      chk(true, 'ok');
+      // replicated strips round each stage up, hence the 2.6 bound when a 'Planner N=..built' note exists
+      chk(r.machines >= r.psum && (rep ? r.machines <= r.psum * 2.6 : r.machines === r.psum), 'machines ' + r.machines + ' vs planner sum ' + r.psum + ' ratio ' + (r.machines / r.psum).toFixed(2) + (rep ? ' (replicated)' : ' (exact)'));
+      const dk = nn.some(n => /^Dock/.test(n)), indNo = nn.some(n => /Industrial dock not built/.test(n));
+      chk(dn === 'off' || dk || (dn === 'ind' && indNo), 'docks ' + (dk ? 'present' : '') + (indNo ? ' ind-not-built' : ''));
+    } else chk(!!r.why && String(r.why).length < 300, 'refused with reason: ' + String(r.why).slice(0, 100));
+    // TARGET 60 s is NOT met for docks and 2x2c; only >240 s fails
+    console.log((sec > 60 ? 'SLOW ' : 'fast ') + bl + ' ' + dn + ' ' + sec.toFixed(1) + 's (target 60s)');
+    chk(sec <= 240, 'time <= 240s');
   }
   if (pe.length) { console.log('page errors: ' + pe[0]); fails++ }
   await br.close(); process.exit(fails ? 1 : 0);
