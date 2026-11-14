@@ -8,9 +8,9 @@ import {checkCompose} from './cmp_plan.mjs';
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const KEY = {servo: '>ITEM_RepairKitHull$', ac: '>ITEM_AdvancedCircuits$'}, WARM = +process.env.WARM || 900, MEAS = +process.env.MEAS || 600;
+const KEY = {servo: '>ITEM_RepairKitHull$', ac: '>ITEM_AdvancedCircuits$', sm: '>ITEM_Servomotor$'}, WARM = +process.env.WARM || 900, MEAS = +process.env.MEAS || 600;
 // [name,item,rate,block class,items built once]
-const CASES = [['Hull Repair Kit 30 2x2', 'servo', 30, 'BPO_Station_02', ['Titanium Plates']], ['Advanced Circuits 5 2x2', 'ac', 5, 'BPO_Station_02', ['Basic Circuits', 'Nickel Plates', 'Magnetic Coils']], ['Advanced Circuits 5 2x2c', 'ac', 5, 'BPO_Station_03', ['Basic Circuits', 'Nickel Plates', 'Magnetic Coils']]];
+const CASES = [['Hull Repair Kit 30 2x2', 'servo', 30, 'BPO_Station_02', ['Titanium Plates']], ['Servomotor 30 2x2', 'sm', 30, 'BPO_Station_02', []],['Advanced Circuits 5 2x2', 'ac', 5, 'BPO_Station_02', ['Basic Circuits', 'Nickel Plates', 'Magnetic Coils']], ['Advanced Circuits 5 2x2c', 'ac', 5, 'BPO_Station_03', ['Basic Circuits', 'Nickel Plates', 'Magnetic Coils']]];
 const KNOWN_SIM = new Set(['Hull Repair Kit 30 2x2']);   // Hull Plate 110/150, Kit 22/30 starve: pool lane weights, slice S4b
 const pageInfo =() => {
   const cmp = window.__cmpL.bl.cmp, T = window.__cmpL.tile, rb = cmp.rb;

@@ -47,10 +47,10 @@ function cmpPool(S){
   let c=S.ca?S.ca.length:Math.ceil(Math.max(Ri,Ro,1)/4);
   if(S.bal&&!S.ca&&Ri&&Ro&&c>1){const k=Array.from({length:8-c},(_,i)=>c+i).find(v=>Ri%v===0&&v<=Ri&&v*4>=Ro&&H-1-4*v>=1);if(k)c=k}   // GROUPS: stacked containers are separate pools, whole input lanes carry equal flow: pick the container count that divides the input lanes evenly (else one container gets 2 lanes and piles up)
   const all=[...inRows,...outRows],mid=all.length?(Math.min(...all)+Math.max(...all))/2:(H-1)/2;
-  const ya=Math.min(Math.max(Math.floor(mid-2*c),1),H-1-4*c);
+  let ya=Math.min(Math.max(Math.floor(mid-2*c),1),H-1-4*c),pt=4,ov=null,tw2=0;
   if(!S.ca&&H-1-4*c<1)return cmpNo('pool block too short (rows)');
   if(S.bal&&c>1&&Ri&&Ro&&!S.ca){   // GROUPS: stacked containers are separate pools: every container gets input lanes in proportion to its output lanes (default blHA ports are centred and can leave a container without input)
-    if(Ri<c)return cmpNo('pool has fewer input lanes than containers');
+    if(Ri<c&&5*c-1>H-2)return cmpNo('pool has fewer input lanes than containers');
     let e=Array.from({length:c},(_,j)=>Math.floor(Ro/c)+(j<Ro%c?1:0));const wt=S.wt&&S.wt.length===Ro?S.wt:null,tw=wt?wt.reduce((x,y)=>x+y,0):0;if(wt){let ce=null,bd=1e9;const rec=(i,j,acc,mx)=>{if(j===c){if(i===Ro&&mx<bd){bd=mx;ce=acc.slice()}return}for(let n=1;n<=4&&i+n<=Ro-(c-1-j);n++){acc.push(n);rec(i+n,j+1,acc,Math.max(mx,Math.abs(wt.slice(i,i+n).reduce((x,y)=>x+y,0)-tw/c)));acc.pop()}};rec(0,0,[],0);if(ce)e=ce}   // out lanes cut by demand weight so every container's outflow equals its (equal) inflow
     let o0=0;   // wt: lane demand weights (ports feed unequal machine counts): a container's input lanes follow the demand of its own output lanes
     const q=e.map(v=>{const f=wt?wt.slice(o0,o0+v).reduce((x,y)=>x+y,0)/tw:v/Ro;o0+=v;return Math.max(1,Math.min(4,f*Ri))}),w=q.map(v=>Math.max(1,Math.floor(v)));
@@ -60,7 +60,20 @@ function cmpPool(S){
       const tl=S.wi.reduce((x,y)=>x+y,0);let i=0,cum=0,tc=0,o1=0;const ww=[];
       for(let j=0;j<c;j++){tc+=wt.slice(o1,o1+e[j]).reduce((x,y)=>x+y,0)/tw*tl;o1+=e[j];let n=0;while(i<Ri-(c-1-j)&&(n<1||(cum+S.wi[i]/2<=tc&&n<4))){cum+=S.wi[i];i++;n++}ww.push(n)}
       if(i===Ri&&ww.every(v=>v>=1&&v<=4))w.splice(0,c,...ww)}
-    const ports=(n,j)=>Array.from({length:n},(_,i)=>ya+4*j+Math.floor((4-n)/2)+i);
+    if(Ri<c){   // overflow chain: input lanes only reach the head containers; one free row between stacked containers holds 1..4 belts passing the surplus on
+      const wt2=wt||Array(Ro).fill(1),fl=S.wi&&S.wi.length===Ri&&S.wi.every(v=>v>0)?S.wi:Array(Ri).fill(1),tf=fl.reduce((x,y)=>x+y,0);tw2=wt2.reduce((x,y)=>x+y,0);
+      const seg=(a,cnt,j)=>a.slice(cnt.slice(0,j).reduce((x,y)=>x+y,0),cnt.slice(0,j+1).reduce((x,y)=>x+y,0)).reduce((x,y)=>x+y,0);
+      const D=e.map((_,j)=>seg(wt2,e,j));
+      for(const up of [0,1]){
+        const wv=Array.from({length:c},()=>0);let r=Ri;for(let j=0;j<c;j++){const n=Math.min(4,r);r-=n;wv[up?c-1-j:j]=n}
+        const sup=wv.map((_,j)=>seg(fl,wv,j)/tf*tw2);
+        const g=[];let cum=0,okc=true;
+        for(let k=0;k<c-1;k++){const j=up?c-1-k:k;cum+=sup[j]-D[j];if(cum<-0.02*tw2)okc=false;g[up?j-1:j]=cum}   // g[i] = surplus passing between container i and i+1
+        if(okc){w.splice(0,c,...wv);pt=5;ya=Math.min(Math.max(Math.floor(mid-(5*c-1)/2),1),H-1-(5*c-1));ov={up,n:g.map(v=>Math.min(4,Math.max(1,Math.ceil(Math.max(v,0)/tw2*Ri))))};break}
+      }
+      if(!ov)return cmpNo('pool has fewer input lanes than containers');
+    }
+    const ports=(n,j)=>Array.from({length:n},(_,i)=>ya+pt*j+Math.floor((4-n)/2)+i);
     S={...S,pyIn:w.flatMap((n,j)=>ports(n,j)),pyOut:e.flatMap((n,j)=>ports(n,j))};
   }
   const AW=Ri?blHA(inRows,c,ya,'out',0,S.pyIn):null,ngW=AW?cmpNg(AW):0;
@@ -71,7 +84,8 @@ function cmpPool(S){
   const AE=Ro?blHA(outRows,c,ya,'in',cx+4,S.pyOut):null,ngE=AE?cmpNg(AE):0;
   if(Ro&&cx+4+ngE+1>W-1)return cmpNo('pool block too narrow (rows)');
   const items=[];
-  for(let j=0;j<(S.ind?0:c);j++)items.push({cls:bx,x:cx,y:S.ca?S.ca[j]:ya+4*j,rot:0,h:0,pid:0,ct:raw?[{item,n:0,inf:true}]:[],...(S.dock?(raw?{dk:'in',dkx:S.dkx}:!Ro?{dk:'out',dkx:S.dkx}:{}):{})});
+  for(let j=0;j<(S.ind?0:c);j++)items.push({cls:bx,x:cx,y:S.ca?S.ca[j]:ya+pt*j,rot:0,h:0,pid:0,ct:raw?[{item,n:0,inf:true}]:[],...(S.dock?(raw?{dk:'in',dkx:S.dkx}:!Ro?{dk:'out',dkx:S.dkx}:{}):{})});
+  if(ov)ov.n.forEach((k,i)=>{for(let x=0;x<k;x++)items.push(bt(cx+x,ya+pt*i+4,ov.up?3:1))});
   if(Ri){   // blHFB 'out' loop: belts to the jog column, vertical, corner at the port row, belts to the container W face (industrial OZ, S.ind: to x=W-1, last belt tagged 'oe')
     const A=blHA(inRows,c,ya,'out',cx-1,S.pyIn),xe=S.ind&&!Ro?W-1:cx-1,tl=(b,x)=>{if(S.ind&&!Ro&&x===xe){b.dk='oe';b.dx=S.dkx}return b};
     for(let j=0;j<Ri;j++){
@@ -100,7 +114,7 @@ function cmpPool(S){
       cmpRun(items,mk,yI,xc+1,W-1);
     }
   }
-  return{ok:true,why:'',items,cx,ya,c};
+  return{ok:true,why:'',items,cx,ya,c,ov:!!ov};
 }
 // cmpFeed(S): S={W,H,mk,bx,sets:[{o,hs,t?}] (t = target row per slot when the template has side-native lane rows, e.g. growth k=3 o+8),M,k,main,pass:[rows],rawItems:[item per raw container],allRaw,seed?}. seed = item whose container is finite (primed by the user). Per set: the chain lane (M rows) passes straight; raw container r at (2, o+passM+4r) feeds slot r+1 (r if allRaw) through a jog column xj=7+M*r+c.
 function cmpFeed(S){
