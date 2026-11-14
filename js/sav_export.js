@@ -223,3 +223,17 @@ function savExport(j) {
   savFind(bp, 'Machines').val = ['sarr', machines];
   return { bytes: savDump(o), warn: [...new Set(warn)] };
 }
+// S4: Download .sav button (browser only). Same name rules as the .json download.
+if(typeof document!=="undefined"&&document.getElementById("expSav")){
+  document.getElementById("expSav").onclick=()=>{
+    let nm=String(S.name||"blueprint").replace(/[<>:"/\|?*]+/g,"_");
+    if(nm.toLowerCase()==="presets")nm="Presets BP";
+    const j=build();j.DisplayName=nm;
+    const r=savExport(j);
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([r.bytes],{type:"application/octet-stream"}));
+    a.download=nm+".sav";a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+    if(r.warn.length)toast("Exported, "+r.warn.length+" class path(s) guessed");
+  };
+}
