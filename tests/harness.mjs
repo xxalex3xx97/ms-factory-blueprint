@@ -163,7 +163,7 @@ async function s2(pg, C) {
   for (const id of ['DAT_CompSciLab', 'DAT_MatSciLab', 'DAT_ElectroSciLab', 'DAT_RelicAnalyzer', 'DAT_AstroSciLab', 'DAT_XenoSciLab']) {
     chk(`lab ${id}: 1 port (brief: labs 1 port)`, P(id).length === 1, `page has ${P(id).length} ports: ${P(id).map(p => p.f + p.pos).join(' ')}`);
   }
-  chk('lab DAT_QuantumSciLab: 2 ports E2 + S8 (REA)', JSON.stringify(P('DAT_QuantumSciLab').map(p => p.f + p.pos).sort()) === '["E2","S8"]', P('DAT_QuantumSciLab').map(p => p.f + p.pos).join(' '));
+  chk('lab DAT_QuantumSciLab: 2 ports E8 + S8 (user game 2026-11-14: lower east, right south)', JSON.stringify(P('DAT_QuantumSciLab').map(p => p.f + p.pos).sort()) === '["E8","S8"]', P('DAT_QuantumSciLab').map(p => p.f + p.pos).join(' '));
   chk('Container (DAT_Container) 2x2: 8 ports E1 E2 N1 N2 S1 S2 W1 W2, toggleable (EA)', JSON.stringify(P('DAT_Container').map(p => p.f + p.pos).sort()) === '["E1","E2","N1","N2","S1","S2","W1","W2"]' && P('DAT_Container').every(p => p.tg), P('DAT_Container').map(p => p.f + p.pos).join(' '));
   chk('Armoury: 0 ports', P('DAT_Armoury').length === 0);
   chk('Workbench (WorkbenchMachine): 0 ports', P('DAT_WorkbenchMachine').length === 0);

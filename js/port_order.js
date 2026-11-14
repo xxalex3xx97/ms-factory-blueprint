@@ -19,7 +19,7 @@ const PORT_ORDER={
   DAT_GrowthChamber:{verified:true,cells:[[7,-2],[7,2],[2,7],[-2,7],[-7,2],[-7,-2],[-2,-7],[2,-7]]},
   DAT_LargeConveyorBelt:{verified:false,cells:[[3,0],[0,3],[-3,0],[0,-3]]},
   DAT_MatSciLab:{verified:false,cells:[[3,0]]},
-  DAT_QuantumSciLab:{verified:true,/*user game 2026-11-14: 9x9, ports right pos 2 + bottom pos 8*/ cells:[[9,-6],[6,9]]},
+  DAT_QuantumSciLab:{verified:true,/*user game 2026-11-14 (screenshot, red lines): 9x9, east-face port on the LOWER side (y=+6, game counts E positions bottom-up so REA "E2"), south-face port on the right (x=+6, S8)*/ cells:[[9,6],[6,9]]},
   DAT_ReactorMachine:{verified:false,cells:[[6,-1],[6,1],[1,6],[-1,6],[-6,1],[-6,-1],[-1,-6],[1,-6]]},
   DAT_Refinery:{verified:true,cells:[[3,0],[0,3],[-3,0],[0,-3]]},
   DAT_RelicAnalyzer:{verified:false,cells:[[3,0]]},
