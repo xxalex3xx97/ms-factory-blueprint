@@ -103,8 +103,8 @@ function cmpFeed(S){
       const pr=y+c,t=s.t?s.t[slot]+c:s.o+slot*M+c,xj=7+sh+M*r+c;
       if(pr===t){for(let x=cx+4;x<=W-1;x++)items.push(bt(x,pr,0));continue}
       for(let x=cx+4;x<xj;x++)items.push(bt(x,pr,0));
-      items.push(bt(xj,pr,3));
-      for(let yy=pr-1;yy>t;yy--)items.push(bt(xj,yy,3));
+      const dn=t>pr;items.push(bt(xj,pr,dn?1:3));
+      if(dn)for(let yy=pr+1;yy<t;yy++)items.push(bt(xj,yy,1));else for(let yy=pr-1;yy>t;yy--)items.push(bt(xj,yy,3));
       items.push(bt(xj,t,0));
       for(let x=xj+1;x<=W-1;x++)items.push(bt(x,t,0));
     }
