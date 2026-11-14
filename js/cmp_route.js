@@ -6,10 +6,19 @@
 // or over a wall (entrance last floor cell, exit first floor cell of the next block, vertical only). No same-axis UG end inside any span (ugPairs pairs consecutive ends of a line).
 // A belt's rot points to the next cell of its own path only. Greedy per lane (longest first, 3 shuffles); nets = [{id,item,src,sink,cells:['x,y',..]}].
 var CMPR_D = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+// FAST memo: cmpRoute is a pure function of its input (seeded shuffles, up to 40-300 tries) and the compose builds the same merge region again per CAP4/NOFUSE variant and dock retry: same input -> cloned cached result.
+var CMPR_MEMO = new Map();
 function cmpRoute(o) {
+  const key = JSON.stringify([o.W, o.H, o.rowsN, o.mk, o.sources, o.sinks, o.blocked ? Array.from(o.blocked) : null, o.ugMax, o.eastStart, o.tagged, o.join, globalThis.CMPR_TRIES]);
+  let r = CMPR_MEMO.get(key);
+  if (!r) { r = cmpRoute0(o); if (CMPR_MEMO.size > 400) CMPR_MEMO.clear(); CMPR_MEMO.set(key, r) }
+  return {...r, items: r.items.map(b => ({...b})), nets: r.nets.map(n => ({...n, cells: n.cells.slice()}))};
+}
+function cmpRoute0(o) {
   const {W, H, rowsN, mk, sources, sinks, ugMax} = o, blocked = new Set(o.blocked || []), P = H + 2, HT = rowsN * P;
   const key = (x, y) => x + ',' + y, floor = (x, y) => x >= 0 && x < W && y >= 0 && y < HT && y % P < H;
   const sinkAt = new Set(sinks.map(s => key(s.x, s.y))), srcAt = new Set(sources.map(s => key(s.x, s.y)));
+  const N = W * HT * 8, dist = new Float64Array(N), prev = new Int32Array(N), via = new Int8Array(N);
   const attempt = (order, noise) => {
     const occ = new Map(), ugEnd = new Set(), spans = [];   // occ: cell -> axis of its straight belt (0/1) or 2 (corner); ugEnd: cell of UG ends; spans: {ax,line,lo,hi}
     const used = new Set(), items = [], nets = [], cn = new Map(), joined = new Set();   // JOIN (o.join): cn cell->lane tag of placed belts, joined cells already side-loaded
@@ -17,7 +26,7 @@ function cmpRoute(o) {
     for (const si of order) {
       const s = sources[si];
       const free = k => !occ.has(k) && !blocked.has(k);
-      const N = W * HT * 8, dist = new Float64Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1), via = new Int8Array(N);   // via: 0 start, 1 step, 2 hop-exit
+      dist.fill(Infinity); prev.fill(-1); via.fill(0);   // via: 0 start, 1 step, 2 hop-exit (arrays allocated once per cmpRoute call)
       const id = (x, y, d, f) => ((y * W + x) * 4 + d) * 2 + f;
       const heap = [];
       const push = (c, i) => { heap.push([c, i]); let k = heap.length - 1; while (k) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; [heap[p], heap[k]] = [heap[k], heap[p]]; k = p } };
