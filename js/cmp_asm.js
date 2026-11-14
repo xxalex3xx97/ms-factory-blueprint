@@ -129,7 +129,7 @@ function cmpShr(b,mk,Wt){
 // CMP S7b: tree assembler. cmpAssembleTree({mk,spMk,bx,bk,pl (cmpPlan),sz (cmpTreeSize .by)}) -> {ok,T,nodes,routed} | {ok:false,why}.
 // Per node [IN][FB][POOL] at block columns o.col..o.col+2, block row o.row. IN = SRC block (k=1 raw), or a MERGE region (any crafted input): one block column of belts spanning the strip rows of the
 // node's subtree, routed by cmpRoute (child POOL/SRC east lanes at x=0 -> parent slot rows at x=W-1). Raw children of a merge node are SRC supplier blocks in their own strip row.
-function cmpAssembleTree(c){return cmpNarrow(c,(c,w)=>{const n0=c.dk&&c.dk.notes.length,r=cmpAssembleTree1(c,w,1);if(!r.fz||r.ok&&!(r.dock&&r.dock.miss&&r.dock.miss.length))return r;if(c.dk)c.dk.notes.length=n0;return cmpAssembleTree1(c,w,0)})}   // packed build first; a refused / dock-missing packed build retries one block per column
+function cmpAssembleTree(c){return cmpNarrow(c,(c,w)=>{const n0=c.dk&&c.dk.notes.length,r=cmpAssembleTree1(c,w,1);if(!r.fz||r.ok&&!(r.T.ov>0)&&!(r.dock&&r.dock.miss&&r.dock.miss.length))return r;if(c.dk)c.dk.notes.length=n0;return cmpAssembleTree1(c,w,0)})}   // packed build first; a refused / dock-missing packed build retries one block per column
 // COMPACT with docks needs every raw hub (supplier SRC pool / src-node IN) in logical column 0 (the west dock edge) and no FEED node (N/S docks) and no GROUPS plan (pl.g); otherwise the one-block-per-column layout
 const cmpTreeDockOk=pl=>!pl.g&&pl.nodes.every(o=>o.inKind!=='feed'||o.col===0);
 function cmpAssembleTree1(c,wide,fz){
