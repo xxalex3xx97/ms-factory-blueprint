@@ -17,7 +17,8 @@ const BK = {'1x1': 'BPO_Station_01', '1x2': 'BPO_Station_2x1', '2x2': 'BPO_Stati
 const CASES = [['Nickel 31 1x1', /^ITEM_NickelOre>ITEM_NickelPlates$/, 31, 0, '1x1'], ['Nickel 480 2x2', /^ITEM_NickelOre>ITEM_NickelPlates$/, 480, 1, '2x2'], ['Nickel 480 auto', /^ITEM_NickelOre>ITEM_NickelPlates$/, 480, 1, 'auto'],
   ['Basic Motor 100 2x2', />ITEM_BasicMotor$/, 100, 1, '2x2'], ['Capacitor 100 2x2', />ITEM_Capacitor$/, 100, 1, '2x2'], ['Capacitor 100 2x2 nrm', />ITEM_Capacitor$/, 100, 1, '2x2', NR],
   ['BC 100 2x2c ind', />ITEM_BasicCircuit$/, 100, 1, '2x2c', IN], ['Enzyme 30 2x2', />ITEM_Enzyme$/, 30, 1, '2x2'], ['Enzyme 30 2x2c nrm', />ITEM_Enzyme$/, 30, 1, '2x2c', NR],
-  ['Nutrients 400 1x2', />ITEM_Nutrients$/, 400, 1, '1x2'], ['HullRepairKit 5 2x2', /^NAME:Hull Repair Kit$/, 5, 1, '2x2'], ['Backpack Mk1 auto', />ITEM_BackpackMk1$/, 1, 1, 'auto'], ['Capacitor 1000 2x2', />ITEM_Capacitor$/, 1000, 1, '2x2']];
+  ['Nutrients 400 1x2', />ITEM_Nutrients$/, 400, 1, '1x2'], ['HullRepairKit 5 2x2', /^NAME:Hull Repair Kit$/, 5, 1, '2x2'], ['Backpack Mk1 auto', />ITEM_BackpackMk1$/, 1, 1, 'auto'], ['Capacitor 1000 2x2', />ITEM_Capacitor$/, 1000, 1, '2x2'],
+  ['BC 101 2x2', />ITEM_BasicCircuit$/, 101, 1, '2x2'], ['BC 130 2x2', />ITEM_BasicCircuit$/, 130, 1, '2x2'], ['BC 99 2x2', />ITEM_BasicCircuit$/, 99, 1, '2x2'], ['AC 5 2x2', />ITEM_AdvancedCircuits$/, 5, 1, '2x2'], ['AC 5 2x2 ind', />ITEM_AdvancedCircuits$/, 5, 1, '2x2', IN], ['AC 5 2x2 Mk3', />ITEM_AdvancedCircuits$/, 5, 2, '2x2'], ['Capacitor 100 2x2 Mk3', />ITEM_Capacitor$/, 100, 2, '2x2']];
 const out = {};
 for (const [name, re, rate, mk, b, dock] of CASES) {
   const r = await pg.evaluate(a => {
