@@ -94,9 +94,11 @@ if (mode === 'exo') {
       let psum = 0;
       for (const [c, r] of leaf) { const Pc = plan(c, r, 1, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false}), pl = cmpPlan(Pc, c, 1, {}); if (pl.ok) psum += pl.nodes.filter(o => !o.raw).reduce((a, o) => a + o.N, 0) }
       const notes = L.note || [];
-      return L.ok ? {ok: true, psum, notes, blocks: L.stat.blocks, machines: L.stat.machines, belts: L.stat.belts, ug: L.stat.ug, ms, leaves} : {ok: false, why: L.why, ms, leaves, psum, notes};
+      const T = L.tile, dcnt = T ? {ind: T.blocks.filter(b => b.cls === plcCls('BPO_Dock_2')).length, nrm: T.blocks.filter(b => b.cls === plcCls('BPO_Dock')).length} : null;
+      return L.ok ? {ok: true, psum, notes, dcnt, blocks: L.stat.blocks, machines: L.stat.machines, belts: L.stat.belts, ug: L.stat.ug, ms, leaves} : {ok: false, why: L.why, ms, leaves, psum, notes, dcnt};
     }, {bk: BK[bl], dock: DK[dn]});
     const {notes, ...show} = r; console.log('EXO ' + bl + ' ' + dn + ' ' + JSON.stringify(show));
+    for (const n of r.notes || []) if (/ndustrial|Dock|dock/.test(n)) console.log('NOTE ' + n);
     const chk = (c, m) => { console.log((c ? 'PASS ' : 'FAIL ') + bl + ' ' + dn + ' ' + m); if (!c) fails++ };
     const nn = r.notes || [], rep = nn.some(n => /Planner N=.*built/.test(n)), sec = r.ms / 1000;
     if (r.ok) {
