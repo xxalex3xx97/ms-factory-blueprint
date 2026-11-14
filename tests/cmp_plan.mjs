@@ -74,6 +74,17 @@ const pageRun = async a => {
   if (badUg) hard.push(badUg + ' UG pairs longer than ' + mx);
   const unp = S.blocks.filter(b => PLC_UG.includes(b.cls)).length - 2 * pairs.length;
   if (unp) hard.push(unp + ' unpaired UG');
+  // S0 holes (mode holes): every item inside some block footprint; no gap between occupied block rows of one block column
+  let holesInfo = null;
+  if (a.holes) {
+    const dB = b => dim({cls: b.cls, rot: b.rot === 1 || b.rot === 3 ? b.rot : 0});
+    const inB = (x, y) => T.blocks.some(b => { const d = dB(b); return x >= b.x * sc && x < b.x * sc + d.w * FC && y >= b.y * sc && y < b.y * sc + d.h * FC });
+    const where = [], cols = {};
+    T.blocks.forEach(b => { (cols[b.x] = cols[b.x] || []).push(b.y) });
+    let holes = 0;
+    Object.entries(cols).forEach(([x, ys0]) => { const ys = [...new Set(ys0)].sort((p, q) => p - q); if (ys.length < 2) return; const st = Math.min(...ys.slice(1).map((y, i) => y - ys[i])); ys.slice(1).forEach((y, i) => { const g = Math.round((y - ys[i]) / st) - 1; if (g > 0) { holes += g; where.push('x' + x + ' y' + ys[i] + '..' + y) } }) });
+    holesInfo = {itemsOut: ms.filter(b => !inB(b.x, b.y)).length, holes, where: where.slice(0, 4)};
+  }
   // containers inside floors (own cells)
   // (3) machine counts per recipe key
   const arm = L.bl && L.bl.cmp && L.bl.cmp.arm;   // Armoury: no Armoury machine, one composer sub-factory per component (parts), judged per part
@@ -110,7 +121,7 @@ const pageRun = async a => {
   // (5) flood
   const fl = a.floodFn ? a.floodFn : null;
   const flood = a.flood;   // set by node side through page function below
-  return {arm: !!arm, nParts: arm ? L.bl.cmp.parts.length : 0, hard, cerrs, count, K, L: {eng: L.eng || null, blocks: T.blocks.length, ug: pairs.length}, items: ms, nodes: tn || null, routed: (L.bl && L.bl.cmp && L.bl.cmp.routed) || null, pm: P.nodes[item].pmach, finalItems: arm ? L.bl.cmp.parts.map(p => p.key) : [item], recKey: a.recipeKey, rate: a.rate, belts: ms.filter(b => PLC_BELT.includes(b.cls)).length, machines: ms.filter(b => b.rec).length, planBelts: null};
+  return {holes: holesInfo, arm: !!arm, nParts: arm ? L.bl.cmp.parts.length : 0, hard, cerrs, count, K, L: {eng: L.eng || null, blocks: T.blocks.length, ug: pairs.length}, items: ms, nodes: tn || null, routed: (L.bl && L.bl.cmp && L.bl.cmp.routed) || null, pm: P.nodes[item].pmach, finalItems: arm ? L.bl.cmp.parts.map(p => p.key) : [item], recKey: a.recipeKey, rate: a.rate, belts: ms.filter(b => PLC_BELT.includes(b.cls)).length, machines: ms.filter(b => b.rec).length, planBelts: null};
 };
 
 // links1 stats on the model loaded by pageRun (containers are sources)
@@ -299,6 +310,20 @@ if (isMain) {
         console.log((r.ok ? 'PASS ' : 'FAIL ') + w + (r.ok ? '' : ': ' + r.errs.join('; ')));
         if (r.count) console.table(r.count);
         if (!r.ok) fails++;
+      }
+      console.table(rows);
+    } else if (mode === 'holes') {   // S0: 5 samples, 2x2c, normal docks: items inside blocks, no block-row holes per block column
+      await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp');
+      await page.waitForFunction(() => window.__fb && typeof cmpCompose === 'function' && typeof placerLayout === 'function');
+      const HS = [['Nickel 31', 'ITEM_NickelOre>ITEM_NickelPlates', 31], ['Capacitor 100', 'ITEM_NickelPlates+ITEM_TitaniumPlates>ITEM_Capacitor', 100], ['Enzyme 10', 'ITEM_Biomass+ITEM_Xenobacteria+ITEM_Nutrients>ITEM_Enzyme', 10], ['Basic Circuits 100', 'ITEM_SiliconWafers+ITEM_MagneticCoils>ITEM_BasicCircuit', 100], ['Advanced Circuits 5', 'ITEM_DetectorArray+ITEM_BasicCircuit+ITEM_Superalloy+ITEM_Coolant>ITEM_AdvancedCircuits', 5]];
+      const rows = [];
+      for (const [name, key, rate] of HS) {
+        const r = await page.evaluate(pageRun, {recipeKey: key, rate, mk: 1, bk: 'BPO_Station_03', strict: true, dock: {in: 'nrm', out: 'nrm'}, exactN: false, holes: true});
+        const h = r.holes || {};
+        rows.push({sample: name, blocks: r.L && r.L.blocks, itemsOut: h.itemsOut, holes: h.holes, where: (h.where || []).join(' ; ')});
+        if (r.errs || r.refused) { fails++; console.log('FAIL ' + name + ': ' + (r.refused || r.errs.join('; '))); continue }
+        if (h.itemsOut || h.holes) { fails++; console.log('FAIL ' + name + ': ' + h.itemsOut + ' items outside blocks, ' + h.holes + ' block-row holes: ' + h.where.join(' ; ')) }
+        else console.log('PASS ' + name);
       }
       console.table(rows);
     } else if (mode === 'tree') {
