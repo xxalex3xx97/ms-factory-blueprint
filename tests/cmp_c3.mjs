@@ -22,7 +22,7 @@ async function run(name, rate) {
     $("plnItem").value = item; $("plnRate").value = rate; $("plnMk").value = 1; $("plnBuf").value = 'DAT_Container_2'; $("plnMod").checked = false;
     $("plnDkI").checked = false; $("plnDkO").checked = false;
     placerGo();
-    for (let i = 0; i < 3000 && !(plcL ? plcT !== null : $("plnPrevErr").textContent); i++) await new Promise(r => setTimeout(r, 100));
+    for (let i = 0; i < 3000 && (plcBusyF || !(plcL ? plcT !== null : $("plnPrevErr").textContent)); i++) await new Promise(r => setTimeout(r, 100));
     return {eng: plcL ? plcL.eng : null, ok: !!plcL, tile: !!plcT && plcT.ok, badge: $("plnEngBadge").textContent, err: $("plnPrevErr").textContent, place: $("plnPlace").disabled, line: $("pvLine").textContent, mach: $("pvMach").textContent};
   }, [name, rate]);
 }

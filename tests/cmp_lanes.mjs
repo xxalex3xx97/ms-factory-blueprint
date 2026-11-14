@@ -25,7 +25,7 @@ for (const [name, rate, mk, build] of (process.argv[2] ? [[process.argv[2], +pro
     $("plnDkI").checked = false; $("plnDkO").checked = false;
     $("plnBk").value = 'BPO_Station_02';
     placerGo();
-    for (let i = 0; i < 3000 && !(plcL ? plcT !== null : $("plnPrevErr").textContent); i++) await new Promise(r => setTimeout(r, 100));
+    for (let i = 0; i < 3000 && (plcBusyF || !(plcL ? plcT !== null : $("plnPrevErr").textContent)); i++) await new Promise(r => setTimeout(r, 100));
     return {eng: plcL ? plcL.eng : null, ok: !!plcL, tile: !!plcT && plcT.ok, badge: $("plnEngBadge").textContent, err: $("plnPrevErr").textContent, place: $("plnPlace").disabled, line: $("pvLine").textContent};
   }, [name, rate, mk]);
   console.log('  ' + name + ' ' + rate + ' Mk' + (mk + 1) + ' | ' + a.badge + ' | ' + a.line + ' | ' + a.err);

@@ -90,7 +90,7 @@ for (const [name, rate, file] of [['Nickel Plates', 480, 'cmp_c7_nickel'], ['Bas
     $("plnDkI").checked = true; $("plnDkO").checked = true; $("plnDk").value = 'nrm'; $("plnDkOT").value = '';
     $("plnBk").value = 'BPO_Station_02';
     placerGo();
-    for (let i = 0; i < 3000 && !(plcL ? plcT !== null : $("plnPrevErr").textContent); i++) await new Promise(r => setTimeout(r, 100));
+    for (let i = 0; i < 3000 && (plcBusyF || !(plcL ? plcT !== null : $("plnPrevErr").textContent)); i++) await new Promise(r => setTimeout(r, 100));
     return {eng: plcL ? plcL.eng : null, ok: !!plcL, tile: !!plcT && plcT.ok, badge: $("plnEngBadge").textContent, err: $("plnPrevErr").textContent, place: $("plnPlace").disabled, line: $("pvLine").textContent, notes: plcL ? plcL.note : [], docks: plcT ? plcT.blocks.filter(b => b.cls === plcCls('BPO_Dock')).length : 0};
   }, [name, rate]);
   console.log('  ' + a.badge + ' | ' + a.line + ' | ' + a.err + ' | docks ' + a.docks + ' | ' + JSON.stringify(a.notes.filter(n => /^Dock/.test(n))));
