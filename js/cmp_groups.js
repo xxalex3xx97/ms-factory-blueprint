@@ -53,45 +53,39 @@ function cmpPlanG(P,item,mk,spMk,block){
 
 // lane assignment after the member templates are built. NB[id].inR[j] = port rows of item j. -> {out:{memberId:[rows]},reg:{ownerId:{r:[r0,r1],src:[{row,y,item}],snk:[...]}}} | {why}
 function cmpGAssign(pl,NB,H){
-  const by=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),out={},reg={};
+  const by=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),out={},reg={},wt={};
   pl.nodes.forEach(o=>{out[o.id]=[]});
   for(const e of pl.g.ge){
     const A=e.c.map(i=>by[i]),B=e.p.map(i=>by[i]),j=B[0].rec.i.findIndex(([it])=>it===A[0].key);
-    const sr=B.map(b=>NB[b.id].inR[j].slice().sort((x,y)=>x-y)),al=A.map(()=>B.map(()=>0));
-    B.forEach((b,bi)=>{   // consumer ports split between producers by flow share (largest remainder)
-      const R=sr[bi].length,d=e.f.reduce((s,r)=>s+r[bi],0),q=A.map((a,ai)=>d>0?e.f[ai][bi]/d*R:0),base=q.map(Math.floor);
-      let rem=R-base.reduce((x,y)=>x+y,0);const ord=q.map((v,i)=>[v-base[i],i]).sort((x,y)=>y[0]-x[0]);
-      for(let k=0;rem>0;k++,rem--)base[ord[k%ord.length][1]]++;
-      base.forEach((v,ai)=>{al[ai][bi]=v})});
-    A.forEach((a,ai)=>{   // a producer with no lane at all would dead-end: take one port from the biggest allocation of a consumer it supplies
-      if(al[ai].some(v=>v>0))return;
-      let bb=-1,bv=0,from=-1;B.forEach((b,bi)=>{if(e.f[ai][bi]>0)A.forEach((z,zi)=>{if(al[zi][bi]>bv){bv=al[zi][bi];bb=bi;from=zi}})});
-      if(bb>=0&&bv>1){al[from][bb]--;al[ai][bb]++}});
-    const ptr=B.map(()=>0),own=by[e.p[0]];
-    reg[own.id]=reg[own.id]||{src:[],snk:[]};
+    const sr=B.map(b=>NB[b.id].inR[j].slice().sort((x,y)=>x-y)),L=A.map(()=>[]),pt=new Set();
+    if(globalThis.__gFF)B.forEach((b,bi)=>{   // fallback (too many lanes to route): ports filled in producer order, a port straddling two producers keeps the first one only (one lane per port, as before LANEMERGE)
+      const R=sr[bi].length,sh=e.f.reduce((t,r)=>t+r[bi],0)/R;let k=0,room=sh;
+      A.forEach((a,ai)=>{let v=e.f[ai][bi];while(v>1e-6&&k<R){const t=Math.min(v,room);if(!pt.has(bi+','+k))L[ai].push({bi,ys:sr[bi][k]});pt.add(bi+','+k);v-=t;room-=t;if(room<1e-6){k++;room=sh}}})});
+    else B.forEach((b,bi)=>A.forEach((a,ai)=>{if(e.f[ai][bi]>1e-6)sr[bi].forEach((ys,k)=>{L[ai].push({bi,ys});pt.add(bi+','+k)})}));   // LANEMERGE: every producer feeding a consumer gets a lane to EVERY port of it (router side-loads them): each pool splits its output evenly over its lanes and a full consumer back-pressures its lanes, so the sim/game settles on the planner flows (a single port per producer pair starved ports: fair merge alternation)
+    const mu=new Map(),mc=(bi,ys)=>bi+','+ys,tg=(ai,bi,ys)=>mu.get(mc(bi,ys))>1?B[bi].id+'@'+ys:A[ai].id+'>'+B[bi].id;   // a port fed by one lane: lane and ports of that pair share a tag (router picks any); fed by several: own tag per port, lanes side-load (j)
+    L.forEach(l=>l.forEach(q=>mu.set(mc(q.bi,q.ys),(mu.get(mc(q.bi,q.ys))||0)+1)));
+    const own=by[e.p[0]];reg[own.id]=reg[own.id]||{src:[],snk:[]};
     A.forEach((a,ai)=>{
-      const tot=al[ai].reduce((x,y)=>x+y,0);if(!tot)return;
-      if(tot>H-2)return;
+      if(L[ai].length>H-2)return;
       const used=new Set(),near=y0=>{for(let d=0;d<H;d++)for(const y of[y0-d,y0+d])if(y>=0&&y<=H-1&&!used.has(y)){used.add(y);return y}};   // lane leaves the pool at its sink's own row when free (same-row lanes stay straight), else the nearest free row
-      B.forEach((b,bi)=>{
-        for(let n=0;n<al[ai][bi];n++){
-          const ys=sr[bi][ptr[bi]++],tag=a.id+'>'+b.id,ya=near(ys);
-          out[a.id].push(ya);reg[own.id].src.push({row:a.row,y:ya,item:tag});reg[own.id].snk.push({row:b.row,y:ys,item:tag});
-        }});
+      L[ai].forEach(({bi,ys})=>{const ya=near(ys);out[a.id].push(ya);(wt[a.id]=wt[a.id]||[]).push((((NB[B[bi].id].lanes.find(l=>l.y===ys&&l.key===A[0].key)||{}).m)||1)/mu.get(mc(bi,ys)));reg[own.id].src.push({row:a.row,y:ya,item:tg(ai,bi,ys),j:mu.get(mc(bi,ys))>1})});
     });
-    if(A.some((a,ai)=>al[ai].reduce((x,y)=>x+y,0)>H-2))return{why:'groups: a pool needs more than '+(H-2)+' lanes'};
+    B.forEach((b,bi)=>sr[bi].forEach((ys,k)=>{if(pt.has(bi+','+k))reg[own.id].snk.push({row:b.row,y:ys,item:tg(L.findIndex(l=>l.some(q=>q.bi===bi&&q.ys===ys)),bi,ys)})}));
+    if(L.some(l=>l.length>H-2))return{why:'groups: a pool needs more than '+(H-2)+' lanes'};
   }
   for(const id in reg){const r=reg[id],rows=[...r.src,...r.snk].map(q=>q.row);r.r=[Math.min(...rows,by[id].row),Math.max(...rows,by[id].row)];
     const g=pl.g.G[by[id].gid];g.mem.forEach(q=>{r.r[0]=Math.min(r.r[0],q.row);r.r[1]=Math.max(r.r[1],q.row)})}
-  for(const id in out)out[id].sort((x,y)=>x-y);
-  return{out,reg};
+  for(const id in out){const ix=out[id].map((y,i)=>i).sort((x,y)=>out[id][x]-out[id][y]),w=wt[id]||[];out[id]=ix.map(i=>out[id][i]);wt[id]=ix.map(i=>w[i])}   // wt: demand weight of each lane (machines on its port / lanes sharing the port), aligned with the sorted rows
+  return{out,reg,wt};
 }
 
 // compose branch used by cmpCompose1 when CMP_GROUPS: -> {ok,A,stages,cmpI,note,per} | {ok:false,why}
 function cmpGroupsRun(P,item,mk,spMk,BX,bk,block){
   const pl=cmpPlanG(P,item,mk,spMk,block);if(!pl.ok)return pl;
   const tz=cmpTreeSize(pl,mk,spMk,block);if(!tz.ok)return tz;
-  const A=cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by,dk:null});if(!A.ok)return A;
+  const mkA=()=>cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by,dk:null});let A=mkA();
+  if(!A.ok&&/merge routing/.test(A.why)){globalThis.__gFF=1;try{A=mkA()}finally{globalThis.__gFF=0}}   // all-to-all lanes did not route: fill-first ports
+  if(!A.ok)return A;
   const stages=pl.nodes.map(o=>({item:o.item,cls:o.cls,tpl:tz.by[o.id].tpl,block,S:tz.by[o.id].S,N:o.N,perStrip:[o.N],B:1}));
   return{ok:true,A,stages,cmpI:{K:1,tree:true,groups:true,stages,nodes:A.nodes,routed:A.routed},note:pl.notes.slice(),per:[P.nodes[item].machines]};
 }

@@ -163,14 +163,14 @@ function cmpAssembleTree1(c,wide,fz){
   const nc0=q=>nb&&q%3!==1&&!wide.has(q),D=pl.D,byD=dp=>pl.nodes.filter(o=>o.depth===dp&&(!o.raw||byId[o.parent].inKind==='merge'));
   const subRows=o=>{if(LA)return LA.reg[o.id].r;const r=[],walk=v=>{r.push(v.row);v.children.forEach(i=>walk(byId[i]))};walk(o);return[Math.min(...r),Math.max(...r)]};
   const mrg=(o,w)=>{const [r0,r1]=subRows(o),sources=[],sinks=[],Y=(row,y)=>(row-r0)*(H+2)+y;
-    if(LA){const R=LA.reg[o.id];R.src.forEach(s=>sources.push({x:0,y:Y(s.row,s.y),item:s.item}));R.snk.forEach(s=>sinks.push({x:w-1,y:Y(s.row,s.y),item:s.item}));
+    if(LA){const R=LA.reg[o.id];R.src.forEach(s=>sources.push({x:0,y:Y(s.row,s.y),item:s.item,j:s.j}));R.snk.forEach(s=>sinks.push({x:w-1,y:Y(s.row,s.y),item:s.item}));
       if(w<W&&sources.length>w-3)return{r0,r1,sources,sinks,rt:{ok:false,why:"region too narrow"}};   // GROUPS: cheap refusal for the width search
-      return{r0,r1,sources,sinks,rt:cmpRoute({W:w,H,rowsN:r1-r0+1,mk,sources,sinks,ugMax:def(ugc).maxApart,eastStart:true})}}
+      return{r0,r1,sources,sinks,rt:cmpRoute({W:w,H,rowsN:r1-r0+1,mk,sources,sinks,ugMax:def(ugc).maxApart,eastStart:true,join:true})}}
     o.children.map(i=>byId[i]).forEach(q=>OR[q.id].forEach(y=>sources.push({x:0,y:Y(q.row,y),item:q.key})));
     NB[o.id].inR.forEach((rows,j)=>rows.forEach(y=>sinks.push({x:w-1,y:Y(o.row,y),item:o.rec.i[j][0]})));
     return{r0,r1,sources,sinks,rt:cmpRoute({W:w,H,rowsN:r1-r0+1,mk,sources,sinks,ugMax:def(ugc).maxApart,eastStart:true})}};
   const feedS=(o,w)=>{const bz=NB[o.id].b,hs=tplIfSets(block,sz[o.id].S).hs,sets=bz.iface.sets.map((q,i)=>({o:q.o,hs:hs[i],n:q.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(q=>q.n>0);return{W:w,H,mk,bx,sets,M:bz.iface.M,k:o.k,main:0,pass:[],rawItems:o.rec.i.map(q=>q[0]),allRaw:true,seed:o.growth?o.key:null}};
-  const poolOf=(o,w)=>o.raw?cmpPool({W:w,H,mk,bx,item:o.key,raw:true,inRows:[],outRows:OR[o.id]}):(m=>cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:m.rows,mgIn:m.mg,outRows:OR[o.id],bal:!!LA}))(cmpMerge(NB[o.id].outRows,NB[o.id].outN,NB[o.id].gOut));
+  const poolOf=(o,w)=>o.raw?cmpPool({W:w,H,mk,bx,item:o.key,raw:true,inRows:[],outRows:OR[o.id]}):(m=>cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:m.rows,mgIn:m.mg,outRows:OR[o.id],bal:!!LA,wt:LA&&LA.wt[o.id],wi:m.n}))(cmpMerge(NB[o.id].outRows,NB[o.id].outN,NB[o.id].gOut));
   const inOf=(o,w)=>{if(o.join)return{items:[]};if(o.inKind==='merge'){const m=mrg(o,w);return m.rt.ok?{items:m.rt.items}:null}return o.inKind==='src'?cmpPool({W:w,H,mk,bx,item:o.rec.i[0][0],raw:true,inRows:[],outRows:NB[o.id].inR[0]}):cmpFeed(feedS(o,w))};
   const mw={},memo=new Map();
   const cnt=(q,w)=>{   // items of column q's pieces at width w (Infinity: some piece does not build)

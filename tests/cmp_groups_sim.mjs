@@ -33,21 +33,31 @@ const simPage = ({nodes, items, warm, meas}) => {
     Z.M.forEach((M, id) => { const b = M.b; if (q.fb ? b.x >= q.fb.x && b.x < q.fb.x + q.fb.w && b.y >= q.fb.y && b.y < q.fb.y + q.fb.h : M.r.o[0] === q.item) { n++; const d = (Z.mt.get(id) || 0) - (m0.get(id) || 0); got += d * 60 / meas; if (M.st === 'starved') stv++ } });
     return {id: q.id, item: q.item, gid: q.gid, rate: q.rate, got, n, stv};
   });
+  const dbg = []; Z.M.forEach((M, id) => { if (M.r.o[0].includes('Capacitor')) dbg.push([M.b.x, M.b.y, M.st, JSON.stringify([...Object.entries(M.inb)].map(([k, v]) => k.replace('ITEM_', '').slice(0, 3) + Math.round(v))), Math.round(((Z.mt.get(id) || 0) - (m0.get(id) || 0)) * 60 / meas)]) });
+  if (globalThis.__wantDbg) { const cc = []; Z.C.forEach((c, id) => { const t = c.st.get('ITEM_TitaniumPlates'); const n = c.st.get('ITEM_NickelPlates'); if (t || n) cc.push([c.b.x, c.b.y, t && Math.round(t.n), n && Math.round(n.n)]) }); console.log('CONT ' + JSON.stringify(cc)) }
+  if (globalThis.__wantDbg) console.log('CAPM ' + JSON.stringify(dbg));
   return {out, src, raw: [...raw], sat: sat.length, st, steady: Z.sm && Z.sm.steady};
 };
 try {
   const page = await (await br.newContext()).newPage();
   page.on('pageerror', e => pageErrs.push(e.message));
+  if (process.env.DBG) page.on('console', m => console.log('[page] ' + m.text()));
   await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp');
   await page.waitForFunction(() => window.__fb && typeof cmpGroupsRun === 'function' && typeof placerLayout === 'function');
   for (const c of cases) for (const mode of ['groups', 'control']) {
     const [n, rate] = c.split(':');
     const key = await page.evaluate(re => [].concat(...Object.values(RECS)).map(rk).find(k => new RegExp(re).test(k)), KEY[n]);
     await page.evaluate(g => { globalThis.CMP_GROUPS = g }, mode === 'groups');
+    if (process.env.DBG) await page.evaluate(() => { globalThis.__gdbg = 1; globalThis.__wantDbg = 1 });
+    if (process.env.DBG) await page.evaluate(() => { globalThis.__rtlog = [] });
+    if (process.env.GFF) await page.evaluate(t => { globalThis.__gFF2 = t }, +process.env.GFF);
+    if (process.env.TRIES) await page.evaluate(t => { globalThis.CMPR_TRIES = t }, +process.env.TRIES);
     const t0 = Date.now(), r = await checkCompose(page, key, +rate, 1, 'BPO_Station_02', {strict: true});
+    if (!r.ok && process.env.DBG) console.log('rtlog', await page.evaluate(() => { const l = __rtlog; const c = {}; l.forEach(x => { const n = x.split('|').length; c[n] = (c[n] || 0) + 1 }); return JSON.stringify(c) }));
     if (!r.ok) { console.log('REFUSED/FAIL ' + c + ' ' + mode + ': ' + r.errs.slice(0, 2).join(' | ')); rows.push({case: c, mode, note: 'build fail'}); if (mode === 'groups') fails++; continue }
     const nodes = r.nodes && r.nodes.map(q => ({id: q.id, item: q.item, gid: q.gid, rate: q.rate, fb: q.fb}));
     const s = await page.evaluate(simPage, {nodes, items: r.items, warm: WARM, meas: MEAS});
+    if (process.env.DBG) console.log('MEMBERS ' + JSON.stringify(s.out.map(o => [o.id, o.item.replace('ITEM_', ''), +o.rate.toFixed(0), +o.got.toFixed(0), o.n, o.stv])));
     const by = {};
     s.out.forEach(o => { const k = o.item.replace('ITEM_', ''), e = by[k] = by[k] || {plan: 0, got: 0, blocks: 0, starvedBlocks: 0, worst: 9}; e.plan += o.rate; e.got += o.got; e.blocks++; const ratio = o.rate > 0 ? o.got / o.rate : 1; e.worst = Math.min(e.worst, ratio); if (ratio < 0.95) e.starvedBlocks++ });
     console.log(`== ${c} ${mode}: blocks ${r.row.blocks} belts ${r.row.belts} machines ${r.row.machines} srcContainers ${s.src} raw ${s.raw.map(x => x.replace('ITEM_', '')).join(',')} states ${JSON.stringify(s.st)} satBelts ${s.sat} steady ${s.steady} (${((Date.now() - t0) / 1000).toFixed(0)}s)`);
