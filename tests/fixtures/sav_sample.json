@@ -68,6 +68,26 @@
    "GridRotation": 0,
    "BlockID": 6,
    "PaletteID": 0
+  },
+  {
+   "Class": "BPO_Dock_2",
+   "GridLocation": {
+    "X": 1600,
+    "Y": 0
+   },
+   "Height": 0,
+   "GridRotation": 2,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BPO_ElevatorBlock_03",
+   "GridLocation": {
+    "X": 2000,
+    "Y": 0
+   },
+   "Height": 0,
+   "GridRotation": 0,
+   "PaletteID": 0
   }
  ],
  "DefaultMachines": [

@@ -54,28 +54,31 @@ for m in dms: PATHS[short(cls(m))]=cls(m)
 CONN=sorted({short(cls(e)) for e in conns})
 
 # SAV_DEFM
+# FIX-1: machine pos = 8*block + rotated offset; machine Height = 8*block Height + dh; rot = block rot + dr
 def norm_list(b):
     br=rot(b); bx,by=gl(b); bh=hgt(b); out=[]
     for m in g.find(b,'DefaultMachines').val[1]:
-        mx,my=gl(m); dx,dy=inv(mx-bx,my-by,br)
-        out.append((cls(m),dx,dy,hgt(m)-bh,(rot(m)-br)%4,cfg(m)))
+        mx,my=gl(m); dx,dy=inv(mx-8*bx,my-8*by,br)
+        out.append((cls(m),dx,dy,hgt(m)-8*bh,(rot(m)-br)%4,cfg(m)))
     return out
 groups={}
 for e in bc:
     if g.find(e,'DefaultMachines').val[1]: groups.setdefault(short(cls(e)),[]).append(e)
 DEFM={}; fails=[]; verified=0; total=0
 for s,es in groups.items():
-    ref=next((e for e in es if rot(e)%4==0),es[0])
+    ref=es[0]  # first instance in file order (FIX-1)
     rl=sorted(x[:5] for x in norm_list(ref))
-    ok=True
+    okc=0
     for e in es:
         total+=1
-        if sorted(x[:5] for x in norm_list(e))==rl: verified+=1
-        else: ok=False
-    if not ok:
-        fails.append(s)
-        if rot(ref)%4!=0: continue  # failing and no rotation-0 reference: drop
+        nl=sorted(x[:5] for x in norm_list(e))
+        if nl==rl: verified+=1; okc+=1
+        else: print('DIFF',s,'ref',rl,'got',nl)
+    print(s,'OK' if okc==len(es) else 'FAIL',okc,'/',len(es))
+    if okc!=len(es): fails.append(s)
     DEFM[s]=[{'c':c,'dx':dx,'dy':dy,'dh':dh,'dr':dr,'hex':hx} for c,dx,dy,dh,dr,hx in norm_list(ref)]
+if fails:
+    print('NEEDS-THINKING: rotation pattern fails for',fails); sys.exit(1)
 
 # SAV_DEFCFG
 DEFCFG={}; seen=set()

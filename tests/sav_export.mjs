@@ -50,39 +50,59 @@ chk('DisplayName parses back', dnRe === 'Site Sample', `got "${dnRe}"`);
 
 const isConn = s => SAV_CONN.includes(s);
 const pathOf = c => (c.startsWith('/Game/') ? c : SAV_PATHS[c.split('/').pop().split('.')[0]]);
-const byId = (list, idName) => new Map(list.map(e => [i32(raw(e, idName)), e]));
-const blkById = byId([...blkRe, ...conRe], 'BlockID');
-let blkOk = true, blkDetail = [];
-fx.Blocks.forEach((b, i) => {
-  const id = i + 1, e = blkById.get(id), short = b.Class.split('/').pop().split('.')[0];
-  const wantList = isConn(short) ? conRe : blkRe;
-  const ok = e && wantList.includes(e) && clsOf(e) === pathOf(b.Class) &&
+// IDs interleave with in-block machines, so match blocks by order within Blocks / Connectors.
+const rotv = (dx, dy, r) => { for (let i = 0; i < ((r % 4) + 4) % 4; i++) [dx, dy] = [-dy, dx]; return [dx, dy]; };
+let blkOk = true, blkDetail = [], inOk = true, inDetail = [], inTotal = 0, zeroOk = true, dockOk = false, elevOk = false;
+let kb = 0, kc = 0;
+fx.Blocks.forEach(b => {
+  const short = b.Class.split('/').pop().split('.')[0];
+  const e = isConn(short) ? conRe[kc++] : blkRe[kb++];
+  const ok = !!e && clsOf(e) === pathOf(b.Class) &&
     JSON.stringify(xf(e)) === JSON.stringify({X: b.GridLocation.X, Y: b.GridLocation.Y, H: b.Height, R: b.GridRotation}) &&
     i32(raw(e, 'PaletteID')) === (b.PaletteID || 0);
-  if (!ok) blkDetail.push(`block ${id} ${b.Class}`);
-  blkOk = blkOk && !!ok;
+  if (!ok) blkDetail.push(`block ${b.Class}`);
+  blkOk = blkOk && ok;
+
+  // In-block default machines vs SAV_DEFM (FIX-1: pos = 8*block + rotated offset, Height = 8*block H + dh, rot = block rot + dr).
+  const dm = e ? savFind(e, 'DefaultMachines').val[1] : [], want = SAV_DEFM[short] || [];
+  inTotal += dm.length;
+  if (!want.length && dm.length) zeroOk = false;
+  if (dm.length !== want.length) { inOk = false; inDetail.push(`${short}: ${dm.length} in-block, want ${want.length}`); }
+  const br = ((b.GridRotation % 4) + 4) % 4;
+  dm.forEach((me, k) => {
+    const d = want[k], [dx, dy] = rotv(d.dx, d.dy, br);
+    const exp = {X: 8 * b.GridLocation.X + dx, Y: 8 * b.GridLocation.Y + dy, H: 8 * b.Height + d.dh, R: (d.dr + br) & 3};
+    const good = clsOf(me) === d.c && JSON.stringify(xf(me)) === JSON.stringify(exp) && cfgHex(me) === d.hex;
+    if (!good) { inOk = false; inDetail.push(`${short} machine ${k}`); }
+    if (short === 'BPO_Dock_2') dockOk = good && b.GridRotation === 2 && exp.X === 8 * b.GridLocation.X - 64 && exp.R === 0;
+    if (short === 'BPO_ElevatorBlock_03') elevOk = good && clsOf(me).includes('BPO_Elevator_02');
+  });
 });
 chk('blocks and connectors match fixture', blkOk, blkDetail.join('; '));
+chk('in-block default machines match SAV_DEFM (FIX-1 offsets)', inOk, inDetail.join('; '));
+chk('in-block machine count == 3 (Dock, Dock_2, ElevatorBlock_03)', inTotal === 3, `got ${inTotal}`);
+chk('Dock_2 block (rot 2): dock at 8*block + (-64,0), rot 0', dockOk);
+chk('ElevatorBlock_03 block: BPO_Elevator_02 at 8*block', elevOk);
+chk('block class without SAV_DEFM gets 0 in-block machines', zeroOk);
 chk('block count (Blocks + Connectors) == fixture', blkRe.length + conRe.length === fx.Blocks.length,
   `${blkRe.length}+${conRe.length} vs ${fx.Blocks.length}`);
 
-// Expected: no in-block DefaultMachines, so Machines == fixture DefaultMachines.
+// Top-level Machines == fixture DefaultMachines, same order (in-block machines are not top-level).
 chk('Machines count == fixture DefaultMachines', macRe.length === fx.DefaultMachines.length,
   `${macRe.length} vs ${fx.DefaultMachines.length}`);
-const macById = byId(macRe, 'MachineID');
 let macOk = true, macDetail = [];
 fx.DefaultMachines.forEach((m, i) => {
-  const id = fx.Blocks.length + i + 1, e = macById.get(id), s = m.Class;
+  const e = macRe[i], s = m.Class;
   const t = m.Transform;
   const wantCfg = m.ConfigHex || SAV_DEFCFG[s] || '';
   const ok = e && clsOf(e) === pathOf(s) && cfgLenOk(e) && cfgHex(e) === wantCfg &&
     JSON.stringify(xf(e)) === JSON.stringify({X: t.GridLocation.X, Y: t.GridLocation.Y, H: t.Height, R: t.GridRotation});
-  if (!ok) macDetail.push(`machine ${id} ${s}`);
+  if (!ok) macDetail.push(`machine ${i} ${s}`);
   macOk = macOk && !!ok;
 });
 chk('machines match fixture (path, transform, config)', macOk, macDetail.join('; '));
 const refIdx = fx.DefaultMachines.findIndex(m => m.Class === 'BP_RefineryObject');
-const refE = macById.get(fx.Blocks.length + refIdx + 1);
+const refE = macRe[refIdx];
 chk('refinery SerializedMachineConfig == ConfigHex', !!refE && cfgHex(refE) === fx.DefaultMachines[refIdx].ConfigHex.slice(0), '');
 const spIdx = fx.DefaultMachines.findIndex(m => m.Class === 'BP_SplitterObject_2');
 chk('splitter config is 33 bytes', fx.DefaultMachines[spIdx].ConfigHex.length === 66);

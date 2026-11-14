@@ -1,5 +1,5 @@
 // GVAS .sav writer for Designer blueprints. Port of tools/gvas_w.py.
-// Plain globals (no modules). Needs SAV_TPL, SAV_PATHS, SAV_CONN, SAV_DEFCFG from sav_template.js.
+// Plain globals (no modules). Needs SAV_TPL, SAV_PATHS, SAV_CONN, SAV_DEFM, SAV_DEFCFG from sav_template.js.
 // Uses only DataView, Uint8Array, atob. No DOM here.
 
 const SAV_NATIVE = new Set(['Color', 'IntPoint', 'Guid', 'Vector', 'Rotator', 'DateTime', 'Vector2D', 'Quat', 'LinearColor', 'Transform']);
@@ -191,8 +191,8 @@ function savExport(j) {
   let nextId = 1;
   const blocks = [], conns = [], machines = [];
 
-  // Blocks and connectors. Prototype already has empty DefaultMachines, so none are written.
-  // Default machines inside blocks are not generated (in-block offsets vary per instance).
+  // Blocks and connectors. In-block default machines (docks, elevators) from SAV_DEFM (FIX-1).
+  // Template block DefaultMachines is emptied, so protoMac (a MachineEntry) is the element prototype.
   for (const b of j.Blocks || []) {
     const short = b.Class.split('/').pop().split('.')[0];
     let path = b.Class;
@@ -203,6 +203,17 @@ function savExport(j) {
     const isConn = SAV_CONN.includes(short);
     const e = savEntry(isConn ? protoCon : protoBlk, path, b.GridLocation.X, b.GridLocation.Y,
       b.Height, b.GridRotation, b.PaletteID || 0, 'BlockID', nextId++);
+    // FIX-1: machine pos = 8*block + rotated offset; Height = 8*block Height + dh; rot = block rot + dr.
+    // Config is the template hex as-is (dock name not re-encoded).
+    const br = ((b.GridRotation % 4) + 4) % 4;
+    savFind(e, 'DefaultMachines').val = ['sarr', (SAV_DEFM[short] || []).map(m => {
+      let dx = m.dx, dy = m.dy;
+      for (let i = 0; i < br; i++) [dx, dy] = [-dy, dx];
+      const q = savEntry(protoMac, m.c, 8 * b.GridLocation.X + dx, 8 * b.GridLocation.Y + dy,
+        8 * b.Height + m.dh, (m.dr + br) & 3, 0, 'MachineID', nextId++);
+      savSetVar(q, 'SerializedMachineConfig', savCfgBytes(m.hex));
+      return q;
+    })];
     (isConn ? conns : blocks).push(e);
   }
 
