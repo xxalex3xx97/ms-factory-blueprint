@@ -1,5 +1,18 @@
+// BL H1 horizontal zones: IZ (containers + input paths) west of the wall x=30, FB (machine rows) east, sink containers at x=55. One 30x30 block; rows packed at pitch P.
+// blHA(yRow,c,ya,side,xp,pyIn): optional pyIn = explicit port row per row (H6a, non-adjacent containers); default = contiguous port block. Port per row (s=floor((4c-R)/2), row i -> port ya+s+i). Flow dir: in = sign(yRow-py) (north -1 rot 3, south +1 rot 1); out = sign(py-yRow).
+// Column: in: x=xp+1+k (north group k from top, south group k from bottom); out: x=xp-1-k (down group k from top, up group k from bottom). Straight rows: col null.
+function blHA(yRow,c,ya,side,xp,pyIn){
+  const R=yRow.length,s=Math.floor((4*c-R)/2),py=pyIn||yRow.map((_,i)=>ya+s+i),dir=yRow.map((y,i)=>Math.sign(side==='in'?y-py[i]:py[i]-y)),col=new Array(R).fill(null);
+  const top=side==='in'?-1:1;   // group counted from the top row (in: north, out: down); the other group from the bottom
+  for(const d of [-1,1]){
+    const idx=[...Array(R).keys()].filter(i=>dir[i]===d);
+    if(d!==top)idx.reverse();
+    idx.forEach((i,k)=>col[i]=side==='in'?xp+1+k:xp-1-k);
+  }
+  return{py,col,dir};
+}
 // CMP C2 hub blocks (composer): cmpPool (SRC / POOL / OZ) and cmpFeed (FEED). Local block coordinates, W x H = block floor. Spec: vault main-sequence/tasks/2026-11-13-composer-spec.md section 3.
-// Reuses blHA (bl_geom.js) and the blHIZ/blHFB/blHIN loops with W/H/rows as parameters. Needs page globals: blHA, PLC_BELT. Lane rows at x=0 / x=W-1 are plain rot-0 belts (the assembler turns wall crossings into UG pairs).
+// Reuses blHA (top of this file) and the blHIZ/blHFB/blHIN loops with W/H/rows as parameters. Needs page globals: blHA, PLC_BELT. Lane rows at x=0 / x=W-1 are plain rot-0 belts (the assembler turns wall crossings into UG pairs).
 const cmpBt=(bc,x,y,rot)=>({cls:bc,x,y,rot,h:0,pid:0});
 const cmpNo=why=>({ok:false,why,items:[]});
 // SHAPE: straight lane run xa..xb on row y, rot 0. Endpoints stay belts (f tags them); the interior is UG hops of up to maxApart-1 cells (the cells between stay free), ~2 items per 10 cells instead of 10.

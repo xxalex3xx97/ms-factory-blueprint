@@ -1,5 +1,6 @@
+const BL={DERATE:1.0};
 // Edge Interface v1: standard lane slots shared by all js/tpl/*.js templates. Spec: vault main-sequence/tasks/2026-11-13-edge-interface-v1.md
-// Global script (page) and node-loadable (tests/tpl_iface.mjs). Needs BL (js/bl_plan.js) for tplDerate.
+// Global script (page) and node-loadable (tests/tpl_iface.mjs). Needs BL (top of this file) for tplDerate.
 // TPL_IF_SETS[block][S] = set origin rows o_s (top row of each set). Only these S are allowed.
 const TPL_IF_SETS={'1x1':{1:[0],2:[0,7]},'1x2':{1:[0],2:[0,7]},'2x2':{1:[0],2:[0,15],3:[0,10,20],4:[0,8,16,23],6:[0,5,10,15,20,25]},'2x2c':{1:[4],2:[4,15],3:[4,12,19],4:[4,9,14,19]}};
 const TPL_IF_H={'1x1':14,'1x2':14,'2x2':30,'2x2c':30};
@@ -113,3 +114,45 @@ function tplLanesBuild(L,n){
 }
 // side-native lane rows (not standard): growth k=3 o+8; growth k=4 o+7,o+8; adv_4in item 3 at o+12; enr sandwich bottom group yM+9+(k-1-j) for j<k
 const TPL_IF_SIDE={growth_k3:[10],growth_k4:[9,10],adv_4in_item3:[12],asm_3in:[],enr_sandwich_bottom:(yM,k)=>Array.from({length:k},(_,j)=>yM+9+(k-1-j))};
+// BL2-BL3 geometry (blMachine, blRow, blStage, blTower). Filled in BL2+.
+// blMachine(cls): first rot 0..3 whose ports give one input (N face, not out) and one output (S face, not in); other ports must be toggleable and go to off.
+function blMachine(cls,k=1,mir=false){
+  if(mir){   // flipped machine (blFlip): same rot, pin/pout at the mirrored x (w-1-x); both must exist, others off. Two-input: refused.
+    const b=blMachine(cls,k);if(!b.ok)return b;if(k!==1)return{ok:false,why:'BL: flip two-input machine'};
+    const ps=portsOf({cls,x:0,y:0,rot:b.rot,off:[]}),xi=b.w-1-b.xin,xo=b.w-1-b.xout;
+    const pi=ps.find(p=>p.nx===0&&p.ny===-1&&p.dir!=='out'&&p.x===xi),po=ps.find(p=>p.nx===0&&p.ny===1&&p.dir!=='in'&&p.x===xo);
+    if(!pi||!po)return{ok:false,why:'BL: flip, no machine port at the mirrored x'};
+    const others=ps.filter(p=>p!==pi&&p!==po);
+    if(others.some(p=>!p.tg))return{ok:false,why:'BL: flip, machine ports'};
+    return{...b,xin:xi,xout:xo,off:others.map(p=>p.key).sort()};
+  }
+  for(let rot=0;rot<4;rot++){
+    const ps=portsOf({cls,x:0,y:0,rot,off:[]});
+    const pins=ps.filter(p=>p.nx===0&&p.ny===-1&&p.dir!=='out').sort((a,b)=>a.x-b.x);
+    const pout=ps.filter(p=>p.nx===0&&p.ny===1&&p.dir!=='in').sort((a,b)=>a.x-b.x)[0];
+    if(pins.length<k||!pout)continue;
+    if(k===2&&pins[1].x-pins[0].x<2)continue;
+    const use=k===2?[pins[0],pins[1]]:[pins[0]];
+    const others=ps.filter(p=>!use.includes(p)&&p!==pout);
+    if(others.some(p=>!p.tg))continue;
+    const d=dim({cls,rot});
+    return{ok:true,rot,w:d.w,h:d.h,xin:k===2?pins[1].x:pins[0].x,...(k===2?{xinB:pins[0].x}:{}),xout:pout.x,off:others.map(p=>p.key).sort()};
+  }
+  return{ok:false,why:'BL: machine ports'};
+}
+// blRow(o): one machine row. Manifold belt y=yIn from colX to last splitter (splitter at X0+k*w+xin, off = pfSplOff(...,['E','S'])), machines at (X0+k*w,yIn+1), output belt y=yOut=yIn+1+h from X0+xout to xEx-1, corner rot 1 at (xEx,yOut).
+function blRow(o){
+  const {mk,spMk,cls,rec,mc,m,X0,yIn,colX,xEx}=o,w=mc.w,xin=mc.xin,xout=mc.xout,h=mc.h;
+  if(colX>=X0+xin)return{ok:false,why:'BL: row input column past first splitter'};
+  const yOut=yIn+1+h,sc=PLC_SPL[spMk],bc=PLC_BELT[mk],spl=pfSplOff(sc,0,['E','S']),items=[];
+  const lastX=X0+(m-1)*w+xin;
+  for(let x=colX;x<=lastX;x++){
+    const k=(x-X0-xin)/w;
+    if(Number.isInteger(k)&&k>=0&&k<m)items.push({cls:sc,x,y:yIn,rot:0,h:0,pid:0,off:spl});
+    else items.push({cls:bc,x,y:yIn,rot:0,h:0,pid:0});
+  }
+  for(let k=0;k<m;k++)items.push({cls,x:X0+k*w,y:yIn+1,rot:mc.rot,h:0,pid:0,off:mc.off,rec});
+  for(let x=X0+xout;x<xEx;x++)items.push({cls:bc,x,y:yOut,rot:0,h:0,pid:0});
+  items.push({cls:bc,x:xEx,y:yOut,rot:1,h:0,pid:0});
+  return{ok:true,items,yOut};
+}

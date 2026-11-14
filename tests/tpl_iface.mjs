@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const IF = new Function(fs.readFileSync(ROOT + '/js/bl_plan.js', 'utf8') + '\n' + fs.readFileSync(ROOT + '/js/tpl/iface.js', 'utf8') + ';return {TPL_IF_SETS,TPL_IF_H,tplIfSets,tplIfRows,tplOutTail,tplDerate,TPL_IF_SIDE}')();
+const IF = new Function(fs.readFileSync(ROOT + '/js/tpl/iface.js', 'utf8') + ';return {TPL_IF_SETS,TPL_IF_H,tplIfSets,tplIfRows,tplOutTail,tplDerate,TPL_IF_SIDE}')();
 const {TPL_IF_SETS, TPL_IF_H, tplIfSets, tplIfRows} = IF;
 const isBelt = c => /ConveyorBelt/.test(c);
 const BELT = 'DAT_ConveyorBelt';

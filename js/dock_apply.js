@@ -1,4 +1,4 @@
-// No Limits: dock inputs/outputs (plain globals). Plan: vault main-sequence/tasks/2026-11-12-dock-plan.md
+// dock apply (shared by composer): dock inputs/outputs (plain globals). Plan: vault main-sequence/tasks/2026-11-12-dock-plan.md
 const NLD={MID:[6,22],LANE_I:[4,6,22,24],BOX_I:'DAT_Container_2'};
 const nlDockOff=bw=>bw>2?1:0;
 const nlSlotN=(c,k,bw)=>30*c+NLD.MID[k]-nlDockOff(bw);
