@@ -21,22 +21,22 @@ window.HAND=(function(){
     S.M.push(m);return m;
   }
   const cx=m=>m.x+m.w/2,cy=m=>m.y+m.h/2,out=p=>[p.x+p.nx,p.y+p.ny],dirOf=(nx,ny)=>DX.findIndex((v,i)=>v===nx&&DY[i]===ny);
-  function cands(m,tx,ty){   // unused ports whose outside cell is free, nearest to the target first
-    return m.ports.filter(p=>!m.used.has(p.key)).map(p=>({p,o:out(p)})).filter(c=>free(c.o[0],c.o[1])).sort((a,b)=>(Math.abs(a.o[0]-tx)+Math.abs(a.o[1]-ty))-(Math.abs(b.o[0]-tx)+Math.abs(b.o[1]-ty)));
+  function cands(m,tx,ty,faces){   // unused ports (optionally only on the given faces, e.g. ['W','N']) whose outside cell is free, nearest to the target first
+    return m.ports.filter(p=>!m.used.has(p.key)&&(!faces||faces.includes(p.f))).map(p=>({p,o:out(p)})).filter(c=>free(c.o[0],c.o[1])).sort((a,b)=>(Math.abs(a.o[0]-tx)+Math.abs(a.o[1]-ty))-(Math.abs(b.o[0]-tx)+Math.abs(b.o[1]-ty)));
   }
   // ---- Dijkstra/A* over (cell, belt direction, piece type): type 0 belt, 1 underground entrance, 2 underground exit
   const nk=(x,y,d,t)=>(((x+4000)*8000+(y+4000))*4+d)*3+t;
   function heapPush(h,it){h.push(it);let i=h.length-1;while(i>0){const p=(i-1)>>1;if(h[p].f<=h[i].f)break;[h[p],h[i]]=[h[i],h[p]];i=p}}
   function heapPop(h){const t=h[0],l=h.pop();if(h.length){h[0]=l;let i=0;for(;;){let a=i*2+1,b=a+1,m=i;if(a<h.length&&h[a].f<h[m].f)m=a;if(b<h.length&&h[b].f<h[m].f)m=b;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m}}return t}
   function spanFree(ax,a,b){const l=S.span.get(ax);if(!l)return true;const lo=Math.min(a,b),hi=Math.max(a,b);return !l.some(([c,d])=>!(hi<c||lo>d))}
-  function findPath(sx,sy,gx,gy,gdir,sback){
+  function findPath(sx,sy,gx,gy,gdir,sback,cfn){   // cfn(x,y) = extra cost of stepping on a cell (used to keep long belts on the block-edge streets)
     const g=new Map(),prev=new Map(),H=[],hh=(x,y)=>Math.abs(x-gx)+Math.abs(y-gy);
     for(let d=0;d<4;d++){if(d===sback)continue;const key=nk(sx,sy,d,0);g.set(key,0);prev.set(key,null);heapPush(H,{f:hh(sx,sy),c:0,x:sx,y:sy,d,t:0,key})}
     {const d=(sback+2)%4;const key=nk(sx,sy,d,1);g.set(key,3);prev.set(key,null);heapPush(H,{f:3+hh(sx,sy),c:3,x:sx,y:sy,d,t:1,key})}
     const node=new Map();let n=0;
     // a belt path must never re-enter a cell it already uses (a loop would put two pieces on one cell)
     const onPath=(u,x,y)=>{let key=u.key,c=0;while(key!=null&&c++<600){const q=node.get(key);if(q&&q.x===x&&q.y===y)return true;key=prev.get(key)}return false};
-    while(H.length&&n++<300000){
+    while(H.length&&n++<(HAND.maxStates||1500000)){
       const u=heapPop(H);if(u.c>g.get(u.key))continue;node.set(u.key,u);
       if(u.x===gx&&u.y===gy&&u.d===gdir&&u.t!==1){const path=[];let key=u.key;while(key!=null){const q=node.get(key);path.push({x:q.x,y:q.y,d:q.d,t:q.t});key=prev.get(key)}return path.reverse()}
       const push=(x,y,d,t,c)=>{const key=nk(x,y,d,t);if(c<(g.has(key)?g.get(key):1e9)){g.set(key,c);prev.set(key,u.key);heapPush(H,{f:c+hh(x,y),c,x,y,d,t,key})}};
@@ -46,8 +46,9 @@ window.HAND=(function(){
       }else{
         const fx=u.x+DX[u.d],fy=u.y+DY[u.d];if(!free(fx,fy)||onPath(u,fx,fy))continue;
         const dz=(S.door.get(k(fx,fy))||0)&&!(fx===gx&&fy===gy)?(HAND.doorCost||30):0;   // stepping on another port's doorway costs extra (keeps ports reachable)
-        for(const nd of[u.d,(u.d+1)%4,(u.d+3)%4])push(fx,fy,nd,0,u.c+1+dz+(nd!==u.d?1:0));
-        push(fx,fy,u.d,1,u.c+3+dz);
+        const ex=cfn?cfn(fx,fy):0;
+        for(const nd of[u.d,(u.d+1)%4,(u.d+3)%4])push(fx,fy,nd,0,u.c+1+dz+ex+(nd!==u.d?(HAND.turnCost||1):0));
+        push(fx,fy,u.d,1,u.c+3+dz+ex);
       }
     }
     return null;
@@ -59,18 +60,18 @@ window.HAND=(function(){
     a.used.add(pa.key);b.used.add(pb.key);
   }
   // link(a,b): belt from an unused port of a to an unused port of b. Returns path length or 0 (and logs the failure).
-  function link(a,b,label){
-    const ca=cands(a,cx(b),cy(b)).slice(0,5);
+  function link(a,b,label,opt){
+    const ca=cands(a,cx(b),cy(b),opt&&opt.pa).slice(0,5);
     for(const A of ca){
-      const cb=cands(b,A.o[0],A.o[1]).slice(0,5);
+      const cb=cands(b,A.o[0],A.o[1],opt&&opt.pb).slice(0,5);
       for(const B of cb){
         const sback=dirOf(-A.p.nx,-A.p.ny),gdir=dirOf(-B.p.nx,-B.p.ny);
         if(A.o[0]===B.o[0]&&A.o[1]===B.o[1]){continue}
-        const path=findPath(A.o[0],A.o[1],B.o[0],B.o[1],gdir,sback);
+        const path=findPath(A.o[0],A.o[1],B.o[0],B.o[1],gdir,sback,opt&&opt.cfn);
         if(path){commit(path,a,A.p,b,B.p,label);return path.length}
       }
     }
-    S.fails.push((label||'')+' '+a.name+' -> '+b.name+' [free ports '+cands(a,0,0).length+'/'+cands(b,0,0).length+']');return 0;
+    S.fails.push((label||'')+' '+a.name+' -> '+b.name+' [free ports '+cands(a,0,0,opt&&opt.pa).length+'/'+cands(b,0,0,opt&&opt.pb).length+']');return 0;
   }
   // verify(): re-walk every placed connection from its source doorway to its destination doorway over the PLACED pieces only (as the game would carry items)
   function verify(){

@@ -1,105 +1,80 @@
-// Exosuit factory, hand-designed (not the auto-builder): 1 Exosuit/hour = leaves 30,20,20,20,20 per minute / 60.
-// Needs tools/hand/hand.js (HAND) and tools/hand/exosuit_spec.js (EXO_SPEC, from the planner). exoBuild(opts) -> {ok,blocks,ms,fails,...}
-// Design rules (what a player would do):
-//  * every product with several producers, several consumers, a self feed (growth seed) or that is a leaf output gets ONE hub container (the storage street);
-//    simple one-to-one products go machine to machine on a single belt
-//  * a raw source container (infinite) sits in each group that eats that raw item
-//  * machines are grouped by family into blocks, groups kept together, belts are routed one connection at a time
-//  * Nutrients get two hubs (3 machines each) because one hub has only 16 ports (planner says 5 machines, this builds 6)
+// Exosuit factory, TIDY MODULAR version (uses hand.js HAND + exosuit_spec.js). exoBuild(opts) -> {ok,blocks,ms,fails,modules,...}
+// STANDARD MODULE (block-local cells of a 30x30 floor; the outer 4 cells of every block are the street):
+//   west   x=5      RAW source containers (infinite), slot s at y=5+5*s          -> stand-ins for docks
+//   middle x=12..20 MACHINES stacked top to bottom (as many blocks, stacked, as the machines need)
+//   east   x=22     OUTPUT hub (one container per product; growth recycling hubs hold the seed) at y=12  -> the module's EXIT
+// ENTRANCE = the machine's own WEST and NORTH ports (inputs always enter there), OUTPUT always leaves the machine's EAST ports into the hub.
+// Flow is always WEST -> EAST: a module sits in column = its depth (longest path from raw); producers are always left of consumers.
+// Belts between modules go from the producer's output hub straight to each consumer machine's input port, along the block-edge streets
+// (cells in the outer 4-cell frame are cheap, the interior is expensive), so they hug block borders in parallel. No relay containers: a consumer
+// that waits on one input cannot hoard the others (a container holds 16,000 items).
 window.exoBuild=function(opts){
-  opts=opts||{};
-  HAND.reset();
-  const SP={};EXO_SPEC.forEach(s=>SP[s.item.replace('ITEM_','')]=s);
-  const LEAF=new Set(['AdvancedPlates','SuperalloyFrame','Biolattice','ChitinComposite','ChromaticAlloy']);
-  const cons={};EXO_SPEC.forEach(s=>s.ins.forEach(i=>{const k=i.replace('ITEM_','');(cons[k]=cons[k]||[]).push(s.item.replace('ITEM_',''))}));
-  const consN={};EXO_SPEC.forEach(s=>s.ins.forEach(i=>{const k=i.replace('ITEM_','');consN[k]=(consN[k]||0)+s.n}));   // consumer MACHINES per product (one output port feeds one belt)
-  const hubOf=p=>{const s=SP[p];return s.n>1||(consN[p]||0)>1||LEAF.has(p)||s.ins.includes(s.item)};
-  const SEED=new Set(EXO_SPEC.filter(s=>s.ins.includes(s.item)).map(s=>s.item.replace('ITEM_','')));
-  const BASEGAP=opts.gap||5;let GAP=BASEGAP;   // growth chambers (7x7, up to 5 belts each) get a wider gap
-  // ---- block snake (4 columns); shelf packing per block
-  const snake=[];for(let gy=0;gy<7;gy++){const row=[0,1,2,3];if(gy%2)row.reverse();row.forEach(gx=>snake.push([gx,gy]))}
-  let bi=0;const shelf={};
-  const sh=i=>{const [gx,gy]=snake[i];return shelf[i]||(shelf[i]={gx,gy,x:2,y:2,rh:0})};   // 2-cell margin: ports facing the block edge need a doorway cell inside the floor
-  const sizeOf=cls=>{const d=dim({cls,rot:0});return[d.w,d.h]};
-  const tryPlace=(st,w,h)=>{let x=st.x,y=st.y,rh=st.rh;if(x+w>28){x=2;y+=rh+GAP;rh=0}if(y+h>28)return null;return{x,y,nx:x+w+GAP,rh:Math.max(rh,h)}};
-  function packGroup(items){   // items: [{cls,...}] kept together in one block when possible
-    for(let j=bi;j<snake.length;j++){
-      const st=sh(j),sim={x:st.x,y:st.y,rh:st.rh},pos=[];let ok=true;
-      for(const it of items){const [w,h]=sizeOf(it.cls);const p=tryPlace(sim,w,h);if(!p){ok=false;break}pos.push(p);sim.x=p.nx;sim.y=p.y;sim.rh=p.rh}
-      if(ok){HAND.block(st.gx,st.gy);const out=[];items.forEach((it,i)=>{const m=HAND.put({...it,gx:st.gx,gy:st.gy,lx:pos[i].x,ly:pos[i].y});out.push(m);if(!m)throw new Error('put failed '+it.name)});st.x=sim.x;st.y=sim.y;st.rh=sim.rh;bi=j;return out}
-    }
-    // too big for one block: continue item by item over the following blocks (a player carries on into the next block)
-    const out=[];
-    for(const it of items){
-      let placedIt=false;
-      for(;bi<snake.length&&!placedIt;){
-        const st=sh(bi),[w,h]=sizeOf(it.cls),p=tryPlace(st,w,h);
-        if(!p){bi++;continue}
-        HAND.block(st.gx,st.gy);const m=HAND.put({...it,gx:st.gx,gy:st.gy,lx:p.x,ly:p.y});if(!m)throw new Error('put failed '+it.name);
-        st.x=p.nx;st.y=p.y;st.rh=p.rh;out.push(m);placedIt=true;
-      }
-      if(!placedIt)throw new Error('out of blocks at '+it.name);
-    }
-    return out;
+  opts=opts||{};HAND.reset();
+  const TW=HAND.TW,SP={};EXO_SPEC.forEach(s=>SP[s.item.replace('ITEM_','')]=s);
+  const names=Object.keys(SP),short=i=>i.replace('ITEM_','');
+  const RAW_X=5,RAW_Y0=5,RAW_PITCH=5,OUT_X=22,OUT_YS=[12,18,6],MX=12,MY0=5,GAP=3,INNER=22,HUBMAX=13;
+  const size=cls=>{const d=dim({cls,rot:0});return[d.w,d.h]};
+  const capOf=cls=>Math.max(1,Math.floor((INNER+GAP)/(size(cls)[1]+GAP)));
+  // ---- depth = column
+  const depth={};const dep=p=>{if(depth[p]!=null)return depth[p];depth[p]=0;let d=0;for(const i of SP[p].ins){const q=short(i);if(q===p||!SP[q])continue;d=Math.max(d,dep(q)+1)}return depth[p]=d};
+  names.forEach(dep);
+  const maxD=Math.max(...names.map(p=>depth[p]));
+  const FAM=['Nutrients','Xenobacteria','Xenoeukarya','Xenoarchaea','Enzyme','AlphaProtein','BetaProtein','Biolattice','ChitinComposite','TitaniumPlates','NickelPlates','CobaltPlates','IridiumPlates','SiliconWafers','Graphene','ReinforcedGlass','EnrichedTitaniumOre','EnrichedNickelOre','EnrichedCobaltOre','Coolant'];
+  const M={};
+  // ---- one module per product; columns by depth, rows ordered by the mean row of the producers (fewer crossings)
+  for(let c=0;c<=maxD;c++){
+    const col=names.filter(p=>depth[p]===c);
+    const key=p=>{const rows=SP[p].ins.map(short).filter(q=>SP[q]&&q!==p&&M[q]).map(q=>M[q].gy0+M[q].blocks/2);return rows.length?rows.reduce((a,b)=>a+b,0)/rows.length:(FAM.includes(p)?FAM.indexOf(p):50)};
+    col.sort((a,b)=>key(a)-key(b));
+    let gy=0;
+    for(const p of col){const s=SP[p],cap=capOf(s.cls),blocks=Math.ceil(s.n/cap);M[p]={p,s,col:c,gy0:gy,blocks,cap,mach:[],raw:{},hubs:[]};gy+=blocks}
   }
-  const MA={},HUB={},RAW={},home={};   // machines by product, hubs by product, raw containers by group+item
-  const mk=(p,i)=>({cls:SP[p].cls,rec:SP[p].rec,name:p+'#'+i});
-  const hub=(p,ct)=>({cls:'DAT_Container_2',name:'hub '+p,ct:ct||[]});
-  const raw=(it,g)=>({cls:'DAT_Container_2',name:'raw '+it+' ['+g+']',ct:[{item:'ITEM_'+it,n:0,inf:true}],_raw:it,_g:g});
-  const seed=p=>[{item:'ITEM_'+p,n:300,inf:false}];
-  const G=[];   // groups: {id,items:[spec],products:[names]}
-  const add=(id,prods,list)=>G.push({id,prods,list});
-  const nut=n=>Array.from({length:n},(_,i)=>mk('Nutrients',i));
-  add('nA',['Nutrients'],[...nut(3).map((m,i)=>({...m,name:'Nutrients#A'+i,_p:'Nutrients',_h:'A'})),hub('NutA'),raw('Graphite','nA'),raw('Silica','nA'),raw('WaterIce','nA')]);
-  add('nB',['Nutrients'],[...nut(3).map((m,i)=>({...m,name:'Nutrients#B'+i,_p:'Nutrients',_h:'B'})),hub('NutB'),raw('Graphite','nB'),raw('Silica','nB'),raw('WaterIce','nB')]);
-  const many=(p,g)=>Array.from({length:SP[p].n},(_,i)=>({...mk(p,i),_p:p,_g:g}));
-  add('xb',['Xenobacteria'],[...many('Xenobacteria','xb'),{...hub('Xenobacteria',seed('Xenobacteria')),_hub:'Xenobacteria'},raw('Biomass','xb')]);
-  add('en',['Enzyme'],[...many('Enzyme','en'),{...hub('Enzyme'),_hub:'Enzyme'},raw('Biomass','en')]);
-  add('xe',['Xenoeukarya','Xenoarchaea'],[...many('Xenoeukarya','xe'),...many('Xenoarchaea','xe'),{...hub('Xenoeukarya',seed('Xenoeukarya')),_hub:'Xenoeukarya'},{...hub('Xenoarchaea',seed('Xenoarchaea')),_hub:'Xenoarchaea'},raw('Biomass','xe')]);
-  add('ab',['AlphaProtein','BetaProtein'],[...many('AlphaProtein','ab'),...many('BetaProtein','ab'),{...hub('AlphaProtein'),_hub:'AlphaProtein'},{...hub('BetaProtein'),_hub:'BetaProtein'},raw('Biomass','ab')]);
-  add('bc',['Biolattice','ChitinComposite'],[...many('Biolattice','bc'),{...hub('Biolattice'),_hub:'Biolattice'},...many('ChitinComposite','bc'),{...hub('ChitinComposite'),_hub:'ChitinComposite'}]);
-  const ref=(p,g)=>many(p,g);
-  add('r1',['TitaniumPlates','NickelPlates','CobaltPlates','SiliconWafers'],[...ref('TitaniumPlates','r1'),...ref('NickelPlates','r1'),...ref('CobaltPlates','r1'),...ref('SiliconWafers','r1'),{...hub('TitaniumPlates'),_hub:'TitaniumPlates'},{...hub('NickelPlates'),_hub:'NickelPlates'},raw('TitaniumOre','r1'),raw('NickelOre','r1'),raw('CobaltOre','r1'),raw('Silica','r1')]);
-  add('r2',['IridiumPlates','Graphene','ReinforcedGlass'],[...ref('IridiumPlates','r2'),...ref('Graphene','r2'),...ref('ReinforcedGlass','r2'),{...hub('IridiumPlates'),_hub:'IridiumPlates'},{...hub('Graphene'),_hub:'Graphene'},raw('IridiumOre','r2'),raw('Graphite','r2'),raw('Silica','r2')]);
-  add('e1',['EnrichedTitaniumOre','EnrichedNickelOre','EnrichedCobaltOre'],[...many('EnrichedTitaniumOre','e1'),...many('EnrichedNickelOre','e1'),...many('EnrichedCobaltOre','e1'),{...hub('EnrichedTitaniumOre'),_hub:'EnrichedTitaniumOre'},{...hub('EnrichedNickelOre'),_hub:'EnrichedNickelOre'},{...hub('EnrichedCobaltOre'),_hub:'EnrichedCobaltOre'},raw('TitaniumOre','e1'),raw('NickelOre','e1'),raw('CobaltOre','e1')]);
-  add('e2',['Superalloy','ChromaticAlloy'],[...many('Superalloy','e2'),{...hub('Superalloy'),_hub:'Superalloy'},...many('ChromaticAlloy','e2'),{...hub('ChromaticAlloy'),_hub:'ChromaticAlloy'}]);
-  add('e3',['Coolant'],[...many('Coolant','e3'),{...hub('Coolant'),_hub:'Coolant'},raw('NitrogenGas','e3')]);
-  add('a1',['MagneticCoils','BasicCircuit','DetectorArray','HullPlates'],[...many('MagneticCoils','a1'),...many('BasicCircuit','a1'),...many('DetectorArray','a1'),...many('HullPlates','a1'),{...hub('MagneticCoils'),_hub:'MagneticCoils'},{...hub('BasicCircuit'),_hub:'BasicCircuit'}]);
-  add('a2',['BasicMotor','Capacitor','ContainmentCoil','SuperconductorCoil'],[...many('BasicMotor','a2'),...many('Capacitor','a2'),...many('ContainmentCoil','a2'),...many('SuperconductorCoil','a2')]);
-  add('s1',['AdvancedCircuits','EmptySimulationMatrix','Multisensor','EncodedSimulationMatrix'],[...many('AdvancedCircuits','s1'),...many('EmptySimulationMatrix','s1'),...many('Multisensor','s1'),...many('EncodedSimulationMatrix','s1'),raw('Lonsdaleite','s1'),raw('StellarSurveyData','s1')]);
-  add('s2',['AdvancedPlates','SuperalloyFrame','ReinforcedPlates','MaglevCoupling'],[...many('AdvancedPlates','s2'),{...hub('AdvancedPlates'),_hub:'AdvancedPlates'},...many('SuperalloyFrame','s2'),{...hub('SuperalloyFrame'),_hub:'SuperalloyFrame'},...many('ReinforcedPlates','s2'),...many('MaglevCoupling','s2')]);
-  const placed=[];
-  for(const g of G){
-    GAP=['nA','nB','xb','en','xe','ab','bc'].includes(g.id)?(opts.ggap||8):BASEGAP;
-    const ms=packGroup(g.list);
-    g.list.forEach((it,i)=>{const m=ms[i];m._p=it._p;m._g=g.id;m._hub=it._hub;m._raw=it._raw;m._nh=it._h;placed.push(m);
-      if(it._p){(MA[it._p]=MA[it._p]||[]).push(m)}
-      if(it._hub)HUB[it._hub]=m;
-      if(it.name==='hub NutA')HUB.NutA=m;if(it.name==='hub NutB')HUB.NutB=m;
-      if(it._raw)RAW[g.id+'|'+it._raw]=m})}
-  // ---- connections, one at a time
-  const nutHub={Enzyme:'NutA',AlphaProtein:'NutB',BetaProtein:'NutB',Biolattice:'NutB'};
-  const srcFor=(it,prod,machine)=>{
-    const p=it.replace('ITEM_','');
-    if(p==='Nutrients')return HUB[nutHub[prod]];
-    if(SP[p]){if(hubOf(p))return HUB[p];return MA[p][0]}
-    const r=RAW[machine._g+'|'+p];if(!r)throw new Error('no raw '+p+' in group '+machine._g+' for '+prod);return r;
-  };
-  const order=['xb','en','xe','ab','bc','nA','nB','r1','r2','e1','e2','e3','a1','a2','s1','s2'];
-  const links=[];
-  for(const gid of order){
-    const grp=G.find(x=>x.id===gid);
-    for(const m of placed.filter(q=>q._g===gid&&q._p)){
-      const prod=m._p,s=SP[prod];
-      if(prod==='Nutrients'){const raws=['Graphite','Silica','WaterIce'];raws.forEach(r=>links.push([RAW[gid+'|'+r],m,'raw '+r+'>'+m.name]));links.push([m,HUB[m._nh==='A'?'NutA':'NutB'],'Nutrients>hub']);continue}
-      for(const it of s.ins){const src=srcFor(it,prod,m);links.push([src,m,it.replace('ITEM_','')+'>'+m.name])}
-      if(hubOf(prod)&&HUB[prod])links.push([m,HUB[prod],prod+'>hub']);
-    }
+  // ---- consumers per producer (machine level): every consumer machine gets its own belt from the producer's output hub
+  const eusers={};   // producer -> [{c,flow}]
+  for(const c of names){const s=SP[c];s.ins.forEach((i,ix)=>{const q=short(i);if(q===c||!SP[q])return;(eusers[q]=eusers[q]||[]).push({c,belts:s.n,flow:s.rate/(s.outn||1)*(s.qty[ix]||1)})})}
+  // ---- build every module from the standard template
+  for(const p of names){
+    const m=M[p],s=m.s,[w,h]=size(s.cls);
+    for(let b=0;b<m.blocks;b++)HAND.block(m.col,m.gy0+b);
+    for(let i=0;i<s.n;i++){const b=Math.floor(i/m.cap),slot=i%m.cap;
+      const mm=HAND.put({cls:s.cls,rec:s.rec,gx:m.col,gy:m.gy0+b,lx:MX,ly:MY0+slot*(h+GAP),name:p+'#'+i});if(!mm)throw new Error('machine '+p+'#'+i+' does not fit');m.mach.push(mm)}
+    let slot=0;
+    for(const i of s.ins){const q=short(i);if(q===p||SP[q])continue;   // raw inputs only
+      const rc=HAND.put({cls:'DAT_Container_2',gx:m.col,gy:m.gy0,lx:RAW_X,ly:RAW_Y0+RAW_PITCH*slot,name:'raw '+q+' > '+p,ct:[{item:i,n:0,inf:true}]});
+      if(!rc)throw new Error('raw container '+q+' of '+p+' does not fit');m.raw[q]=rc;slot++}
+    if(slot>4)throw new Error(p+' has more than 4 raw inputs');
+    // output hub(s): one is the standard; a second only when one hub would run out of its 16 ports (Nutrients: 13 consumer belts + 5 machines)
+    const ext=(eusers[p]||[]).reduce((a,u)=>a+u.belts,0),self=s.ins.includes(s.item),nh=Math.max(1,Math.ceil((ext+s.n*(self?2:1))/HUBMAX));   // second hub only when one would run out of its 16 ports; a recycling module's machines each feed back from THEIR OWN hub, consumers are spread over hubs by supply
+    for(let j=0;j<nh;j++){const hb=HAND.put({cls:'DAT_Container_2',gx:m.col,gy:m.gy0,lx:OUT_X,ly:OUT_YS[j],name:'out '+p+(nh>1?' '+(j+1)+'/'+nh:''),ct:self?[{item:s.item,n:300,inf:false}]:[]});
+      if(!hb)throw new Error('output hub of '+p+' does not fit');m.hubs.push(hb)}
   }
-  let ok=0;const results=[];
-  const outs=links.filter(l=>/>hub$/.test(l[2])),ins=links.filter(l=>!/>hub$/.test(l[2]));   // outputs first: a machine must never lose its output port to its inputs
-  for(const [a,b,label] of [...outs,...ins]){const n=HAND.link(a,b,label);if(n)ok++;results.push(n)}
+  // ---- links. inside modules first (plain routing)
+  const cfn=(x,y)=>{const gx=Math.floor(x/TW),gy=Math.floor(y/TW),lx=x-gx*TW,ly=y-gy*TW;return(lx<4||lx>25||ly<4||ly>25)?0:(opts.interior||8)};
+  const IN=['W','N'];
+  const jobs=[];
+  for(const p of names){const m=M[p],s=m.s,self=s.ins.includes(s.item),nh=m.hubs.length;
+    m.mach.forEach((mm,i)=>jobs.push({a:mm,b:m.hubs[i%nh],l:p+' machine > out hub',opt:{pa:['E'],pb:['W','S']}}));   // hub: machine outputs come in on the west/south faces, belts leave from east/north
+  }
+  for(const p of names){const m=M[p],s=m.s,self=s.ins.includes(s.item),nh=m.hubs.length;
+    if(self)m.mach.forEach((mm,i)=>jobs.push({a:m.hubs[i%nh],b:mm,l:p+' seed > machine',opt:{pa:['E','N'],pb:IN}}));
+    for(const q in m.raw)m.mach.forEach(mm=>jobs.push({a:m.raw[q],b:mm,l:'raw '+q+' > '+p,opt:{pb:IN}}))}
+  // ---- between modules: producer hub -> every consumer machine (consumer module -> hub chosen so no hub exceeds its ports)
+  const ext=[];
+  for(const q of names){const users=(eusers[q]||[]).slice().sort((a,b)=>b.flow-a.flow),nh=M[q].hubs.length,
+      room=M[q].hubs.map((_,j)=>M[q].mach.filter((_,i)=>i%nh===j).length*(SP[q].pm||1));   // supply of each hub = its machines x per-machine rate; each consumer goes to the hub with the most room left
+    const per=[];users.forEach(u=>M[u.c].mach.forEach((cm,i)=>per.push({u,cm,i,fl:u.flow/u.belts})));
+    per.sort((a,b)=>b.fl-a.fl);   // each consumer MACHINE takes its belt from the hub with the most supply left
+    for(const e of per){let j=0;for(let k=1;k<room.length;k++)if(room[k]>room[j])j=k;room[j]-=e.fl;
+      ext.push({a:M[q].hubs[j],b:e.cm,l:q+' > '+e.u.c+'#'+e.i,opt:{pa:['E','N'],pb:IN,cfn}})}}
+  let ok=0;const all=[...jobs,...ext];
+  const fell=[];
+  for(const j of all){let n=HAND.link(j.a,j.b,j.l,j.opt);
+    if(!n&&j.opt&&(j.opt.pb||j.opt.pa)){HAND.S.fails.pop();n=HAND.link(j.a,j.b,j.l,{...j.opt,pa:null,pb:null});if(n)fell.push(j.l)}   // preferred faces crowded: any free port
+    if(!n){HAND.S.fails.pop();const mx=HAND.maxStates;HAND.maxStates=4000000;n=HAND.link(j.a,j.b,j.l,null);HAND.maxStates=mx;if(n)fell.push(j.l+' (any route)')}   // last resort: no street preference, any ports, bigger search
+    if(n)ok++}
   const T=HAND.result();
-  T.links=links.length;T.linksOk=ok;T.blocksUsed=T.blocks.length;
+  T.links=all.length;T.linksOk=ok;T.cols=maxD+1;T.fell=fell;
+  T.modules=names.map(p=>({p,col:M[p].col,gy0:M[p].gy0,blocks:M[p].blocks,n:M[p].s.n,raw:Object.keys(M[p].raw),hubs:M[p].hubs.length}));
   return T;
 };
+
