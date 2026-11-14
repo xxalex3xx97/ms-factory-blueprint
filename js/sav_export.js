@@ -34,7 +34,7 @@ function savFstrR(u8, p) {
 
 function savFstrW(s) {
   if (s === '') return savI32(0);
-  if (/^[\x00-\xff]*$/.test(s)) {
+  if (/^[\x00-\x7f]*$/.test(s)) {
     const o = new Uint8Array(4 + s.length + 1);
     savDV(o).setInt32(0, s.length + 1, true);
     for (let i = 0; i < s.length; i++) o[4 + i] = s.charCodeAt(i);
@@ -311,14 +311,16 @@ function savExport(j, opts) {
 // S4: Download .sav button (browser only). Same name rules as the .json download.
 if(typeof document!=="undefined"&&document.getElementById("expSav")){
   document.getElementById("expSav").onclick=()=>{
-    let nm=String(S.name||"blueprint").replace(/[<>:"/\|?*]+/g,"_");
+    let nm=String(S.name||"blueprint").replace(/[<>:"\/\\|?*]+/g,"_");
     if(nm.toLowerCase()==="presets")nm="Presets BP";
-    const j=build();j.DisplayName=nm;
-    const r=savExport(j,{size:b=>{const f=dim({cls:b.Class,rot:b.GridRotation});return[f.w,f.h]},icon:savIconCanvas()});
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(new Blob([r.bytes],{type:"application/octet-stream"}));
-    a.download=nm+".sav";a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-    if(r.warn.length)toast("Exported, "+r.warn.length+" class path(s) guessed");
+    try{
+      const j=build();j.DisplayName=nm;
+      const r=savExport(j,{size:b=>{const f=dim({cls:b.Class,rot:b.GridRotation});return[f.w,f.h]},icon:savIconCanvas()});
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(new Blob([r.bytes],{type:"application/octet-stream"}));
+      a.download=nm+".sav";a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      if(r.warn.length)toast("Exported, "+r.warn.length+" class path(s) guessed");
+    }catch(e){console.error(e);toast(".sav export failed: "+(e&&e.message||e))}
   };
 }
