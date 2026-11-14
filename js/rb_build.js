@@ -9,33 +9,38 @@ function rbBuild(x){
   const poolOf=(q,w,rows)=>{const n=NB[q.id],mm=cmpMerge(n.outRows,n.outN,n.gOut);return cmpPool({W:w,H,mk,bx,item:0,raw:false,inRows:mm.rows,mgIn:mm.mg,outRows:rows})};
   // IN region of a merge module: producer lanes (x=0) -> member port rows (x=w-1), rows hull of both modules; consumer first row r
   const reg=(m,w,r)=>{
-    const p=m.prod,rs=[r,r+m.B-1,p.r,p.r+p.B-1],r0=Math.min(...rs),r1=Math.max(...rs),Y=(row,y)=>(row-r0)*(H+2)+y,src=[],snk=[],many=p.B>1;
-    p.mem.forEach((pm,pb)=>p.lanes.forEach(l=>{const cm=m.mem[l.ci];src.push({x:0,y:Y(p.r+pb,l.ya),item:many?cm.id+'@'+l.y:pm.id+'>'+cm.id,...(many?{j:true}:{})})}));
-    m.mem.forEach((cm,cb)=>NB[cm.id].inR[0].forEach(y=>snk.push({x:w-1,y:Y(r+cb,y),item:many?cm.id+'@'+y:p.mem[0].id+'>'+cm.id})));
-    return{r0,r1,rt:cmpRoute({W:w,H,rowsN:r1-r0+1,mk,sources:src,sinks:snk,ugMax:def(ugc).maxApart,eastStart:true})};
+    const rs=[r,r+m.B-1];m.kids.forEach(p=>rs.push(p.r,p.r+p.B-1));
+    const r0=Math.min(...rs),r1=Math.max(...rs),Y=(row,y)=>(row-r0)*(H+2)+y,src=[],snk=[];
+    m.kids.forEach(p=>{const many=p.B>1;   // every producer member has a lane to EVERY port of the consumer members (all-to-all, LANEMERGE); a port fed by several lanes = own tag per port, side-load (j)
+      p.mem.forEach((pm,pb)=>p.lanes.forEach(l=>{const cm=m.mem[l.ci];src.push({x:0,y:Y(p.r+pb,l.ya),item:many?cm.id+'@'+l.y:pm.id+'>'+cm.id,...(many?{j:true}:{})})}));
+      m.mem.forEach((cm,cb)=>NB[cm.id].inR[p.pj].forEach(y=>snk.push({x:w-1,y:Y(r+cb,y),item:many?cm.id+'@'+y:p.mem[0].id+'>'+cm.id})))});
+    if(src.length>w-3&&w<W)return{r0,r1,rt:{ok:false,why:'region too narrow'}};
+    return{r0,r1,rt:cmpRoute({W:w,H,rowsN:r1-r0+1,mk,sources:src,sinks:snk,ugMax:def(ugc).maxApart,eastStart:true,join:true})};
   };
   for(const o of order){
-    const gr=G[o.id],m={o,gr,id:o.id,B:gr.B,mem:gr.mem,prod:gr.kids.length?M[gr.kids[0].o.id]:null,lanes:[],outRows:[]};M[o.id]=m;
-    if(o.parents&&o.parents.length){   // lanes out of every member: one per consumer port, leaving at the port's own row when free, else the nearest free row (near rule of cmp_groups.js 70)
+    const gr=G[o.id],m={o,gr,id:o.id,B:gr.B,mem:gr.mem,kids:gr.kids.map(k=>M[k.o.id]),lanes:[],outRows:[]};M[o.id]=m;
+    if(o.parents&&o.parents.length){
+      m.pj=G[o.parents[0]].o.rec.i.findIndex(([it])=>it===o.key);   // lanes out of every member: one per consumer port, leaving at the port's own row when free, else the nearest free row (near rule of cmp_groups.js 70)
       const used=new Set(),near=y0=>{for(let q=0;q<H;q++)for(const y of[y0-q,y0+q])if(y>=0&&y<=H-1&&!used.has(y)){used.add(y);return y}};
-      G[o.parents[0]].mem.forEach((cm,ci)=>NB[cm.id].inR[0].slice().sort(asc).forEach(y=>m.lanes.push({ci,y,ya:near(y)})));
+      G[o.parents[0]].mem.forEach((cm,ci)=>NB[cm.id].inR[m.pj].slice().sort(asc).forEach(y=>m.lanes.push({ci,y,ya:near(y)})));
       if(m.lanes.length>H-2)return no('rb: '+o.item+' pool needs '+m.lanes.length+' lanes, a block holds '+(H-2));
       m.outRows=m.lanes.map(l=>l.ya).sort(asc);
     }
     const o0=m.mem[0],NB0=NB[o0.id],z0=tz.by[o0.id];let pk;
-    if(m.prod)pk=rbPack({W,H,mk,dw:d.w,fb:{b:NB0.b,bi:NB0.bi},inF:w=>{const r=reg(m,w,m.prod.r);return r.rt.ok?{ok:true,items:r.rt.items}:{ok:false,why:r.rt.why||'merge routing failed'}},poolF:(w,rows)=>poolOf(o0,w,rows),outRows:m.outRows});
+    const rowWant=m.kids.length?Math.round(m.kids.reduce((s,p)=>s+p.r*p.o.N,0)/m.kids.reduce((s,p)=>s+p.o.N,0)):0;   // flow-weighted mean block row of the producers
+    if(m.kids.length)pk=rbPack({W,H,mk,dw:d.w,fb:{b:NB0.b,bi:NB0.bi},inF:w=>{const r=reg(m,w,rowWant);return r.rt.ok?{ok:true,items:r.rt.items}:{ok:false,why:r.rt.why||'merge routing failed'}},poolF:(w,rows)=>poolOf(o0,w,rows),outRows:m.outRows});
     else pk=rbPackNode(o0,z0,NB0,{block,bx,W,H,mk,outRows:m.outRows,dw:d.w});
     if(!pk.ok)return no('rb: '+o.item+': '+pk.why);
     m.pk=pk;
-    const c0=m.prod?m.prod.c+m.prod.pk.nPhys:0,rowWant=m.prod?m.prod.r:0;let hit=false;
+    const c0=m.kids.length?Math.max(...m.kids.map(p=>p.c+p.pk.nPhys)):0;let hit=false;
     for(const cd of rbCandidates(c0,rowWant,24)){
       if(Date.now()-t0>15000)return no('rb: time');
-      const {c,r}=cd,rg=m.prod?reg(m,pk.colW[0],r):null;
+      const {c,r}=cd,rg=m.kids.length?reg(m,pk.colW[0],r):null;
       if(rg&&!rg.rt.ok)continue;
       const cells=[];
       for(let pc=0;pc<pk.nPhys;pc++){const rs=new Set();for(let b=0;b<m.B;b++)rs.add(r+b);if(rg&&pc===pk.colP[0])for(let y=rg.r0;y<=rg.r1;y++)rs.add(y);rs.forEach(y=>cells.push({gx:c+pc,gy:y,dx:pc,dy:y-r}))}
       const lan=[];
-      if(m.prod){const p=m.prod,gx0=p.c+p.pk.nPhys-1;p.mem.forEach((pm,pb)=>p.lanes.forEach(l=>lan.push([gx0,c,p.r+pb,l.ya])))}
+      m.kids.forEach(p=>{const gx0=p.c+p.pk.nPhys-1;p.mem.forEach((pm,pb)=>p.lanes.forEach(l=>lan.push([gx0,c,p.r+pb,l.ya])))});
       if(!g.free(cells)||!lan.every(a=>g.laneFree(...a)))continue;
       g.claim(m,cells);lan.forEach(a=>g.laneClaim(...a));
       Object.assign(m,{c,r,cells,rg});hit=true;break;
@@ -51,7 +56,7 @@ function rbBuild(x){
     for(let b=0;b<m.mem.length;b++){
       const q=m.mem[b],Y=(m.r+b-gy0)*TH,n=NB[q.id],ct=[],bz=n.b,w=pk.colW[1],fit=w===W||w===bz.w?n.bi:cmpShr(bz,mk,w);
       if(!fit)return no('rb: shrink failed ('+m.o.item+')');
-      if(!m.prod){const h=cmpPool({W:pk.colW[0],H,mk,bx,item:q.rec.i[0][0],raw:true,inRows:[],outRows:n.inR[0]});if(h.ok===false)return no(h.why);put(h.items,pX(0),Y)}
+      if(!m.kids.length){const h=cmpPool({W:pk.colW[0],H,mk,bx,item:q.rec.i[0][0],raw:true,inRows:[],outRows:n.inR[0]});if(h.ok===false)return no(h.why);put(h.items,pX(0),Y)}
       put(fit,pX(1),Y);
       const h=poolOf(q,pk.colW[2],m.outRows);if(h.ok===false)return no(h.why);put(h.items,pX(2),Y,ct);
       nodes.push({id:q.id,item:q.item,key:q.key,rate:q.rate,lanes:n.lanes,outRows:n.outRows,rec:rk(q.rec),N:q.N,pN:m.o.N,util:q.util,pU:q.util,gx:m.c+pk.colP[1],gy:(m.r+b-gy0)*d.h,inCol:m.c+pk.colP[0],pool:m.c+pk.colP[2],row:m.r+b-gy0,fb:{x:pX(1),y:Y,w,h:H},ct,kind:q.inKind});
