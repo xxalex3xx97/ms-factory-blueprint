@@ -9,7 +9,7 @@ import {execFileSync} from 'child_process';
 import {fileURLToPath} from 'url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-for (const f of ['config', 'sav_template', 'sav_export'])
+for (const f of ['config', 'sav_template', 'sav_icon', 'sav_export'])
   vm.runInThisContext(fs.readFileSync(path.join(ROOT, 'js', f + '.js'), 'utf8'), f + '.js');
 
 let total = 0, pass = 0;
@@ -44,6 +44,17 @@ chk('re-dump identical to export', Buffer.compare(Buffer.from(savDump(re)), byte
 chk('no warnings for fixture classes', Array.isArray(r.warn) && r.warn.length === 0, JSON.stringify(r.warn));
 
 const bpRe = savFind(re.props, 'Blueprint').val[1];
+const gv = savFind(savFind(bpRe, 'Screenshot').val[1], 'GreyscaleValues').val[1];
+const gvN = i32(gv, 0), gvVals = [];
+for (let i = 0; i < gvN; i++) gvVals.push(i32(gv, 4 + 4 * i));
+chk('GreyscaleValues count i32 65536', gvN === 65536, `got ${gvN}`);
+chk('GreyscaleValues payload length 262148', gv.length === 262148, `got ${gv.length}`);
+chk('GreyscaleValues >20 non-zero (fixture blocks 400 apart, so icon is small)', gvVals.filter(v => v !== 0).length > 20, `${gvVals.filter(v => v !== 0).length}`);
+// Hand-made 2-block job, blocks adjacent, 4x4 cells each: icon must be large.
+const adj = savIcon({Blocks: [{GridLocation: {X: 0, Y: 0}}, {GridLocation: {X: 16, Y: 0}}]}, () => [4, 4]);
+const adjNz = adj.filter(v => v !== 0).length;
+chk('adjacent 2-block icon >1000 non-zero', adjNz > 1000, `${adjNz}`);
+chk('GreyscaleValues all within 0..255', gvVals.every(v => v >= 0 && v <= 255));
 const blkRe = savFind(bpRe, 'Blocks').val[1], conRe = savFind(bpRe, 'Connectors').val[1], macRe = savFind(bpRe, 'Machines').val[1];
 const dnRe = savFstrR(savFind(bpRe, 'DisplayName').val[1].slice(9), 0)[0];
 chk('DisplayName parses back', dnRe === 'Site Sample', `got "${dnRe}"`);

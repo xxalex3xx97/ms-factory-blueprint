@@ -182,7 +182,7 @@ function savEntry(proto, path, x, y, h, r, pal, idName, id) {
   return e;
 }
 
-function savExport(j) {
+function savExport(j, opts) {
   const o = savLoad(Uint8Array.from(atob(SAV_TPL), c => c.charCodeAt(0)));
   const bp = savFind(o.props, 'Blueprint').val[1];
   const warn = [];
@@ -192,9 +192,10 @@ function savExport(j) {
   const dn = savFind(bp, 'DisplayName');
   dn.val = ['raw', savCat([dn.val[1].slice(0, 9), savFstrW(name)])];
 
-  // Blank thumbnail on purpose: 65536 greyscale ints, all 0.
-  const px = new Uint8Array(4 + 65536 * 4);
-  savDV(px).setInt32(0, 65536, true);
+  // Screenshot: 65536 greyscale ints from the pure icon renderer (count i32, then i32 per pixel).
+  const ic = savIcon(j, opts && opts.size), px = new Uint8Array(4 + 65536 * 4), dv = savDV(px);
+  dv.setInt32(0, 65536, true);
+  for (let i = 0; i < 65536; i++) dv.setInt32(4 + 4 * i, ic[i], true);
   savFind(savFind(bp, 'Screenshot').val[1], 'GreyscaleValues').val = ['raw', px];
 
   // Prototypes: first template entry of each list (already trimmed to one entry).
@@ -267,7 +268,7 @@ if(typeof document!=="undefined"&&document.getElementById("expSav")){
     let nm=String(S.name||"blueprint").replace(/[<>:"/\|?*]+/g,"_");
     if(nm.toLowerCase()==="presets")nm="Presets BP";
     const j=build();j.DisplayName=nm;
-    const r=savExport(j);
+    const r=savExport(j,{size:b=>{const f=dim({cls:b.Class,rot:b.GridRotation});return[f.w,f.h]}});
     const a=document.createElement("a");
     a.href=URL.createObjectURL(new Blob([r.bytes],{type:"application/octet-stream"}));
     a.download=nm+".sav";a.click();
