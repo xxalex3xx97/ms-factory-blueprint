@@ -2,7 +2,7 @@
 // BASE rate = one full row: machines-per-Mk2-belt (floor(120 / max input rate per machine), min 1) x output/min of one machine.
 // Everything runs client-side; results are cached per session in GAL.
 const GAL={cards:[],byKey:new Map(),busy:false};
-const GAL_ENG={zones:"Zones",tower:"Tower","tower-multi":"Tower (multi-input)",nl:"No Limits",vcol:"Columns"};
+const GAL_ENG={cmp:"Composer",zones:"Zones"};
 const galEsc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function galInit(){
   if(GAL.cards.length)return;
@@ -26,7 +26,7 @@ function galBuild(k){
   if(L.ok){
     const T=L.tile&&L.tile.ok?L.tile:{blocks:[{cls:plcCls("BPO_Station_02"),x:0,y:0}],ms:L.items},cnt={mach:0,belt:0,spl:0,ug:0,box:0};
     L.items.forEach(b=>cnt[b.rec?"mach":PLC_UG.includes(b.cls)?"ug":PLC_BELT.includes(b.cls)?"belt":PLC_SPL.includes(b.cls)?"spl":"box"]++);
-    res.eng=L.eng||"legacy";res.engName=GAL_ENG[L.eng]||"Legacy placer";res.cnt=cnt;res.blocks=L.tile&&L.tile.ok?L.tile.blocks.length:0;res.w=L.w;res.h=L.h;res.T=T;res.items=L.items;res.fb=L.blWhy||"";
+    res.eng=L.eng||"legacy";res.engName=GAL_ENG[L.eng]||"Legacy placer";res.cnt=cnt;res.blocks=L.tile&&L.tile.ok?L.tile.blocks.length:0;res.w=L.w;res.h=L.h;res.T=T;res.items=L.items;res.fb="";
     res.chip=["g","Golden template"];
   }else{res.why=String(L.why||"").replace(/ \(NL used\)$/,"");res.chip=["b","Not supported yet: "+res.why]}
   return k.res=res;

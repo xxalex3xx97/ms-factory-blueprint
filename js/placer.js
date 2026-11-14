@@ -1,13 +1,13 @@
 const plcMmax=(a,f=x=>x)=>{let m=-Infinity;for(const x of a){const v=f(x);if(v>m)m=v}return m},plcMmin=(a,f=x=>x)=>{let m=Infinity;for(const x of a){const v=f(x);if(v<m)m=v}return m};   // spread-free min/max: Math.max(...big) overflows the call stack on huge layouts
 // Build factory (Step 1): single-recipe, single-raw-input plan -> ghost. Layout is pure.
 const PLC_BELT=["DAT_ConveyorBelt","DAT_ConveyorBelt2","DAT_ConveyorBelt3"],PLC_SPL=["DAT_Splitter","DAT_Splitter_2","DAT_Splitter_3"];
-let PLC_BOX="DAT_Container";   // NL swaps it for the duration of nlTop (Buffer container choice), everything else reads it as a constant
+let PLC_BOX="DAT_Container";   // everything reads it as a constant
 const PL_STD=["BPO_Station_01","BPO_Station_2x1","BPO_Station_02"];   // smallest first; floors 14x14, 30x14, 30x30
 const PL_ALL=[...PL_STD,"BPO_Station_03"];   // + 2x2 C (floor 30x30); not in PL_STD: prefab.js uses its last entry as the biggest block
 const PLC_UG=["DAT_UndergroundBelt","DAT_UndergroundBelt_2","DAT_UndergroundBelt_3"];const plcCls=nm=>Object.keys(BASE).find(k=>BASE[k].kind==="b"&&BASE[k].name===nm);
 const PLC_SRC=480;
 let PLC_BANK=false;   // test hook only (slice 1): bank layout instead of the lane layout
-var CMP_ENGINE=false;   // composer (js/compose.js) instead of zones: ?engine=cmp
+var CMP_ENGINE=true;   // composer (js/compose.js) is the default; ?engine=old = legacy
 let PLC_G=0;   // test hook: force band count
 const PLC_BIG=12;   // blocks above which the modal asks to confirm (not a limit)
 const plcPp=(cls,rot)=>portsOf({cls,x:0,y:0,rot,off:[]});
@@ -331,7 +331,7 @@ function plcUnshare(P,item){
 }
 // belt / splitter too slow for the planned load: the layout uses the next higher Mk automatically (the note says so) instead of refusing
 function placerLayout(P,item,mk,spMk,o={}){
-  o={...o,eng:(typeof CMP_ENGINE!=="undefined"&&CMP_ENGINE)?"cmp":"zones"};   // old engines (tower, tower-multi, nlTop, legacy bank) are dismissed: golden templates only, a refusal is final. vcol (blVC) hook: bl_top.js blTop
+  o={...o,eng:(typeof CMP_ENGINE!=="undefined"&&CMP_ENGINE)?"cmp":"zones"};   // composer or zones; a refusal is final
   try{return placerLayoutX(P,item,mk,spMk,o)}catch(e){return{ok:false,why:"internal error while laying out this factory ("+e.message+"): tell the developer which item and settings"}}   // a crash shows in the modal with Place disabled, never breaks the page
 }
 function placerLayoutX(P,item,mk,spMk,o={}){
@@ -782,7 +782,7 @@ const plcAsync=()=>typeof CMP_ENGINE!=="undefined"&&CMP_ENGINE;
 const plcKey=(x,dk)=>JSON.stringify([x.it,x.rate,x.mk,x.sp,$("plnBal").value,plnProto(),$("plnEnr").checked,PLN_PICK,$("plnBk").value,$("plnBuf").value,dk,["CMP_ENGINE","CMP_GROUPS","CMP_GROUPS_AUTO","CMP_BLK","CMP_MEMO"].map(k=>window[k])]);
 function plcApply(L){
   const dl=$("plnPrev");plcBusyF=false;$("plnPrevMap").style.opacity="";
-  $("plnEngBadge").textContent=L.ok?(L.eng==="cmp"?"Template: Composer":L.eng==="vcol"?"Template: Columns":"Template: Zones"):"";
+  $("plnEngBadge").textContent=L.ok?(L.eng==="cmp"?"Template: Composer":"Template: Zones"):"";
   if(!L.ok){plcL=null;plcT=null;placerClear();$("pvLine").textContent="";$("plnPrevErr").textContent=/^(Pick an item|internal error)/.test(L.why)?L.why:"Not supported yet: "+String(L.why).replace(/^BL: /,"").replace(/ \(NL used\)$/,"").replace(/^Engine zones built a layout but /,"");$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
@@ -803,7 +803,7 @@ function placerRun(open,defer){
 function placerGo(){$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;$("pvRate").value=$("plnRate").value;placerRun(true,true)}
 // live modal: build settings re-run the preview; errors show inside the modal with Place off
 const placerLive=()=>{clearTimeout(plcDebT);placerRun(false,true)};
-let plcFb=null;const PLC_ENG={zones:"Zones",tower:"Tower","tower-multi":"Tower (multi-input)",nl:"No Limits"};   // names only: still read by gallery/old tests
+let plcFb=null;const PLC_ENG={cmp:"Composer",zones:"Zones"};   // names only: still read by gallery/old tests
 function placerClear(){
   ["pvMach","pvBelt","pvSpl","pvBox","pvUg","pvBlk","pvCell","pvIO"].forEach(i=>{if($(i))$(i).textContent="-"});
   $("plnPrevNote").textContent="";$("plnPrevBig").textContent="";
@@ -936,13 +936,13 @@ $("plnMk").addEventListener("change",plcSync);$("plnSp").addEventListener("chang
 $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;placerLive()});
 $("pvRate").addEventListener("input",()=>{clearTimeout(plcDebT);plcDebT=setTimeout(()=>{if(+$("pvRate").value>0){$("plnRate").value=$("pvRate").value;placerLive()}},300)});   // typing: one compute 300 ms after the last key (Enter/blur = change = at once)
 // Engine switch: Old = the original placer (default), New = prefab factory builder (pfFact2 > pfBands > pfChain, falls back to the old path when it refuses). Remembered once chosen.
-// No Limits is the only engine in the UI (always on). plcEngine stays for tests: ?engine=old|new|nl in the page URL pins an older engine, default bl (Block engine, falls back to NL per case).
-const plcEngine=v=>{PLC_PREFAB=PF_FACT=(v==="new"||v==="nl"||v==="bl");if(typeof NL_ENGINE!=="undefined")NL_ENGINE=(v==="nl"||v==="bl");if(typeof BL_ENGINE!=="undefined")BL_ENGINE=(v==="bl")};
+// Composer is the default. ?engine=old in the page URL pins the legacy placer (prefab flags off); any other value = composer.
+const plcEngine=v=>{CMP_ENGINE=PLC_PREFAB=PF_FACT=(v!=="old")};
 if(!plcCls("BPO_Station_03"))$("plnBk").querySelector('option[value="BPO_Station_03"]')?.remove();
 try{const v=localStorage.getItem("msfb.block");if(PLC_BKV.includes(v))$("plnBk").value=v}catch(_){}
 $("plnBk").addEventListener("change",()=>{try{localStorage.setItem("msfb.block",$("plnBk").value)}catch(_){}});
 const PLC_DK="msfb.docks",plcDkSave=()=>{try{localStorage.setItem(PLC_DK,JSON.stringify({i:$("plnDkI").checked,o:$("plnDkO").checked,t:$("plnDk").value,ot:$("plnDkOT").value}))}catch(_){}};
 try{const s=JSON.parse(localStorage.getItem(PLC_DK)||"{}");$("plnDkI").checked=!!s.i;$("plnDkO").checked=!!s.o;if(["ind","nrm"].includes(s.t))$("plnDk").value=s.t;if(["","ind","nrm"].includes(s.ot))$("plnDkOT").value=s.ot}catch(_){}
 ["plnDkI","plnDkO","plnDk","plnDkOT"].forEach(id=>$(id).addEventListener("change",()=>{plcDkSave();placerLive()}));
-try{const v=new URLSearchParams(location.search).get("engine");if(v==="cmp"){CMP_ENGINE=true;plcEngine("bl")}else plcEngine(v||"bl")}catch(_){plcEngine("bl")}
+try{plcEngine(new URLSearchParams(location.search).get("engine"))}catch(_){plcEngine()}
 window.addEventListener("resize",()=>{if($("plnPrev").open)requestAnimationFrame(placerFitView)});
