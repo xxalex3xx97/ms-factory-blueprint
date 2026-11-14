@@ -8,9 +8,10 @@ function cmpPlan(P,item,mk,opts){
   const edgeOf=(f,t)=>E.find(e=>e.from===f&&e.to===t);
   const isRaw=it=>!(P.nodes[it]&&P.nodes[it].crafter);
   const refuse=w=>{throw {cmpWhy:w}};
-  const nodes=[];
+  const nodes=[],share=!!(opts&&opts.share),memo={};   // share: crafted nodes memoised per item (planner DAG, no unroll); depth = longest path; no row placement (row 0). maxGap = max over edges of depth(producer)-depth(consumer)-1 (consumer depth smaller: root 0, producers deeper)
   // build copy of item fed at output rate `rate`; each consumer edge makes its own copy (unroll)
-  function build(it,rate,d,parent){
+  function build(it,rate,d,parent,flow){
+    if(share&&!isRaw(it)&&memo[it]){const m=memo[it];if(parent){m.parents.push(parent.id);m.fl[parent.id]=flow}return m}
     const id='n'+nodes.length;
     if(isRaw(it)){
       const o={id,item:cmpName(it),key:it,raw:true,rec:null,cls:null,k:0,N:0,util:0,pm:0,pN:0,pU:0,rate,depth:d,col:null,row:null,main:false,inKind:'src',growth:false,children:[],parent:parent?parent.id:null,note:'',sub:0};
@@ -19,16 +20,18 @@ function cmpPlan(P,item,mk,opts){
     const n=P.nodes[it];
     if(!n.crafter||!n.rec||!plnCb(n.crafter))refuse('No machine builds this recipe');
     if(/Armoury/i.test(n.crafter))refuse('Armoury');
-    const exact=Math.abs(rate-n.rate)<1e-9;   // single original copy: planner N and util kept exactly
+    if(share)rate=n.rate;
+    const exact=share||Math.abs(rate-n.rate)<1e-9;   // single original copy: planner N and util kept exactly
     const N=exact?n.machines:Math.ceil(rate/n.pmach-1e-9);
     const util=exact?n.util:rate/n.pmach/N;   // planner convention: average utilisation over the N machines
     const o={id,item:cmpName(it),key:it,raw:false,rec:n.rec,cls:def(plnCb(n.crafter).id).key,k:n.rec.i.length,N,util,pm:n.pmach,pN:n.machines,pU:n.util,rate,depth:d,col:null,row:null,main:false,inKind:null,growth:n.rec.i.some(([q])=>q===it),children:[],parent:parent?parent.id:null,note:'',sub:0};
     nodes.push(o);
+    if(share){o.parents=parent?[parent.id]:[];o.fl=parent?{[parent.id]:flow}:{};memo[it]=o}
     for(const [q] of n.rec.i){
       if(q===it)continue;   // growth self-input = primed seed container, not a child
       const e=edgeOf(q,it);
       if(!e)refuse('planner edge missing '+cmpName(q)+' -> '+cmpName(it));
-      o.children.push(build(q,e.flow*rate/n.rate,d+1,o));
+      o.children.push(build(q,e.flow*rate/n.rate,d+1,o,e.flow));
     }
     o.inKind=o.children.some(c=>!c.raw)?'merge':(o.k===1?'src':'feed');
     o.sub=o.N+o.children.reduce((a,c)=>a+c.sub,0);
@@ -52,11 +55,17 @@ function cmpPlan(P,item,mk,opts){
     const root=P.nodes[item];
     if(!root||isRaw(item))refuse('No machine builds this recipe');
     const r=build(item,opts&&opts.rate!=null?opts.rate:root.rate,0,null);   // opts.rate: S12 replicated strip (root rate share)
+    let maxGap=0;
+    if(share){
+      const byId=Object.fromEntries(nodes.map(o=>[o.id,o]));
+      for(let ch=1;ch;){ch=0;nodes.forEach(o=>{if(!o.raw)o.children.forEach(c=>{if(!c.raw&&c.depth<o.depth+1){c.depth=o.depth+1;ch=1}})})}
+      nodes.forEach(o=>{if(!o.raw)o.children.forEach(c=>{if(c.raw)c.depth=o.depth+1;else maxGap=Math.max(maxGap,c.depth-o.depth-1)})});
+    }
     nodes.forEach(o=>{if(o.raw&&o.parent){const p=nodes.find(q=>q.id===o.parent);if(p.inKind!=='merge')o.depth=p.depth}});   // ENZ: raw leaf of a src/feed node is that node's own IN hub, it needs no column of its own
     const D=Math.max(...nodes.map(o=>o.depth));
     // rows: root main down, root sides alternate / greedy balance (largest first); non-root sides far side
     const [m,...sides]=r.children;
-    if(m){
+    if(m&&!share){
       place(m,0,1);
       let up=0,down=ext(m);
       for(const c of sides.slice().sort((a,b)=>ext(b)-ext(a))){
@@ -64,7 +73,7 @@ function cmpPlan(P,item,mk,opts){
         else{place(c,down+1,1);down+=1+ext(c)}
       }
     }
-    r.row=0;
+    r.row=0;if(share)nodes.forEach(o=>{o.row=0});
     const minR=Math.min(...nodes.map(o=>o.row));
     nodes.forEach(o=>{o.row-=minR});
     // columns from depth
@@ -78,7 +87,7 @@ function cmpPlan(P,item,mk,opts){
     });
     const rows=Math.max(...nodes.map(o=>o.row))+1;
     const notes=[...new Set(nodes.map(o=>o.note).filter(Boolean))];
-    return{ok:true,why:null,nodes:nodes.map(o=>({id:o.id,item:o.item,key:o.key,raw:o.raw,rec:o.rec,cls:o.cls,k:o.k,N:o.N,util:o.util,pm:o.pm,pN:o.pN,pU:o.pU,rate:o.rate,depth:o.depth,col:o.col,fb:o.fb,pool:o.pool,row:o.row,main:o.main,inKind:o.inKind,growth:o.growth,children:o.children.map(c=>c.id),parent:o.parent,note:o.note})),D,rows,cols:3*D+3,notes};
+    return{ok:true,why:null,nodes:nodes.map(o=>({id:o.id,item:o.item,key:o.key,raw:o.raw,rec:o.rec,cls:o.cls,k:o.k,N:o.N,util:o.util,pm:o.pm,pN:o.pN,pU:o.pU,rate:o.rate,depth:o.depth,col:o.col,fb:o.fb,pool:o.pool,row:o.row,main:o.main,inKind:o.inKind,growth:o.growth,children:o.children.map(c=>c.id),parent:o.parent,note:o.note,...(share?{parents:o.parents||[],fl:o.fl||{}}:{})})),D,rows,cols:3*D+3,notes,...(share?{share:true,maxGap}:{})};
   }catch(e){if(e&&e.cmpWhy!==undefined)return cmpNo(e.cmpWhy);throw e}
 }
 // CMP S12: cmpPlanK(P,item,mk,K,caps) = K replicated tree strips stacked in rows, each a full tree at a share of the root rate; each strip has its own OZ. Candidate splits: cmpSplit (per-key machine sums equal the
