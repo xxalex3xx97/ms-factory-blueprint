@@ -52,6 +52,8 @@ const isConn = s => SAV_CONN.includes(s);
 const pathOf = c => (c.startsWith('/Game/') ? c : SAV_PATHS[c.split('/').pop().split('.')[0]]);
 // IDs interleave with in-block machines, so match blocks by order within Blocks / Connectors.
 const rotv = (dx, dy, r) => { for (let i = 0; i < ((r % 4) + 4) % 4; i++) [dx, dy] = [-dy, dx]; return [dx, dy]; };
+// Flat fixture machines that the export must emit in-block only (their key is produced by an in-block machine).
+const DEDUPED = ['BPO_Elevator_02|16000|0|0', 'BPO_IndustrialDock|19264|0|0'];
 let blkOk = true, blkDetail = [], inOk = true, inDetail = [], inTotal = 0, zeroOk = true, dockOk = false, elevOk = false;
 let kb = 0, kc = 0;
 fx.Blocks.forEach(b => {
@@ -72,26 +74,44 @@ fx.Blocks.forEach(b => {
   dm.forEach((me, k) => {
     const d = want[k], [dx, dy] = rotv(d.dx, d.dy, br);
     const exp = {X: 8 * b.GridLocation.X + dx, Y: 8 * b.GridLocation.Y + dy, H: 8 * b.Height + d.dh, R: (d.dr + br) & 3};
-    const good = clsOf(me) === d.c && JSON.stringify(xf(me)) === JSON.stringify(exp) && cfgHex(me) === d.hex;
+    const good = clsOf(me) === d.c && JSON.stringify(xf(me)) === JSON.stringify(exp);
     if (!good) { inOk = false; inDetail.push(`${short} machine ${k}`); }
-    if (short === 'BPO_Dock_2') dockOk = good && b.GridRotation === 2 && exp.X === 8 * b.GridLocation.X - 64 && exp.R === 0;
+    if (short === 'BPO_Dock_2' && b.GridRotation === 2) dockOk = good && exp.X === 8 * b.GridLocation.X - 64 && exp.R === 0;
     if (short === 'BPO_ElevatorBlock_03') elevOk = good && clsOf(me).includes('BPO_Elevator_02');
   });
 });
 chk('blocks and connectors match fixture', blkOk, blkDetail.join('; '));
 chk('in-block default machines match SAV_DEFM (FIX-1 offsets)', inOk, inDetail.join('; '));
-chk('in-block machine count == 3 (Dock, Dock_2, ElevatorBlock_03)', inTotal === 3, `got ${inTotal}`);
+chk('in-block machine count == 4 (Dock, Dock_2 rot 2, ElevatorBlock_03, Dock_2 rot 0)', inTotal === 4, `got ${inTotal}`);
 chk('Dock_2 block (rot 2): dock at 8*block + (-64,0), rot 0', dockOk);
 chk('ElevatorBlock_03 block: BPO_Elevator_02 at 8*block', elevOk);
 chk('block class without SAV_DEFM gets 0 in-block machines', zeroOk);
 chk('block count (Blocks + Connectors) == fixture', blkRe.length + conRe.length === fx.Blocks.length,
   `${blkRe.length}+${conRe.length} vs ${fx.Blocks.length}`);
 
-// Top-level Machines == fixture DefaultMachines, same order (in-block machines are not top-level).
-chk('Machines count == fixture DefaultMachines', macRe.length === fx.DefaultMachines.length,
-  `${macRe.length} vs ${fx.DefaultMachines.length}`);
+// Config and name checks on in-block machines. Blocks found by X (fixture X values are unique among blocks).
+const inBlk = x => savFind(blkRe.find(e => xf(e).X === x), 'DefaultMachines').val[1];
+const dockTpl = cfgDec('BPO_IndustrialDock', SAV_DEFM.BPO_Dock_2[0].hex);
+const d1600 = cfgDec('BPO_IndustrialDock', cfgHex(inBlk(1600)[0]));
+chk('in-block dock (Dock_2 Name "Test Dock") decodes name "Test Dock"', !!d1600 && d1600.name === 'Test Dock', JSON.stringify(d1600));
+chk('in-block dock keeps template filter count', !!d1600 && d1600.filters.length === dockTpl.filters.length,
+  `${d1600 && d1600.filters.length} vs ${dockTpl.filters.length}`);
+chk('in-block dock filters all empty (template items reset)', !!d1600 && d1600.filters.every(f => f.item === '' && f.bLoading === 0));
+const dNoName = cfgDec('BPO_IndustrialDock', savInCfg('BPO_IndustrialDock', SAV_DEFM.BPO_Dock_2[0].hex, undefined, ''));
+chk('dock without name and without flat match decodes name "" (not "TEST")', !!dNoName && dNoName.name === '' && dNoName.filters.length === dockTpl.filters.length,
+  JSON.stringify(dNoName));
+chk('in-block elevator hex == cfgEnc named "Lift A"', cfgHex(inBlk(2000)[0]) === cfgEnc('named', {name: 'Lift A'}), cfgHex(inBlk(2000)[0]));
+const dOld = cfgDec('BPO_IndustrialDock', cfgHex(inBlk(2400)[0]));
+chk('in-block dock from flat match decodes name "Old" with one filter warpfuel',
+  !!dOld && dOld.name === 'Old' && dOld.filters.length === 1 && dOld.filters[0].item === 'warpfuel', JSON.stringify(dOld));
+
+// Top-level Machines == fixture DefaultMachines minus the deduped ones, same order.
+const flatWant = fx.DefaultMachines.filter(m => !DEDUPED.includes(savKey(savShort(m.Class), m.Transform.GridLocation.X, m.Transform.GridLocation.Y, m.Transform.Height)));
+chk('Machines count == fixture DefaultMachines minus 2 deduped', macRe.length === flatWant.length && flatWant.length === fx.DefaultMachines.length - 2,
+  `${macRe.length} vs ${flatWant.length}`);
+chk('deduped flat machines not emitted top-level', !macRe.some(e => /BPO_Elevator_02|BPO_IndustrialDock/.test(clsOf(e))));
 let macOk = true, macDetail = [];
-fx.DefaultMachines.forEach((m, i) => {
+flatWant.forEach((m, i) => {
   const e = macRe[i], s = m.Class;
   const t = m.Transform;
   const wantCfg = m.ConfigHex || SAV_DEFCFG[s] || '';
@@ -101,11 +121,11 @@ fx.DefaultMachines.forEach((m, i) => {
   macOk = macOk && !!ok;
 });
 chk('machines match fixture (path, transform, config)', macOk, macDetail.join('; '));
-const refIdx = fx.DefaultMachines.findIndex(m => m.Class === 'BP_RefineryObject');
+const refIdx = flatWant.findIndex(m => m.Class === 'BP_RefineryObject');
 const refE = macRe[refIdx];
-chk('refinery SerializedMachineConfig == ConfigHex', !!refE && cfgHex(refE) === fx.DefaultMachines[refIdx].ConfigHex.slice(0), '');
-const spIdx = fx.DefaultMachines.findIndex(m => m.Class === 'BP_SplitterObject_2');
-chk('splitter config is 33 bytes', fx.DefaultMachines[spIdx].ConfigHex.length === 66);
+chk('refinery SerializedMachineConfig == ConfigHex', !!refE && cfgHex(refE) === flatWant[refIdx].ConfigHex.slice(0), '');
+const spIdx = flatWant.findIndex(m => m.Class === 'BP_SplitterObject_2');
+chk('splitter config is 33 bytes', flatWant[spIdx].ConfigHex.length === 66);
 
 const allIds = [...blkRe, ...conRe].map(e => i32(raw(e, 'BlockID'))).concat(macRe.map(e => i32(raw(e, 'MachineID'))));
 chk('BlockID and MachineID all unique', new Set(allIds).size === allIds.length, `${allIds.length} ids`);

@@ -158,6 +158,20 @@ function savCfgBytes(hex) {
   return savCat([savI32(b.length), b]);
 }
 
+const savShort = c => String(c).split('/').pop().split('.')[0];
+const savKey = (s, x, y, h) => s + '|' + x + '|' + y + '|' + h;
+// Config hex for an in-block default machine. A matching flat machine (fm) wins; else the template hex
+// with its name and filters reset (dock) or the empty named form (elevator/teleporter).
+function savInCfg(s, tpl, fm, blockName) {
+  const k = cfgKind(s); let hex = fm && fm.ConfigHex ? fm.ConfigHex : tpl;
+  if (!(fm && fm.ConfigHex)) {
+    if (k === 'dock') { const d = cfgDec(s, tpl); hex = d ? cfgEnc('dock', {name: '', filters: d.filters.map(() => ({item: '', bLoading: 0}))}) : tpl; }
+    else if (k === 'named') hex = cfgEnc('named', {name: ''});
+  }
+  const nm = (k === 'dock' && blockName) || (fm && fm.Name) || '';
+  return nm && (k === 'dock' || k === 'named') ? cfgWithName(s, hex, nm) : hex;
+}
+
 // Clone of a template entry (props list) with Class, Transform, id and palette set.
 function savEntry(proto, path, x, y, h, r, pal, idName, id) {
   const e = proto.map(savClone);
@@ -191,10 +205,17 @@ function savExport(j) {
   let nextId = 1;
   const blocks = [], conns = [], machines = [];
 
+  // Flat machines that an in-block default machine will reproduce are emitted once, in-block (deduped).
+  const flat = new Map(), used = new Set();
+  for (const m of j.DefaultMachines || []) {
+    const t = m.Transform;
+    if (t && t.GridLocation) flat.set(savKey(savShort(m.Class), t.GridLocation.X, t.GridLocation.Y, t.Height), m);
+  }
+
   // Blocks and connectors. In-block default machines (docks, elevators) from SAV_DEFM (FIX-1).
   // Template block DefaultMachines is emptied, so protoMac (a MachineEntry) is the element prototype.
   for (const b of j.Blocks || []) {
-    const short = b.Class.split('/').pop().split('.')[0];
+    const short = savShort(b.Class);
     let path = b.Class;
     if (!b.Class.startsWith('/Game/')) {
       path = SAV_PATHS[short];
@@ -209,9 +230,11 @@ function savExport(j) {
     savFind(e, 'DefaultMachines').val = ['sarr', (SAV_DEFM[short] || []).map(m => {
       let dx = m.dx, dy = m.dy;
       for (let i = 0; i < br; i++) [dx, dy] = [-dy, dx];
-      const q = savEntry(protoMac, m.c, 8 * b.GridLocation.X + dx, 8 * b.GridLocation.Y + dy,
-        8 * b.Height + m.dh, (m.dr + br) & 3, 0, 'MachineID', nextId++);
-      savSetVar(q, 'SerializedMachineConfig', savCfgBytes(m.hex));
+      const X = 8 * b.GridLocation.X + dx, Y = 8 * b.GridLocation.Y + dy, H = 8 * b.Height + m.dh;
+      const s = savShort(m.c), fm = flat.get(savKey(s, X, Y, H));
+      if (fm) used.add(savKey(s, X, Y, H));
+      const q = savEntry(protoMac, m.c, X, Y, H, (m.dr + br) & 3, 0, 'MachineID', nextId++);
+      savSetVar(q, 'SerializedMachineConfig', savCfgBytes(savInCfg(s, m.hex, fm, b.Name)));
       return q;
     })];
     (isConn ? conns : blocks).push(e);
@@ -219,13 +242,17 @@ function savExport(j) {
 
   // Flat machines. Config from site ConfigHex; underground exit has none, so empty config (unverified in game).
   for (const m of j.DefaultMachines || []) {
-    const s = m.Class.split('/').pop().split('.')[0];
+    const s = savShort(m.Class);
     let path = SAV_PATHS[s];
     if (!path) { path = `/Game/Blueprints/Machines/${s}.${s}_C`; warn.push('guessed path ' + s); }
     const t = m.Transform;
+    if (used.has(savKey(s, t.GridLocation.X, t.GridLocation.Y, t.Height))) continue;
     const e = savEntry(protoMac, path, t.GridLocation.X, t.GridLocation.Y, t.Height, t.GridRotation,
       m.PaletteID || 0, 'MachineID', nextId++);
-    savSetVar(e, 'SerializedMachineConfig', savCfgBytes(m.ConfigHex || SAV_DEFCFG[s] || ''));
+    let hx = m.ConfigHex || SAV_DEFCFG[s] || '';
+    const k = cfgKind(s);
+    if (typeof m.Name === 'string' && m.Name && (k === 'dock' || k === 'named')) hx = cfgWithName(s, hx, m.Name);
+    savSetVar(e, 'SerializedMachineConfig', savCfgBytes(hx));
     machines.push(e);
   }
 

@@ -77,12 +77,23 @@
    },
    "Height": 0,
    "GridRotation": 2,
-   "PaletteID": 0
+   "PaletteID": 0,
+   "Name": "Test Dock"
   },
   {
    "Class": "BPO_ElevatorBlock_03",
    "GridLocation": {
     "X": 2000,
+    "Y": 0
+   },
+   "Height": 0,
+   "GridRotation": 0,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BPO_Dock_2",
+   "GridLocation": {
+    "X": 2400,
     "Y": 0
    },
    "Height": 0,
@@ -170,6 +181,35 @@
    },
    "MachineID": 6,
    "PaletteID": 0
+  },
+  {
+   "Class": "BPO_Elevator_02",
+   "Transform": {
+    "GridLocation": {
+     "X": 16000,
+     "Y": 0
+    },
+    "Height": 0,
+    "GridRotation": 0
+   },
+   "MachineID": 7,
+   "PaletteID": 0,
+   "Name": "Lift A",
+   "ConfigHex": "010002000000ff01000000070000004c696674204100"
+  },
+  {
+   "Class": "BPO_IndustrialDock",
+   "Transform": {
+    "GridLocation": {
+     "X": 19264,
+     "Y": 0
+    },
+    "Height": 0,
+    "GridRotation": 2
+   },
+   "MachineID": 8,
+   "PaletteID": 0,
+   "ConfigHex": "0100040000004f6c64000100000009000000776172706675656c0000000000"
   }
  ]
 }
