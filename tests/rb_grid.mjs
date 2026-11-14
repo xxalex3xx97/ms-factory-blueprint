@@ -27,6 +27,12 @@ check(!g.free([{gx: 3, gy: 5}]), 'a module cannot claim a block that carries a l
 g.laneRelease(0, 6, 5, 4);
 check(g.laneFree(0, 6, 5, 4) && g.cor.size === 0, 'laneRelease restores');
 check(!g.laneFree(0, 6, 1, 4), 'lane blocked by a module cell in its way');
+// east lane reservations
+const g2 = rbGrid(); g2.reserve(0, 7, 'L1', 10);
+check(!g2.free([{gx: 5, gy: 7}]) && g2.free([{gx: 5, gy: 8}]) && g2.free([{gx: 0, gy: 7}]) && g2.free([{gx: 11, gy: 7}]), 'reserved row blocks a module cell (not its origin, not beyond end, not other rows)');
+check(g2.free([{gx: 5, gy: 7}], new Set(['L1'])) && !g2.free([{gx: 5, gy: 7}], new Set(['L2'])), 'owner passes, other id refused');
+g2.unreserve('L1');
+check(g2.free([{gx: 5, gy: 7}]) && g2.res.size === 0, 'unreserve restores');
 // spot order
 const o = rbCandidates(3, 10).map(q => q.c + ',' + (q.r - 10));
 const want = []; for (let dc = 0; dc < 4; dc++) for (const dr of [0, 1, -1, 2, -2, 3]) want.push((3 + dc) + ',' + dr);

@@ -25,13 +25,13 @@ function rbBuild(x){
     if(o.parents&&o.parents.length){
       m.pj={};   // lanes out of the pool: one per consumer port (of EVERY consumer), leaving at the port's own row when free, else the nearest free row (near rule of cmp_groups.js 70)
       const used=new Set(),near=y0=>{for(let q=0;q<H;q++)for(const y of[y0-q,y0+q])if(y>=0&&y<=H-1&&!used.has(y)){used.add(y);return y}};
-      o.parents.forEach(pid=>{const pj=m.pj[pid]=G[pid].o.rec.i.findIndex(([it])=>it===o.key);G[pid].mem.forEach((cm,ci)=>NB[cm.id].inR[pj].slice().sort(asc).forEach(y=>m.lanes.push({ci,y,ya:near(y),par:pid})))});
+      o.parents.forEach(pid=>{const pj=m.pj[pid]=G[pid].o.rec.i.findIndex(([it])=>it===o.key);G[pid].mem.forEach((cm,ci)=>NB[cm.id].inR[pj].slice().sort(asc).forEach(y=>m.lanes.push({ci,y,ya:near(y),par:pid,id:o.id+'#'+m.lanes.length})))});
       if(m.lanes.length>H-2)return no('rb: '+o.item+' pool needs '+m.lanes.length+' lanes, a block holds '+(H-2));
       m.outRows=m.lanes.map(l=>l.ya).sort(asc);
     }
     const o0=m.mem[0],NB0=NB[o0.id],z0=tz.by[o0.id];let pk;
     const dk=m.kids.filter(p=>p.defer&&p.c==null),kp=m.kids.filter(p=>p.c!=null);   // dk: leaf producers (raw supplier, one consumer) are placed WITH this module, adjacent west of its IN column
-    const rowWant=kp.length?Math.round(kp.reduce((s,p)=>s+p.r*p.o.N,0)/kp.reduce((s,p)=>s+p.o.N,0)):0;   // flow-weighted mean block row of the placed producers
+    const rowWant=(kp.length?Math.round(kp.reduce((s,p)=>s+p.r*p.o.N,0)/kp.reduce((s,p)=>s+p.o.N,0)):0)+(x.bias|0);   // flow-weighted mean block row of the placed producers
     const tent=r=>{let y=r+m.B;dk.forEach(p=>{p.r=y;y+=p.B})};
     const th0=m.kids.length?thru(m):[],clash=(r,t)=>t.p.r+t.pb>=r&&t.p.r+t.pb<=r+m.B-1;let rP=rowWant;while(th0.some(t=>clash(rP,t)))rP++;   // pack sizing at a row that does not collide with crossing lanes
     tent(rP);
@@ -41,7 +41,7 @@ function rbBuild(x){
     m.pk=pk;
     if(!m.kids.length&&o.parents&&o.parents.length===1){m.defer=true;continue}
     const th=th0,own=[];kp.forEach(p=>p.mem.forEach((pm,pb)=>p.lanes.filter(l=>l.par===m.id).forEach(l=>own.push({p,pb,l}))));
-    const c0=Math.max(0,...kp.map(p=>p.c+p.pk.nPhys),...own.map(a=>fr(a.p,a.l)+1),...dk.map(p=>p.pk.nPhys));let hit=false;
+    const ownIds=new Set(own.map(a=>a.l.id)),okIds=new Set([...ownIds,...th.map(t=>t.l.id)]),c0=Math.max(0,...kp.map(p=>p.c+p.pk.nPhys),...own.map(a=>fr(a.p,a.l)+1),...dk.map(p=>p.pk.nPhys));let hit=false;
     for(const cd of rbCandidates(c0,rowWant,24)){
       if(Date.now()-t0>15000)return no('rb: time');
       const {c,r}=cd;
@@ -51,7 +51,7 @@ function rbBuild(x){
         const n=p.pk.nPhys;let ok=false;
         for(const dr of[0,1,-1,2,-2,3,-3,4,-4]){
           const cs=[];for(let pc=0;pc<n;pc++)for(let b=0;b<p.B;b++)cs.push({gx:c-n+pc,gy:r+dr+b,dx:pc,dy:b});
-          if(g.free(cs)&&cs.every(q=>!taken.has(q.gx+','+q.gy))){cs.forEach(q=>taken.add(q.gx+','+q.gy));lcells.push({p,cs});p.r=r+dr;ok=true;break}
+          if(g.free(cs,ownIds)&&cs.every(q=>!taken.has(q.gx+','+q.gy))){cs.forEach(q=>taken.add(q.gx+','+q.gy));lcells.push({p,cs});p.r=r+dr;ok=true;break}
         }
         if(!ok){okL=false;break}
       }
@@ -61,11 +61,13 @@ function rbBuild(x){
       const cells=[];
       for(let pc=0;pc<pk.nPhys;pc++){const rs=new Set();for(let b=0;b<m.B;b++)rs.add(r+b);if(rg&&pc===pk.colP[0])for(let y=rg.r0;y<=rg.r1;y++)rs.add(y);rs.forEach(y=>cells.push({gx:c+pc,gy:y,dx:pc,dy:y-r}))}
       const lan=own.map(a=>[fr(a.p,a.l),c,a.p.r+a.pb,a.l.ya]);
-      if(!g.free(cells)||!lan.every(a=>g.laneFree(...a)))continue;
-      g.claim(m,cells);lan.forEach(a=>g.laneClaim(...a));
-      lcells.forEach(({p,cs})=>{g.claim(p,cs);p.c=c-p.pk.nPhys;p.cells=cs});
+      if(!g.free(cells,okIds)||!lan.every(a=>g.laneFree(...a)))continue;
+      g.claim(m,cells,okIds);lan.forEach(a=>g.laneClaim(...a));ownIds.forEach(i=>g.unreserve(i));
+      lcells.forEach(({p,cs})=>{g.claim(p,cs,okIds);p.c=c-p.pk.nPhys;p.cells=cs});
       th.forEach(t=>{t.l.from=c});
-      Object.assign(m,{c,r,cells,rg,thr:th.map(t=>({row:t.p.r+t.pb,y:t.l.ya}))});hit=true;break;
+      Object.assign(m,{c,r,cells,rg,thr:th.map(t=>({row:t.p.r+t.pb,y:t.l.ya}))});
+      m.lanes.forEach(l=>{if(!M[l.par]||M[l.par].c==null)for(let pb=0;pb<m.B;pb++)g.reserve(m.c+m.pk.nPhys-1,m.r+pb,l.id)});   // east lane reservation: later modules keep off this row
+      hit=true;break;
     }
     if(!hit){globalThis.__rbDbg={occ:[...g.occ].map(([k,v])=>k+' '+v.mod.o.item),cor:[...g.cor.keys()],kids:m.kids.map(p=>p.o.item+' c'+p.c+' r'+p.r+' B'+p.B+' n'+p.pk.nPhys),c0,rowWant};return no('rb: no spot for '+o.item)}
   }

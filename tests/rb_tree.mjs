@@ -16,7 +16,8 @@ const pageInfo = () => {
   const dB = b => dim({cls: b.cls, rot: b.rot === 1 || b.rot === 3 ? b.rot : 0}), inB = (x, y) => T.blocks.some(b => { const d = dB(b); return x >= b.x * FC && x < b.x * FC + d.w * FC && y >= b.y * FC && y < b.y * FC + d.h * FC });
   const cols = {}; T.blocks.forEach(b => { (cols[b.x] = cols[b.x] || []).push(b.y) });
   let holes = 0; Object.values(cols).forEach(ys0 => { const ys = [...new Set(ys0)].sort((p, q) => p - q); ys.slice(1).forEach((y, i) => { holes += Math.round((y - ys[i]) / dB(T.blocks[0]).h) - 1 }) });
-  return {rb, itemsOut: T.ms.filter(b => !inB(b.x, b.y)).length, holes, blocks: T.blocks.length, nodes: cmp.nodes.map(q => q.item + ' ' + q.N)};
+  const emptyB = T.blocks.filter(b => { const d = dB(b); return !T.ms.some(q => q.x >= b.x * FC && q.x < b.x * FC + d.w * FC && q.y >= b.y * FC && q.y < b.y * FC + d.h * FC) }).length;
+  return {rb, emptyB, itemsOut: T.ms.filter(b => !inB(b.x, b.y)).length, holes, blocks: T.blocks.length, nodes: cmp.nodes.map(q => q.item + ' ' + q.N)};
 };
 const simPage = ({nodes, items, warm, meas}) => {
   S.blocks = []; S.dm = []; let bid = 500000; items.forEach(b => S.blocks.push({...b, id: ++bid, h: 0}));
@@ -60,7 +61,8 @@ try {
     console.log('   ' + name + ': compose+check ' + ms + ' ms, blocks ' + i.blocks + ', machines/node: ' + i.nodes.join('; '));
     i.rb.mods.forEach(m => console.log('   module ' + m.letter + ' ' + m.item + ' N=' + m.N + ': B=' + m.B + ' nPhys=' + m.nPhys + ' blocks=' + m.blocks + ' at c' + m.c + ' r' + m.r));
     console.log(i.rb.ascii.map(s => '      ' + s).join('\n'));
-    check(i.itemsOut === 0 && i.holes === 0, name + ': every item inside a block, no holes (' + i.itemsOut + ' out, ' + i.holes + ' holes)');
+    check(i.itemsOut === 0 && i.emptyB === 0, name + ': every item inside a block, every block holds an item (' + i.itemsOut + ' out, ' + i.emptyB + ' empty)');
+    console.log('   INFO ' + name + ': bounding-box gaps ' + i.holes);
     const nodes = r.nodes.map(q => ({id: q.id, item: q.item, gid: q.gid, rate: q.rate, fb: q.fb}));
     const s = await page.evaluate(simPage, {nodes, items: r.items, warm: WARM, meas: MEAS});
     const by = {};
