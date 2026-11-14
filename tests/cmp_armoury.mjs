@@ -1,5 +1,5 @@
 // CMP H gate: Armoury items (hand-crafted, no belt ports) = one composer sub-factory per component, stacked, strict checkCompose (exact planner N, flood, every component reaches a container, mutate 'any').
-// Built: Backpack Mk1/2/3, Exoskeleton Mk1/2 (Blocks 'auto'); Exoskeleton Mk3 only with ARM_HEAVY=1 (2100 machines, ~3 min). Refused with a specific reason: Exosuit (Supercomputer 2-input, thousands of machines).
+// Built: Backpack Mk1/2/3, Exoskeleton Mk1/2 (Blocks 'auto'); Exoskeleton Mk3 only with ARM_HEAVY=1 (2100 machines, ~3 min). Exosuit is checked at 1/min (user: it needs only 1/min), builds with Blocks 'auto' (~3000 machines).
 // Also prints a per-recipe table (built/refused). Run: node tests/cmp_armoury.mjs   Exit 1 on FAIL or page error.
 import {pathToFileURL} from 'url';
 import path from 'path';
@@ -26,11 +26,11 @@ try {
   });
   console.log('Armoury recipes the planner offers: ' + recs.length + ' ' + recs.map(r => r.name).join(', '));
   const heavy = !!process.env.ARM_HEAVY, only = process.env.ARM_ONLY;
-  const refuse = {'Exosuit': /Supercomputer|stacked blocks/}, skipHeavy = ['Exoskeleton Mk. 3'];
+  const refuse = {}, skipHeavy = ['Exoskeleton Mk. 3'];
   for (const rc of recs) {
     if (only && !new RegExp(only).test(rc.name)) continue;
     if (!heavy && skipHeavy.includes(rc.name)) { console.log('SKIP (ARM_HEAVY=1 to run) ' + rc.name); continue }
-    const r = await checkCompose(page, rc.key, rc.pm, 1, 'auto', {strict: true, mutate: 'any'});
+    const r = await checkCompose(page, rc.key, rc.name === 'Exosuit' ? 1 : rc.pm, 1, 'auto', {strict: true, mutate: 'any'});
     rows.push({item: rc.name, status: r.refused ? 'refused' : r.ok ? 'built' : 'FAIL', ...(r.refused ? {why: r.refused.slice(0, 110)} : {blocks: r.row.blocks, machines: r.row.machines, belts: r.row.belts})});
     if (r.refused) { const ok = refuse[rc.name] && refuse[rc.name].test(r.refused); console.log((ok ? 'REFUSED (expected) ' : 'FAIL refused ') + rc.name + ': ' + r.refused); if (!ok) fails++; continue }
     if (refuse[rc.name]) { console.log('FAIL ' + rc.name + ' now builds, update the gate'); fails++ }

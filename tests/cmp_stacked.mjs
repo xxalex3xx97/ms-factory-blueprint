@@ -10,12 +10,15 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const KEY = {cap: 'ITEM_NickelPlates+ITEM_TitaniumPlates>ITEM_Capacitor', bc: 'ITEM_SiliconWafers+ITEM_MagneticCoils>ITEM_BasicCircuit', enz: 'ITEM_Biomass+ITEM_Xenobacteria+ITEM_Nutrients>ITEM_Enzyme', aa: 'ITEM_DetectorArray+ITEM_BasicCircuit+ITEM_Superalloy+ITEM_Coolant>ITEM_AdvancedCircuits'};
 const BK = {'2x2': 'BPO_Station_02', '2x2c': 'BPO_Station_03', '1x1': 'BPO_Station_01', auto: 'auto'};
 
+// Mode exo: Exosuit at 1/min through cmpCompose (cmpArmoury), per case ok/why, machines, blocks, belts, ug, ms, per-leaf ms (cmpCompose wrapped in the page).
+// Usage: node tests/cmp_stacked.mjs exo [block 2x2|2x2c] [dock off|nrm|ind]   (no args = all 6 cases, sequential; caller kills on timeout, e.g. `timeout 480 node ...`)
 const mode = process.argv[2] || 'table';
-if (mode !== 'table') { console.log('usage: node tests/cmp_stacked.mjs table'); process.exit(1) }
+if (mode !== 'table' && mode !== 'exo') { console.log('usage: node tests/cmp_stacked.mjs table | exo [2x2|2x2c] [off|nrm|ind]'); process.exit(1) }
 
 const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--js-flags=--max-old-space-size=8192']});
 const page = await (await br.newContext()).newPage(); const pe = [];
 page.on('pageerror', e => pe.push(e.message));
+page.on('console', m => /^LEAF /.test(m.text()) && console.log(m.text()));
 await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp');
 await page.waitForFunction(() => window.__fb && typeof cmpCompose === 'function' && typeof cmpAssembleTree === 'function');
 
@@ -40,6 +43,24 @@ const pageTable = ({key, rate, bk}) => {
 };
 
 let fails = 0;
+if (mode === 'exo') {
+  const DK = {off: null, nrm: {in: 'nrm', out: 'nrm'}, ind: {in: 'ind', out: 'ind'}};
+  const [ab, ad] = [process.argv[3], process.argv[4]];
+  for (const bl of ab ? [ab] : ['2x2', '2x2c']) for (const dn of ad ? [ad] : ['off', 'nrm', 'ind']) {
+    const r = await page.evaluate(({bk, dock}) => {
+      const rec = [].concat(...Object.values(RECS)).find(r => /Exo.?suit/i.test(plnNm(r.o[0]))), item = rec.o[0], key = rk(rec);
+      const leaves = [], orig = window.cmpCompose; let depth = 0;
+      window.cmpCompose = function (P, it, ...a) { const t = performance.now(); depth++; try { return orig.call(this, P, it, ...a) } finally { depth--; if (depth) { leaves.push(cmpName(it) + ' ' + Math.round(performance.now() - t) + 'ms'); console.log('LEAF ' + leaves[leaves.length - 1]) } } };
+      const P = plan(item, 1, 1, {}, {[item]: key}, {proto: false, enr: false, obs: false});
+      const t0 = performance.now(), L = cmpCompose(P, item, 1, 1, {box: 'DAT_Container_2', dock, bk}), ms = Math.round(performance.now() - t0);
+      window.cmpCompose = orig;
+      return L.ok ? {ok: true, blocks: L.stat.blocks, machines: L.stat.machines, belts: L.stat.belts, ug: L.stat.ug, ms, leaves} : {ok: false, why: L.why, ms, leaves};
+    }, {bk: BK[bl], dock: DK[dn]});
+    console.log('EXO ' + bl + ' ' + dn + ' ' + JSON.stringify(r));
+  }
+  if (pe.length) { console.log('page errors: ' + pe[0]); fails++ }
+  await br.close(); process.exit(fails ? 1 : 0);
+}
 for (const [label, bk] of [['2x2c', BK['2x2c']], ['2x2', BK['2x2']]]) {
   const r = await page.evaluate(pageTable, {key: ADV, rate: 900, bk});
   console.log('== AdvancedPlates 900/min on ' + label + ' (' + bk + ')');
