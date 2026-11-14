@@ -137,6 +137,23 @@ function cmpTreeSize(pl,mk,spMk,block,caps){
   return bad||{ok:true,by};
 }
 
+// capacity refusal hint: whole-tree size (max() only, no builds) + a rate that should fit one block per node. -> ' Whole tree needs ~N machines, ~B blocks on 2x2. Try a lower rate (about R/min fits one factory).'
+function cmpTreeEst(pl,block,rate,mk,spMk){
+  const Ss=TPL_IF_SETS[block]?Object.keys(TPL_IF_SETS[block]).map(Number):[],byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o]));
+  let mach=0,blk=0,f=1;
+  for(const o of pl.nodes){
+    if(o.raw)continue;
+    mach+=o.N;
+    const pk=tplPick(o.cls,o.k,block);if(!pk.ok)continue;
+    const merge=o.inKind==='merge',mc=merge?(o.k>=3&&o.children.map(i=>byId[i]).find(c=>c.row<o.row)||byId[o.children[0]]):null;
+    const base={block,cls:o.cls,rec:rk(o.rec),recObj:o.rec,recd:o.rec,mk,spMk,main:merge?o.rec.i.findIndex(([it])=>it===mc.key):0,growth:o.growth,raw:merge?0:o.k};
+    let mx=0;for(const S of Ss)mx=Math.max(mx,pk.t.max({...base,S})||0);
+    if(mx>0){blk+=Math.ceil(o.N/mx);f=Math.min(f,mx/o.N)}
+  }
+  const r=v=>v<1000?''+v:(+v.toPrecision(2)).toLocaleString('en-US'),R=Math.floor(rate*f);
+  return' Whole tree needs ~'+r(mach)+' machines, ~'+r(blk)+' blocks on '+block+'. Try a lower rate'+(R>=1?' (about '+R.toLocaleString('en-US')+'/min fits one factory).':'.');
+}
+
 // CMP H: Armoury items are hand-crafted (the Armoury machine has no belt ports), so the layout holds no Armoury machine: every leaf component (Armoury inputs expanded recursively)
 // is its own composer sub-factory (cmpCompose on a fresh plan at rate N x recipe amount, exact planner N, own OZ container(s)); the sub-tiles are stacked vertically in one tile.
 function cmpArmoury(P,item,mk,spMk,o,bk,BX){
@@ -246,7 +263,7 @@ function cmpCompose1(P,item,mk,spMk,o={}){
         const z=cmpTreeSize(q,mk,spMk,block);if(!z.ok){last=z.why;continue}
         const e=ex(q);if(e<bx){bp=q;bz=z;bx=e}if(!e)break;
       }
-      if(!bz)return cmpErr(why1+(last!==why1?' (replicated strips x2..x'+CMP_MAXKT+': '+last+')':''));
+      if(!bz)return cmpErr(why1+(last!==why1?' (replicated strips x2..x'+CMP_MAXKT+': '+last+')':'')+(/stacked blocks not built/.test(why1)?cmpTreeEst(pl,block,P.nodes[item].rate,mk,spMk):''));
       pl=bp;tz=bz;
     }
     A=cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by,dk});if(!A.ok)return indFb(A);

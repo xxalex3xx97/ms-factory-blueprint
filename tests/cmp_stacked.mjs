@@ -47,6 +47,18 @@ for (const [label, bk] of [['2x2c', BK['2x2c']], ['2x2', BK['2x2']]]) {
   console.table(r.rows);
   console.log('total machines ' + r.machines + ' (planner ' + r.planMachines + '), total blocks ' + r.blocks + (r.treeErr ? ' | tree refused: ' + r.treeErr : ''));
 }
+// refusal text: capacity refusal shows whole-tree size + lower-rate hint
+for (const bk of [BK['2x2'], BK['2x2c']]) {
+  const r = await page.evaluate(({key, rate, bk}) => {
+    const rec = [].concat(...Object.values(RECS)).find(r => rk(r) === key), item = rec.o[0];
+    const P = plan(item, rate, 1, {}, {[item]: key}, {proto: false, enr: false, obs: false});
+    const L = cmpCompose(P, item, 1, 1, {bk, box: 'DAT_Container_2'});
+    return {ok: L.ok, why: L.why};
+  }, {key: ADV, rate: 900, bk});
+  const good = !r.ok && /needs ~[\d,]+ machines, ~[\d,]+ blocks on 2x2/.test(r.why) && /lower rate/.test(r.why);
+  console.log((good ? 'ok   ' : 'FAIL ') + 'refusal ' + bk + ': ' + r.why);
+  if (!good) fails++;
+}
 // Exosuit leaf components: skipped, no rate given for the Exosuit (cmpArmoury leaves depend on it).
 console.log('Exosuit leaf table: skipped (no rate specified for Exosuit)');
 
