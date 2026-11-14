@@ -35,12 +35,19 @@ const run = a => pg.evaluate(a => {
     const seen = new Set([x0 + ',' + y0]), q = [[x0, y0]];
     while (q.length) { const [x, y] = q.pop(); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy, k = nx + ',' + ny; if (nx < x0 || ny < y0 || nx > x1 || ny > y1 || occ.has(k) || seen.has(k)) continue; seen.add(k); q.push([nx, ny]) } }
     const docks = bl.filter(b => b.dock);
-    return {docks: docks.length, bad: docks.filter(b => !face(b).every(([x, y]) => seen.has(x + ',' + y))).map(b => ({x: b.x, y: b.y, rot: b.rot}))};
+    // DOCKCLEAR: ship clearance (cmpDockClr: mid free of every non-dock block + at least one lateral strip free = not wedged between two blocks) + no overlap of any two blocks
+    const nd = new Set(); bl.filter(b => !b.dock).forEach(b => { for (let i = 0; i < b.w; i++) for (let j = 0; j < b.h; j++) nd.add((b.x + i) + ',' + (b.y + j)) });
+    const clr = docks.filter(b => { const c = cmpDockClr({cls: b.cls, x: b.x, y: b.y, rot: b.rot}); return c.mid.some(z => nd.has(z)) || c.sides.every(w => w.some(z => nd.has(z))) }).map(b => ({x: b.x, y: b.y, rot: b.rot}));
+    const cnt = new Map(); let ovl = 0; bl.forEach(b => { for (let i = 0; i < b.w; i++) for (let j = 0; j < b.h; j++) { const k = (b.x + i) + ',' + (b.y + j); if (cnt.has(k)) ovl++; else cnt.set(k, 1) } });
+    return {clr, ovl, docks: docks.length, bad: docks.filter(b => !face(b).every(([x, y]) => seen.has(x + ',' + y))).map(b => ({x: b.x, y: b.y, rot: b.rot}))};
   };
   const r = eval1(bl);
   // mutation: cover the outward face of the first dock with a 1x1 block -> must be red
   const d0 = bl.find(b => b.dock), mut = d0 ? eval1([...bl, {x: face(d0)[0][0], y: face(d0)[0][1], w: 1, h: 1, rot: 0, dock: false}]).bad.length > 0 : null;
-  return {...r, mut, un: L.note.some(n => /^Industrial dock not (built|possible)/.test(n)), blocks: T.blocks.length, ms: T.ms.length};
+  // mutation 2: wedge the first dock between two blocks (one cell in each lateral strip) -> clearance must go red; mutation 3: a block on a dock body cell -> overlap must go red
+  const c0 = d0 && cmpDockClr({cls: d0.cls, x: d0.x, y: d0.y, rot: d0.rot}), wedge = d0 ? eval1([...bl, ...c0.sides.map(w => { const [x, y] = w[0].split(',').map(Number); return {x, y, w: 1, h: 1, rot: 0, dock: false} })]).clr.length > 0 : null;
+  const ovm = d0 ? eval1([...bl, {x: d0.x, y: d0.y, w: 1, h: 1, rot: 0, dock: false}]).ovl > 0 : null;
+  return {...r, mut, wedge, ovm, un: L.note.some(n => /^Industrial dock not (built|possible)/.test(n)), blocks: T.blocks.length, ms: T.ms.length};
 }, a);
 const keys = await pg.evaluate(() => [].concat(...Object.values(RECS)).map(rk));
 const K = re => keys.find(k => re.test(k));
@@ -56,9 +63,9 @@ for (const [name, key, rate, mk] of items) for (const b in BK) for (const dk in 
   if (!key) { check(false, tag + ' recipe key missing'); continue }
   let r; try { r = await run({key, rate, mk, bk: BK[b], dock: DK[dk]}) } catch (e) { check(false, tag + ' exception ' + e.message.slice(0, 120)); continue }
   if (r.err) { console.log('REFUSED ' + tag + ': ' + r.err.slice(0, 110)); rows.push({case: tag, status: 'refused'}); continue }
-  const ok = (r.docks > 0 || (dk === 'industrial' && r.un)) && !r.bad.length && r.mut !== false;
+  const ok = (r.docks > 0 || (dk === 'industrial' && r.un)) && !r.bad.length && r.mut !== false && !r.clr.length && !r.ovl && r.wedge !== false && r.ovm !== false;
   rows.push({case: tag, status: ok ? 'ok' : 'FAIL', docks: r.docks, enclosed: r.bad.length, blocks: r.blocks});
-  check(ok, tag + ' | docks ' + r.docks + ' enclosed ' + r.bad.length + (r.bad.length ? ' ' + JSON.stringify(r.bad.slice(0, 3)) : '') + ' mut ' + r.mut + ' blocks ' + r.blocks);
+  check(ok, tag + ' | docks ' + r.docks + ' enclosed ' + r.bad.length + (r.bad.length ? ' ' + JSON.stringify(r.bad.slice(0, 3)) : '') + ' mut ' + r.mut + '/' + r.wedge + '/' + r.ovm + (r.clr.length ? ' CLR ' + JSON.stringify(r.clr.slice(0, 3)) : '') + (r.ovl ? ' OVERLAP ' + r.ovl : '') + ' blocks ' + r.blocks);
 }
 console.table(rows);
 check(errs.length === 0, 'no page errors' + (errs.length ? ': ' + errs[0] : ''));
