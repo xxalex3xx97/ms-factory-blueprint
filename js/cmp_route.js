@@ -104,7 +104,7 @@ function cmpRoute0(o) {
   const ord0 = idx.slice().sort((a, b) => dmin(b) - dmin(a)), ord1 = idx.slice().sort((a, b) => str(b) - str(a) || dmin(b) - dmin(a));
   if (!o.join && sources.length > sinks.length) return {ok: false, why: 'merge routing failed', items: [], nets: []};
   let sd = 12345; const rnd = () => (sd = (sd * 1103515245 + 12345) % 2147483648) / 2147483648;   // seeded: deterministic
-  for (let t = 0; t < (globalThis.CMPR_TRIES || (W < 20 ? 300 : 40)); t++) {   // narrow merge region: more shuffles; ponytail: spec said 3 shuffles; greedy order is fragile at 8 lanes, 40 is cheap
+  for (let t = 0; t < (globalThis.CMPR_TRIES || 40); t++) {   // ponytail: spec said 3 shuffles; 40 seeded shuffles. Narrow widths (8..10) were 300 but a failing width then cost 2-3 s (Basic Circuits >100 took 7 s); the largest winning try over the 20 tilehash cases is 26. Ceiling: a build needing try 41+ gets a wider region or a refusal, raise CMPR_TRIES
     const ord = t === 1 ? ord1 : t ? idx.map(i => [rnd(), i]).sort((a, b) => a[0] - b[0]).map(a => a[1]) : ord0;
     const r = attempt(ord, t > 1 ? 0.6 : 0); if (r) return {ok: true, items: r.items, nets: r.nets};
   }

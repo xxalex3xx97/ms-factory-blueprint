@@ -15,7 +15,7 @@ await pg.waitForFunction(() => window.__fb && typeof placerLayout === 'function'
 const IN = {in: 'ind', out: 'ind'}, NR = {in: 'nrm', out: 'nrm'};
 const CASES = [['AC5 no docks', 'Advanced Circuits', 5, 1, null], ['AC5 industrial', 'Advanced Circuits', 5, 1, IN], ['AC5 normal docks', 'Advanced Circuits', 5, 1, NR], ['AC5 belt Mk3', 'Advanced Circuits', 5, 2, null],
   ['Capacitor 100', 'Capacitor', 100, 1, null], ['Capacitor 100 Mk3', 'Capacitor', 100, 2, null], ['BC 99', 'Basic Circuits', 99, 1, null], ['BC 100', 'Basic Circuits', 100, 1, null], ['BC 101', 'Basic Circuits', 101, 1, null], ['BC 130', 'Basic Circuits', 130, 1, null],
-  ['Nickel 31', 'Nickel Plates', 31, 1, null], ['Enzyme 30', 'Enzyme', 30, 1, null]];
+  ['BC 200', 'Basic Circuits', 200, 1, null], ['BC 300', 'Basic Circuits', 300, 1, null], ['Cap 300', 'Capacitor', 300, 1, null], ['Cap 500', 'Capacitor', 500, 1, null], ['AC15', 'Advanced Circuits', 15, 1, null], ['AC30', 'Advanced Circuits', 30, 1, null], ['Nickel 31', 'Nickel Plates', 31, 1, null], ['Enzyme 30', 'Enzyme', 30, 1, null]];
 const out = {};
 for (const [tag, name, rate, mk, dock] of CASES) {
   const ts = [];
