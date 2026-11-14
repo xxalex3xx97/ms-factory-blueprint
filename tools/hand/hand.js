@@ -3,11 +3,12 @@
 // (turns, underground hops over anything and across the 2-cell block walls) around what is already placed.
 // Page globals used: plcCls, dim, portsOf, def, PLC_BELT, PLC_UG, FC.   Usage: HAND.reset(); HAND.block(gx,gy); const a=HAND.put({...}); HAND.link(a,b); const T=HAND.result();
 window.HAND=(function(){
-  const mk=1,BELT=PLC_BELT[mk],UG=PLC_UG[mk],MAXA=def(UG).maxApart,CLS=plcCls('BPO_Station_03'),D0=dim({cls:CLS,rot:0}),TW=D0.w*FC,FW=30;
+  let mk=1,BELT,UG,MAXA;function setMk(m){mk=m;BELT=PLC_BELT[m];UG=PLC_UG[m];MAXA=def(UG).maxApart}setMk(1);   // belt tier: Mk1 60/min hop 8, Mk2 120/min hop 10, Mk3 180/min hop 12
+  const CLS=plcCls('BPO_Station_03'),D0=dim({cls:CLS,rot:0}),TW=D0.w*FC,FW=30;
   const DX=[1,0,-1,0],DY=[0,1,0,-1];   // rot 0 east, 1 south, 2 west, 3 north
   const S={blocks:new Map(),occ:new Map(),res:new Map(),door:new Map(),M:[],pcs:[],span:new Map(),fails:[]};
   const k=(x,y)=>x+','+y;
-  function reset(){S.blocks=new Map();S.occ=new Map();S.res=new Map();S.door=new Map();S.M=[];S.pcs=[];S.span=new Map();S.fails=[];S.paths=[]}
+  function reset(o){setMk(o&&o.mk!=null?o.mk:1);S.blocks=new Map();S.occ=new Map();S.res=new Map();S.door=new Map();S.M=[];S.pcs=[];S.span=new Map();S.fails=[];S.paths=[]}
   function block(gx,gy){S.blocks.set(k(gx,gy),{gx,gy})}
   function inFloor(x,y){const gx=Math.floor(x/TW),gy=Math.floor(y/TW);if(!S.blocks.has(k(gx,gy)))return false;return x-gx*TW<FW&&y-gy*TW<FW}
   let cur=null;   // owner label of the link being routed: it may use cells reserved for itself
@@ -117,5 +118,9 @@ window.HAND=(function(){
     const bl=[...S.blocks.values()].map(b=>({cls:CLS,x:b.gx*D0.w,y:b.gy*D0.h}));
     return{ok:true,blocks:bl,ms:items,fails:S.fails.slice(),machines:S.M.length,belts:S.pcs.length};
   }
-  return{reset,block,put,link,reserve,result,check,verify,S,TW,FW,CLS,free,inFloor};
+  // lane(a,pa,b,pb,path,label): commit a path that was laid directly by rule (no search); pa/pb are the source/destination ports
+  function lane(a,pa,b,pb,path,label){commit(path,a,pa,b,pb,label);return path.length}
+  // prune(): drop every block that holds nothing (no machine and no belt piece)
+  function prune(){const keep=new Set();S.occ.forEach((_,kk)=>{const [x,y]=kk.split(',').map(Number);keep.add(k(Math.floor(x/TW),Math.floor(y/TW)))});[...S.blocks.keys()].forEach(kk=>{if(!keep.has(kk))S.blocks.delete(kk)})}
+  return{reset,block,put,link,reserve,lane,prune,setMk,D:()=>MAXA-1,result,check,verify,S,TW,FW,CLS,free,inFloor};
 })();

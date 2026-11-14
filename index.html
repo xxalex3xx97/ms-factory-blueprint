@@ -308,6 +308,7 @@
   <div class="btns"><button id="plnPlace" type="button">Place</button><button id="plnCancel" type="button">Cancel</button></div>
 </dialog>
 <script>/* ?exo=1: build the hand-designed Exosuit factory (tools/hand) live, block by block */
+if(/[?&]exo=bus/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","exosuit_spec","exobus","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:500,build:exoBus})}catch(e){console.error("exo",e)}});   /* ?exo=bus: the row-bus layout */
 if(/[?&]exo=1/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","exosuit_spec","exosuit","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:900})}catch(e){console.error("exo",e)}});</script>
 </body>
 </html>

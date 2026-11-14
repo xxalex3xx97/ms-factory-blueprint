@@ -2,7 +2,7 @@
 // Needs hand.js, exosuit_spec.js, exosuit.js loaded. opts: {stepMs:900}. Resolves {ok,machines,belts,blocks}.
 window.exoPlay=async function(o){
   o=o||{};const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  const T=exoBuild({}),TW=HAND.TW,d=dim({cls:HAND.CLS,rot:0});
+  const T=(o.build||exoBuild)({}),TW=HAND.TW,d=dim({cls:HAND.CLS,rot:0});
   setView("L");S.blocks=[];sel=new Set();all();
   const isBelt=m=>/Conveyor|Underground/.test(m.cls);
   const bOf=m=>Math.floor(m.x/TW)+','+Math.floor(m.y/TW);
