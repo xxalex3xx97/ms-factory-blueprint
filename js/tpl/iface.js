@@ -112,4 +112,4 @@ function tplLanesBuild(L,n){
   return{ok:true,items,w:W,h:L.H,ports,rows,sets:L.S,nMax,nRow:L.nSet,blockCls:L.blockCls,stats:st,rin:L.rin,rout:L.rout,lanes:L.m,warn:null,iface:{v:1,block:sp.block,S:L.S,M:Math.max(...m),k:L.rc.i.length,main,sets,side:[...new Set(ports.in.map(p=>p.y))]}};
 }
 // side-native lane rows (not standard): growth k=3 o+8; growth k=4 o+7,o+8; adv_4in item 3 at o+12; enr sandwich bottom group yM+9+(k-1-j) for j<k
-const TPL_IF_SIDE={growth_k3:[8],growth_k4:[7,8],adv_4in_item3:[12],asm_3in:[],enr_sandwich_bottom:(yM,k)=>Array.from({length:k},(_,j)=>yM+9+(k-1-j))};
+const TPL_IF_SIDE={growth_k3:[10],growth_k4:[9,10],adv_4in_item3:[12],asm_3in:[],enr_sandwich_bottom:(yM,k)=>Array.from({length:k},(_,j)=>yM+9+(k-1-j))};

@@ -1,4 +1,4 @@
-// GrowthChamber and Supercomputer: identical ports, positions 2 and 4 (cells 1 and 3 of 5) on every side (user 2026-11-14, screenshot msedge_GLzZMiQdEr).
+// GrowthChamber and Supercomputer: 7x7, identical ports, positions 3 and 5 (cells 2 and 4 of 7) on every side (user 2026-11-14).
 // Checks portsOf (catalog) and PORT_ORDER cells (half cells, centre origin). Run: node tests/ports_gc_sc.mjs   Exit 1 on FAIL.
 import {createRequire} from 'module';
 import path from 'path';
@@ -18,14 +18,14 @@ const R = await pg.evaluate(() => {
   return o;
 });
 await br.close();
-const WANT = ['N:1,0', 'N:3,0', 'E:4,1', 'E:4,3', 'S:1,4', 'S:3,4', 'W:0,1', 'W:0,3'].sort();
-const WANTO = ['5,-2', '5,2', '2,5', '-2,5', '-5,2', '-5,-2', '-2,-5', '2,-5'].sort();
+const WANT = ['N:2,0', 'N:4,0', 'E:6,2', 'E:6,4', 'S:2,6', 'S:4,6', 'W:0,2', 'W:0,4'].sort();
+const WANTO = ['7,-2', '7,2', '2,7', '-2,7', '-7,2', '-7,-2', '-2,-7', '2,-7'].sort();
 let fails = 0;
 const check = (ok, m) => { console.log((ok ? 'PASS ' : 'FAIL ') + m); if (!ok) fails++ };
 const [g, s] = [R.DAT_GrowthChamber, R.DAT_Supercomputer];
 check(JSON.stringify(g.cells) === JSON.stringify(s.cells), 'portsOf identical');
-check(JSON.stringify(g.cells) === JSON.stringify(WANT), 'portsOf = positions 2 and 4 on every side: ' + g.cells);
+check(JSON.stringify(g.cells) === JSON.stringify(WANT), 'portsOf = positions 3 and 5 on every side: ' + g.cells);
 check(JSON.stringify(g.order) === JSON.stringify(s.order), 'PORT_ORDER identical');
-check(JSON.stringify(g.order) === JSON.stringify(WANTO), 'PORT_ORDER cells = Assembler cells (half cells ±2)');
+check(JSON.stringify(g.order) === JSON.stringify(WANTO), 'PORT_ORDER cells (half cells ±2, edge 7)');
 check(g.ver && s.ver, 'PORT_ORDER verified (user statement)');
 process.exit(fails ? 1 : 0);

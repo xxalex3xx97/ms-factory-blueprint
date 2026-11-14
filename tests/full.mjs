@@ -5,5 +5,5 @@
 import {runJobs} from './lib/pool.mjs';
 const slow = ['cmp_indonly', 'cmp_c7h', 'cmp_armoury', 'cmp_placed', 'cmp_s12', 'cmp_groups_placed', 'cmp_groups_sim'];
 const rest = ['cmp_dockedge', 'cmp_c7', 'cmp_compact', 'cmp_c7d', 'cmp_lanes', 'cmp_s7b', 'cmp_placed_enz', 'cmp_poollanes', 'cmp_dockfb', 'cmp_c3', 'cmp_layout', 'cmp_route', 'cmp_hub', 'cmp_groups', 'ports_gc_sc', 'plan_rk',
-  'tpl_refinery_1in', 'tpl_assembler_1in', 'tpl_assembler_2in', 'tpl_assembler_3in', 'tpl_enrichment_1in', 'tpl_enrichment_2_3in', 'tpl_advassembler_1_2in', 'tpl_advassembler_4in', 'tpl_growth_2_3_4in', 'tpl_special_machines', 'tpl_iface', 'tpl_lanes', 'tpl_plan'];
+  'tpl_refinery_1in', 'tpl_assembler_1in', 'tpl_assembler_2in', 'tpl_assembler_3in', 'tpl_enrichment_1in', 'tpl_enrichment_2_3in', 'tpl_advassembler_1_2in', 'tpl_advassembler_4in', 'tpl_growth_2_3_4in', 'tpl_supercomputer_2in', 'tpl_special_machines', 'tpl_iface', 'tpl_lanes', 'tpl_plan'];
 process.exit(await runJobs([...slow, ...rest].map(file => ({file, env: {MUT: '12'}})), +process.env.CONC || 4, 'full') ? 1 : 0);

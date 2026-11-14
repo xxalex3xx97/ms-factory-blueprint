@@ -2,7 +2,7 @@
 // cmpSize(P,item,mk,spMk,block): per stage template, S (capacity m(S)), K strips, machines per strip n[s][j].
 // Needs planner.js (plnCb, def, rk), js/tpl/iface.js (TPL_IF_SETS, tplIfSets), js/tpl/bundle.js + registry.js (tplPick).
 const CMP_MAXK=4,CMP_MAXKT=40;   // CMP_MAXKT: tree strips
-const CMP_MERGE_OK=['assembler_2in','advassembler_1_2in','growth_2_3_4in','assembler_3in','enrichment_2_3in','advassembler_4in'];
+const CMP_MERGE_OK=['assembler_2in','advassembler_1_2in','growth_2_3_4in','supercomputer_2in','assembler_3in','enrichment_2_3in','advassembler_4in'];
 const CMP_LANES={'1x1':12,'1x2':12,'2x2':28,'2x2c':28};   // max lanes per pooled face = 4*floor((H-2)/4) (c stacked containers, ya>=1, bottom row free); H = 14 / 30
 const cmpErr=why=>({ok:false,why});
 const cmpName=it=>typeof plnNm==='function'?plnNm(it):String(it);

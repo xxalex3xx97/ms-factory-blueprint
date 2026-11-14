@@ -22,8 +22,8 @@ const cases = [
   // [machine, k, expected {W rows, E rows, N rows, S rows, out row, pitch}]
   ['AdvancedAssembler', 4, {W: [2, 4], E: [2, 4], N: [], S: [], out: 6, pitch: 9}],
   ['Assembler', 3, {W: [1, 3], E: [1], N: [], S: [], out: 3, pitch: 5}],
-  ['GrowthChamber', 3, {W: [2, 4], E: [2], N: [], S: [], out: 4, pitch: 5}],
-  ['GrowthChamber', 4, {W: [2, 4], E: [2], N: [2], S: [], out: 4, pitch: 7}],
+  ['GrowthChamber', 3, {W: [2, 4], E: [2], N: [], S: [], out: 4, pitch: 7}],
+  ['GrowthChamber', 4, {W: [2, 4], E: [2], N: [2], S: [], out: 4, pitch: 9}],
   ['Refinery', 1, {W: [1], E: [], N: [], S: [], out: 1, pitch: 3}],
   ['Refinery', 2, {W: [1], E: [], N: [1], S: [], out: 1, pitch: 5}],
 ];
