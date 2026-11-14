@@ -777,12 +777,13 @@ const PLC_BKV=PL_ALL;
 const placerBk=()=>PLC_BKV.map(c=>c===($("plnBk").value==="auto"?"BPO_Station_02":$("plnBk").value));   // "auto" = composer picks (cmpCompose sets CMP_BK)
 const placerDock=()=>{const i=$("plnDkI").checked,o=$("plnDkO").checked;if(!i&&!o)return null;const t=$("plnDk").value;return{in:i?t:null,out:o?($("plnDkOT").value||t):null}};
 // UI speed: result cache (last 8 layouts), coalesced + deferred compute with a "Building..." paint first (composer only: older engines stay synchronous for their tests)
-let plcRunTok=0,plcBusyF=false,plcDebT=0;const plcLC=new Map();
+let plcRunTok=0,plcBusyF=false,plcDebT=0,plcPv=null,plcT0=0,plcBI=0;const plcLC=new Map();
 const plcAsync=()=>typeof CMP_ENGINE!=="undefined"&&CMP_ENGINE;
 const plcKey=(x,dk)=>JSON.stringify([x.it,x.rate,x.mk,x.sp,$("plnBal").value,plnProto(),$("plnEnr").checked,PLN_PICK,$("plnBk").value,$("plnBuf").value,dk,["CMP_ENGINE","CMP_GROUPS","CMP_GROUPS_AUTO","CMP_BLK","CMP_MEMO","RB_ENGINE"].map(k=>window[k])]);
 function plcApply(L){
-  const dl=$("plnPrev");plcBusyF=false;$("plnPrevMap").style.opacity="";
+  const dl=$("plnPrev");plcBusyF=false;$("plnPrevMap").style.opacity="";plcProgHide();
   $("plnEngBadge").textContent=L.ok?(L.eng==="cmp"?"Template: "+plcEngName(L):"Template: Zones"):"";
+  if(L.ok&&L.rbWhy){const b=$("plnEngBadge"),w=String(L.rbWhy);b.textContent+=" - Strips fallback: "+(w.length>140?w.slice(0,139)+"…":w);b.title=w}else $("plnEngBadge").title="";
   if(!L.ok){plcL=null;plcT=null;placerClear();$("pvLine").textContent="";$("plnPrevErr").textContent=/^(Pick an item|internal error)/.test(L.why)?L.why:"Not supported yet: "+String(L.why).replace(/^BL: /,"").replace(/ \(NL used\)$/,"").replace(/^Engine zones built a layout but /,"");$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
@@ -793,7 +794,7 @@ const plcSpawn=()=>{if(plcW)return plcW;if(typeof Worker==="undefined"||typeof F
 function plcRunW(open,x,dk,key,tok){
   plcKill();const w=plcSpawn();if(!x||!w)return placerRun(open);
   const id=++plcWId;
-  w.onmessage=ev=>{if(ev.data.id!==id||tok!==plcRunTok)return;plcKill();const d=ev.data;if(d.err){plcNoWorker=true;return placerRun(open)}
+  w.onmessage=ev=>{if(ev.data.id!==id||tok!==plcRunTok)return;if(ev.data.prog){if(window.__progLog)window.__progLog.push(ev.data.prog);plcPv=ev.data.prog;plcBP();return}plcKill();const d=ev.data;if(d.err){plcNoWorker=true;return placerRun(open)}
     window.CMP_BK=d.bk;plcFb=d.fb;if(key){plcLC.set(key,{L:d.L,bk:d.bk,fb:d.fb});if(plcLC.size>8)plcLC.delete(plcLC.keys().next().value)}plcApply(d.L)};
   w.onerror=ev=>{ev.preventDefault();plcKill();plcNoWorker=true;if(tok===plcRunTok)placerRun(open)};
   const flags={};for(const k of Object.keys(window)){if(/^(CMP_|RB_)/.test(k)){const v=window[k];if(v==null||typeof v!=="object"&&typeof v!=="function")flags[k]=v}}
@@ -807,6 +808,7 @@ function placerRun(open,defer){
   if(defer&&plcAsync()){   // paint first, compute after; a newer request makes this one stale
     const tok=++plcRunTok;plcBusyF=true;if(!dl.open)dl.showModal();
     $("plnPlace").disabled=true;$("pvLine").textContent="Building...";$("plnPrevMap").style.opacity=".45";
+    plcPv=null;plcT0=performance.now();clearInterval(plcBI);plcBI=setInterval(plcBP,250);plcBP();
     plcKill();requestAnimationFrame(()=>setTimeout(()=>{if(tok===plcRunTok)plcRunW(open,x,dk,key,tok)},0));return}
   ++plcRunTok;plcFb=null;
   const L=x?placerLayout(x.P,x.it,x.mk,x.sp??x.mk,{box:$("plnBuf").value,mod:false,dock:dk}):{ok:false,why:"Pick an item and a rate first"};
@@ -881,12 +883,18 @@ function placerPreview(L){
   step();
 }
 // progress bar + text while the block search runs; shown only after 150 ms, hidden when done or cancelled
-function plcProg(v,show){let e=document.getElementById("plcProg");
+function plcProgEl(){let e=document.getElementById("plcProg");
   if(!e){e=document.createElement("div");e.id="plcProg";e.innerHTML='<progress max="100" value="0" style="width:100%;height:6px"></progress><div style="font-size:12px"></div>';e.style.display="none";$("plnPrevErr").before(e)}
+  return e}
+// while the layout is built: bar (indeterminate when frac<0 / no worker progress) + status line "phase: detail - elapsed s"
+function plcBP(){if(!plcBusyF)return;const e=plcProgEl(),p=plcPv,pr=e.querySelector("progress");
+  if(p&&p.frac>=0)pr.value=p.frac*100;else pr.removeAttribute("value");
+  e.lastChild.textContent=(p?p.detail||p.phase:"Building...")+" - "+((performance.now()-plcT0)/1000).toFixed(1)+" s";e.style.display="block"}
+function plcProg(v,show){const e=plcProgEl();
   const pct=v.phase===1?v.n/v.total*30:30+70*v.n/v.total,sz=["1x1","2x1","2x2","2x2 C"][PL_ALL.map(plcCls).indexOf(v.cls)]||"";
   e.querySelector("progress").value=pct;e.lastChild.textContent="Trying "+sz+", "+v.G+" band(s) ("+v.n+" of "+v.total+") - "+Math.round(pct)+"%";
   if(show)e.style.display="block"}
-function plcProgHide(){const e=document.getElementById("plcProg");if(e)e.style.display="none"}
+function plcProgHide(){clearInterval(plcBI);const e=document.getElementById("plcProg");if(e)e.style.display="none"}
 function plcFinish(L){
   plcProgHide();
   const src=plcT&&plcT.ok?plcT.ms:L.items,k={mach:0,belt:0,spl:0,box:0,ug:0},

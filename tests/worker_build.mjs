@@ -61,5 +61,25 @@ for (const eng of ['rb', 'cmp']) {
   const c2 = await page.evaluate(() => { window.plcNoWorker = true; plcLC.clear(); const x = placerPlan(); plcL = placerLayout(x.P, x.it, x.mk, x.sp ?? x.mk, {box: $('plnBuf').value, mod: false, dock: placerDock()}); return __sig() });
   const rate = await page.evaluate(() => $('pvRate').value);
   ck(eng + ' cancel: final == rate 5 result', rate === '5' && hash(c1) === hash(c2), 'rate ' + rate);
+  if (eng !== 'rb') continue;
+  // progress events + status UI (fresh page state after the reload above)
+  await page.evaluate(() => { window.__progLog = []; window.plcNoWorker = false; plcNoWorker = false; plcLC.clear(); placerGo() });
+  await page.waitForFunction(() => __progLog.length >= 2 || !plcBusyF, null, {timeout: 120000});
+  const mid = await page.evaluate(() => { const e = document.getElementById('plcProg'); return {vis: !!e && e.style.display === 'block', txt: e ? e.lastChild.textContent : ''} });
+  if (process.env.SHOT) await page.screenshot({path: process.env.SHOT});
+  await idle();
+  const pg = await page.evaluate(() => ({log: __progLog, hid: document.getElementById('plcProg').style.display === 'none'}));
+  const phases = new Set(pg.log.map(p => p.phase)), att = {};
+  for (const p of pg.log) if (p.phase === 'Placing modules') (att[(p.detail.match(/attempt \d+/) || [''])[0]] ||= []).push(p.frac);
+  const mono = Object.values(att).every(a => a.every((f, i) => !i || f >= a[i - 1]));
+  ck('progress: >= 3 distinct phases', phases.size >= 3, [...phases].join(','));
+  ck('progress: frac monotonic within an attempt', mono && Object.keys(att).length > 0);
+  ck('progress: bar visible mid-build with status text', mid.vis || pg.log.length < 2, mid.txt);
+  ck('progress: bar hidden when done', pg.hid);
+  // forced rb refusal -> strips fallback shows the reason
+  await page.evaluate(() => { window.RB_FORCE_REFUSE = true; plcL = null; plcLC.clear(); placerGo() }); await idle();
+  const fb = await page.evaluate(() => ({ok: plcL && plcL.ok, why: plcL && plcL.rbWhy, badge: $('plnEngBadge').textContent, title: $('plnEngBadge').title, nw: plcNoWorker}));
+  ck('forced refusal: L.rbWhy survives worker clone', fb.ok && fb.why === 'forced' && fb.nw === false, JSON.stringify(fb.why));
+  ck('forced refusal: badge shows Strips fallback line', /Strips fallback: forced/.test(fb.badge) && fb.title === 'forced', fb.badge);
 }
 await br.close(); console.log(bad ? 'FAIL' : 'OK'); process.exit(bad ? 1 : 0);

@@ -161,7 +161,9 @@ function cmpArmoury(P,item,mk,spMk,o,bk,BX){
   const walk=(x,rate)=>{const T=P.nodes[x];for(const [y,n] of T.rec.i){const r=rate*n/T.rec.o[1];if(isA(y))walk(y,r);else leaf.set(y,(leaf.get(y)||0)+r)}};
   walk(item,P.nodes[item].rate);
   const cls=plcCls(bk),d=dim({cls,rot:0}),ms=[],blocks=[],parts=[],note=[],nodes=[],routed=[],stages=[];let off=0,cols=1,ug=0,span=0;
+  let li=0;
   for(const [c,r] of leaf){
+    fbProgress('Armoury leaves','Leaf '+(li+1)+'/'+leaf.size+' '+cmpName(c),li++/leaf.size);
     if(!(P.nodes[c]&&P.nodes[c].crafter))return cmpErr('Armoury input '+cmpName(c)+' is a raw item (no factory to build)');
     const t0=performance.now(),Pc=plan(c,r,mk,{sp:null,bal:null},PLN_PICK,{proto:false,enr:false}),L=cmpCompose(Pc,c,mk,spMk,{...o,bk}),t1=performance.now();
     if(!L.ok)return cmpErr(cmpName(c)+' '+(+r.toFixed(2))+'/min: '+L.why);
@@ -202,9 +204,11 @@ function cmpCompose(P,item,mk,spMk,o={}){
 function cmpCompose0(P,item,mk,spMk,o={}){   // RB default: a refused recursive build falls back to the old strip composer; both refused = both reasons
   const L=cmpCompose0r(P,item,mk,spMk,o);
   if(L.ok||!globalThis.RB_ENGINE)return L;
+  fbProgress('Strip fallback','Recursive builder refused: '+String(L.why).slice(0,120)+' - trying strip composer',-1);
   globalThis.RB_ENGINE=false;let L2;
   try{L2=cmpCompose0r(P,item,mk,spMk,o)}finally{globalThis.RB_ENGINE=true}
   if(!L2.ok&&L.why&&L.why!==L2.why)L2={...L2,why:L.why+' | '+L2.why};
+  if(L2.ok)L2.rbWhy=String(L.why);   // shown in the preview badge (placer.js plcApply)
   return L2;
 }
 function cmpCompose0r(P,item,mk,spMk,o={}){
@@ -234,6 +238,7 @@ function cmpCompose1(P,item,mk,spMk,o={}){
     let best=null,why=null;const all=[];
     for(const b of PL_ALL){
       if(!plcCls(b))continue;
+      fbProgress('Block types','Trying block type '+CMP_BLOCKS[PL_ALL.indexOf(b)]+' ('+(PL_ALL.indexOf(b)+1)+'/'+PL_ALL.length+')',PL_ALL.indexOf(b)/PL_ALL.length);
       const L=cmpCompose(P,item,mk,spMk,{...o,bk:b});
       if(!L.ok){why=why||L.why;continue}
       const k=cmpKey(L)+(L.note.some(n=>/^Dock-limited|^Dock not built|cannot be docked/.test(n))?1e15:0);   // a build that lost a dock never beats one that kept all; then floor area (block units), then belts

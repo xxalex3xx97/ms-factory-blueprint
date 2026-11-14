@@ -1,3 +1,4 @@
+globalThis.fbProgress=globalThis.fbProgress||function(){};   // compute progress hook (phase,detail,frac 0..1|-1): real in the worker (tools/worker_bundle.mjs TAIL), no-op on the main thread
 const $=s=>document.getElementById(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const HUES={Basic:200,Vertical:335,Defence:20,"Functional Blocks":150,Shipyards:265};

@@ -27,7 +27,9 @@ function rbBuild(x){
     if(src.length>w-3&&w<W)return{r0,r1,rt:{ok:false,why:'region too narrow'}};
     return{r0,r1,rt:cmpRoute({W:w,H,rowsN:r1-r0+1,mk,sources:src,sinks:snk,ugMax:def(ugc).maxApart,eastStart:true,join:true})};
   };
+  let pi=0;
   for(const o of order){
+    fbProgress('Placing modules','Placing '+o.item+' ('+(pi+1)+'/'+order.length+')'+(globalThis.__fbAtt||''),pi++/order.length);
     const gr=G[o.id],m={o,gr,id:o.id,B:gr.B,mem:gr.mem,kids:gr.kids.map(k=>M[k.o.id]),lanes:[],outRows:[]};M[o.id]=m;
     if(o.parents&&o.parents.length){
       m.pj={};   // lanes out of the pool: one per consumer port (of EVERY consumer), leaving at the port's own row when free, else the nearest free row (near rule of cmp_groups.js 70)
@@ -91,6 +93,7 @@ function rbBuild(x){
     if(!hit){globalThis.__rbDbg={occ:[...g.occ].map(([k,v])=>k+' '+v.mod.o.item),cor:[...g.cor.keys()],kids:m.kids.map(p=>p.o.item+' c'+p.c+' r'+p.r+' B'+p.B+' n'+p.pk.nPhys),c0,rowWant};return no('rb: no spot for '+o.item)}
   }
   // ---- finalize
+  fbProgress(DK?'Docks':'Finalizing',(DK?'Docks and ':'')+'finalizing layout'+(globalThis.__fbAtt||''),1);
   const keys=[...g.occ.keys(),...g.cor.keys()].map(k=>k.split(',').map(Number)),gy0=Math.min(...keys.map(k=>k[1])),ms=[],routed=[],nodes=[];
   if(DK)DK.notes.length=n0;   // placement notes are redone below with the final block rows (j of the DOCKCLEAR keys)
   for(const m of order.map(o=>M[o.id])){
