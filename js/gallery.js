@@ -26,7 +26,7 @@ function galBuild(k){
   if(L.ok){
     const T=L.tile&&L.tile.ok?L.tile:{blocks:[{cls:plcCls("BPO_Station_02"),x:0,y:0}],ms:L.items},cnt={mach:0,belt:0,spl:0,ug:0,box:0};
     L.items.forEach(b=>cnt[b.rec?"mach":PLC_UG.includes(b.cls)?"ug":PLC_BELT.includes(b.cls)?"belt":PLC_SPL.includes(b.cls)?"spl":"box"]++);
-    res.eng=L.eng||"legacy";res.engName=GAL_ENG[L.eng]||"Legacy placer";res.cnt=cnt;res.blocks=L.tile&&L.tile.ok?L.tile.blocks.length:0;res.w=L.w;res.h=L.h;res.T=T;res.items=L.items;res.fb="";
+    res.eng=L.eng||"legacy";res.engName=L.eng==="cmp"?plcEngName(L):GAL_ENG[L.eng]||"Legacy placer";res.cnt=cnt;res.blocks=L.tile&&L.tile.ok?L.tile.blocks.length:0;res.w=L.w;res.h=L.h;res.T=T;res.items=L.items;res.fb="";
     res.chip=["g","Golden template"];
   }else{res.why=String(L.why||"").replace(/ \(NL used\)$/,"");res.chip=["b","Not supported yet: "+res.why]}
   return k.res=res;

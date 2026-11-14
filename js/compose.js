@@ -199,7 +199,15 @@ function cmpCompose(P,item,mk,spMk,o={}){
   let e=M.get(key);if(e){window.CMP_BK=e.bk;return e.L}
   const L=cmpCompose0(P,item,mk,spMk,o);M.set(key,{L,bk:window.CMP_BK});return L;
 }
-function cmpCompose0(P,item,mk,spMk,o={}){
+function cmpCompose0(P,item,mk,spMk,o={}){   // RB default: a refused recursive build falls back to the old strip composer; both refused = both reasons
+  const L=cmpCompose0r(P,item,mk,spMk,o);
+  if(L.ok||!globalThis.RB_ENGINE)return L;
+  globalThis.RB_ENGINE=false;let L2;
+  try{L2=cmpCompose0r(P,item,mk,spMk,o)}finally{globalThis.RB_ENGINE=true}
+  if(!L2.ok&&L.why&&L.why!==L2.why)L2={...L2,why:L.why+' | '+L2.why};
+  return L2;
+}
+function cmpCompose0r(P,item,mk,spMk,o={}){
   if(globalThis.CMP_CAP4||globalThis.CMP_IN||(globalThis.CMP_GROUPS||globalThis.RB_ENGINE)&&!(o.dock&&(o.dock.in||o.dock.out)))return cmpCompose1(P,item,mk,spMk,o);
   if(globalThis.RB_ENGINE&&!globalThis.CMP_GROUPS&&o.dock&&(o.dock.in||o.dock.out)){   // RB S6a: NORMAL docks go to the recursive builder (rbDockOk: not industrial); INDUSTRIAL docks (S6b/S6c) stay on the old path. A refused rb build falls back to the old path (docks are never refused)
     const sel=$('plnBk'),b0=o.bk||(sel?(sel.value==='auto'?'auto':PL_ALL[placerBk().indexOf(true)]):null);

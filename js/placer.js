@@ -782,7 +782,7 @@ const plcAsync=()=>typeof CMP_ENGINE!=="undefined"&&CMP_ENGINE;
 const plcKey=(x,dk)=>JSON.stringify([x.it,x.rate,x.mk,x.sp,$("plnBal").value,plnProto(),$("plnEnr").checked,PLN_PICK,$("plnBk").value,$("plnBuf").value,dk,["CMP_ENGINE","CMP_GROUPS","CMP_GROUPS_AUTO","CMP_BLK","CMP_MEMO","RB_ENGINE"].map(k=>window[k])]);
 function plcApply(L){
   const dl=$("plnPrev");plcBusyF=false;$("plnPrevMap").style.opacity="";
-  $("plnEngBadge").textContent=L.ok?(L.eng==="cmp"?"Template: Composer":"Template: Zones"):"";
+  $("plnEngBadge").textContent=L.ok?(L.eng==="cmp"?"Template: "+plcEngName(L):"Template: Zones"):"";
   if(!L.ok){plcL=null;plcT=null;placerClear();$("pvLine").textContent="";$("plnPrevErr").textContent=/^(Pick an item|internal error)/.test(L.why)?L.why:"Not supported yet: "+String(L.why).replace(/^BL: /,"").replace(/ \(NL used\)$/,"").replace(/^Engine zones built a layout but /,"");$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }
@@ -816,7 +816,9 @@ function placerRun(open,defer){
 function placerGo(){$("pvMk").value=$("plnMk").value;$("pvSp").value=$("plnSp").value;$("pvRate").value=$("plnRate").value;placerRun(true,true)}
 // live modal: build settings re-run the preview; errors show inside the modal with Place off
 const placerLive=()=>{clearTimeout(plcDebT);placerRun(false,true)};
-let plcFb=null;const PLC_ENG={cmp:"Composer",zones:"Zones"};   // names only: still read by gallery/old tests
+let plcFb=null;const PLC_ENG={cmp:"Composer",zones:"Zones"};
+const plcEngName=L=>L.eng!=="cmp"?"Zones":L.bl&&L.bl.cmp&&L.bl.cmp.rb?"Composer (recursive)":globalThis.RB_ENGINE?"Composer (strips fallback)":"Composer";   // which engine actually built it
+   // names only: still read by gallery/old tests
 function placerClear(){
   ["pvMach","pvBelt","pvSpl","pvBox","pvUg","pvBlk","pvCell","pvIO"].forEach(i=>{if($(i))$(i).textContent="-"});
   $("plnPrevNote").textContent="";$("plnPrevBig").textContent="";
@@ -950,7 +952,7 @@ $("pvRate").addEventListener("change",()=>{$("plnRate").value=$("pvRate").value;
 $("pvRate").addEventListener("input",()=>{clearTimeout(plcDebT);plcDebT=setTimeout(()=>{if(+$("pvRate").value>0){$("plnRate").value=$("pvRate").value;placerLive()}},300)});   // typing: one compute 300 ms after the last key (Enter/blur = change = at once)
 // Engine switch: Old = the original placer (default), New = prefab factory builder (pfFact2 > pfBands > pfChain, falls back to the old path when it refuses). Remembered once chosen.
 // Composer is the default. ?engine=old in the page URL pins the legacy placer (prefab flags off); any other value = composer.
-const plcEngine=v=>{CMP_ENGINE=PLC_PREFAB=PF_FACT=(v!=="old");globalThis.RB_ENGINE=v==="rb"};   // ?engine=rb = recursive builder (js/rb_*.js, dev flag)
+const plcEngine=v=>{CMP_ENGINE=PLC_PREFAB=PF_FACT=(v!=="old");globalThis.RB_ENGINE=v!=="old"&&v!=="cmp"};   // default / ?engine=rb = recursive builder with strip fallback; ?engine=cmp = strips only; ?engine=old = legacy
 if(!plcCls("BPO_Station_03"))$("plnBk").querySelector('option[value="BPO_Station_03"]')?.remove();
 try{const v=localStorage.getItem("msfb.block");if(PLC_BKV.includes(v))$("plnBk").value=v}catch(_){}
 $("plnBk").addEventListener("change",()=>{try{localStorage.setItem("msfb.block",$("plnBk").value)}catch(_){}});
