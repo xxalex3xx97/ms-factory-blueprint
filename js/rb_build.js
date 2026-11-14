@@ -4,11 +4,12 @@
 // -> {ok:true,T,nodes,routed,rb:{mods,ascii}} | {ok:false,why}.  Page globals: cmpRoute, cmpPool, cmpMerge, cmpShr, rbPack, rbPackNode, rbGrid, rbCandidates, plcCls, dim, def, PLC_UG, PLC_BELT, ugPairs, rk.
 function rbBuild(x){
   const {pl,G,NB,tz,mk,bx,bk,block,W,H}=x,cls=plcCls(bk),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk],t0=Date.now(),g=rbGrid(),byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),asc=(a,b)=>a-b;
-  // DOCKS (NORMAL only, S6a; industrial = S6b, 2x2c adapter = S6c, both stay on the old path): x.dk={mk,in,out,notes} as compose.js. Raw hubs (SRC/FEED) are NEVER fused: own block at gx=0 (west face),
+  // DOCKS (normal S6a, industrial S6b: dk.indIn/indOut, cmpDockHub/cmpFeedDock/cmpDockApply do the ind tags ie/oe/iv/is): x.dk={mk,in,out,notes} as compose.js. Raw hubs (SRC/FEED) are NEVER fused: own block at gx=0 (west face),
   // their lanes cross empty corridor blocks (cmp_asm.js bank pass-through); the root POOL (OZ) is the last piece of its block, container flush east (q.x+4===W-1). cmpDockApply (cmp_dock.js) needs per hub item: dk tags + hx/hw/hu/hc (put), nodes[] gx/gy/inCol/pool/fb/ct.
   const DK=x.dk&&(x.dk.in||x.dk.out)?x.dk:null,hubOwn=!!(DK&&DK.in),n0=DK?DK.notes.length:0,no=why=>{if(DK)DK.notes.length=n0;return{ok:false,why}};
   const rawD=(o,q)=>o.rec.i.map(([it])=>{const c=o.children.map(i=>byId[i]).find(c=>c.key===it);return c?c.rate*q.rate/o.rate:0});   // planner raw rate per raw input of member q (share of node o)
   const sidesOf=row=>{let up=1,dn=1;for(const k of[...g.occ.keys(),...g.cor.keys()]){const[gx,gy]=k.split(',').map(Number);if(gx===0){if(gy<row)up=0;if(gy>row)dn=0}}return[up&&'N',dn&&'S'].filter(Boolean)};   // FEED hub: N / S dock only when no block lies above / below it in block column 0 (outer edge)
+  const mkHub=(m,jr)=>m.mem.map((q,b)=>rbNodeIn(q,tz.by[q.id],NB[q.id],{block,bx,H,mk,dkx:{dk:DK,D:rawD(m.o,q),dh:d.h,dw:d.w,row:jr(b),sides:()=>sidesOf(m.r+b)}}));
   pl.nodes.forEach(o=>{if(o.raw&&o.parent)o.parents=[o.parent]});
   const root=pl.nodes.find(o=>!o.raw&&!(o.parents&&o.parents.length)),order=[],M={};
   const seen=new Set(),visit=o=>{if(seen.has(o.id))return;seen.add(o.id);o.children.map(i=>byId[i]).filter(c=>!c.raw||G[c.id]).forEach(visit);order.push(o)};visit(root);   // shared product: visited (built) once
@@ -42,7 +43,7 @@ function rbBuild(x){
       const h=cmpPool({W,H,mk,bx,item:o.key,raw:true,inRows:[],outRows:m.outRows,...(m.dI||{})});if(h.ok===false)return no('rb: '+o.item+' supplier: '+h.why);m.pk={ok:true,nPhys:1,colP:[0],colX:[0],colW:[W]};m.defer=true;continue}   // raw supplier of a merge node: one SRC block (docks: own block at gx=0, placed by the consumer)
     const o0=m.mem[0],NB0=NB[o0.id],z0=tz.by[o0.id];let pk;
     const isRoot=!(o.parents&&o.parents.length),hb=hubOwn&&!m.kids.length;   // hb: leaf module with a raw hub block at gx=0 (hub[b] = member b's hub builder, .rows = its lane rows)
-    if(hb)m.hub=m.mem.map((q,b)=>{const f=rbNodeIn(q,tz.by[q.id],NB[q.id],{block,bx,H,mk,dkx:{dk:DK,D:rawD(o,q),dh:d.h,dw:d.w,row:b,sides:()=>sidesOf(m.r+b)}});if(q.inKind==='src')f.rows=NB[q.id].inR[0];else{const bz=NB[q.id].b,hs=tplIfSets(block,tz.by[q.id].S).hs,sets=bz.iface.sets.map((s,i)=>({o:s.o,n:s.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(s=>s.n>0),M=bz.iface.M;f.rows=sets.flatMap(s=>q.rec.i.flatMap((_,r)=>Array.from({length:M},(_,c)=>(s.t?s.t[r]:s.o+r*M)+c)))}return f});
+    if(hb){m.hub=mkHub(m,()=>0);m.hub.forEach((f,b)=>{const q=m.mem[b];if(q.inKind==='src')f.rows=NB[q.id].inR[0];else{const bz=NB[q.id].b,sets=bz.iface.sets.map((s,i)=>({o:s.o,n:s.n,t:bz.ports&&bz.ports.in?bz.ports.in.filter(p=>p.set===i).map(p=>p.y):null})).filter(s=>s.n>0),M=bz.iface.M;f.rows=sets.flatMap(s=>q.rec.i.flatMap((_,r)=>Array.from({length:M},(_,c)=>(s.t?s.t[r]:s.o+r*M)+c)))}})}   // dock hub builders; j (DOCKCLEAR key) is the final block row: rebuilt at finalize
     if(DK&&DK.out&&isRoot){m.dO=m.mem.map(q=>cmpDockHub(DK,{kind:'out',name:q.item,D:q.rate,rows:cmpMerge(NB[q.id].outRows,NB[q.id].outN,NB[q.id].gOut).rows,H,dh:d.h,tree:1,j:0}));if(m.dO.some(v=>v.ok===false))return no('rb: '+o.item+' dock hub: '+m.dO.find(v=>v.ok===false).why)}
     const dk=m.kids.filter(p=>p.defer&&p.c==null),kp=m.kids.filter(p=>p.c!=null);   // dk: leaf producers (raw supplier, one consumer) are placed WITH this module, adjacent west of its IN column
     const rowWant=(kp.length?Math.round(kp.reduce((s,p)=>s+p.r*p.o.N,0)/kp.reduce((s,p)=>s+p.o.N,0)):0)+(x.bias|0);   // flow-weighted mean block row of the placed producers
@@ -91,9 +92,14 @@ function rbBuild(x){
   }
   // ---- finalize
   const keys=[...g.occ.keys(),...g.cor.keys()].map(k=>k.split(',').map(Number)),gy0=Math.min(...keys.map(k=>k[1])),ms=[],routed=[],nodes=[];
+  if(DK)DK.notes.length=n0;   // placement notes are redone below with the final block rows (j of the DOCKCLEAR keys)
   for(const m of order.map(o=>M[o.id])){
+    if(DK){const j0=m.r-gy0;   // industrial: hub / OZ dock plans keyed by final block row (CMP_NODK)
+      if(m.o.raw&&hubOwn){m.dI=cmpDockHub(DK,{kind:'in',name:m.o.item,D:m.o.rate,rows:m.outRows,H,dh:d.h,j:j0});if(m.dI.ok===false)return no('rb: '+m.o.item+' dock hub: '+m.dI.why)}
+      if(m.hub)m.hub=mkHub(m,b=>j0+b);
+      if(m.dO){m.dO=m.mem.map((q,b)=>cmpDockHub(DK,{kind:'out',name:q.item,D:q.rate,rows:cmpMerge(NB[q.id].outRows,NB[q.id].outN,NB[q.id].gOut).rows,H,dh:d.h,tree:1,j:j0+b}));if(m.dO.some(v=>v.ok===false))return no('rb: '+m.o.item+' dock hub: '+m.dO.find(v=>v.ok===false).why)}}
     const pk=m.pk,pX=q=>(m.c+pk.colP[q])*TW+pk.colX[q]-pk.colP[q]*FC;
-    const put=(items,X,Y,ct,tag,hx)=>items.forEach(b=>{const q={...b,x:b.x+X,y:b.y+Y,...(hx!=null&&b.dk?{hx,hw:W,hu:d.w,hc:0}:{})};ms.push(q);if(tag)tag.push(q);if(ct&&b.ct)ct.push(q.x+','+q.y)});   // hx: block origin cell x of a dock hub piece (cmpDockApply reads hx/hw/hu/hc)
+    const put=(items,X,Y,ct,tag,hx)=>items.forEach(b=>{const q={...b,x:b.x+X,y:b.y+Y,...(hx!=null&&b.dk?{hx,hw:W,hu:d.w,hc:hx/TW}:{})};ms.push(q);if(tag)tag.push(q);if(ct&&b.ct)ct.push(q.x+','+q.y)});   // hx: block origin cell x of a dock hub piece (cmpDockApply reads hx/hw/hu/hc)
     if(m.rg)put(m.rg.rt.items,pX(0),(m.rg.r0-gy0)*TH,null,routed);
     (m.thr||[]).forEach(t=>{for(let xx=pk.colW[0];xx<W;xx++)ms.push({cls:PLC_BELT[mk],x:m.c*TW+xx,y:(t.row-gy0)*TH+t.y,h:0,rot:0,pid:0})});   // tail of a crossing lane east of the IN piece
     if(m.o.raw){put(cmpPool({W,H,mk,bx,item:m.o.key,raw:true,inRows:[],outRows:m.outRows,...(m.dI||{})}).items,pX(0),(m.r-gy0)*TH,null,null,m.dI?m.c*TW:null);continue}

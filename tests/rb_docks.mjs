@@ -1,4 +1,4 @@
-// RB S6a: NORMAL docks (dock {in:'nrm',out:'nrm'}) in the recursive builder (?engine=rb). Industrial docks (S6b) and 2x2c adapter (S6c) stay on the old path.
+// RB S6a/S6b: NORMAL docks (dock {in:'nrm',out:'nrm'}) and INDUSTRIAL docks (IND=1 or 'ind' cases: {in:'ind',out:'ind'}, only industrial: no normal dock item) in the recursive builder (?engine=rb).
 // Run: node tests/rb_docks.mjs   Exit 1 on FAIL or page error.
 // Cases: Nickel Plates 31 / 480, Capacitor 100, Enzyme 10, Basic Circuits 100, Advanced Circuits 5 (2x2, 2x2c).
 // Per case: checkCompose strict (planner N exact, ov 0, span 0, flood clean: raw container -> every node, last node -> OZ container) with docks + rb engine used + every raw item docked (one dock container per raw node, never refused, no 'cannot be docked' note)
@@ -12,10 +12,13 @@ const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WARM = +process.env.WARM || 900, MEAS = +process.env.MEAS || 600;
-const DOCK = {in: 'nrm', out: 'nrm'};
+const DOCK = {in: 'nrm', out: 'nrm'}, IDOCK = {in: 'ind', out: 'ind'};
 // [name, key regex, rate, block class]
 const CASES = [['Nickel Plates 31 2x2', '^ITEM_NickelOre>ITEM_NickelPlates$', 31, 'BPO_Station_02'], ['Nickel Plates 480 2x2', '^ITEM_NickelOre>ITEM_NickelPlates$', 480, 'BPO_Station_02'], ['Capacitor 100 2x2', '>ITEM_Capacitor$', 100, 'BPO_Station_02'],
   ['Nickel Plates 480 1x2 (stacked B=2)', '^ITEM_NickelOre>ITEM_NickelPlates$', 480, 'BPO_Station_2x1'], ['Nickel Plates 480 1x1 (stacked B=4)', '^ITEM_NickelOre>ITEM_NickelPlates$', 480, 'BPO_Station_01'], ['Enzyme 10 2x2', '>ITEM_Enzyme$', 10, 'BPO_Station_02'], ['Basic Circuits 100 2x2', '>ITEM_BasicCircuit$', 100, 'BPO_Station_02'], ['Advanced Circuits 5 2x2', '>ITEM_AdvancedCircuits$', 5, 'BPO_Station_02'], ['Advanced Circuits 5 2x2c', '>ITEM_AdvancedCircuits$', 5, 'BPO_Station_03']];
+const IC = [['Nickel Plates 31', '^ITEM_NickelOre>ITEM_NickelPlates$', 31], ['Nickel Plates 480', '^ITEM_NickelOre>ITEM_NickelPlates$', 480], ['Capacitor 100', '>ITEM_Capacitor$', 100], ['Enzyme 10', '>ITEM_Enzyme$', 10], ['Basic Circuits 100', '>ITEM_BasicCircuit$', 100], ['Advanced Circuits 5', '>ITEM_AdvancedCircuits$', 5]];
+for (const [n, k, r] of IC) for (const [t, bk] of [['2x2', 'BPO_Station_02'], ['2x2c', 'BPO_Station_03']]) CASES.push([n + ' ' + t + ' IND', k, r, bk, 'ind']);
+for (const [n, k, r, bk] of [['Enzyme 10 1x1', '>ITEM_Enzyme$', 10, 'BPO_Station_01'], ['Enzyme 10 1x2', '>ITEM_Enzyme$', 10, 'BPO_Station_2x1'], ['Nutrients 400 2x2c', '>ITEM_Nutrients$', 400, 'BPO_Station_03']]) CASES.push([n + ' IND', k, r, bk, 'ind']);   // old-path 'no dock + note' shapes: notes allowed (printed). Not here: Basic Circuits/Capacitor 1x1,1x2 and Enzyme 120 2x2c sim (rb limits, same with NORMAL docks: S6a scope was Nickel only for 1x1/1x2)
 const only = process.argv[2] ? new RegExp(process.argv[2]) : null;
 // page side, on the layout checkCompose just built (window.__cmpL / __cmpP). a.del = 'x,y' dock belt cell removed before the belt-chain check (mutation)
 const dockPage = a => {
@@ -27,6 +30,7 @@ const dockPage = a => {
   const beltAt = (x, y) => { if (a.del === x + ',' + y) return null; const b = cell.get(x + ',' + y); return b && PLC_BELT.includes(b.cls) && b.rot === 0 ? b : null };
   for (const q of all) {
     const c = ms.find(m => m.x === q.x && m.y === q.y && m.dd), x0 = c.dd.gx * 16, y0 = c.dd.gy * 16, M = y0 + 16 * c.dd.u + 6, hb = T.blocks.find(b => b.x === c.dd.gx && b.y === c.dd.gy && b.cls !== dc && b.cls !== adc), hu = dim({cls: hb.cls, rot: hb.rot || 0}).w, Wh = hu * 16 - 2;
+    if (c.dd.ind) continue;   // industrial: Dock_2 assembly, checked by the dock-edge flood below + checkCompose flood
     if (c.dd.side === 'N' || c.dd.side === 'S') continue;   // FEED hub vertical dock: checked by the dock-edge flood below
     if (!(c.y <= M && c.y + 3 >= M + 1)) errs.push('container does not cover its door cells @' + c.x + ',' + c.y);
     const dkb = docks.find(b => q.k === 'in' ? b.x === c.dd.gx - 1 - ad && b.y === c.dd.gy + c.dd.u : b.x === c.dd.gx + hu + ad && b.y === c.dd.gy + c.dd.u);
@@ -56,7 +60,7 @@ const dockPage = a => {
   const outDocks = dl.filter(b => b.rot === 0).length, inDocks = dl.filter(b => b.rot !== 0).length, inWest = dl.filter(b => b.rot === 2).length;
   const dB = b => dim({cls: b.cls, rot: b.rot === 1 || b.rot === 3 ? b.rot : 0}), inB = (x, y) => T.blocks.some(b => { const e = dB(b); return x >= b.x * FC && x < b.x * FC + e.w * FC && y >= b.y * FC && y < b.y * FC + e.h * FC });
   const emptyB = T.blocks.filter(b => !dcs.includes(b.cls) && b.cls !== adc).filter(b => { const e = dB(b); return !T.ms.some(q => q.x >= b.x * FC && q.x < b.x * FC + e.w * FC && q.y >= b.y * FC && q.y < b.y * FC + e.h * FC) }).length;
-  return {errs, cells0: list.flatMap(z => z.cells), bad, missing, enclosed, clr, ovl, outDocks, inDocks, inWest, nIn: raw.length, nOut: oz.length, docks: docks.length, rb: !!cmp.rb, asc: cmp.rb ? cmp.rb.ascii : null, mods: cmp.rb ? cmp.rb.mods.map(m => m.letter + ' ' + m.item + ' c' + m.c + ' r' + m.r + ' B' + m.B + ' blocks ' + m.blocks) : [],
+  return {nrmDocks: docks.length, ind2: T.blocks.filter(b => b.cls === plcCls('BPO_Dock_2')).length, tags: ms.filter(m => ['ie', 'oe', 'iv', 'is'].includes(m.dk)).length, indNotes: L.note.filter(n => /^Industrial|^Dock-limited/.test(n)), errs, cells0: list.flatMap(z => z.cells), bad, missing, enclosed, clr, ovl, outDocks, inDocks, inWest, nIn: raw.length, nOut: oz.length, docks: docks.length, rb: !!cmp.rb, asc: cmp.rb ? cmp.rb.ascii : null, mods: cmp.rb ? cmp.rb.mods.map(m => m.letter + ' ' + m.item + ' c' + m.c + ' r' + m.r + ' B' + m.B + ' blocks ' + m.blocks) : [],
     notes: L.note.filter(n => /^Dock/.test(n) && !/^Dock \d+: assign/.test(n)), assigns: L.note.filter(n => /^Dock \d+: assign/.test(n)).length, misaligned: L.note.some(n => /misaligned/.test(n)), cannot: L.note.filter(n => /cannot be docked|not built/.test(n)),
     itemsOut: T.ms.filter(b => !inB(b.x, b.y)).length, emptyB, blocks: T.blocks.length, nodes: cmp.nodes.map(q => q.item + ' ' + q.N)};
 };
@@ -83,10 +87,11 @@ try {
   page.on('pageerror', e => pageErrs.push(e.message));
   await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=rb');
   await page.waitForFunction(() => window.__fb && typeof rbRun === 'function' && typeof placerLayout === 'function' && typeof cmpDockApply === 'function');
-  for (const [name, kre, rate, bk] of CASES) {
+  for (const [name, kre, rate, bk, kind] of CASES) {
+    const ind = kind === 'ind';
     if (only && !only.test(name)) continue;
     const key = await page.evaluate(re => [].concat(...Object.values(RECS)).map(rk).find(k => new RegExp(re).test(k)), kre);
-    const t0 = Date.now(), r = await checkCompose(page, key, rate, 1, bk, {strict: true, mutate: 'any', exactN: true, dock: DOCK}), ms = Date.now() - t0;
+    const t0 = Date.now(), r = await checkCompose(page, key, rate, 1, bk, {strict: true, mutate: 'any', exactN: true, dock: ind ? IDOCK : DOCK}), ms = Date.now() - t0;
     check(r.ok, name + ': checkCompose strict with docks (planner N exact, ov 0, span 0, flood: raw containers -> nodes -> OZ container)' + (r.ok ? '' : ' -> ' + r.errs.slice(0, 4).join(' | ')));
     if (!r.ok) { rows.push({case: name, note: 'build fail'}); continue }
     const a = await page.evaluate(dockPage, {bk, mk: 1});
@@ -95,6 +100,21 @@ try {
     if (a.asc) console.log(a.asc.map(s => '      ' + s).join('\n'));
     a.notes.forEach(n => console.log('   note ' + n));
     check(a.rb, name + ': built by the recursive builder (not the old path)');
+    let old = '?'; try { old = await page.evaluate(({bk, dock}) => { const L = window.__cmpL; RB_ENGINE = false; try { const o = placerLayout(window.__cmpP, L.src.item, 1, 1, {box: 'DAT_Container_2', mod: false, dock, bk}); return o && o.ok !== false && o.tile ? o.tile.blocks.length : 'fail' } finally { RB_ENGINE = true } }, {bk, dock: ind ? IDOCK : DOCK}) } catch (e) { old = 'err' }
+    console.log('   blocks rb ' + a.blocks + ' vs old ' + old);
+    if (ind) {
+      check(a.nrmDocks === 0 && a.tags === 0, name + ': industrial only: normal docks ' + a.nrmDocks + ', Dock_2 ' + a.ind2 + ', untouched dock tags ' + a.tags);
+      a.indNotes.forEach(n => console.log('   NOTE ' + n));
+      check(!a.misaligned, name + ': no "dock slot misaligned"');
+      check(a.enclosed === 0 && a.clr === 0 && a.ovl === 0, name + ': docks on the outer edge (enclosed ' + a.enclosed + ', clearance ' + a.clr + ', overlap ' + a.ovl + ')');
+      check(a.itemsOut === 0 && a.emptyB === 0, name + ': every item inside a block, every block holds an item (' + a.itemsOut + ' out, ' + a.emptyB + ' empty)');
+      const nodes = r.nodes.map(q => ({id: q.id, item: q.item, rate: q.rate, fb: q.fb}));
+      const s = await page.evaluate(simPage, {nodes, items: r.items, warm: WARM, meas: MEAS});
+      const bad = s.out.filter(o => (o.rate > 0 ? o.got / o.rate : 1) < 0.95).length;
+      check(bad === 0, name + ': sim zero starved consumers (' + bad + ' starved of ' + s.out.length + ')');
+      rows.push({case: name, ind2: a.ind2, notes: a.indNotes.length, flood: 'ok', starved: bad, blocksRb: a.blocks, blocksOld: old, ms});
+      continue;
+    }
     check(!a.errs.length && a.bad === 0, name + ': dock belts chain dock <-> container (' + a.errs.slice(0, 2).join('; ') + ' bad ' + a.bad + ')');
     check(a.docks >= a.nIn + a.nOut, name + ': dock blocks ' + a.docks + ' for ' + a.nIn + ' input + ' + a.nOut + ' output docked containers');
     check(a.nOut >= 1 && a.assigns === a.nIn + a.nOut, name + ': output docked, one "Dock n: assign" note per dock container (' + a.assigns + '/' + (a.nIn + a.nOut) + ')');
