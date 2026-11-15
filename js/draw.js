@@ -194,8 +194,8 @@ const ENT_DOOR_S=44;
 function entMark(b,x,y,alpha,s,w,h,force){   // force: placement/paste ghost, always show the door marks (they show the rotation)
   if(alpha<.5||s<5)return;const E=entrances(b,true);if(!E.length)return;   // bar = full door slot length (scales with zoom); only the chevron is capped (r <= 9); door marks (many on stations) only when a cell is >= ENT_DOOR_S px
   const t=Math.max(2,Math.min(5,s*.12)),r=Math.min(9,Math.max(3,s*.12)),L=Math.max(5,DOORW/FC*s),lh=s>=18?Math.min(12,Math.max(9,s/3))+6:0;
-  E.forEach(e=>{if(!e.port&&s<ENT_DOOR_S&&!force)return;const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,bw=hz?L:t,bh=hz?t:L,
-    bx=D[0]>0?ex-t:D[0]<0?ex:ex-L/2,by=D[1]>0?ey-t:D[1]<0?ey:ey-L/2,sg=e.port?1:-1,   // door: chevron looks inward, port: outward
+  E.forEach(e=>{if(!e.port&&s<ENT_DOOR_S&&!force)return;const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,Lm=e.len?Math.max(5,e.len*s):L,bw=hz?Lm:t,bh=hz?t:Lm,   // e.len: wider/narrower than the standard door slot (adapter gaps)
+    bx=D[0]>0?ex-t:D[0]<0?ex:ex-Lm/2,by=D[1]>0?ey-t:D[1]<0?ey:ey-Lm/2,sg=e.port?1:-1,   // door: chevron looks inward, port: outward
     dd=r+t+(D[1]<0?lh:0),cx0=ex-D[0]*dd,cy0=ey-D[1]*dd;
     cx.save();cx.fillStyle=e.port?`hsla(140,85%,75%,${alpha})`:`hsla(${hue(catOf(b)||"")},90%,86%,${alpha*.9})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.6})`;cx.lineWidth=1;
     cx.fillRect(bx,by,bw,bh);cx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
