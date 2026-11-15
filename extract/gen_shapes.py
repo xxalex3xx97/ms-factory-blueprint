@@ -28,7 +28,7 @@ import base64, json, os, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 EX = os.path.join(ROOT, 'extract')
 OUT = os.path.join(ROOT, 'js', 'shapes.js')
-SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'drop', 'chain', 'hatch', 'clip', 'shapeOf', 'flipY', 'wallsOverride', 'hatchAdd', 'size')
+SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'drop', 'chain', 'hatch', 'clip', 'shapeOf', 'flipY', 'wallsOverride', 'hatchAdd', 'size', 'lgaps')
 
 
 def rd(name):
@@ -135,6 +135,8 @@ def build():
         entry = {'fw': round(size[0]), 'fh': round(size[1]), 'walls': walls, 'props': props, 'arms': arms, 'ports': ports}
         if p.get('polys'):
             entry['polys'] = [[[r3(x - ox), r3((-y if p.get('flipY') else y) - oy)] for x, y in poly] for poly in p['polys']]
+        if p.get('lgaps'):   # lgaps: [side,x0,y0,x1,y1] door gaps in the shape frame, Layout marks only (floored block with unverified doors; floor/areas untouched)
+            entry['lgaps'] = p['lgaps']
         if p.get('entrance'):   # entrance: {kind: 'doors'|'ports', evidence}; Layout marks door slots (catalog door data) or the side of the output ports
             if p['entrance'].get('kind') not in ('doors', 'ports', 'open') or not p['entrance'].get('evidence'):
                 sys.exit('bad entrance for ' + name)

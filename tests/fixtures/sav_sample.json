@@ -1,0 +1,215 @@
+{
+ "Version": 2,
+ "DisplayName": "Site Sample",
+ "Blocks": [
+  {
+   "Class": "BPO_Dock",
+   "GridLocation": {
+    "X": 0,
+    "Y": 0
+   },
+   "Height": 0,
+   "GridRotation": 0,
+   "BlockID": 1,
+   "PaletteID": 0,
+   "Name": "Test Dock"
+  },
+  {
+   "Class": "BPO_Station_01",
+   "GridLocation": {
+    "X": 400,
+    "Y": 0
+   },
+   "Height": 0,
+   "GridRotation": 0,
+   "BlockID": 2,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BPO_StationCorridor_02",
+   "GridLocation": {
+    "X": 800,
+    "Y": 0
+   },
+   "Height": 0,
+   "GridRotation": 1,
+   "BlockID": 3,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BPO_Station_02A",
+   "GridLocation": {
+    "X": 800,
+    "Y": 400
+   },
+   "Height": 0,
+   "GridRotation": 2,
+   "BlockID": 4,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BPO_SolarPanel",
+   "GridLocation": {
+    "X": 1200,
+    "Y": 0
+   },
+   "Height": 0,
+   "GridRotation": 0,
+   "BlockID": 5,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BPO_Connector_08T",
+   "GridLocation": {
+    "X": -400,
+    "Y": 0
+   },
+   "Height": 0,
+   "GridRotation": 0,
+   "BlockID": 6,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BPO_Dock_2",
+   "GridLocation": {
+    "X": 1600,
+    "Y": 0
+   },
+   "Height": 0,
+   "GridRotation": 2,
+   "PaletteID": 0,
+   "Name": "Test Dock"
+  },
+  {
+   "Class": "BPO_ElevatorBlock_03",
+   "GridLocation": {
+    "X": 2000,
+    "Y": 0
+   },
+   "Height": 0,
+   "GridRotation": 0,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BPO_Dock_2",
+   "GridLocation": {
+    "X": 2400,
+    "Y": 0
+   },
+   "Height": 0,
+   "GridRotation": 0,
+   "PaletteID": 0
+  }
+ ],
+ "DefaultMachines": [
+  {
+   "Class": "BP_RefineryObject",
+   "Transform": {
+    "GridLocation": {
+     "X": 0,
+     "Y": 800
+    },
+    "Height": 0,
+    "GridRotation": 0
+   },
+   "MachineID": 1,
+   "PaletteID": 0,
+   "ConfigHex": "01000f000000746974616e69756d706c61746573000400000001010101"
+  },
+  {
+   "Class": "BP_SplitterObject_2",
+   "Transform": {
+    "GridLocation": {
+     "X": 400,
+     "Y": 800
+    },
+    "Height": 0,
+    "GridRotation": 1
+   },
+   "MachineID": 2,
+   "PaletteID": 0,
+   "ConfigHex": "010003000000000000000000000000000000ffffffffffffffff03000000010101"
+  },
+  {
+   "Class": "BP_ConveyorBelt2Object",
+   "Transform": {
+    "GridLocation": {
+     "X": 800,
+     "Y": 800
+    },
+    "Height": 0,
+    "GridRotation": 0
+   },
+   "MachineID": 3,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BP_ConveyorBelt2Object",
+   "Transform": {
+    "GridLocation": {
+     "X": 800,
+     "Y": 1200
+    },
+    "Height": 0,
+    "GridRotation": 1
+   },
+   "MachineID": 4,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BP_ConveyorBelt2Object",
+   "Transform": {
+    "GridLocation": {
+     "X": 800,
+     "Y": 1600
+    },
+    "Height": 0,
+    "GridRotation": 2
+   },
+   "MachineID": 5,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BP_ContainerObject_2",
+   "Transform": {
+    "GridLocation": {
+     "X": 1200,
+     "Y": 800
+    },
+    "Height": 0,
+    "GridRotation": 0
+   },
+   "MachineID": 6,
+   "PaletteID": 0
+  },
+  {
+   "Class": "BPO_Elevator_02",
+   "Transform": {
+    "GridLocation": {
+     "X": 16000,
+     "Y": 0
+    },
+    "Height": 0,
+    "GridRotation": 0
+   },
+   "MachineID": 7,
+   "PaletteID": 0,
+   "Name": "Lift A",
+   "ConfigHex": "010002000000ff01000000070000004c696674204100"
+  },
+  {
+   "Class": "BPO_IndustrialDock",
+   "Transform": {
+    "GridLocation": {
+     "X": 19264,
+     "Y": 0
+    },
+    "Height": 0,
+    "GridRotation": 2
+   },
+   "MachineID": 8,
+   "PaletteID": 0,
+   "ConfigHex": "0100040000004f6c64000100000009000000776172706675656c0000000000"
+  }
+ ]
+}

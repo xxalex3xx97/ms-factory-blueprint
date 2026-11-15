@@ -61,6 +61,8 @@ function entrances(b,real){
   const d=def(b.cls),sh=d&&SHAPES[d.name],o=[];if(!d)return o;
   if(!floorRect(b)&&sh&&sh.gaps){const t=shapeTf(b);if(!t)return o;   // no-floor doors (Command Module, shipyards): one mark per gap, at the gap centre on the block edge; rot maps the block-frame side to a world side
     sh.gaps.forEach(g=>{const[p,q]=t.f0((g[1]+g[3])/2,(g[2]+g[4])/2);o.push({ed:(EN.indexOf(g[0])+(b.rot&3))%4,x:p/FC,y:q/FC,port:false})});return o}
+  if(floorRect(b)&&!dv(b)&&sh&&sh.lgaps){const t=shapeTf(b);if(!t)return o;   // floored block with unverified doors: Layout marks only, at the decoded gap centres (lgaps; floor and areas() untouched)
+    sh.lgaps.forEach(g=>{const[p,q]=t.f0((g[1]+g[3])/2,(g[2]+g[4])/2);o.push({ed:(EN.indexOf(g[0])+(b.rot&3))%4,x:p/FC,y:q/FC,port:false,len:Math.hypot(g[3]-g[1],g[4]-g[2])/FC})});return o}
   if(floorRect(b)&&dv(b)){const fo=fcell(b),r=floorRect(b),QI=d.floorInset||0,fl=d.door&&d.door.flush,nq=real?NFQ:0;
     for(let ed=0;ed<4;ed++){if(SHIPEND(b)&&ed===b.rot||!sideOpen(b,ed))continue;const v=ed%2===0,n=v?fo.ch:fo.cw;
       for(let k=0;k<n;k++){const c=((v?r.y:r.x)+FC*k+(fl?0:DOFF)-QI+DOORW/2+nq)/FC;   // door slot centre along the edge (cell units), same slot as areas(); real: +NFQ
@@ -136,9 +138,16 @@ const outside=(b,R)=>{const d=dim(b);return !onArea(b.x,b.y,d.w,d.h,R)};
 const WARN="Not fully on the buildable floor (block floors + open doors). Allowed, but may not work in game";
 // underground belts: entrance+exit = two UG machines of the same class/height/rotation on one line. Per line, sorted along the flow, pair 1+2, 3+4 ...
 // (skip a tile whose follower is too far when the next one is in range). n = cells entrance..exit inclusive; the game limit is d.maxApart (Mk max length).
+// explicit pu (partner id, set when the player places entrance+exit, pasted, or imported) wins, so nested / overlapping pairs follow the order they were drawn
 function ugPairs(ms){
-  const g=new Map(),out=[];
-  ms.forEach(u=>{const d=def(u.cls);if(!d||d.category!=="Undergrounds")return;const[dx]=DIR[u.rot],k=[u.cls,u.h,u.rot,dx?u.y:u.x].join("|");(g.get(k)||g.set(k,[]).get(k)).push(u)});
+  const g=new Map(),out=[],byId=new Map(),used=new Set();
+  ms.forEach(u=>{const d=def(u.cls);if(d&&d.category==="Undergrounds")byId.set(u.id,u)});
+  byId.forEach(u=>{
+    const t=byId.get(u.pu);if(!t||t.pu!==u.id||used.has(u.id)||used.has(t.id)||t.cls!==u.cls||t.h!==u.h||t.rot!==u.rot)return;
+    const[dx,dy]=DIR[u.rot];if(dx?t.y!==u.y:t.x!==u.x)return;const n=dx?(t.x-u.x)*dx+1:(t.y-u.y)*dy+1;if(n<2)return;
+    used.add(u.id);used.add(t.id);out.push({u,t,n,max:def(u.cls).maxApart});
+  });
+  ms.forEach(u=>{if(used.has(u.id))return;const d=def(u.cls);if(!d||d.category!=="Undergrounds")return;const[dx]=DIR[u.rot],k=[u.cls,u.h,u.rot,dx?u.y:u.x].join("|");(g.get(k)||g.set(k,[]).get(k)).push(u)});
   g.forEach(l=>{
     const[dx,dy]=DIR[l[0].rot],pos=u=>dx?u.x*dx:u.y*dy,mx=def(l[0].cls).maxApart;l.sort((a,b)=>pos(a)-pos(b));
     for(let i=0;i+1<l.length;i++){
@@ -149,6 +158,8 @@ function ugPairs(ms){
   });
   return out;
 }
+// copies carry oid (source id): remap pu to the copied partner, drop it when the partner was not copied
+function ugRelink(nb){const m=new Map(nb.map(b=>[b.oid,b.id]));nb.forEach(b=>{if(b.pu!=null){if(m.has(b.pu))b.pu=m.get(b.pu);else delete b.pu}delete b.oid});return nb}
 let UWC=null;
 function ugWarn(){
   if(LKP&&UWC&&UWC.k===PK)return UWC.v;

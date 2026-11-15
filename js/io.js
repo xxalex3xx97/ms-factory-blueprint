@@ -1,7 +1,10 @@
 // ---- export / import (blocks: GridLocation = cell x CU; machines: GridLocation = floor cells)
 const CU=CATALOG.cell_units||2;
 // block Name (dock, industrial dock, shipyard core only; not Shipyard Side): optional string, written only when set
-const NMC=["BPO_Dock","BPO_Dock_2","BPO_ShipyardCore","BPO_ShipyardCore_02"],nmOk=c=>{const d=def(c);return!!d&&NMC.includes(d.name)},expNm=(b,e)=>{if(b.nm&&nmOk(b.cls))e.Name=b.nm;return e};
+const NMC=["BPO_Dock","BPO_Dock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ElevatorBlock_03"],nmOk=c=>{const d=def(c);return!!d&&(NMC.includes(d.name)||d.id==="DAT_Teleporter")},
+  DBC=["BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2"],rsOk=c=>{const d=def(c);return!!d&&DBC.includes(d.name)},   // drone bay block: b.rs = resource its drones mine (lowercase item name, e.g. "silica"), JSON Blocks[].Resource
+  RSL=["cobaltore","iridiumore","nickelore","titaniumore","silica","waterice"],
+  expNm=(b,e)=>{if(b.nm&&nmOk(b.cls))e.Name=b.nm;if(b.rs&&rsOk(b.cls))e.Resource=b.rs;return e};
 const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.length)e.Ports=ps.map(p=>({Face:p.f,Index:p.i,Enabled:p.en})).concat(xp);return e};   // extra non-game field, only when non-default
 // game splitter config bytes = [front, right, left] at rot 0, as local faces (port identity is fixed in the machine, so rotation needs no mapping). The back/input face (W at rot 0) is never a game byte.
 const SPL_FACES=["S","E","N"];
@@ -18,10 +21,12 @@ function expCt(b,e){if(!isStore(b)||!b.ct)return;const m=new Map(),inf=new Map()
 function expCfg(b,d,e,ugn){
   cfgModel(b,d,e,ugn);
   if(b.cfgKeep&&b.cfgKeep.sig===cfgSig(b)&&cfgKind(d.id)!=="underground")e.ConfigHex=b.cfgKeep.hex;   // imported bytes kept bit-for-bit while recipe/ports/filters are unchanged
+  if(e.ConfigHex){const n=cfgDec(d.id,e.ConfigHex);if(n&&n.name)e.Name=n.name}
 }
 function cfgModel(b,d,e,ugn){
   const k=cfgKind(d.id);if(!k)return;
   if(k==="underground"){const n=ugn.get(b.id);if(n){e.Length=n;e.ConfigHex=cfgEnc(k,{length:n})}return}
+  if(k==="named"){if(b.nm)e.ConfigHex=cfgEnc(k,{name:b.nm});return}
   const ps=portsOf(b),en=ps.map(p=>p.en),off=!!(b.off&&b.off.length);
   if(k==="recipe"){
     if(!b.rec&&!b.recn&&!off)return;
@@ -93,7 +98,7 @@ function parseSav(buf){
     const C=A.cls,pth=i=>i>=0&&i<C.length?C[i]:null;
     const blocks=[],machs=A.machs.slice();
     for(const{b,ms}of A.blocks){machs.push(...ms);const p=pth(b.cls);if(p){const e={Class:p,GridLocation:{X:b.X,Y:b.Y},Height:b.H,GridRotation:b.R,BlockID:b.ID,PaletteID:b.PAL};   // dock name: string in the built-in dock child machine's ConfigHex (kept as an opaque machine too)
-      if(NMC.includes(p.split("/").pop().split(".")[0]))for(const m of ms){const q=pth(m.cls),c=q&&q.split("/").pop().split(".")[0];if(c&&/(StationBlockDock|IndustrialDock|ShipyardBlockDock)/.test(c)&&m.hx){const d=cfgDec(c,m.hx);if(d&&d.name)e.Name=d.name}}
+      {const bn=p.split("/").pop().split(".")[0];if(NMC.includes(bn)||DBC.includes(bn))for(const m of ms){const q=pth(m.cls),c=q&&q.split("/").pop().split(".")[0];if(c&&/(StationBlockDock|IndustrialDock|ShipyardBlockDock|Elevator|MiningDroneBay)/.test(c)&&!/ItemElevator/.test(c)&&m.hx){const d=cfgDec(c,m.hx);if(d&&d.name)e.Name=d.name;if(d&&d.resource)e.Resource=d.resource}}}
       blocks.push(e)}}
     const dm=[],dup=ugDupes(machs,UG);
     for(const m of machs){const p=pth(m.cls);if(p){const c=p.split("/").pop().split(".")[0],e={Class:c,Transform:{GridLocation:{X:m.X,Y:m.Y},Height:m.H,GridRotation:m.R},MachineID:m.MID,PaletteID:m.PAL,...(m.hx?cfgView(c,m.hx):{})};
@@ -160,6 +165,7 @@ function parseSav(buf){
 function impCfg(b,d,m){SV++;
   const k=cfgKind(d.id),dc=k&&cfgDec(d.id,m.ConfigHex);
   if(k==="underground"){const l=n0(m.Length)||(dc?dc.length:0);if(l>1)b.ugl=l;return}   // Length field (world record) first, ConfigHex as fallback
+  if(k==="named"){if(dc&&dc.name)b.nm=dc.name;return}
   if(!dc)return;
   const off=[],ps=portsOf(b),gm=gamePortMap(b);
   if(isSplitterCls(d.id))(dc.ports||[]).forEach((e,g)=>{const q=ps.find(q=>q.f===SPL_FACES[g]);if(e===false&&q&&q.tg)off.push(q.key)});
@@ -200,7 +206,7 @@ function importJson0(txt,quiet){
     const x=cell(gx,4,ox),y=cell(gy,4,oy),nb={id:uid++,cls,x,y,h:Math.round(n(b.Height)/BZ),rot:r,pid:n(b.PaletteID)};
     if(4*x+ox!==Number(gx)||4*y+oy!==Number(gy))nb.raw={x,y,r,X:Number(gx),Y:Number(gy)};   // block never moves on round trip; non-fitting game coords kept via raw
     return nb});
-  S.blocks.forEach((b,i)=>{impPorts(b,o.Blocks[i].Ports);const nm=o.Blocks[i].Name;if(typeof nm==="string"&&nm&&nmOk(b.cls))b.nm=nm});
+  S.blocks.forEach((b,i)=>{impPorts(b,o.Blocks[i].Ports);const nm=o.Blocks[i].Name,rs=o.Blocks[i].Resource;if(typeof nm==="string"&&nm&&nmOk(b.cls))b.nm=nm;if(typeof rs==="string"&&rs&&rsOk(b.cls))b.rs=rs});
   const cd=o.FactoryLayout&&o.FactoryLayout.ClosedDoorways,lg=[];S.closed=[];
   if(Array.isArray(cd))cd.forEach(d=>{if(d&&d.Seg!=null&&"ESWN".includes(d.Edge))S.closed.push(`${n(d.Height)}|${n(d.X)}|${n(d.Y)}|${d.Edge}|${n(d.Seg)}`);else if(d)lg.push(d)});
   // old format (V/H strip, or an edge without Seg): closes every door on that edge
@@ -210,16 +216,20 @@ function importJson0(txt,quiet){
     const d=matchM(m),t=m&&m.Transform,g=t&&t.GridLocation;
     if(d&&g){nm++;const mi=n(m.MachineID),b={id:uid++,cls:d.id,x:n(g.X),y:n(g.Y),h:n(t.Height),rot:rot(t.GridRotation),pid:n(m.PaletteID),mid:mi>0?mi:0};
       if(v2){const f=dim(b);b.x=cell(g.X,2,f.w-14);b.y=cell(g.Y,2,f.h-14);b.h=Math.round(n(t.Height)/MZ)}   // floor cell = (raw-W)/2+7 (fit: 2021/2290 on floors, refinery/splitter/assembler/elevator 100%)
-      impCfg(b,d,m);impPorts(b,m.Ports);if(typeof m.Recipe==="string"&&m.Recipe){b.rec=m.Recipe;delete b.recn}
+      impCfg(b,d,m);if(typeof m.Name==="string"&&m.Name&&cfgKind(d.id)==="named"){const cur=cfgDec(d.id,m.ConfigHex);if(!cur||cur.name!==m.Name)b.cfgKeep={hex:cfgEnc("named",{name:m.Name}),sig:cfgSig(b)}}   // Name wins over ConfigHex
+      impPorts(b,m.Ports);if(typeof m.Recipe==="string"&&m.Recipe){b.rec=m.Recipe;delete b.recn}
       if(Array.isArray(m.Contents))b.ct=m.Contents.filter(x=>x&&typeof x.Item==="string"&&x.Item).map(x=>({item:x.Item,n:Math.max(0,Math.round(Number(x.Count))||0),inf:x.Infinite===true}));
       if(m.SiteOnly&&Array.isArray(m.SiteOnly.Infinite))b.ct=(b.ct||[]).concat(m.SiteOnly.Infinite.filter(x=>x&&typeof x.Item==="string"&&x.Item).map(x=>({item:x.Item,n:Math.max(0,Math.round(Number(x.Count))||0),inf:true})));   // site-only infinite sources
       S.blocks.push(b)}
     else S.dm.push(m);
   });
   // a game underground is ONE machine at the entrance with Length: rebuild the exit tile (same rotation/line) unless a UG is already there or the cell is taken. No Length / no partner = single tile (no partner invented).
+  const ents=new Set(S.blocks.filter(b=>b.ugl).map(b=>b.id));   // entrance tiles: never taken as another pair's exit
   S.blocks.filter(b=>b.ugl).forEach(b=>{
     const ex=b.x+DIR[b.rot][0]*(b.ugl-1),ey=b.y+DIR[b.rot][1]*(b.ugl-1);delete b.ugl;
-    if(!S.blocks.some(q=>q.h===b.h&&isM(q)&&q.x===ex&&q.y===ey))S.blocks.push({id:uid++,cls:b.cls,x:ex,y:ey,h:b.h,rot:b.rot,pid:b.pid,mid:0});
+    const ox=S.blocks.find(q=>q.h===b.h&&isM(q)&&q.x===ex&&q.y===ey);   // a plain exit tile already there (own export / autosave): link it, so nested pairs survive a refresh
+    if(ox){if(!ents.has(ox.id)&&!ox.pu&&ox.cls===b.cls&&ox.rot===b.rot){ox.pu=b.id;b.pu=ox.id}}
+    else{const x={id:uid++,cls:b.cls,x:ex,y:ey,h:b.h,rot:b.rot,pid:b.pid,mid:0,pu:b.id};b.pu=x.id;S.blocks.push(x)}
   });
   sel=new Set();$("name").value=S.name;all();if(quiet)return true;fit();
   const unk=S.blocks.filter(b=>!BASE[b.cls]).length;
@@ -265,7 +275,9 @@ $("impSav").onclick=()=>{
   if(!ok)toast("Save folder: "+SAVDIR);
   $("savFile").value="";$("savFile").click()};
 $("savFile").onchange=e=>savOpen(e.target.files[0]);
-const savOpen=async f=>{if(!f)return;try{const ab=await f.arrayBuffer(),l=parseSav(ab);if(!l.length){toast("No player stations found in this save");return}
+const savOpen=async f=>{if(!f)return;try{const ab=await f.arrayBuffer(),dj=typeof savImport==="function"?savImport(new Uint8Array(ab)):null;   // Designs folder blueprint (.sav): import directly
+ if(dj){if(importJson(JSON.stringify(dj)))toast("Imported design \""+dj.DisplayName+"\"");return}
+ const l=parseSav(ab);if(!l.length){toast("No player stations found in this save");return}
  if(l.length===1){if(importJson(JSON.stringify(l[0].json)))svPut(ab,f.name,l,0);return}
  SAVL=l;SAVB=ab;SAVN=f.name;$("savSt").replaceChildren(...l.map((s,i)=>new Option(`${s.name} (${s.json.Blocks.length} blocks, ${s.json.DefaultMachines.length} machines)`,String(i))));$("dSav").showModal()}catch(err){toast("Save read failed: "+err.message)}};
 $("savX").onclick=()=>$("dSav").close();

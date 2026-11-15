@@ -9,6 +9,7 @@ function cfgKind(cls){
   if(c.includes("splitter")||c.includes("beltbalancer"))return"splitter";
   if(c.includes("underground"))return"underground";
   if(c.includes("miningdronebay"))return"dronebay";
+  if((c.includes("elevator")&&!c.includes("itemelevator"))||c.includes("teleporter"))return"named";
   if(c.includes("dock")&&!c.includes("docking"))return"dock";
   if(["assembler","refinery","enrichment","growth","supercomputer","relicsynth"].some(k=>c.includes(k)))return"recipe";
   return null;
@@ -28,6 +29,7 @@ function cfgEnc(k,d){
   else if(k==="dock"){fs(d.name||"");i32(d.filters.length);d.filters.forEach(f=>{fs(f.item);i32(f.bLoading)})}
   else if(k==="dronebay")fs(d.resource||"");
   else if(k==="underground")i32(d.length);
+  else if(k==="named"){if(d.name){i32(2);o.push(255);i32(1);fs(d.name)}else{i32(0);o.push(255);i32(0)}}
   else throw new Error("no config layout for "+k);
   return o.map(v=>v.toString(16).padStart(2,"0")).join("");
 }
@@ -45,14 +47,17 @@ function cfgDec(cls,hex){
     else if(k==="splitter"){d.filters=cnt(fstr);d.prioA=i32();d.prioB=i32();d.ports=bools()}
     else if(k==="dock"){d.name=fstr();d.filters=cnt(()=>({item:fstr(),bLoading:i32()}))}
     else if(k==="dronebay")d.resource=fstr();
+    else if(k==="named"){i32();const h=take(1)[0];if(h===255){d.name=i32()?fstr():""}else if(h===0){fstr();fstr();d.name=fstr()}else return null}
     else d.length=i32();
     return p===b.length?d:null;
   }catch(e){return null}
 }
+// cfgDec view -> hex with Name applied (dock keeps its filters; named elevator/teleporter gets the name); other kinds unchanged
+function cfgWithName(cls,hex,name){const k=cfgKind(cls),d=cfgDec(cls,hex);if(k==="dock")return cfgEnc("dock",{name,filters:d?d.filters:[]});if(k==="named")return cfgEnc("named",{name});return hex}
 // decoded view fields shared by the python extractor and parseSav (human readable; ConfigHex stays authoritative)
 function cfgView(cls,hex){
   const o={ConfigHex:hex},d=cfgDec(cls,hex);
-  if(d){if("recipe"in d)o.RecipeName=d.recipe;if("ports"in d)o.PortsEnabled=d.ports;if("filters"in d)o.Filters=d.filters;if("length"in d)o.Length=d.length}
+  if(d){if("recipe"in d)o.RecipeName=d.recipe;if("ports"in d)o.PortsEnabled=d.ports;if("filters"in d)o.Filters=d.filters;if("length"in d)o.Length=d.length;if("name"in d&&d.name)o.Name=d.name}
   return o;
 }
 // ---- game port order (js/port_order.js, from bpu_port_data.lua): config byte g = game cell g. Site port matched by position (half cells, centre origin, y down); rotation (x,y)->(-y,x) per step (unverified for rot!=0).

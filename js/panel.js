@@ -37,6 +37,7 @@ function panel(){
     }else h+='<h2>Selection ('+bs.length+')</h2>';
     h+='<div class="pad"><div class="btns"><button id="bRot">Rotate</button><button id="bDup">Duplicate</button><button id="bDel" class="danger">Delete</button></div><div class="btns">'+(one&&isM(one)?'<button id="bCfgCopy">Copy config</button>':'')+'<button id="bCfgPaste"'+(typeof cfgClip!=="undefined"&&cfgClip?'':' disabled')+'>Paste config</button></div>';
     if(one){
+      if(rsOk(one.cls)){const rs=one.rs||"",ol=RSL.includes(rs)||!rs?RSL:RSL.concat(rs);h+='<div class="row"><label for="frs">Mines</label><select id="frs" data-rs="1"><option value="">(not set)</option>'+ol.map(v=>'<option value="'+esc(v)+'"'+(v===rs?" selected":"")+'>'+esc((CATALOG.items["ITEM_"+(Object.keys(CATALOG.items).map(k=>k.slice(5)).find(k=>k.toLowerCase()===v)||v)]||{}).n||v)+'</option>').join("")+'</select></div>'}
       if(nmOk(one.cls))h+='<div class="row"><label for="fnm">Name</label><input id="fnm" type="text" data-nm="1" value="'+esc(one.nm||"")+'"></div>';
       const et=entText(one);if(et)h+='<div class="sub" title="'+esc(ENT_HINT)+'" id="entInfo"><b>'+et.kind+':</b> '+et.sides.join(", ")+'<br>'+esc(ENT_HINT)+'.</div>';
       if(F){
@@ -102,7 +103,8 @@ $("insp").addEventListener("change",e=>{
   const t=e.target,bs=S.blocks.filter(b=>sel.has(b.id));
   if(t.dataset.prio&&bs.length===1){push();togglePrio(bs[0],t.dataset.prio);all();return}
   if(t.dataset.port&&bs.length===1){push();togglePort(bs[0],t.dataset.port);all();return}
-  if(t.dataset.nm&&bs.length===1){const v=t.value.trim();if(v===(bs[0].nm||""))return;push();if(v)bs[0].nm=v;else delete bs[0].nm;all();return}
+  if(t.dataset.rs&&bs.length===1){const v=t.value;if(v===(bs[0].rs||""))return;push();if(v)bs[0].rs=v;else delete bs[0].rs;all();return}
+  if(t.dataset.nm&&bs.length===1){const v=t.value.trim();if(v===(bs[0].nm||""))return;push();if(v)bs[0].nm=v;else delete bs[0].nm;delete bs[0].cfgKeep;all();return}
   if(t.dataset.ct&&bs.length===1){
     const m=bs[0],i=+t.dataset.i;push();
     SV++;m.ct=(m.ct||[]).map((x,j)=>j!==i?x:t.dataset.ct==="inf"?{...x,inf:t.checked}:{...x,n:Math.max(0,Math.round(Number(t.value))||0)});all();return}
@@ -138,7 +140,7 @@ $("insp").addEventListener("click",e=>{
   if(id==="bRot")rotate();
   else if(id==="bDel")del();
   else if(id==="bCfgCopy"&&typeof cfgCopy==="function")cfgCopy();else if(id==="bCfgPaste"&&typeof cfgPasteMode==="function")cfgPasteMode();
-  else if(id==="bDup"){const nb=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null,id:uid++,mid:0,x:b.x+1,y:b.y+1}));if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}push();S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));all()}
+  else if(id==="bDup"){const nb=ugRelink(S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null,oid:b.id,id:uid++,mid:0,x:b.x+1,y:b.y+1})));if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}push();S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));all()}
   else if(id==="bStop"){active=null;all()}
   else if(id==="bClear"){if(S.blocks.length&&confirm("Remove all blocks and buildables?")){push();S.blocks=[];S.closed=[];sel=new Set();all()}}
   else if(id==="bResetCat"){if(confirm("Discard all catalog edits (size, floor, category, verified)?")){push();OV={};saveOV();all()}}

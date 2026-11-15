@@ -3864,6 +3864,48 @@ async function s38(br) {
   await ctx.close();
 }
 
+// ================= 42 nested underground order (pu links), drone bay Resource, elevator block + teleporter Name
+async function s42(br) {
+  const ctx = await br.newContext({viewport: {width: 1400, height: 900}});
+  const pg = await ctx.newPage();
+  wire(pg, 's42');
+  await pg.goto(PAGE);
+  await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  await pg.waitForTimeout(300);
+  await reset(pg);
+  const r = await pg.evaluate(() => {
+    const u = (id, x, pu) => ({id, cls: 'DAT_UndergroundBelt', x, y: 5, h: 0, rot: 0, pid: 0, ...(pu ? {pu} : {})});
+    S.blocks = [u(901, 0, 903), u(902, 3, 904), u(903, 9, 901), u(904, 6, 902)];   // outer 0..9, inner 3..6 (nested)
+    const a = __fb.ugPairs(S.blocks).map(p => [p.u.id, p.t.id, p.n]).sort();
+    S.blocks = [u(901, 0), u(902, 3), u(903, 9), u(904, 6)];   // no links: old positional pairing
+    const b = __fb.ugPairs(S.blocks).map(p => [p.u.id, p.t.id]).sort();
+    return {a, b};
+  });
+  chk('42 nested underground pairs follow the drawn links (0-9 and 3-6)', JSON.stringify(r.a) === JSON.stringify([[901, 903, 10], [902, 904, 4]]), JSON.stringify(r.a));
+  chk('42 unlinked undergrounds keep the positional fallback (0-3, 6-9)', JSON.stringify(r.b) === JSON.stringify([[901, 902], [904, 903]]), JSON.stringify(r.b));
+  const imported = await pg.evaluate(() => { __fb.importJson(JSON.stringify({Version: 1, DisplayName: 't', Blocks: [], DefaultMachines: [
+    {Class: 'DAT_UndergroundBelt', Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}, Length: 10, MachineID: 1, PaletteID: 0},
+    {Class: 'DAT_UndergroundBelt', Transform: {GridLocation: {X: 3, Y: 0}, Height: 0, GridRotation: 0}, Length: 4, MachineID: 2, PaletteID: 0}]})); return __fb.ugPairs(S.blocks.filter(isM)).map(p => p.n).sort((a, b) => a - b); });
+  chk('42 imported nested game undergrounds (Length 10 and 4) keep both lengths', JSON.stringify(imported) === JSON.stringify([4, 10]), JSON.stringify(imported));
+  const rt0 = await pg.evaluate(() => { const u = (id, x, pu) => ({id, cls: 'DAT_UndergroundBelt', x, y: 5, h: 0, rot: 0, pid: 0, pu}); S.blocks = [u(901, 0, 903), u(902, 3, 904), u(903, 9, 901), u(904, 6, 902)]; __fb.importJson(JSON.stringify(__fb.build())); return __fb.ugPairs(S.blocks.filter(isM)).map(p => p.n).sort((a, b) => a - b); });
+  chk('42 nested undergrounds survive export -> import (refresh / autosave)', JSON.stringify(rt0) === JSON.stringify([4, 10]), JSON.stringify(rt0));
+  const dsg = await pg.evaluate(() => { const j0 = {Version: 2, DisplayName: 'Dz', Blocks: [{Class: '/Game/Blueprints/BuildingBlocks/BPO_Dock.BPO_Dock_C', GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0, Name: 'Dock ü'}, {Class: '/Game/Blueprints/BuildingBlocks/BPO_MiningDroneBayBlock.BPO_MiningDroneBayBlock_C', GridLocation: {X: 40, Y: 0}, Height: 0, GridRotation: 0, BlockID: 2, PaletteID: 0, Resource: 'silica'}], DefaultMachines: []};
+    const r = savExport(j0, {size: () => [1, 1], icon: new Array(65536).fill(0)}), j = savImport(r.bytes);
+    return {n: j && j.DisplayName, b: j && j.Blocks.map(e => [e.Name || null, e.Resource || null]), none: savImport(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32])) === null}; });
+  chk('42 design .sav import: savExport -> savImport keeps name, Dock Name, bay Resource; non-GVAS = null', dsg.n === 'Dz' && JSON.stringify(dsg.b) === JSON.stringify([['Dock ü', null], [null, 'silica']]) && dsg.none, JSON.stringify(dsg));
+  await reset(pg);
+  await imp(pg, bp([{...blk('BPO_MiningDroneBayBlock', 0, 0), Resource: 'silica'}, {...blk('BPO_ElevatorBlock_03', 20, 0), Name: 'Lift A'}, blk('BPO_Station_01', 40, 0)],
+    [{Class: 'DAT_Teleporter', Transform: {GridLocation: {X: 80, Y: 80}, Height: 0, GridRotation: 0}, ConfigHex: '020000000000ff', MachineID: 5, PaletteID: 0}]));
+  const st = await pg.evaluate(() => { const o = __fb.build(); return {rs: S.blocks.map(b => b.rs ?? null), nm: S.blocks.map(b => b.nm ?? null), B: o.Blocks.map(e => [e.Resource ?? null, e.Name ?? null])}; });
+  chk('42 Resource only on the drone bay, Name on the elevator block (model + export)', JSON.stringify(st.B.slice(0, 3)) === JSON.stringify([['silica', null], [null, 'Lift A'], [null, null]]), JSON.stringify(st));
+  const tp = await pg.evaluate(() => { const t = S.blocks.find(b => b.cls === 'DAT_Teleporter'); if (!t) return null; t.nm = 'Hub'; const e = __fb.build().DefaultMachines.find(m => m.Class === 'DAT_Teleporter'); const h = e && e.ConfigHex; __fb.importJson(JSON.stringify(__fb.build())); const t2 = S.blocks.find(b => b.cls === 'DAT_Teleporter'); return {name: e && e.Name, back: t2 && t2.nm}; });
+  chk('42 teleporter Name exports (config + Name) and re-imports', !!tp && tp.name === 'Hub' && tp.back === 'Hub', JSON.stringify(tp));
+  const sel = await pg.evaluate(() => { const b = S.blocks.find(b => (def(b.cls) || {}).name === 'BPO_MiningDroneBayBlock'); sel = new Set([b.id]); all(); return !!document.getElementById('frs'); });
+  chk('42 drone bay inspector has the Mines select', sel);
+  const adp = await pg.evaluate(() => { importJson(JSON.stringify({Version: 1, DisplayName: 't', Blocks: [{Class: '/Game/Blueprints/BuildingBlocks/BPO_StationAdapter_01.BPO_StationAdapter_01_C', GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []})); const b = S.blocks[0]; return {n: entrances(b, true).length, sides: entText(b) && entText(b).sides.join('')}; });
+  chk('42 station adapter: Layout door marks (W, 2xE, N, S = 5 marks on 4 sides)', adp.n === 5 && adp.sides === 'ESWN', JSON.stringify(adp));
+  await ctx.close();
+}
 // ================= 40 rename docks: Name on Dock / Industrial Dock / Shipyard Core (+_02), not Shipyard Side (2026-11-09 brief rename-docks-shipyards, slice A)
 async function s40(br) {
   const ctx = await br.newContext({viewport: {width: 1400, height: 900}});
@@ -4212,6 +4254,7 @@ try {
   try { console.log('--- 38 delete mode, config copy/paste, context menu'); await s38(br); } catch (e) { chk('38 section ran', false, e.stack || String(e)); }
   try { console.log('--- 39 dock shape'); await s39(br); } catch (e) { chk('39 dock shape: section ran', false, e.stack || String(e)); }
   try { console.log('--- 40 rename docks'); await s40(br); } catch (e) { chk('40 rename docks: section ran', false, e.stack || String(e)); }
+  try { console.log('--- 42 ug order, bay resource, names'); await s42(br); } catch (e) { chk('42 section ran', false, e.stack || String(e)); }
   try { console.log('--- 41 tour, ? search, Flow legend'); await s41(br); } catch (e) { chk('41 tour/help/legend: section ran', false, e.stack || String(e)); }
   try { console.log('--- 26 round trip'); await s26(br); } catch (e) { chk('26 round trip: section ran', false, e.stack || String(e)); }
   try { console.log('--- 27 dock shape'); await s27(br); } catch (e) { chk('27 dock shape: section ran', false, e.stack || String(e)); }
