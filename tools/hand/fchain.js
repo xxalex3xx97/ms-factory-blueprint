@@ -5,7 +5,13 @@
 // PLANNED ROUTES: a belt may only use the street tracks (pairs of adjacent cell lines of every street row and street column), the output blocks and the entry stubs, so the search is a thin graph, not open floor.
 //   Entry of a block without dock: stub row from the street column to (0,lane row). Entry of a dock block: stub column from the north street down to its approach column inside the block.
 window.chainBuild=function(opts){
-  opts=opts||{};const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=null?opts.mk:1,TW=32;
+  opts=opts||{};
+  // pass 1 measures the lanes every street column and the trunk bands really need (wide streets), pass 2 builds with exactly that much street: a much smaller factory, far fewer pieces
+  if(!opts.sws&&!opts.noAdapt){let m=opts.margin||2,r1=chainBuild({...opts,sw:opts.sw0||16,tbs:opts.tbs||8,noAdapt:true,dry:true}),r2=null;
+    for(let t=0;t<3;t++){const meas=r1.report.meas,sws=meas.map(c=>Math.max(2,Math.ceil((c.ns+c.nc+2*m)/14))),halfs=meas.map(c=>c.ns+m),tbs=Math.max(3,Math.ceil((r1.report.trunk+m)/14)+0);
+      r2=chainBuild({...opts,sws,halfs,tbs,noAdapt:true});if(!r2.report.failed||t===2)break;m+=2;r1=chainBuild({...opts,sw:opts.sw0||16,tbs:opts.tbs||8,noAdapt:true,dry:true})}
+    return r2}
+const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=null?opts.mk:1,TW=32;
   const P=plan(ITEM,RATE,MK);
   const CM={CRAFT_Refinery:['Refinery','DAT_Refinery',6],CRAFT_Assembler:['Assembler','DAT_Assembler'],CRAFT_GrowthChamber:['GrowthChamber','DAT_GrowthChamber'],CRAFT_Supercomputer:['Supercomputer','DAT_Supercomputer'],CRAFT_AdvancedAssembler:['AdvancedAssembler','DAT_AdvancedAssembler'],CRAFT_Enrichment:['Enrichment','DAT_EnrichmentChamber']};
   const CAPD={Refinery:36,Assembler:15,GrowthChamber:6,Supercomputer:9,AdvancedAssembler:4,Enrichment:4},CAPN={...CAPD,AdvancedAssembler:6,Enrichment:6};
@@ -15,16 +21,16 @@ window.chainBuild=function(opts){
   nodes.forEach(n=>dOf(n.item));
   const blocksOf=n=>{const [cn]=CM[n.crafter],cap=(rawOf(n)?CAPD:CAPN)[cn],nb=Math.ceil(n.machines/cap),L=[];let left=n.machines;for(let b=0;b<nb;b++){const m=Math.ceil(left/(nb-b));left-=m;L.push([b,nb,m])}return L};
   // columns: by depth, a depth wraps into side-by-side columns after WRAP rows
-  const WRAP=opts.wrap||8,colList=[],SW=opts.sw||10,TBS=opts.tbs||6;
+  const WRAP=opts.wrap||8,colList=[],SW=opts.sw||10,TBS=opts.tbs||6,sws=opts.sws||[];
   const byDepth={};nodes.forEach(n=>(byDepth[dep[n.item]]=byDepth[dep[n.item]]||[]).push(n));
   Object.keys(byDepth).map(Number).sort((a,b)=>a-b).forEach(c=>{let cur={items:[]};
     for(const n of byDepth[c].sort((a,b)=>b.machines-a.machines))for(const [b,nb,m] of blocksOf(n)){if(cur.items.length>=WRAP){colList.push(cur);cur={items:[]}}cur.items.push({n,b,nb,m})}
     colList.push(cur)});
-  let x=0;const specs=[],streetBx=new Set(),westOf={};let maxRows=1;
-  colList.forEach((col,ci)=>{col.hasRaw=col.items.some(i=>rawOf(i.n));x+=col.hasRaw?4:0;col.gx=x;col.west=ci?colList[ci-1].gx+1+SW:null;x+=2+SW;for(let d=2;d<2+SW;d++)streetBx.add(col.gx+d);   // block, output block, street 4 strides wide (64 lanes)
-    col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter];maxRows=Math.max(maxRows,r+1);westOf[col.gx]=col.west;
+  let x=0;const specs=[],streetBx=new Set(),westOf={},westOf0={},swMap={};let maxRows=1;
+  colList.forEach((col,ci)=>{col.hasRaw=col.items.some(i=>rawOf(i.n));x+=col.hasRaw?4:0;col.gx=x;col.sw=sws[ci]||SW;col.half=(opts.halfs||[])[ci];col.west=ci?colList[ci-1].gx+1+colList[ci-1].sw:null;col.west0=ci?colList[ci-1].gx+2:null;swMap[col.gx+2]={sw:col.sw,half:col.half};x+=2+col.sw;for(let d=2;d<2+col.sw;d++)streetBx.add(col.gx+d);   // block, output block, street 4 strides wide (64 lanes)
+    col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter];maxRows=Math.max(maxRows,r+1);westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
       specs.push({gx:col.gx,gy:TBS+1+2*r,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),col:dep[it.n.item]})})});
-  const lastGx=colList[colList.length-1].gx,W=lastGx+2+SW,H=TBS+1+2*maxRows+TBS;   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
+  const lastGx=colList[colList.length-1].gx,W=lastGx+2+colList[colList.length-1].sw,H=TBS+1+2*maxRows+TBS;   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
   const nCols=colList.length,report={recipes:nodes.length,blocks:specs.length,cols:nCols,rows:maxRows,routed:0,failed:0,entries:0,unsupplied:[]};
   const dockZone=new Set();specs.forEach(s=>{if(s.dock)for(let d=1;d<=4;d++)for(let dy=-1;dy<=1;dy++)dockZone.add((s.gx-d)+','+(s.gy+dy))});   // dock + adapter (2 strides) and 3 units of ship space in front (2 strides)
   const outBlk=new Set(specs.map(s=>(s.gx+1)+','+s.gy));
@@ -35,7 +41,7 @@ window.chainBuild=function(opts){
     const ents=[];anch.forEach(a=>a.entries.forEach(e=>ents.push(e)));report.entries=ents.length;
     const src={};anch.forEach(a=>a.exits.forEach(e=>{const ps=e.obj.ports.filter(p=>p.f==='E').sort((a,b)=>a.y-b.y),sp=e.obj.ports.filter(p=>p.f==='S').sort((a,b)=>a.x-b.x);(src[e.item]=src[e.item]||[]).push({obj:e.obj,room:e.rate,x:a.gx,ports:[ps[0],ps[2],sp[0]].filter(Boolean)})}));   // three belts per box: E ports 2 rows apart and the first S port
     const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],DH=HAND.D(),PAD=3,lanes=new Map(),Hpx=H*TW;
-    const laneX=(bx0,k)=>(bx0+Math.floor(k/14))*TW+2+2*(k%14),NL=14*SW,NT=14*TBS,HALF=NL/2;   // lanes on every 2nd cell line, never next to a wall (cell lines 2..28 of a stride)   // street column = 4 strides, a lane on every 2nd cell line
+    const laneX=(bx0,k)=>(bx0+Math.floor(k/14))*TW+2+2*(k%14),NT=14*TBS,nlOf=bx0=>14*swMap[bx0].sw,halfOf=bx0=>swMap[bx0].half!=null?swMap[bx0].half:nlOf(bx0)/2;   // lanes on every 2nd cell line, never next to a wall (cell lines 2..28 of a stride)   // street column = 4 strides, a lane on every 2nd cell line
     const take=(key,a,b,n,lo=0)=>{const l=lanes.get(key)||lanes.set(key,[]).get(key);for(let k=lo;k<n;k++){if(!l[k])l[k]=[];if(!l[k].some(([c,d])=>!(b+PAD<c||a-PAD>d))){l[k].push([a,b]);return k}}return -1};
     const LB={},sgn=v=>v>0?1:v<0?-1:0,dirOf=(dx,dy)=>dx>0?0:dy>0?1:dx<0?2:3;
     // plan one straight run between two waypoints (both exclusive): greedy underground chains over occupied cells; false when a needed cell is taken
@@ -54,9 +60,9 @@ window.chainBuild=function(opts){
     // entries without dock of one block sit on adjacent rows: their consumer lanes are taken together, in the order that keeps every corner free (from the top: lower row = lower lane x; from the bottom: the opposite)
     const pre=new Map();
     {const g={};ents.forEach(e=>{if(!e.north&&westOf[e.gx]!=null)(g[e.gx+','+e.gy]=g[e.gx+','+e.gy]||[]).push(e)});
-     Object.values(g).forEach(L=>{L.sort((a,b)=>a.y-b.y);const e0=L[0],bx2=westOf[e0.gx]-(SW-1),top=L.some(e=>e.y%TW===0)?false:L.some(e=>e.y%TW===29)?true:e0.y<=Hpx/2,key='v'+bx2;   // a lane row on the first cell line of a block cannot be reached from the north (a wall is right before it)
+     Object.values(g).forEach(L=>{L.sort((a,b)=>a.y-b.y);const e0=L[0],bx2=westOf0[e0.gx],top=L.some(e=>e.y%TW===0)?false:L.some(e=>e.y%TW===29)?true:e0.y<=Hpx/2,key='v'+bx2;   // a lane row on the first cell line of a block cannot be reached from the north (a wall is right before it)
        const a0=top?0:L[0].y,b0=top?L[L.length-1].y:Hpx;const free=[];const l=lanes.get(key)||lanes.set(key,[]).get(key);
-       for(let k=HALF;k<NL&&free.length<L.length;k++){if(!l[k])l[k]=[];if(!l[k].some(([c,d])=>!(b0+PAD<c||a0-PAD>d)))free.push(k)}
+       for(let k=halfOf(bx2);k<nlOf(bx2)&&free.length<L.length;k++){if(!l[k])l[k]=[];if(!l[k].some(([c,d])=>!(b0+PAD<c||a0-PAD>d)))free.push(k)}
        if(free.length<L.length){L.forEach(e=>pre.set(e,-1));return}
        free.forEach(k=>lanes.get(key)[k].push([a0,b0]));
        L.forEach((e,i)=>pre.set(e,{k:top?free[L.length-1-i]:free[i],top}))})}
@@ -64,11 +70,11 @@ window.chainBuild=function(opts){
     if(!opts.noRoute)for(const e of ents){if(cnt++>=lim)break;const L=src[e.item];if(!L||!L.length){report.unsupplied.push(e.item.replace('ITEM_','')+' > '+e.blk);continue}
       let ok=0,why='';const order=L.slice().sort((a,b)=>Math.abs(a.x-e.gx)-Math.abs(b.x-e.gx)||b.room-a.room);
       for(const s of order){if(!s.ports.length)continue;const p=s.ports[0],sx=p.x+p.nx,sy=p.y+p.ny;
-        const bx1=s.x+2,dock=!!e.north,bx2=dock?e.gx+2:westOf[e.gx]-(SW-1),tgtY=dock?(e.gy-1)*TW:e.y;
+        const bx1=s.x+2,dock=!!e.north,bx2=dock?e.gx+2:westOf0[e.gx],tgtY=dock?(e.gy-1)*TW:e.y;
         const pr=pre.get(e),top=(pr&&typeof pr==='object')?pr.top:(sy+tgtY)<=(2*Hpx-sy-tgtY),tk=top?'tT':'tB',tBase=top?0:(H-TBS)*TW;
-        const k1=take('v'+bx1,Math.min(sy,top?0:Hpx),Math.max(sy,top?0:Hpx),HALF);if(k1<0){why='no source lane';continue}const X1=laneX(bx1,k1);
+        const k1=take('v'+bx1,Math.min(sy,top?0:Hpx),Math.max(sy,top?0:Hpx),halfOf(bx1));if(k1<0){why='no source lane';continue}const X1=laneX(bx1,k1);
         let X2,Yt=null;
-        if(bx1===bx2&&!pr){X2=X1}else{let k2;if(pr&&typeof pr==='object')k2=pr.k;else k2=take('v'+bx2,0,Hpx,NL,HALF);if(k2==null||k2<0){why='no consumer lane';continue}X2=laneX(bx2,k2);const kt=take(tk,Math.min(X1,X2),Math.max(X1,X2),NT);if(kt<0){why='no trunk lane';continue}Yt=tBase+Math.floor(kt/14)*TW+2+2*(kt%14)}
+        if(bx1===bx2&&!pr){X2=X1}else{let k2;if(pr&&typeof pr==='object')k2=pr.k;else k2=take('v'+bx2,0,Hpx,nlOf(bx2),halfOf(bx2));if(k2==null||k2<0){why='no consumer lane';continue}X2=laneX(bx2,k2);const kt=take(tk,Math.min(X1,X2),Math.max(X1,X2),NT);if(kt<0){why='no trunk lane';continue}Yt=tBase+Math.floor(kt/14)*TW+2+2*(kt%14)}
         let wps;
         if(dock){const kh=take('h'+(e.gy-1),Math.min(X2,e.x),Math.max(X2,e.x),14);if(kh<0){why='no street row lane';continue}const Yh=(e.gy-1)*TW+2+2*kh;
           wps=[[sx,sy],[X1,sy],...(Yt!=null?[[X1,Yt],[X2,Yt]]:[]),[X2,Yh],[e.x,Yh],[e.x,e.y]]}
@@ -76,6 +82,9 @@ window.chainBuild=function(opts){
         const clean=wps.filter((w,i)=>i===0||w[0]!==wps[i-1][0]||w[1]!==wps[i-1][1]);
         if(lay(clean,e.gx+','+e.gy)){s.obj.used.add(p.key);s.ports.shift();s.room-=e.dem;ok=1;break}else why='blocked '+JSON.stringify((()=>{const c=LB.cell,q=c&&HAND.S.pcs.find(p=>p.x===c[0]&&p.y===c[1]);return q?{g:q.g,cls:q.cls.slice(-4),rot:q.rot}:{floor:c&&HAND.inFloor(c[0],c[1]),occ:c&&HAND.S.occ.get(c[0]+','+c[1])}})())+' '+JSON.stringify(LB.cell)+' '+JSON.stringify(LB.run)+' dock='+dock+' wps='+JSON.stringify(clean)}
       if(ok)report.routed++;else{report.failed++;HAND.S.fails.push(e.item.replace('ITEM_','')+' > '+e.blk+' no route ('+why+')')}}
+    // measure the lanes used per street column and trunk band (the second pass sizes the streets from this)
+    report.meas=colList.map(col=>{const bx0=col.gx+2,l=lanes.get('v'+bx0)||[],h=halfOf(bx0);let ns=0,nc=0;l.forEach((a,k)=>{if(a&&a.length){if(k<h)ns=Math.max(ns,k+1);else nc=Math.max(nc,k+1-h)}});return{bx0,ns,nc}});
+    report.trunk=Math.max(0,...['tT','tB'].map(k=>{const l=lanes.get(k)||[];let m=0;l.forEach((a,i)=>{if(a&&a.length)m=Math.max(m,i+1)});return m}));
     report.ms=Date.now()-t0;HAND.prune()}});
   R.report=report;return R;
 };

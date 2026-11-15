@@ -19,7 +19,7 @@ window.HAND=(function(){
   function put(o){
     const x=o.gx*TW+o.lx,y=o.gy*TW+o.ly,d=dim({cls:o.cls,rot:0});
     for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)if((!o.force&&!inFloor(x+i,y+j))||S.occ.has(k(x+i,y+j)))return null;   // force: cell outside every block floor (dock blocks)
-    const m={id:S.M.length,cls:o.cls,x,y,w:d.w,h:d.h,rec:o.rec,ct:o.ct,name:o.name||o.cls,ports:portsOf({cls:o.cls,x,y,rot:0,h:0}),used:new Set()};
+    const m={id:S.M.length,cls:o.cls,x,y,w:d.w,h:d.h,rec:o.rec,ct:o.ct,name:o.name||o.cls,nm:o.nm,ports:portsOf({cls:o.cls,x,y,rot:0,h:0}),used:new Set()};
     m.ports.forEach(p=>{const kk=k(p.x+p.nx,p.y+p.ny);S.door.set(kk,(S.door.get(kk)||0)+1)});   // doorway cell of every port: other belts should keep out
     for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)S.occ.set(k(x+i,y+j),m.id);
     S.M.push(m);return m;
@@ -114,7 +114,7 @@ window.HAND=(function(){
   }
   function result(){
     const items=[];
-    for(const m of S.M){const off=m.ports.filter(p=>!m.used.has(p.key)).map(p=>p.key);items.push({cls:m.cls,x:m.x,y:m.y,rot:0,h:0,pid:0,off,...(m.rec?{rec:m.rec}:{}),...(m.ct?{ct:m.ct}:{})})}
+    for(const m of S.M){const off=m.ports.filter(p=>!m.used.has(p.key)).map(p=>p.key);items.push({cls:m.cls,x:m.x,y:m.y,rot:0,h:0,pid:0,off,...(m.rec?{rec:m.rec}:{}),...(m.nm?{nm:m.nm}:{}),...(m.ct?{ct:m.ct}:{})})}
     S.pcs.forEach(p=>items.push({...p}));
     const bl=[...S.blocks.values()].map(b=>({cls:CLS,x:b.gx*D0.w,y:b.gy*D0.h}));
     return{ok:true,blocks:bl,ms:items,fails:S.fails.slice(),machines:S.M.length,belts:S.pcs.length};
