@@ -40,7 +40,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     for(let gx=0;gx<W;gx++)for(let gy=0;gy<H;gy++)if(!dockZone.has(gx+','+gy))HAND.block(gx,gy);
     // ---- rule-based lanes: every belt = source box -> street lane up/down to a trunk band -> along the trunk -> consumer street lane -> (street row lane + stub column | stub row) -> entry. No search.
     const ents=[];anch.forEach(a=>a.entries.forEach(e=>ents.push(e)));report.entries=ents.length;
-    const src={};anch.forEach(a=>a.exits.forEach(e=>{const ps=e.obj.ports.filter(p=>p.f==='E').sort((a,b)=>a.y-b.y),sp=e.obj.ports.filter(p=>p.f==='S').sort((a,b)=>a.x-b.x);(src[e.item]=src[e.item]||[]).push({obj:e.obj,room:e.rate,x:a.gx,ports:[ps[0],ps[2],sp[0]].filter(Boolean)})}));   // three belts per box: E ports 2 rows apart and the first S port
+    const src={};anch.forEach(a=>a.exits.forEach(e=>{const ps=e.obj.ports.filter(p=>p.f==='E').sort((a,b)=>a.y-b.y),sp=e.obj.ports.filter(p=>p.f==='S').sort((a,b)=>a.x-b.x);(src[e.item]=src[e.item]||[]).push({obj:e.obj,room:e.rate,x:a.gx,ports:[ps[0],ps[2],sp[0],...ps.filter((q,i)=>i!==0&&i!==2),...sp.slice(1)].filter(Boolean)})}));   // three belts per box: E ports 2 rows apart and the first S port; the other ports follow when a product has more consumers than that
     const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],DH=HAND.D(),PAD=3,lanes=new Map(),Hpx=H*TW;
     const laneX=(bx0,k)=>(bx0+Math.floor(k/14))*TW+2+2*(k%14),NT=14*TBS,nlOf=bx0=>14*swMap[bx0].sw,halfOf=bx0=>swMap[bx0].half!=null?swMap[bx0].half:nlOf(bx0)/2;   // lanes on every 2nd cell line, never next to a wall (cell lines 2..28 of a stride)   // street column = 4 strides, a lane on every 2nd cell line
     const take=(key,a,b,n,lo=0)=>{const l=lanes.get(key)||lanes.set(key,[]).get(key);for(let k=lo;k<n;k++){if(!l[k])l[k]=[];if(!l[k].some(([c,d])=>!(b+PAD<c||a-PAD>d))){l[k].push([a,b]);return k}}return -1};
@@ -73,7 +73,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
         if(lay(cl,e.gx+','+e.gy))report.routed++;else{report.failed++;HAND.S.fails.push(e.item.replace('ITEM_','')+' > '+e.blk+' no route (dock tail)')}continue}
       const L=src[e.item];if(!L||!L.length){report.unsupplied.push(e.item.replace('ITEM_','')+' > '+e.blk);continue}
       let ok=0,why='';const order=L.slice().sort((a,b)=>Math.abs(a.x-e.gx)-Math.abs(b.x-e.gx)||b.room-a.room);
-      for(const s of order){if(!s.ports.length)continue;const p=s.ports[0],sx=p.x+p.nx,sy=p.y+p.ny;
+      for(const [s,p] of order.flatMap(s=>s.ports.map(p=>[s,p]))){const sx=p.x+p.nx,sy=p.y+p.ny;
         const bx1=s.x+2,dock=!!e.north,bx2=dock?e.gx+2:westOf0[e.gx],tgtY=dock?(e.gy-1)*TW:e.y;
         const pr=pre.get(e),top=(pr&&typeof pr==='object')?pr.top:(sy+tgtY)<=(2*Hpx-sy-tgtY),tk=top?'tT':'tB',tBase=top?0:(H-TBS)*TW;
         const k1=take('v'+bx1,Math.min(sy,top?0:Hpx),Math.max(sy,top?0:Hpx),halfOf(bx1));if(k1<0){why='no source lane';continue}const X1=laneX(bx1,k1);
@@ -84,7 +84,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
           wps=[[sx,sy],[X1,sy],...(Yt!=null?[[X1,Yt],[X2,Yt]]:[]),[X2,Yh],[e.x,Yh],[e.x,e.y]]}
         else wps=[[sx,sy],[X1,sy],...(Yt!=null?[[X1,Yt],[X2,Yt]]:[]),[X2,e.y],[e.x,e.y]];
         const clean=wps.filter((w,i)=>i===0||w[0]!==wps[i-1][0]||w[1]!==wps[i-1][1]);
-        if(lay(clean,e.gx+','+e.gy)){s.obj.used.add(p.key);s.ports.shift();s.room-=e.dem;ok=1;break}else why='blocked '+JSON.stringify((()=>{const c=LB.cell,q=c&&HAND.S.pcs.find(p=>p.x===c[0]&&p.y===c[1]);return q?{g:q.g,cls:q.cls.slice(-4),rot:q.rot}:{floor:c&&HAND.inFloor(c[0],c[1]),occ:c&&HAND.S.occ.get(c[0]+','+c[1])}})())+' '+JSON.stringify(LB.cell)+' '+JSON.stringify(LB.run)+' dock='+dock+' wps='+JSON.stringify(clean)}
+        if(lay(clean,e.gx+','+e.gy)){s.obj.used.add(p.key);s.ports.splice(s.ports.indexOf(p),1);s.room-=e.dem;ok=1;break}else why='blocked '+JSON.stringify((()=>{const c=LB.cell,q=c&&HAND.S.pcs.find(p=>p.x===c[0]&&p.y===c[1]);return q?{g:q.g,cls:q.cls.slice(-4),rot:q.rot}:{floor:c&&HAND.inFloor(c[0],c[1]),occ:c&&HAND.S.occ.get(c[0]+','+c[1])}})())+' '+JSON.stringify(LB.cell)+' '+JSON.stringify(LB.run)+' dock='+dock+' wps='+JSON.stringify(clean)}
       if(ok)report.routed++;else{report.failed++;HAND.S.fails.push(e.item.replace('ITEM_','')+' > '+e.blk+' no route ('+why+')')}}
     // measure the lanes used per street column and trunk band (the second pass sizes the streets from this)
     report.meas=colList.map(col=>{const bx0=col.gx+2,l=lanes.get('v'+bx0)||[],h=halfOf(bx0);let ns=0,nc=0;l.forEach((a,k)=>{if(a&&a.length){if(k<h)ns=Math.max(ns,k+1);else nc=Math.max(nc,k+1-h)}});return{bx0,ns,nc}});
