@@ -14,9 +14,21 @@ function galInit(){
   }));
   GAL.cards.sort((a,b)=>a.cls.localeCompare(b.cls)||a.grp.localeCompare(b.grp)||a.name.localeCompare(b.name));
 }
+function galArm(k){   // Armoury has no ports: hand-fed. One Armoury, one large container per input touching it (W, N, E), no belts. User fills the containers by hand.
+  HAND.reset({mk:1});HAND.setTile($("plnBk").value);HAND.block(0,0);
+  const ins=[...new Set(k.r.i.map(([x])=>x))],dc=dim({cls:"DAT_Container_2",rot:0}),da=dim({cls:"DAT_Armoury",rot:0});
+  if(ins.length>3)return{ok:false,why:"more than 3 inputs",chip:["b","Not supported yet: more than 3 inputs"]};
+  const ax=dc.w,ay=dc.h,pos=[[0,ay],[ax,0],[ax+da.w,ay]];
+  const A=HAND.put({cls:"DAT_Armoury",gx:0,gy:0,lx:ax,ly:ay,name:"Armoury "+k.name,rec:rk(k.r)});
+  const C=ins.map((it,i)=>HAND.put({cls:"DAT_Container_2",gx:0,gy:0,lx:pos[i][0],ly:pos[i][1],name:"Fill by hand: "+plnNm(it),nm:"Fill by hand: "+plnNm(it),ct:[{item:it,n:0,inf:false}]}));
+  if(!A||C.some(c=>!c))return{ok:false,why:"armoury layout does not fit",chip:["b","Not supported yet: layout does not fit"]};
+  const R=HAND.result(),E=plcExt(R),cnt={mach:1,belt:0,spl:0,ug:0,box:ins.length};
+  return{ok:true,eng:"chain",engName:"Hand-fed Armoury",cnt,blocks:R.blocks.length,w:E.w,h:E.h,T:{blocks:R.blocks,ms:R.ms},items:R.ms,fb:"Fill the containers by hand, craft in the Armoury",chip:["g","Hand-fed Armoury: fill the containers by hand"]};
+}
 function galBuild(k){   // the build engine (tools/hand chainBuild, one recipe, every input a source container): same layout rules as the Build factory modal
   if(k.res)return k.res;
   const t0=performance.now();let T=null,why="";
+  if(k.c==="CRAFT_Armoury"){const r=galArm(k);r.ms=Math.round(performance.now()-t0);return k.res=r}
   try{
     if(typeof chainBuild!=="function")throw new Error("engine not loaded");
     if(!["CRAFT_Refinery","CRAFT_Assembler","CRAFT_GrowthChamber","CRAFT_Supercomputer","CRAFT_AdvancedAssembler","CRAFT_Enrichment","CRAFT_DeepSpaceObservatory"].includes(k.c))throw new Error("no block for this machine yet ("+k.cls+")");
