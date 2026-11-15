@@ -2,6 +2,7 @@
 (function(){
   const l=s=>new Promise(r=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=r;document.head.appendChild(e)}),nx=()=>new Promise(r=>setTimeout(r,30));
   let ENG=null,tok=0;
+  window.engineReady=async()=>{if(typeof chainBuild!=="function")for(const f of ["tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f)};
   window.placerRun=async function(open){
     const dl=$("plnPrev");if(!open&&!dl.open)return;
     const item=$("plnItem").value,rate=+$("pvRate").value||+$("plnRate").value,mk=+$("pvMk").value,me=++tok;

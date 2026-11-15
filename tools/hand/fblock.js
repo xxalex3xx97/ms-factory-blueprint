@@ -8,7 +8,7 @@
 //   Non-raw lanes keep entering at x=0 and hop under the jog columns. Machines start east of the jog columns, so a dock-ready block holds slightly fewer machines.
 window.fbBuild=function(opts){
   opts=opts||{};const MK=opts.mk!=null?opts.mk:1,DOCK=!!opts.dock;HAND.reset({mk:MK});
-  const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],SPL=PLC_SPL[MK],TW=HAND.TW,DH=HAND.D(),by=plnBy(false,true),isRaw=it=>!by.has(it);
+  const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],SPL=PLC_SPL[MK],TW=HAND.TW,DH=HAND.D(),by=plnBy(false,true),isRaw=it=>!!HAND.allRaw||!by.has(it);
   const CLASSES=[['Refinery','DAT_Refinery','CRAFT_Refinery',6],['Assembler','DAT_Assembler','CRAFT_Assembler'],['GrowthChamber','DAT_GrowthChamber','CRAFT_GrowthChamber'],['Supercomputer','DAT_Supercomputer','CRAFT_Supercomputer'],['AdvancedAssembler','DAT_AdvancedAssembler','CRAFT_AdvancedAssembler'],['Enrichment','DAT_EnrichmentChamber','CRAFT_Enrichment']];
   const hopSpan=(ax,a,b)=>{const l=HAND.S.span.get(ax)||[];l.push([a,b]);HAND.S.span.set(ax,l)};   // tell check() the pair is intended
   const info=[],dockBlk=[],anch=[];

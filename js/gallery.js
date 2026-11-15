@@ -14,21 +14,28 @@ function galInit(){
   }));
   GAL.cards.sort((a,b)=>a.cls.localeCompare(b.cls)||a.grp.localeCompare(b.grp)||a.name.localeCompare(b.name));
 }
-function galBuild(k){
+function galBuild(k){   // the build engine (tools/hand chainBuild, one recipe, every input a source container): same layout rules as the Build factory modal
   if(k.res)return k.res;
-  const t0=performance.now();let L;
+  const t0=performance.now();let T=null,why="";
   try{
-    const pk={};if(k.idx>0)pk[k.item]=rk(k.r);
-    const P=plan(k.item,k.base,1,{sp:null,bal:null},pk,{proto:false,enr:false});
-    L=placerLayout(P,k.item,1,1,{box:"DAT_Container_2",mod:false,dock:null,eng:"zones"});
-  }catch(e){L={ok:false,why:"internal error ("+e.message+")"}}
-  const res={ok:!!L.ok,ms:Math.round(performance.now()-t0)};
-  if(L.ok){
-    const T=L.tile&&L.tile.ok?L.tile:{blocks:[{cls:plcCls("BPO_Station_02"),x:0,y:0}],ms:L.items},cnt={mach:0,belt:0,spl:0,ug:0,box:0};
-    L.items.forEach(b=>cnt[b.rec?"mach":PLC_UG.includes(b.cls)?"ug":PLC_BELT.includes(b.cls)?"belt":PLC_SPL.includes(b.cls)?"spl":"box"]++);
-    res.eng=L.eng||"legacy";res.engName=L.eng==="cmp"?plcEngName(L)+(L.rbWhy?": "+String(L.rbWhy).slice(0,140):""):GAL_ENG[L.eng]||"Legacy placer";res.cnt=cnt;res.blocks=L.tile&&L.tile.ok?L.tile.blocks.length:0;res.w=L.w;res.h=L.h;res.T=T;res.items=L.items;res.fb="";
+    if(typeof chainBuild!=="function")throw new Error("engine not loaded");
+    if(!["CRAFT_Refinery","CRAFT_Assembler","CRAFT_GrowthChamber","CRAFT_Supercomputer","CRAFT_AdvancedAssembler","CRAFT_Enrichment"].includes(k.c))throw new Error("no block for this machine yet ("+k.cls+")");
+    if(new Set(k.r.i.map(([x])=>x)).size>3)throw new Error("more than 3 different inputs: the engine has source slots for 3");
+    const pick={};if(k.idx>0)pick[k.item]=rk(k.r);
+    const R=chainBuild({item:k.item.replace(/^ITEM_/,""),rate:k.base,single:true,docks:false,tile:$("plnBk").value,pick,maxStates:60000,hw:3});
+    if(R.report.skipped&&R.report.skipped.length)why="no block for this machine yet ("+k.cls+")";
+    else if(R.fails.length)why=R.fails[0];
+    else if(!R.ms.some(m=>m.rec))why="nothing built";
+    else{const mx=Math.min(...R.blocks.map(q=>q.x)),my=Math.min(...R.blocks.map(q=>q.y));   // start at the origin (preview and snippets)
+      T={blocks:R.blocks.map(q=>({...q,x:q.x-mx,y:q.y-my})),ms:R.ms.map(q=>({...q,x:q.x-mx*FC,y:q.y-my*FC}))}}
+  }catch(e){why=/^(no block|more than)/.test(e.message)?e.message:"internal error ("+e.message+")"}
+  const res={ok:!!T,ms:Math.round(performance.now()-t0)};
+  if(T){
+    const cnt={mach:0,belt:0,spl:0,ug:0,box:0},E=plcExt(T);
+    T.ms.forEach(b=>cnt[b.rec?"mach":PLC_UG.includes(b.cls)?"ug":PLC_BELT.includes(b.cls)?"belt":PLC_SPL.includes(b.cls)?"spl":"box"]++);
+    res.eng="chain";res.engName="Build engine";res.cnt=cnt;res.blocks=T.blocks.length;res.w=E.w;res.h=E.h;res.T=T;res.items=T.ms;res.fb="";
     res.chip=["g","Golden template"];
-  }else{res.why=String(L.why||"").replace(/ \(NL used\)$/,"");res.chip=["b","Not supported yet: "+res.why]}
+  }else{res.why=why;res.chip=["b","Not supported yet: "+why]}
   return k.res=res;
 }
 // draw a built result into a canvas: same renderer as placerShot (paint() with PLC_PREV), fitted to the canvas
@@ -75,7 +82,7 @@ function galStats(){const o={};GAL.cards.forEach(k=>{if(!k.res)return;const key=
   const d=document.createElement("dialog");d.id="galDlg";d.setAttribute("aria-labelledby","galT");
   d.innerHTML=`<div class="pvHd"><h3 id="galT">Template gallery</h3></div><div id="galBar"><input type="text" id="galQ" placeholder="Search recipe" aria-label="Search recipe"><select id="galM" aria-label="Machine"><option value="">All machines</option></select><select id="galG" aria-label="Inputs"><option value="">All inputs</option></select><select id="galS" aria-label="Status"><option value="">All status</option><option value="golden">Golden template</option><option value="other">Other engines</option><option value="unsupported">Not supported</option><option value="unbuilt">Not built yet</option></select><span class="sub" id="galN"></span><button id="galAll" class="pri" type="button">Build all</button><progress id="galProg" value="0" max="1"></progress><span class="sub" id="galDone"></span><button id="galExAll" type="button">Export all</button><button id="galClose" type="button">Close</button></div><div id="galGrid"></div>`;
   document.body.appendChild(d);
-  $("galOpen").onclick=()=>{galInit();const fill=(id,v)=>{const s=$(id);if(s.options.length<2)[...new Set(v)].forEach(x=>s.add(new Option(x,x)))};fill("galM",GAL.cards.map(k=>k.cls));fill("galG",GAL.cards.map(k=>k.grp));galShow();if(!d.open)d.showModal()};
+  $("galOpen").onclick=async()=>{if(window.engineReady)await engineReady();galInit();const fill=(id,v)=>{const s=$(id);if(s.options.length<2)[...new Set(v)].forEach(x=>s.add(new Option(x,x)))};fill("galM",GAL.cards.map(k=>k.cls));fill("galG",GAL.cards.map(k=>k.grp));galShow();if(!d.open)d.showModal()};
   ["galQ","galM","galG","galS"].forEach(i=>$(i).addEventListener("input",galShow));
   $("galAll").onclick=galAll;$("galClose").onclick=()=>d.close();
   $("galExAll").onclick=()=>{GAL.cards.filter(k=>!k.res).forEach(galStep);galShow();galFile(GAL.cards.map(galSnip).filter(Boolean),"template-library.json")};
