@@ -7,7 +7,7 @@
 window.chainBuild=function(opts){
   opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.noDock=opts.docks===false;HAND.nrm=opts.dockType==='nrm';HAND.adapt=opts.adapter!=null?opts.adapter:(opts.tile||'BPO_Station_03')==='BPO_Station_03';   // 2x2 B: docks join the block directly; the open-sided 2x2 C needs a Station Adapter
   // pass 1 measures the lanes every street column and the trunk bands really need (wide streets), pass 2 builds with exactly that much street: a much smaller factory, far fewer pieces
-  if(opts.dockType==='nrm'&&!opts.noAdapt&&!opts.capsDone){let caps={...(opts.caps||{})};   // normal docks: each block holds fewer machines; find the real capacity per product with dry builds, then plan the block count with it
+  if(!opts.noAdapt&&!opts.capsDone){let caps={...(opts.caps||{})};   // normal docks: each block holds fewer machines; find the real capacity per product with dry builds, then plan the block count with it
     for(let i=0;i<4;i++){const r=chainBuild({...opts,caps,sw:opts.sw0||16,tbs:opts.tbs||8,noAdapt:true,dry:true,noRoute:true});let bad=false;(r.specs||[]).forEach(sp=>{const inf=r.info.find(x=>x.name===sp.name);if(inf&&sp.n>inf.cap){caps[sp.item]=Math.min(caps[sp.item]||99,inf.cap);bad=true}});if(!bad)break}
     return chainBuild({...opts,caps,capsDone:true})}
   if(!opts.sws&&!opts.noAdapt){let m=opts.margin||2,r1=chainBuild({...opts,sw:opts.sw0||16,tbs:opts.tbs||8,noAdapt:true,dry:true}),r2=null;
@@ -37,7 +37,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
   const lastCol=colList[colList.length-1],lastGx=lastCol.gx,gxO=lastGx+2+lastCol.sw,nLn=Math.ceil(RATE/[60,120,180][MK]-1e-9),nrmO=(opts.outDockType||opts.dockType)==='nrm',nOD=opts.outDock?Math.ceil(nLn/(nrmO?4:8)):0;   // output dock: an extra tile column east of everything (nLn lanes of the final item, 8 lanes per industrial dock)
   if(nOD){maxRows=Math.max(maxRows,nOD);westOf[gxO]=lastGx+1+lastCol.sw;westOf0[gxO]=lastGx+2}
   const W=nOD?gxO+1:gxO,H=TBS+1+2*maxRows+TBS,odRow0=nOD?Math.min(Math.min(...specs.filter(q=>q.item===ITEM).map(q=>q.gy))+1,TBS+2*maxRows-2*(nOD-1)):0;   // the output docks sit on the street row right below the final blocks: the belt stays beside them, and its rows never coincide with a box port row   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
-  const nCols=colList.length,report={recipes:nodes.length,blocks:specs.length,cols:nCols,rows:maxRows,routed:0,failed:0,entries:0,unsupplied:[]};
+  const nCols=colList.length,report={skipped:Object.values(P.nodes).filter(n=>n.crafter&&n.machines>0&&!CM[n.crafter]).map(n=>n.item.replace('ITEM_','')+' ('+n.crafter.replace('CRAFT_','')+')'),recipes:nodes.length,blocks:specs.length,cols:nCols,rows:maxRows,routed:0,failed:0,entries:0,unsupplied:[]};
   const dockZone=new Set();specs.forEach(s=>{if(s.dock)for(let d=1;d<=4;d++)for(let dy=-1;dy<=1;dy++)dockZone.add((s.gx-d)+','+(s.gy+dy))});   // dock + adapter (2 strides) and 3 units of ship space in front (2 strides)
   const outBlk=new Set(specs.map(s=>(s.gx+1)+','+s.gy));
   const t0=Date.now(),odBlk=[];

@@ -20,7 +20,7 @@
     $("pvLine").textContent=T.machines+" machines · "+T.blocks.length+" blocks · "+(T.machines?(T.belts/T.machines).toFixed(1):"0")+" belts/machine";
     $("pvMach").textContent=T.machines;$("pvBelt").textContent=T.belts;$("pvBox").textContent=boxes;$("pvBlk").textContent=T.blocks.length+" ("+docks+" docks)";
     $("pvIO").textContent=($("plnDkI").checked?"raw items from "+($("plnDk").value==="nrm"?"normal":"industrial")+" docks (one ore each)":"raw items from source containers you fill")+($("plnDkO").checked?", finished product out through an industrial dock":", output into containers");
-    $("plnPrevNote").textContent="";
+    $("plnPrevNote").textContent=T.report.skipped&&T.report.skipped.length?"Not built (no block for this machine yet): "+T.report.skipped.join(", "):"";
     $("plnPrevErr").textContent=bad?bad+" problems, not placeable: "+T.fails.slice(0,2).join("; "):"";
     $("plnPlace").disabled=!!bad;placerFitView();
   };

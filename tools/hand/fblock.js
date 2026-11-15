@@ -78,8 +78,8 @@ window.fbBuild=function(opts){
       if(!nrm)asm.boxes.forEach(b=>{const grp2=b.x===22&&b.y===9,c=HAND.put({cls:'DAT_Container_2',gx,gy:gy+dy,lx:-16-A+b.y,ly:b.x,force:true,name:'dock box',nm:grp2?nm:undefined,ct:grp2?[{item:xd.item,n:0,inf:true}]:[]});if(!c)throw new Error(name+': extra dock box does not fit');
         if(grp2)c.ports.forEach(q=>{if(q.f==='W'||q.f==='E')c.used.add(q.key)});else c.ports.forEach(q=>c.used.add(q.key))});
       if(!nrm)asm.belts.forEach(kb=>putY(-16-A+kb.y,kb.x,TR[kb.rot],BELT));
-      for(let r=0;r<rowsUsed;r++)for(let x=nrm?-1-A:-16-A+13;x<=-1;x++)putY(x,22+(nrm?1:2)*r,0,BELT);   // one tail per row of the block, 2 rows apart
-      dockBlk.push(...(HAND.noDock?dkTiles(gx*2,(gy+dy)*2):nrm?[{cls:plcCls('BPO_Dock'),x:gx*2-1-(A?1:0),y:(gy+dy)*2+1,rot:2,nm}]:[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:(gy+dy)*2,rot:2,nm}]),...(HAND.adapt&&!HAND.noDock?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:(gy+dy)*2,rot:2}]:[]))});
+      for(let r=0;r<rowsUsed;r++)for(let x=nrm?-1-A:-16-A+13;x<=-1;x++)putY(x,nrm?[22,6][r]:22+2*r,0,BELT);   // one tail per row of the block, 2 rows apart
+      dockBlk.push(...(HAND.noDock?dkTiles(gx*2,(gy+dy)*2):nrm?Array.from({length:rowsUsed},(_,r)=>({cls:plcCls('BPO_Dock'),x:gx*2-1-(A?1:0),y:(gy+dy)*2+(r===0?1:0),rot:2,nm})):[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:(gy+dy)*2,rot:2,nm}]),...(HAND.adapt&&!HAND.noDock?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:(gy+dy)*2,rot:2}]:[]))});
     if(dk)groups.forEach(g=>g.forEach(t=>{
       if(t.xj==null){rawStart.set(t.r+','+t.idx,0);usedP.set(t.p,0);return}
       for(let x=0;x<t.xj;x++)put1(x,t.p,0,BELT);
@@ -96,7 +96,7 @@ window.fbBuild=function(opts){
         for(let i=0;i<Math.min(nN,kr);i++)mm.used.add(nP[nN-1-i].key);for(let i=0;i<Math.min(nS,Math.max(0,kr-nN));i++)mm.used.add(sP[i].key);
         mm.used.add(side?eP[up?0:eP.length-1].key:sP[iO].key)}
       // lane start: raw lanes start at their jog; other lanes at the west edge (after the container when the row is inside a dock group), hopping under jog columns
-      const startOf=(idx,yl)=>{const rs=rawStart.get(r+','+idx);if(rs!=null)return{x0:rs};let x0=0;if(usedP.has(yl)){x0=usedP.get(yl)+1;entryBlocked++}else if(chain){if(E){const xa=entryCol.get(r+','+idx);{const xi=extraItems.indexOf(inItem(idx));entries.push({x:ox+xa,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,north:true,gx,gy,tailY:xi>=0?oy+(xi===0?-1:1)*TW+22+(nrm?1:2)*r:null})}for(let x=xa+1;x<E;x++)put1(x,yl,0,BELT);x0=E}else{entries.push({x:ox,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,gx,gy});x0=1}}return{x0}};
+      const startOf=(idx,yl)=>{const rs=rawStart.get(r+','+idx);if(rs!=null)return{x0:rs};let x0=0;if(usedP.has(yl)){x0=usedP.get(yl)+1;entryBlocked++}else if(chain){if(E){const xa=entryCol.get(r+','+idx);{const xi=extraItems.indexOf(inItem(idx));entries.push({x:ox+xa,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,north:true,gx,gy,tailY:xi>=0?oy+(xi===0?-1:1)*TW+(nrm?[22,6][r]:22+2*r):null})}for(let x=xa+1;x<E;x++)put1(x,yl,0,BELT);x0=E}else{entries.push({x:ox,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,gx,gy});x0=1}}return{x0}};
       const withHop=(hop,yl,x0)=>{const mx=crossX(yl,x0);if(mx>=0)hop.set(x0,mx+1)};
       for(let j=0;j<nN;j++){if(j>=kr)continue;const yl=top+j,hop=new Map(),spx=[],st=startOf(j,yl);
         for(let q=0;q<m;q++){const px=X(q)+cN[nN-1-j];spx.push(px);let far=-1;for(let jj=0;jj<j;jj++)far=Math.max(far,X(q)+cN[nN-1-jj]);
