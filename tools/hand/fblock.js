@@ -25,9 +25,10 @@ window.fbBuild=function(opts){
     const nN=Math.min(k,pf);let nS=k-nN;const side=nS>=pf;if(!side)nS=Math.min(nS,pf-1);
     const rawList=[...new Set(rc.i.map(([it])=>it).filter(isRaw))],extraItems=chain&&dk?rawList.slice(1):[];   // an industrial dock carries ONE ore: further raw items get their own dock (rows gy-1, gy+1) and arrive like bus items from the north
     const inItem=j=>rc.i[j][0],rawIn=rc.i.map(([it])=>isRaw(it)&&!extraItems.includes(it));   // input index: N lane j = input j, S lane j = input nN+j
+    const nrm=!!(HAND.nrm&&dk&&chain),capRows=!nrm?99:Math.min(...rawList.map(it=>Math.floor((extraItems.includes(it)?2:4)/rc.i.filter(([x])=>x===it).length))),LIM=nrm?2:4;   // normal docks: a dock has 2 belt ports and a block face holds 2 docks, so at most 4 raw lane rows (2 per dock, 2 for an extra item's own dock)
     const yTop=chain&&dk&&rawIn.some(v=>!v)?2:0,   // dock blocks fed from the north: two empty rows on top so the entry belt can turn after the wall tunnel
     band=side?nN+s+nS+2:nN+s+(nS?1:0)+1,rowsN=side?2:Math.floor((30-yTop)/band),pitch=side?s+1:s,iO=nS&&!side?pf-1:0;
-    const yStart=r=>side?(r===0?yTop:30-band):yTop+r*band,nRows=side?2:rowsN;
+    const yStart=r=>side?(r===0?yTop:30-band):yTop+r*band,nRows=Math.min(side?2:rowsN,capRows);
     // ---- dock hub: which lane rows are raw, grouped by item
     const targets=new Map();   // item -> [{row,key}]
     const laneRow=(r,idx)=>{const y0=yStart(r),up=side&&r===1,top=y0+(up?2:0),my=top+nN;return idx<nN?top+idx:my+s+(idx-nN)};
@@ -39,13 +40,13 @@ window.fbBuild=function(opts){
     const groups=[[],[]],gitem=[null,null];
     if(dk){
       if(items.length===1){const all=targets.get(items[0]).sort((a,b)=>a.row-b.row),h=Math.min(4,Math.ceil(all.length/2)>4?4:Math.max(Math.ceil(all.length/2),all.length>4?4:all.length));
-        const g1=all.length<=4?all:all.slice(0,Math.ceil(all.length/2)),g2=all.length<=4?[]:all.slice(Math.ceil(all.length/2));groups[0]=g1;groups[1]=g2;gitem[0]=gitem[1]=items[0]}
+        const g1=all.length<=LIM?all:all.slice(0,Math.ceil(all.length/2)),g2=all.length<=LIM?[]:all.slice(Math.ceil(all.length/2));groups[0]=g1;groups[1]=g2;gitem[0]=gitem[1]=items[0]}
       else{groups[0]=(targets.get(items[0])||[]).sort((a,b)=>a.row-b.row);gitem[0]=items[0];if(items[1]){groups[1]=targets.get(items[1]).sort((a,b)=>a.row-b.row);gitem[1]=items[1]}
         for(let i=2;i<items.length;i++)undocked+=targets.get(items[i]).length}
-      groups.forEach((g,gi)=>{if(g.length>4){undocked+=g.length-4;g.length=4}});
-      const base=[4,22];
+      groups.forEach((g,gi)=>{if(g.length>LIM){undocked+=g.length-LIM;g.length=LIM}});
+      const base=nrm?[6,22]:[4,22];
       groups.forEach((g,gi)=>{if(!g.length)return;const n=g.length;let best=0,bs=1e9;
-        for(let st=0;st+n<=4;st++){let sum=0;g.forEach((t,i)=>sum+=Math.abs(base[gi]+st+i-t.row));if(sum<bs){bs=sum;best=st}}
+        for(let st=0;st+n<=LIM;st++){let sum=0;g.forEach((t,i)=>sum+=Math.abs(base[gi]+st+i-t.row));if(sum<bs){bs=sum;best=st}}
         g.forEach((t,i)=>{t.p=base[gi]+best+i;t.gi=gi});
         const ups=g.filter(t=>t.row<t.p).sort((a,b)=>a.row-b.row),downs=g.filter(t=>t.row>t.p).sort((a,b)=>b.row-a.row);
         g.filter(t=>t.row===t.p).forEach(t=>{t.xj=null});
@@ -63,21 +64,21 @@ window.fbBuild=function(opts){
     if(dk&&groups.some(g=>g.length)){
       const asm=nlIndAsm(),nice=it=>it.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2');
       const gRate=g=>g.reduce((sum,t)=>sum+Math.max(0,Math.min(per,nUse-t.r*per))*inRate(t.idx),0),gNm=gi=>groups[gi].length&&gRate(groups[gi])>0?(HAND.noDock?'Source: ':'Dock: ')+nice(gitem[gi])+' '+Math.round(gRate(groups[gi]))+'/min':null;   // the name tells the player which cargo to assign
-      asm.boxes.forEach(b=>{const gi=b.y===9&&(b.x===4||b.x===22)?(b.x===4?0:1):-1,it=gi>=0&&groups[gi].length?gitem[gi]:null;
+      if(!nrm)asm.boxes.forEach(b=>{const gi=b.y===9&&(b.x===4||b.x===22)?(b.x===4?0:1):-1,it=gi>=0&&groups[gi].length?gitem[gi]:null;
         const c=HAND.put({cls:'DAT_Container_2',gx,gy,lx:-16-A+b.y,ly:b.x,force:true,name:'dock box',nm:it?gNm(gi):undefined,ct:it?[{item:it,n:0,inf:true}]:[]});if(!c)throw new Error(name+': dock box does not fit');
         if(it)c.ports.forEach(q=>{if(q.f==='W'||q.f==='E')c.used.add(q.key)})
         else c.ports.forEach(q=>c.used.add(q.key))});
-      asm.belts.forEach(kb=>putF(-16-A+kb.y,kb.x,TR[kb.rot],BELT));
-      const tails=new Set();groups.forEach(g=>g.forEach(t=>tails.add(t.p)));tails.forEach(py=>{for(let x=-16-A+13;x<=-1;x++)putF(x,py,0,BELT)});
-      dockBlk.push(...(HAND.noDock?dkTiles(gx*2,gy*2):[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:gy*2,rot:2,nm:[gNm(0),gNm(1)].filter(Boolean).join(' + ')}]),...(HAND.adapt&&!HAND.noDock?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:gy*2,rot:2}]:[]))}
+      if(!nrm)asm.belts.forEach(kb=>putF(-16-A+kb.y,kb.x,TR[kb.rot],BELT));
+      const tails=new Set();groups.forEach(g=>g.forEach(t=>tails.add(t.p)));tails.forEach(py=>{for(let x=nrm?-1-A:-16-A+13;x<=-1;x++)putF(x,py,0,BELT)});
+      dockBlk.push(...(HAND.noDock?dkTiles(gx*2,gy*2):nrm?groups.flatMap((g,gi)=>g.length?[{cls:plcCls('BPO_Dock'),x:gx*2-1-(A?1:0),y:gy*2+gi,rot:2,nm:gNm(gi)}]:[]):[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:gy*2,rot:2,nm:[gNm(0),gNm(1)].filter(Boolean).join(' + ')}]),...(HAND.adapt&&!HAND.noDock?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:gy*2,rot:2}]:[]))}
     xDock.forEach(xd=>{const asm=nlIndAsm(),nice=it=>it.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2'),dy=xd.dy,idxs=[];rc.i.forEach(([it],j)=>{if(it===xd.item)idxs.push(j)});
       const rowsUsed=Math.ceil(nUse/per);let rate=0;for(let r=0;r<rowsUsed;r++){const m=Math.min(per,nUse-r*per);idxs.forEach(j=>rate+=m*inRate(j))}
       const nm=(HAND.noDock?'Source: ':'Dock: ')+nice(xd.item)+' '+Math.round(rate)+'/min',putY=(x,y,rot,c)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+dy*TW+y,rot},true))throw new Error(name+': extra dock cell taken '+x+','+y)};
-      asm.boxes.forEach(b=>{const grp2=b.x===22&&b.y===9,c=HAND.put({cls:'DAT_Container_2',gx,gy:gy+dy,lx:-16-A+b.y,ly:b.x,force:true,name:'dock box',nm:grp2?nm:undefined,ct:grp2?[{item:xd.item,n:0,inf:true}]:[]});if(!c)throw new Error(name+': extra dock box does not fit');
+      if(!nrm)asm.boxes.forEach(b=>{const grp2=b.x===22&&b.y===9,c=HAND.put({cls:'DAT_Container_2',gx,gy:gy+dy,lx:-16-A+b.y,ly:b.x,force:true,name:'dock box',nm:grp2?nm:undefined,ct:grp2?[{item:xd.item,n:0,inf:true}]:[]});if(!c)throw new Error(name+': extra dock box does not fit');
         if(grp2)c.ports.forEach(q=>{if(q.f==='W'||q.f==='E')c.used.add(q.key)});else c.ports.forEach(q=>c.used.add(q.key))});
-      asm.belts.forEach(kb=>putY(-16-A+kb.y,kb.x,TR[kb.rot],BELT));
-      for(let r=0;r<rowsUsed;r++)for(let x=-16-A+13;x<=-1;x++)putY(x,22+2*r,0,BELT);   // one tail per row of the block, 2 rows apart
-      dockBlk.push(...(HAND.noDock?dkTiles(gx*2,(gy+dy)*2):[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:(gy+dy)*2,rot:2,nm}]),...(HAND.adapt&&!HAND.noDock?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:(gy+dy)*2,rot:2}]:[]))});
+      if(!nrm)asm.belts.forEach(kb=>putY(-16-A+kb.y,kb.x,TR[kb.rot],BELT));
+      for(let r=0;r<rowsUsed;r++)for(let x=nrm?-1-A:-16-A+13;x<=-1;x++)putY(x,22+(nrm?1:2)*r,0,BELT);   // one tail per row of the block, 2 rows apart
+      dockBlk.push(...(HAND.noDock?dkTiles(gx*2,(gy+dy)*2):nrm?[{cls:plcCls('BPO_Dock'),x:gx*2-1-(A?1:0),y:(gy+dy)*2+1,rot:2,nm}]:[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:(gy+dy)*2,rot:2,nm}]),...(HAND.adapt&&!HAND.noDock?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:(gy+dy)*2,rot:2}]:[]))});
     if(dk)groups.forEach(g=>g.forEach(t=>{
       if(t.xj==null){rawStart.set(t.r+','+t.idx,0);usedP.set(t.p,0);return}
       for(let x=0;x<t.xj;x++)put1(x,t.p,0,BELT);
@@ -94,7 +95,7 @@ window.fbBuild=function(opts){
         for(let i=0;i<Math.min(nN,kr);i++)mm.used.add(nP[nN-1-i].key);for(let i=0;i<Math.min(nS,Math.max(0,kr-nN));i++)mm.used.add(sP[i].key);
         mm.used.add(side?eP[up?0:eP.length-1].key:sP[iO].key)}
       // lane start: raw lanes start at their jog; other lanes at the west edge (after the container when the row is inside a dock group), hopping under jog columns
-      const startOf=(idx,yl)=>{const rs=rawStart.get(r+','+idx);if(rs!=null)return{x0:rs};let x0=0;if(usedP.has(yl)){x0=usedP.get(yl)+1;entryBlocked++}else if(chain){if(E){const xa=entryCol.get(r+','+idx);{const xi=extraItems.indexOf(inItem(idx));entries.push({x:ox+xa,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,north:true,gx,gy,tailY:xi>=0?oy+(xi===0?-1:1)*TW+22+2*r:null})}for(let x=xa+1;x<E;x++)put1(x,yl,0,BELT);x0=E}else{entries.push({x:ox,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,gx,gy});x0=1}}return{x0}};
+      const startOf=(idx,yl)=>{const rs=rawStart.get(r+','+idx);if(rs!=null)return{x0:rs};let x0=0;if(usedP.has(yl)){x0=usedP.get(yl)+1;entryBlocked++}else if(chain){if(E){const xa=entryCol.get(r+','+idx);{const xi=extraItems.indexOf(inItem(idx));entries.push({x:ox+xa,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,north:true,gx,gy,tailY:xi>=0?oy+(xi===0?-1:1)*TW+22+(nrm?1:2)*r:null})}for(let x=xa+1;x<E;x++)put1(x,yl,0,BELT);x0=E}else{entries.push({x:ox,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,gx,gy});x0=1}}return{x0}};
       const withHop=(hop,yl,x0)=>{const mx=crossX(yl,x0);if(mx>=0)hop.set(x0,mx+1)};
       for(let j=0;j<nN;j++){if(j>=kr)continue;const yl=top+j,hop=new Map(),spx=[],st=startOf(j,yl);
         for(let q=0;q<m;q++){const px=X(q)+cN[nN-1-j];spx.push(px);let far=-1;for(let jj=0;jj<j;jj++)far=Math.max(far,X(q)+cN[nN-1-jj]);
