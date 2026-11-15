@@ -10,6 +10,7 @@ const simLive=()=>smOn()&&SIM.t>0;   // sim exists and has run (not reset): colo
 const bnK=()=>simLive()?simView():linksC(layer);
 const bnU=(K,id)=>{const e=K.load.get(id),u=e?e.util:0;return BM==="B"&&simLive()&&smS().full.has(id)?Math.max(u||0,1.25):u};
 function drawBnCells(s){
+  if(ZW&&typeof BIGF==="function"&&BIGF())return;   // big factory, zooming / panning: the bottleneck colours of every belt come back with the full repaint
   const K=bnK();cx.save();cx.globalAlpha=.6;
   lyBlocks().all.forEach(b=>{if(!isBelt(b)||!inView(b))return;const d=dim(b);cx.fillStyle=bnCol(bnU(K,b.id),BM);cx.fillRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)});
   cx.restore();
