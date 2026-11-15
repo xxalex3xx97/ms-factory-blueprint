@@ -77,3 +77,5 @@ const cfgSig=b=>JSON.stringify([b.rec||"",b.recn||"",(b.off||[]).slice().sort(),
 // site recipe key (inputs>output, see inspector.js rk) <-> game Recipe.Name
 const recName=key=>RECNAMES[String(key).split("#")[0]]||(key?String(key).split("#")[0].split(">").pop().replace(/^ITEM_/,"").toLowerCase():"");
 const recKeyOf=(()=>{let m=null;return name=>{if(!m){m=new Map();Object.keys(RECNAMES).forEach(k=>m.set(RECNAMES[k].toLowerCase(),k))}return m.get(String(name).toLowerCase())}})();
+// dock blocks with item filters (slot count): BPO_Dock (station dock) 2, BPO_Dock_2 (industrial dock) 8; site field b.df = [{item,bLoading}]
+const dkN=c=>({BPO_Dock:2,BPO_Dock_2:8})[(def(c)||{}).name]||0;

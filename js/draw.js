@@ -236,6 +236,13 @@ function drawBlock(b,alpha,isSel){
     cx.restore();
   }
 }
+const fid=k=>FITEMS.find(id=>fkey(id)===String(k||"").toLowerCase());
+function bayBox(b,i,x,y,w,h,bg){
+  const f=((b.df||[])[i]||{}).item;
+  if(bg){cx.fillStyle=f?"rgba(40,110,70,.9)":"rgba(0,0,0,.55)";cx.fillRect(x,y,w,h)}
+  cx.lineWidth=f?2:1;cx.strokeStyle=f?"hsl(140,70%,48%)":"rgba(255,255,255,.8)";cx.strokeRect(x+.5,y+.5,w-1,h-1);
+  if(f){const id=fid(f),im=id&&img(id),z=Math.min(w,h)*.72;if(im&&im.complete&&im.naturalWidth&&z>=10)cx.drawImage(im,x+(w-z)/2,y+(h-z)/2,z,z)}
+  BAYHIT.push({b,i,x,y,w,h})}
 function hatch(x,y,w,h,c){
   cx.save();cx.beginPath();cx.rect(x,y,w,h);cx.clip();
   cx.strokeStyle=c||"rgba(255,255,255,.13)";cx.lineWidth=1;cx.beginPath();
@@ -353,6 +360,9 @@ function drawShapeFloor(A,s){
     const path=pg=>{cx.beginPath();pg.forEach((v,i)=>i?cx.lineTo(v[0],v[1]):cx.moveTo(v[0],v[1]));cx.closePath()};
     wr.forEach(q=>rc(q,ST,1));poly.forEach(pg=>{path(pg);cx.fillStyle=ST;cx.strokeStyle=ST;cx.lineWidth=2;cx.stroke();cx.fill()});
     wr.forEach(q=>rc(q,WF));poly.forEach(pg=>{path(pg);cx.fillStyle=WF;cx.fill()});
+    if(s>=10){
+      if(dock){const pb=pods.filter(p=>p.bay!=null),bm=Math.max(...pb.map(p=>p.bay));pb.forEach(p=>{const x0=X(p.q.x),y0=Y(p.q.y);bayBox(b,bm-p.bay,x0,y0,X(p.q.x+p.q.w)-x0,Y(p.q.y+p.q.h)-y0)})}
+      else if(dkN(b.cls)===2&&sh.props[0]){const pr=sh.props[0];sh.ports.slice().sort((a,c)=>a[2]-c[2]).forEach((pt,i)=>{const q=tr(pr[0],pt[2]-.5,pr[2],pt[2]+.5),x0=X(q.x),y0=Y(q.y);bayBox(b,i,x0,y0,X(q.x+q.w)-x0,Y(q.y+q.h)-y0)})}}
     // ports (display only): green bar on each port's edge (dock: pod floor-facing edge), bay number only on numbered ports
     if(s>=6){const Ln=Math.min(.6*s,18),Tk=Math.min(5,Math.max(3,.2*s)),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
       marks.forEach(p=>{const[ex,ey]=t.f(p.x,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),w=odd?Ln:Tk,h=odd?Tk:Ln;
@@ -360,10 +370,11 @@ function drawShapeFloor(A,s){
       (sh.iports||[]).forEach(([sd,x,y])=>{const[ex,ey]=t.f(x,y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),v=("EW".includes(sd))!==!!odd,w=v?Tk:Ln,h=v?Ln:Tk;   // info ports (elevator): same bar, vertical on E/W sides, display only
         cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
       if(s>=10){cx.font="600 "+Math.min(13,Math.max(9,s*.6))+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillStyle="rgba(255,255,255,.9)";
-        marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(p.bay),tx,ty)})}
+        const bm=Math.max(...marks.map(p=>p.bay||0));marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(dock?bm+1-p.bay:p.bay),tx,ty)})}
       cx.restore()}
   });
 }
+const BAYHIT=[];   // dock bay number labels of the last paint: {b,i (0-based filter slot),x,y screen px}
 function paintFloorBase(s){
   const A=typeof HAR==="function"?HAR(layer):areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;   // HAR: the areas() result cached per block set (it was rebuilt on every paint)
   if(LOWD()){cx.fillStyle="rgba(48,60,76,.95)";A.floors.forEach(r=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s;if(x>W||y>H||x+w<0||y+h<0)return;cx.fillRect(x,y,w,h)});return A}   // zooming / panning a big factory: plain floor rects, the full floor comes back 160 ms after the last frame
@@ -520,6 +531,7 @@ function paint0(){
   if(F&&SM&&SIM&&SIM.sig!==PK){simReset();SIM.sig=PK;smClkUp()}
   cached("base",()=>{
   RCT=null;
+  BAYHIT.length=0;
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8,F?GRIDOFF:0);
   if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*Math.abs(b.h-layer));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}

@@ -216,6 +216,12 @@
   </div>
   <div class="btns"><button id="helpTour" type="button">Replay tutorial</button><button id="helpX" class="pri">Close</button></div>
 </dialog>
+<dialog id="dBay" aria-labelledby="bayT" style="width:min(340px,94vw)">
+  <h3 id="bayT">Bay filter</h3>
+  <input id="bayIn" type="text" placeholder="Search item..." aria-label="Search item" autocomplete="off" role="combobox" aria-controls="bayL">
+  <ul id="bayL" role="listbox"></ul>
+  <div class="btns"><button id="bayX">Cancel</button></div>
+</dialog>
 <dialog id="dExp" aria-labelledby="dExpT">
   <h3 id="dExpT">Export JSON</h3>
   <textarea id="expTa" readonly aria-label="Exported JSON"></textarea>

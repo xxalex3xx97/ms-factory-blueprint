@@ -1,9 +1,11 @@
 function recipesHtml(d,b){
   const rs=recsOf(d);if(!rs.length)return"";
   const nm=id=>(ITEMS[id]||{}).n||String(id).replace(/^ITEM_/,"");
+  const oc=new Map();rs.forEach(q=>oc.set(q.o[0],(oc.get(q.o[0])||0)+1));   // output counts once per call (alternate-recipe star)
   return `<h2>Recipes (${rs.length})</h2><div class="pad"><div class="rgrid">`
     +rs.map(r=>{const tip=r.i.map(x=>x[1]+"x "+nm(x[0])).join(" + ")+" -> "+r.o[1]+"x "+nm(r.o[0])+(r.t==null?"":" | "+secs(r.t)+" s")+" | "+rateTxt(pm(r.o[1],r.t));
-      return `<div class="rtile${b&&b.rec===rk(r)?" sel":""}"${b?` data-rk="${esc(rk(r))}" role="button" tabindex="0"`:""} title="${esc(tip)}">${iurl(r.o[0])?`<img class="ic" alt="" src="${iurl(r.o[0])}">`:""}<span class="rn">${esc(nm(r.o[0]))}</span></div>`}).join("")
+      const en=r.i.some(x=>/^ITEM_Enriched.*Ore$/.test(x[0])),alt=oc.get(r.o[0])>1,st=en||alt?` <span class="star">&#9733;</span>`:"";   // star: uses enriched raw ore, or an alternate recipe for the same output
+      return `<div class="rtile${b&&b.rec===rk(r)?" sel":""}"${b?` data-rk="${esc(rk(r))}" role="button" tabindex="0"`:""} title="${esc(tip+(en?" | enriched ore":"")+(alt?" | alternate recipe":""))}">${iurl(r.o[0])?`<img class="ic" alt="" src="${iurl(r.o[0])}">`:""}<span class="rn">${esc(nm(r.o[0]))}${st}</span></div>`}).join("")
     +`</div>`+(b&&b.rec?`<div class="btns"><button id="bRecClr">Clear recipe</button></div>`:"")
     +`</div>`;
 }
@@ -22,6 +24,16 @@ function sumBody(b,d){
   if(l&&isBelt(b))x+='<div class="kv">load <b>'+l.tot+(l.cap?" / "+l.cap:"")+'</b> /min</div>';
   return x;
 }
+// item filters: splitter / balancer outputs (b.fl, strings like "waterice") and dock slots (b.df {item,bLoading}); empty = no filter
+const fkey=id=>id.slice(5).toLowerCase(),FITEMS=Object.keys(ITEMS).sort((a,b)=>(ITEMS[a].n||a).localeCompare(ITEMS[b].n||b));
+const SPL_LBL=["Right","Front","Left"];
+function filtHtml(b){
+  const dn=dkN(b.cls),sp=!dn&&isM(b)&&cfgKind(b.cls)==="splitter";if(!dn&&!sp)return"";
+  const n=dn||(b.fl?b.fl.length:isBalCls(b.cls)?2:3),cur=i=>dn?((b.df||[])[i]||{}).item||"":(b.fl||[])[i]||"";
+  return sec("filt","Filters",Array.from({length:n},(_,i)=>{const c=cur(i).toLowerCase(),id=FITEMS.find(q=>fkey(q)===c),ic=id&&iurl(id);
+    return `<div class="row"><label for="fl${i}">${dn?i+1:isBalCls(b.cls)?i+1:(SPL_LBL[i]||i+1)}</label><button type="button" id="fl${i}" class="fbtn" data-${dn?"df":"fl"}="${i}">`
+      +(c?(ic?`<img class="ic" alt="" src="${ic}">`:"")+esc(id?ITEMS[id].n||id:c):"(no filter)")+`<span class="caret">&#9662;</span></button></div>`}).join(""));
+}
 function panel(){
   const bs=S.blocks.filter(b=>sel.has(b.id));
   const one=bs.length===1?bs[0]:null;
@@ -39,6 +51,7 @@ function panel(){
     if(one){
       if(rsOk(one.cls)){const rs=one.rs||"",ol=RSL.includes(rs)||!rs?RSL:RSL.concat(rs);h+='<div class="row"><label for="frs">Mines</label><select id="frs" data-rs="1"><option value="">(not set)</option>'+ol.map(v=>'<option value="'+esc(v)+'"'+(v===rs?" selected":"")+'>'+esc((CATALOG.items["ITEM_"+(Object.keys(CATALOG.items).map(k=>k.slice(5)).find(k=>k.toLowerCase()===v)||v)]||{}).n||v)+'</option>').join("")+'</select></div>'}
       if(nmOk(one.cls))h+='<div class="row"><label for="fnm">Name</label><input id="fnm" type="text" data-nm="1" value="'+esc(one.nm||"")+'"></div>';
+      h+=filtHtml(one);
       const et=entText(one);if(et)h+='<div class="sub" title="'+esc(ENT_HINT)+'" id="entInfo"><b>'+et.kind+':</b> '+et.sides.join(", ")+'<br>'+esc(ENT_HINT)+'.</div>';
       if(F){
         if(one.h===layer&&outside(one,A.rects))h+='<div class="warnline">'+esc(WARN)+'</div>';
@@ -129,6 +142,14 @@ $("insp").addEventListener("change",e=>{
 });
 $("insp").addEventListener("click",e=>{
   const id=e.target.id;
+  const fb=e.target.closest&&e.target.closest("button[data-fl],button[data-df]");
+  if(fb&&S.blocks.filter(q=>sel.has(q.id)).length===1){
+    const m=S.blocks.find(q=>sel.has(q.id)),i=+(fb.dataset.fl??fb.dataset.df),dn=dkN(m.cls);
+    const cur=dn?((m.df||[])[i]||{}).item||"":(m.fl||[])[i]||"";
+    const lbl=dn?"Bay "+(i+1):(isBalCls(m.cls)?"Output "+(i+1):(SPL_LBL[i]||"Output "+(i+1)));
+    pickItem((def(m.cls).label||"Filter")+" "+lbl+" filter",cur,key=>{setSlot(m,i,key);all()});
+    return;
+  }
   const cd=e.target.closest&&e.target.closest("[data-ctdel]");
   if((cd||id==="bCtAdd")&&S.blocks.filter(q=>sel.has(q.id)).length===1){
     const m=S.blocks.find(q=>sel.has(q.id)),ct=m.ct||[];
@@ -146,3 +167,31 @@ $("insp").addEventListener("click",e=>{
   else if(id==="bResetCat"){if(confirm("Discard all catalog edits (size, floor, category, verified)?")){push();OV={};saveOV();all()}}
 });
 
+
+// write one filter slot of a dock (b.df) or splitter/balancer (b.fl); key "" clears it
+function setSlot(b,i,key){
+  const dn=dkN(b.cls),old=dn?((b.df||[])[i]||{}).item||"":(b.fl||[])[i]||"";
+  if(String(old).toLowerCase()===String(key).toLowerCase())return;
+  push();
+  if(dn){const a=Array.from({length:dn},(_,j)=>({item:"",bLoading:0,...((b.df||[])[j]||{})}));a[i].item=key;if(a.some(f=>f.item))b.df=a;else delete b.df}
+  else{const n=b.fl?b.fl.length:isBalCls(b.cls)?2:3,a=Array.from({length:n},(_,j)=>(b.fl||[])[j]||"");a[i]=key;if(a.some(Boolean))b.fl=a;else delete b.fl}
+  delete b.cfgKeep;
+}
+// click a dock bay square (canvas) or a filter button (inspector): select2-style item picker, onPick(key) with key "" = no filter
+function pickItem(title,cur,onPick){
+  cur=String(cur||"").toLowerCase();const d=$("dBay"),L=$("bayL"),inp=$("bayIn");$("bayT").textContent=title;
+  const rows=[{id:"",n:"(no filter)"},...FITEMS.map(id=>({id,n:ITEMS[id].n||id}))];
+  let shown=rows,on=0;
+  const render=()=>{L.innerHTML=shown.map((r,k)=>'<li role="option" data-k="'+k+'"'+(k===on?' class="on" aria-selected="true"':'')+'>'+(iurl(r.id)?'<img class="ic" alt="" src="'+iurl(r.id)+'">':'<span class="ic"></span>')+esc(r.n)+'</li>').join("");const e=L.querySelector(".on");if(e)e.scrollIntoView({block:"nearest"})};
+  const find=()=>{const q=inp.value.trim().toLowerCase();shown=[rows[0],...rows.slice(1).filter(r=>!q||r.n.toLowerCase().includes(q))];on=q?Math.min(1,shown.length-1):Math.max(0,shown.findIndex(r=>r.id&&fkey(r.id)===cur));render()};
+  const pick=id=>{d.close();onPick(id?fkey(id):"")};
+  inp.value="";inp.oninput=find;
+  inp.onkeydown=e=>{if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();on=Math.max(0,Math.min(shown.length-1,on+(e.key==="ArrowDown"?1:-1)));render()}else if(e.key==="Enter"){e.preventDefault();if(shown[on])pick(shown[on].id)}};
+  L.onclick=e=>{const li=e.target.closest("li");if(li)pick(shown[+li.dataset.k].id)};
+  $("bayX").onclick=()=>d.close();
+  find();d.showModal();inp.focus();
+}
+// canvas dock square: picker for that bay's slot
+function bayFilter(b,i){
+  pickItem((def(b.cls).label||"Dock")+" bay "+(i+1)+" filter",((b.df||[])[i]||{}).item||"",key=>{setSlot(b,i,key);sel=new Set([b.id]);all()});
+}
