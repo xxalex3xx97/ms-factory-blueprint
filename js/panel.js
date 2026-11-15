@@ -103,7 +103,7 @@ $("insp").addEventListener("change",e=>{
   const t=e.target,bs=S.blocks.filter(b=>sel.has(b.id));
   if(t.dataset.port&&bs.length===1){push();togglePort(bs[0],t.dataset.port);all();return}
   if(t.dataset.rs&&bs.length===1){const v=t.value;if(v===(bs[0].rs||""))return;push();if(v)bs[0].rs=v;else delete bs[0].rs;all();return}
-  if(t.dataset.nm&&bs.length===1){const v=t.value.trim();if(v===(bs[0].nm||""))return;push();if(v)bs[0].nm=v;else delete bs[0].nm;all();return}
+  if(t.dataset.nm&&bs.length===1){const v=t.value.trim();if(v===(bs[0].nm||""))return;push();if(v)bs[0].nm=v;else delete bs[0].nm;delete bs[0].cfgKeep;all();return}
   if(t.dataset.ct&&bs.length===1){
     const m=bs[0],i=+t.dataset.i;push();
     SV++;m.ct=(m.ct||[]).map((x,j)=>j!==i?x:t.dataset.ct==="inf"?{...x,inf:t.checked}:{...x,n:Math.max(0,Math.round(Number(t.value))||0)});all();return}

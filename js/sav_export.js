@@ -22,6 +22,7 @@ function savI32(...vals) {
 function savFstrR(u8, p) {
   const n = savDV(u8).getInt32(p, true); p += 4;
   if (n === 0) return ['', p];
+  if (Math.abs(n) * (n < 0 ? 2 : 1) > u8.length - p) throw new Error('sav: bad string length');
   if (n > 0) {
     let s = '';
     for (let i = 0; i < n - 1; i++) s += String.fromCharCode(u8[p + i]);
@@ -275,7 +276,7 @@ function savExport(j, opts) {
     // FIX-1: machine pos = 8*block + rotated offset; Height = 8*block Height + dh; rot = block rot + dr.
     // Config is the template hex as-is (dock name not re-encoded).
     const br = ((b.GridRotation % 4) + 4) % 4;
-    savFind(e, 'DefaultMachines').val = ['sarr', (SAV_DEFM[short] || (b.Resource && /^BPO_MiningDroneBayBlock(_2)?$/.test(short) ? [{c: '/Game/Blueprints/Machines/' + short.replace('Block', '') + '.' + short.replace('Block', '') + '_C', dx: 0, dy: 0, dh: 0, dr: 0, hex: ''}] : [])).map(m => {
+    savFind(e, 'DefaultMachines').val = ['sarr', (SAV_DEFM[short] || (b.Resource && /^BPO_MiningDroneBayBlock(_2)?$/.test(short) && !(j.DefaultMachines || []).some(m => /^BPO_MiningDroneBay(_2)?$/.test(m.Class) && m.Transform && Math.abs(m.Transform.GridLocation.X - 8 * b.GridLocation.X) <= 24 && Math.abs(m.Transform.GridLocation.Y - 8 * b.GridLocation.Y) <= 24) ? [{c: '/Game/Blueprints/Machines/' + short.replace('Block', '') + '.' + short.replace('Block', '') + '_C', dx: 0, dy: 0, dh: 0, dr: 0, hex: ''}] : [])).map(m => {
       let dx = m.dx, dy = m.dy;
       for (let i = 0; i < br; i++) [dx, dy] = [-dy, dx];
       const X = 8 * b.GridLocation.X + dx, Y = 8 * b.GridLocation.Y + dy, H = 8 * b.Height + m.dh;
@@ -298,6 +299,7 @@ function savExport(j, opts) {
     const e = savEntry(protoMac, path, t.GridLocation.X, t.GridLocation.Y, t.Height, t.GridRotation,
       m.PaletteID || 0, 'MachineID', nextId++);
     let hx = m.ConfigHex || SAV_DEFCFG[s] || '';
+    if (cfgKind(s) === 'dronebay') { const bb = (j.Blocks || []).find(b => b.Resource && /MiningDroneBayBlock/.test(b.Class) && Math.abs(t.GridLocation.X - 8 * b.GridLocation.X) <= 24 && Math.abs(t.GridLocation.Y - 8 * b.GridLocation.Y) <= 24); if (bb) hx = cfgEnc('dronebay', {resource: bb.Resource}); }
     const k = cfgKind(s);
     if (typeof m.Name === 'string' && m.Name && (k === 'dock' || k === 'named')) hx = cfgWithName(s, hx, m.Name);
     savSetVar(e, 'SerializedMachineConfig', savCfgBytes(hx));
@@ -311,9 +313,9 @@ function savExport(j, opts) {
 }
 // ---- Design .sav import (inverse of savExport): GVAS design file -> site JSON (Version 2). Returns null when u8 is not a design file.
 // Machines inside blocks become flat DefaultMachines (as parseSav does for world saves); dock/elevator names and drone bay resource are read from their child configs.
-function savImport(u8) {
-  let o;
-  try { o = savLoad(u8); } catch (e) { return null; }
+function savImport(u8) { try { return savImport0(u8); } catch (e) { return null; } }
+function savImport0(u8) {
+  const o = savLoad(u8);
   const bpp = o.props.find(x => x.name === 'Blueprint');
   if (!bpp || bpp.val[0] !== 'props') return null;
   const bp = bpp.val[1], get = (l, n) => { const r = l.find(x => x.name === n); return r && r.val; };
@@ -344,7 +346,7 @@ function savImport(u8) {
   if (ma && ma[0] === 'sarr') ma[1].forEach(m => machs.push(mach(m)));
   machs.sort((a, b) => a.MachineID - b.MachineID);
   const name = dn && dn[0] === 'raw' && dn[1].length > 9 ? savFstrR(dn[1], 9)[0] : 'Imported';
-  return { Version: 2, DisplayName: name, Blocks: blocks, DefaultMachines: machs };
+  return blocks.length ? { Version: 2, DisplayName: name, Blocks: blocks, DefaultMachines: machs } : null;
 }
 // S4: Download .sav button (browser only). Same name rules as the .json download.
 if(typeof document!=="undefined"&&document.getElementById("expSav")){
