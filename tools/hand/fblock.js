@@ -59,25 +59,25 @@ window.fbBuild=function(opts){
     // industrial dock west of the block (2x2 C: station adapter between block and dock, assembly shifted 16 cells): the 8 lane belts arrive at x=0 on rows 4..7 / 22..25
     const rawStart=new Map(),usedP=new Map();
     const xDock=extraItems.map((it,xi)=>({dy:xi===0?-1:1,item:it}));   // extra docks   // 'r,idx' -> start x of the raw lane; port row -> jog column of the lane on it
-    const TR=[1,0,3,2],A=HAND.adapt?16:0,DKX=HAND.adapt?4:3,putF=(x,y,rot,c,extra)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+y,rot,...extra},true))throw new Error(name+': dock cell taken '+x+','+y)};
+    const TR=[1,0,3,2],A=HAND.adapt?16:0,DKX=HAND.adapt?4:3,dkTiles=(ux,uy)=>[{cls:HAND.CLS,x:ux-4,y:uy,rot:0},{cls:HAND.CLS,x:ux-2,y:uy,rot:0}],putF=(x,y,rot,c,extra)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+y,rot,...extra},true))throw new Error(name+': dock cell taken '+x+','+y)};
     if(dk&&groups.some(g=>g.length)){
       const asm=nlIndAsm(),nice=it=>it.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2');
-      const gRate=g=>g.reduce((sum,t)=>sum+Math.max(0,Math.min(per,nUse-t.r*per))*inRate(t.idx),0),gNm=gi=>groups[gi].length?'Dock: '+nice(gitem[gi])+' '+Math.round(gRate(groups[gi]))+'/min':null;   // the name tells the player which cargo to assign
+      const gRate=g=>g.reduce((sum,t)=>sum+Math.max(0,Math.min(per,nUse-t.r*per))*inRate(t.idx),0),gNm=gi=>groups[gi].length?(HAND.noDock?'Source: ':'Dock: ')+nice(gitem[gi])+' '+Math.round(gRate(groups[gi]))+'/min':null;   // the name tells the player which cargo to assign
       asm.boxes.forEach(b=>{const gi=b.y===9&&(b.x===4||b.x===22)?(b.x===4?0:1):-1,it=gi>=0&&groups[gi].length?gitem[gi]:null;
         const c=HAND.put({cls:'DAT_Container_2',gx,gy,lx:-16-A+b.y,ly:b.x,force:true,name:'dock box',nm:it?gNm(gi):undefined,ct:it?[{item:it,n:0,inf:true}]:[]});if(!c)throw new Error(name+': dock box does not fit');
         if(it)c.ports.forEach(q=>{if(q.f==='W'||q.f==='E')c.used.add(q.key)})
         else c.ports.forEach(q=>c.used.add(q.key))});
       asm.belts.forEach(kb=>putF(-16-A+kb.y,kb.x,TR[kb.rot],BELT));
       const tails=new Set();groups.forEach(g=>g.forEach(t=>tails.add(t.p)));tails.forEach(py=>{for(let x=-16-A+13;x<=-1;x++)putF(x,py,0,BELT)});
-      dockBlk.push({cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:gy*2,rot:2,nm:[gNm(0),gNm(1)].filter(Boolean).join(' + ')},...(HAND.adapt?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:gy*2,rot:2}]:[]))}
+      dockBlk.push(...(HAND.noDock?dkTiles(gx*2,gy*2):[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:gy*2,rot:2,nm:[gNm(0),gNm(1)].filter(Boolean).join(' + ')}]),...(HAND.adapt&&!HAND.noDock?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:gy*2,rot:2}]:[]))}
     xDock.forEach(xd=>{const asm=nlIndAsm(),nice=it=>it.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2'),dy=xd.dy,idxs=[];rc.i.forEach(([it],j)=>{if(it===xd.item)idxs.push(j)});
       const rowsUsed=Math.ceil(nUse/per);let rate=0;for(let r=0;r<rowsUsed;r++){const m=Math.min(per,nUse-r*per);idxs.forEach(j=>rate+=m*inRate(j))}
-      const nm='Dock: '+nice(xd.item)+' '+Math.round(rate)+'/min',putY=(x,y,rot,c)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+dy*TW+y,rot},true))throw new Error(name+': extra dock cell taken '+x+','+y)};
+      const nm=(HAND.noDock?'Source: ':'Dock: ')+nice(xd.item)+' '+Math.round(rate)+'/min',putY=(x,y,rot,c)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+dy*TW+y,rot},true))throw new Error(name+': extra dock cell taken '+x+','+y)};
       asm.boxes.forEach(b=>{const grp2=b.x===22&&b.y===9,c=HAND.put({cls:'DAT_Container_2',gx,gy:gy+dy,lx:-16-A+b.y,ly:b.x,force:true,name:'dock box',nm:grp2?nm:undefined,ct:grp2?[{item:xd.item,n:0,inf:true}]:[]});if(!c)throw new Error(name+': extra dock box does not fit');
         if(grp2)c.ports.forEach(q=>{if(q.f==='W'||q.f==='E')c.used.add(q.key)});else c.ports.forEach(q=>c.used.add(q.key))});
       asm.belts.forEach(kb=>putY(-16-A+kb.y,kb.x,TR[kb.rot],BELT));
       for(let r=0;r<rowsUsed;r++)for(let x=-16-A+13;x<=-1;x++)putY(x,22+2*r,0,BELT);   // one tail per row of the block, 2 rows apart
-      dockBlk.push({cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:(gy+dy)*2,rot:2,nm},...(HAND.adapt?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:(gy+dy)*2,rot:2}]:[]))});
+      dockBlk.push(...(HAND.noDock?dkTiles(gx*2,(gy+dy)*2):[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:(gy+dy)*2,rot:2,nm}]),...(HAND.adapt&&!HAND.noDock?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:(gy+dy)*2,rot:2}]:[]))});
     if(dk)groups.forEach(g=>g.forEach(t=>{
       if(t.xj==null){rawStart.set(t.r+','+t.idx,0);usedP.set(t.p,0);return}
       for(let x=0;x<t.xj;x++)put1(x,t.p,0,BELT);

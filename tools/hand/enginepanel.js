@@ -12,12 +12,12 @@
     $("pvLine").textContent="Building...";$("plnPrevMap").style.opacity=".45";await nx();
     if(typeof chainBuild!=="function")for(const f of ["js/dock_apply.js","tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f);
     if(me!==tok)return;
-    let T;try{T=chainBuild({item:item.replace(/^ITEM_/,""),rate,mk,maxStates:60000,hw:3})}catch(e){$("pvLine").textContent="Build failed";$("plnPrevErr").textContent=e.message;$("plnPrevMap").style.opacity="";return}
+    let T;try{T=chainBuild({item:item.replace(/^ITEM_/,""),rate,mk,docks:$("plnDkI").checked,maxStates:60000,hw:3})}catch(e){$("pvLine").textContent="Build failed";$("plnPrevErr").textContent=e.message;$("plnPrevMap").style.opacity="";return}
     const bad=T.fails.length+HAND.check().bad.length,mach=T.ms.filter(m=>m.rec).length,boxes=T.ms.filter(m=>/Container/.test(m.cls)).length,docks=T.blocks.filter(b=>/Dock/.test(b.cls)).length;
     T.machines=mach;ENG={T};$("plnPrevMap").style.opacity="";
     $("pvLine").textContent=T.machines+" machines · "+T.blocks.length+" blocks · "+(T.machines?(T.belts/T.machines).toFixed(1):"0")+" belts/machine";
     $("pvMach").textContent=T.machines;$("pvBelt").textContent=T.belts;$("pvBox").textContent=boxes;$("pvBlk").textContent=T.blocks.length+" ("+docks+" docks)";
-    $("pvIO").textContent="raw items from industrial docks (one ore each), output into containers";
+    $("pvIO").textContent=($("plnDkI").checked?"raw items from industrial docks (one ore each)":"raw items from source containers you fill")+", output into containers";
     $("plnPrevNote").textContent=$("plnDkO").checked?"Output to a dock is not built yet: the output goes into containers.":"";
     $("plnPrevErr").textContent=bad?bad+" problems, not placeable: "+T.fails.slice(0,2).join("; "):"";
     $("plnPlace").disabled=!!bad;placerFitView();
@@ -44,8 +44,8 @@
     const z=Math.min(w/(x1-x0),h/(y1-y0))*.95;plcV={z,ox:(w-(x1-x0)*z)/2-x0*z,oy:(h-(y1-y0)*z)/2-y0*z};plcDo()};
   $("plnPlace").onclick=placerPlace;
   // settings the chain engine does not have yet are fixed and greyed out
-  const fix=()=>{$("plnBk").value="BPO_Station_03";$("plnDkI").checked=true;$("plnDk").value="ind";$("plnDkO").checked=false;$("plnDkOT").value="";
-    ["plnBk","pvSp","plnBuf","plnLbl","plnDkI","plnDk","plnDkO","plnDkOT"].forEach(i=>{$(i).disabled=true;$(i).title="Not available yet"});
+  const fix=()=>{$("plnBk").value="BPO_Station_03";$("plnDk").value="ind";$("plnDkO").checked=false;$("plnDkOT").value="";
+    ["plnBk","pvSp","plnBuf","plnLbl","plnDk","plnDkO","plnDkOT"].forEach(i=>{$(i).disabled=true;$(i).title="Not available yet"});
     const m=$("pvMk").querySelector('option[value="2"]');if(m){m.disabled=true;m.title="Mk3 is not available yet";if($("pvMk").value==="2")$("pvMk").value="1"}};
-  fix();$("plnPrev").addEventListener("toggle",fix);const run0=placerRun;window.placerRun=function(){fix();return run0.apply(this,arguments)};
+  $("plnDkI").checked=true;fix();$("plnPrev").addEventListener("toggle",fix);const run0=placerRun;window.placerRun=function(){fix();return run0.apply(this,arguments)};
 })();
