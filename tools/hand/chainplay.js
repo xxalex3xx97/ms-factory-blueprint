@@ -12,7 +12,7 @@ window.chainPlay=async function(o){
   const tkey=b=>(b.x/d.w)+','+(b.y/d.h),tkeys=new Set(tiles.map(tkey));
   const fac=new Set();T.ms.forEach(m=>{if(!isBelt(m)){const k=keyOf(m);if(tkeys.has(k))fac.add(k)}});   // tiles that hold machines
   // dock assembly items sit in the berth strides west of their block (no tile there): they belong to the factory tile 1..4 strides east
-  const owner=m=>{if(m.g&&fac.has(m.g))return m.g;const k=keyOf(m);if(fac.has(k))return k;const [bx,by]=k.split(',').map(Number);for(let dx=1;dx<=4;dx++)if(fac.has((bx+dx)+','+by))return (bx+dx)+','+by;return null};
+  const owner=m=>{if(m.g&&fac.has(m.g))return m.g;const k=keyOf(m);if(fac.has(k))return k;const [bx,by]=k.split(',').map(Number);for(let dx=1;dx<=4;dx++)for(const dy of[0,-1,1])if(fac.has((bx+dx)+','+(by+dy)))return (bx+dx)+','+(by+dy);return null};   // extra docks sit one stride row above / below their block
   const groups=new Map();T.ms.forEach(m=>{const g=owner(m);(groups.get(g)||groups.set(g,[]).get(g)).push(m)});
   const saved={noBuild:window.noBuild,push:window.push,cutBelts:window.cutBelts};
   if(!o.check){window.noBuild=()=>false;window.push=()=>{};window.cutBelts=()=>{}}   // o.check: keep the site's own placement checks on (validation run)
@@ -25,7 +25,7 @@ window.chainPlay=async function(o){
     const street=tiles.filter(t=>!fac.has(tkey(t)));
     for(const c of chunks(street,400)){paste(c,[],'street');await sleep(0)}
     redraw();window.__exoLog.push('street floors '+street.length);
-    for(const b of order){const k=tkey(b),mine=groups.get(k)||[],ex=extra.filter(e=>e.y===b.y&&(e.x===b.x-4||e.x===b.x-1)),ms=mine.filter(m=>!isBelt(m));
+    for(const b of order){const k=tkey(b),mine=groups.get(k)||[],ex=extra.filter(e=>Math.abs(e.y-b.y)<=2&&(e.x===b.x-4||e.x===b.x-1)),ms=mine.filter(m=>!isBelt(m));
       paste([b,...ex],ms,'block '+k);window.__exoLog.push('block '+k+': '+ms.length+' machines');
       if(!o.fast){redraw();await sleep(o.stepMs||300)}}
     redraw();

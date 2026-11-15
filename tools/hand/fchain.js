@@ -28,8 +28,9 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     colList.push(cur)});
   let x=0;const specs=[],streetBx=new Set(),westOf={},westOf0={},swMap={};let maxRows=1;
   colList.forEach((col,ci)=>{col.hasRaw=col.items.some(i=>rawOf(i.n));x+=col.hasRaw?4:0;col.gx=x;col.sw=sws[ci]||SW;col.half=(opts.halfs||[])[ci];col.west=ci?colList[ci-1].gx+1+colList[ci-1].sw:null;col.west0=ci?colList[ci-1].gx+2:null;swMap[col.gx+2]={sw:col.sw,half:col.half};x+=2+col.sw;for(let d=2;d<2+col.sw;d++)streetBx.add(col.gx+d);   // block, output block, street 4 strides wide (64 lanes)
-    col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter];maxRows=Math.max(maxRows,r+1);westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
-      specs.push({gx:col.gx,gy:TBS+1+2*r,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),col:dep[it.n.item]})})});
+    let cur=0;col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter],nExtra=rawOf(it.n)?Math.max(0,new Set(it.n.rec.i.map(([q])=>q).filter(isRaw)).size-1):0;westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
+      if(nExtra)cur+=2;const gyRow=cur;cur+=nExtra?4:2;maxRows=Math.max(maxRows,cur/2);   // a block with extra docks keeps the rows above and below for them
+      specs.push({gx:col.gx,gy:TBS+1+gyRow,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),col:dep[it.n.item]})})});
   const lastGx=colList[colList.length-1].gx,W=lastGx+2+colList[colList.length-1].sw,H=TBS+1+2*maxRows+TBS;   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
   const nCols=colList.length,report={recipes:nodes.length,blocks:specs.length,cols:nCols,rows:maxRows,routed:0,failed:0,entries:0,unsupplied:[]};
   const dockZone=new Set();specs.forEach(s=>{if(s.dock)for(let d=1;d<=4;d++)for(let dy=-1;dy<=1;dy++)dockZone.add((s.gx-d)+','+(s.gy+dy))});   // dock + adapter (2 strides) and 3 units of ship space in front (2 strides)
@@ -67,7 +68,10 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
        free.forEach(k=>lanes.get(key)[k].push([a0,b0]));
        L.forEach((e,i)=>pre.set(e,{k:top?free[L.length-1-i]:free[i],top}))})}
     const lim=opts.limit||1e9;let cnt=0;
-    if(!opts.noRoute)for(const e of ents){if(cnt++>=lim)break;const L=src[e.item];if(!L||!L.length){report.unsupplied.push(e.item.replace('ITEM_','')+' > '+e.blk);continue}
+    if(!opts.noRoute)for(const e of ents){if(cnt++>=lim)break;
+      if(e.tailY!=null){const tx=e.gx*TW,wps=[[tx,e.tailY],[e.x,e.tailY],[e.x,e.y]],cl=wps.filter((w,i)=>i===0||w[0]!==wps[i-1][0]||w[1]!==wps[i-1][1]);
+        if(lay(cl,e.gx+','+e.gy))report.routed++;else{report.failed++;HAND.S.fails.push(e.item.replace('ITEM_','')+' > '+e.blk+' no route (dock tail)')}continue}
+      const L=src[e.item];if(!L||!L.length){report.unsupplied.push(e.item.replace('ITEM_','')+' > '+e.blk);continue}
       let ok=0,why='';const order=L.slice().sort((a,b)=>Math.abs(a.x-e.gx)-Math.abs(b.x-e.gx)||b.room-a.room);
       for(const s of order){if(!s.ports.length)continue;const p=s.ports[0],sx=p.x+p.nx,sy=p.y+p.ny;
         const bx1=s.x+2,dock=!!e.north,bx2=dock?e.gx+2:westOf0[e.gx],tgtY=dock?(e.gy-1)*TW:e.y;

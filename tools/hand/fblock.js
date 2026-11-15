@@ -23,7 +23,8 @@ window.fbBuild=function(opts){
         put1(x,y,0,BELT);x++}};
     const s=dim({cls,rot:0}).w,P0=portsOf({cls,x:0,y:0,rot:0,h:0}),cN=P0.filter(p=>p.f==='N').map(p=>p.x).sort((a,b)=>a-b),cE=P0.filter(p=>p.f==='E').map(p=>p.y).sort((a,b)=>a-b),pf=cN.length,kr=rc.i.length,k=Math.max(...RECS[crafter].map(x=>x.i.length));   // block geometry from the class's biggest recipe; this recipe fills the first kr lanes
     const nN=Math.min(k,pf);let nS=k-nN;const side=nS>=pf;if(!side)nS=Math.min(nS,pf-1);
-    const inItem=j=>rc.i[j][0],rawIn=rc.i.map(([it])=>isRaw(it));   // input index: N lane j = input j, S lane j = input nN+j
+    const rawList=[...new Set(rc.i.map(([it])=>it).filter(isRaw))],extraItems=chain&&dk?rawList.slice(1):[];   // an industrial dock carries ONE ore: further raw items get their own dock (rows gy-1, gy+1) and arrive like bus items from the north
+    const inItem=j=>rc.i[j][0],rawIn=rc.i.map(([it])=>isRaw(it)&&!extraItems.includes(it));   // input index: N lane j = input j, S lane j = input nN+j
     const yTop=chain&&dk&&rawIn.some(v=>!v)?2:0,   // dock blocks fed from the north: two empty rows on top so the entry belt can turn after the wall tunnel
     band=side?nN+s+nS+2:nN+s+(nS?1:0)+1,rowsN=side?2:Math.floor((30-yTop)/band),pitch=side?s+1:s,iO=nS&&!side?pf-1:0;
     const yStart=r=>side?(r===0?yTop:30-band):yTop+r*band,nRows=side?2:rowsN;
@@ -56,7 +57,8 @@ window.fbBuild=function(opts){
     const X0=dk?Math.max(1,J+1):1,per=Math.min(perOv||99,Math.floor((28-X0+(side?1:0))/pitch)),cap=nRows*per,nUse=nTot?Math.min(nTot,cap):cap;HAND.block(gx,gy);if(chain)HAND.block(gx+1,gy);   // chain: the output block (gx+1) holds the boxes
     const entries=[],exits=[],inRate=idx=>rc.i[idx][1]*1800/rc.t,prodRate=rc.o[1]*1800/rc.t,selfFeed=rc.i.some(([it])=>it===rc.o[0]);
     // industrial dock west of the block (2x2 C: station adapter between block and dock, assembly shifted 16 cells): the 8 lane belts arrive at x=0 on rows 4..7 / 22..25
-    const rawStart=new Map(),usedP=new Map();   // 'r,idx' -> start x of the raw lane; port row -> jog column of the lane on it
+    const rawStart=new Map(),usedP=new Map();
+    const xDock=extraItems.map((it,xi)=>({dy:xi===0?-1:1,item:it}));   // extra docks   // 'r,idx' -> start x of the raw lane; port row -> jog column of the lane on it
     const TR=[1,0,3,2],A=16,putF=(x,y,rot,c,extra)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+y,rot,...extra},true))throw new Error(name+': dock cell taken '+x+','+y)};
     if(dk&&groups.some(g=>g.length)){
       const asm=nlIndAsm(),nice=it=>it.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2');
@@ -68,6 +70,14 @@ window.fbBuild=function(opts){
       asm.belts.forEach(kb=>putF(-16-A+kb.y,kb.x,TR[kb.rot],BELT));
       const tails=new Set();groups.forEach(g=>g.forEach(t=>tails.add(t.p)));tails.forEach(py=>{for(let x=-16-A+13;x<=-1;x++)putF(x,py,0,BELT)});
       dockBlk.push({cls:plcCls('BPO_Dock_2'),x:gx*2-4,y:gy*2,rot:2,nm:[gNm(0),gNm(1)].filter(Boolean).join(' + ')},{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:gy*2,rot:2})}
+    xDock.forEach(xd=>{const asm=nlIndAsm(),nice=it=>it.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2'),dy=xd.dy,idxs=[];rc.i.forEach(([it],j)=>{if(it===xd.item)idxs.push(j)});
+      const rowsUsed=Math.ceil(nUse/per);let rate=0;for(let r=0;r<rowsUsed;r++){const m=Math.min(per,nUse-r*per);idxs.forEach(j=>rate+=m*inRate(j))}
+      const nm='Dock: '+nice(xd.item)+' '+Math.round(rate)+'/min',putY=(x,y,rot,c)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+dy*TW+y,rot},true))throw new Error(name+': extra dock cell taken '+x+','+y)};
+      asm.boxes.forEach(b=>{const grp2=b.x===22&&b.y===9,c=HAND.put({cls:'DAT_Container_2',gx,gy:gy+dy,lx:-16-A+b.y,ly:b.x,force:true,name:'dock box',nm:grp2?nm:undefined,ct:grp2?[{item:xd.item,n:0,inf:true}]:[]});if(!c)throw new Error(name+': extra dock box does not fit');
+        if(grp2)c.ports.forEach(q=>{if(q.f==='W'||q.f==='E')c.used.add(q.key)});else c.ports.forEach(q=>c.used.add(q.key))});
+      asm.belts.forEach(kb=>putY(-16-A+kb.y,kb.x,TR[kb.rot],BELT));
+      for(let r=0;r<rowsUsed;r++)for(let x=-16-A+13;x<=-1;x++)putY(x,22+2*r,0,BELT);   // one tail per row of the block, 2 rows apart
+      dockBlk.push({cls:plcCls('BPO_Dock_2'),x:gx*2-4,y:(gy+dy)*2,rot:2,nm},{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:(gy+dy)*2,rot:2})});
     if(dk)groups.forEach(g=>g.forEach(t=>{
       if(t.xj==null){rawStart.set(t.r+','+t.idx,0);usedP.set(t.p,0);return}
       for(let x=0;x<t.xj;x++)put1(x,t.p,0,BELT);
@@ -84,7 +94,7 @@ window.fbBuild=function(opts){
         for(let i=0;i<Math.min(nN,kr);i++)mm.used.add(nP[nN-1-i].key);for(let i=0;i<Math.min(nS,Math.max(0,kr-nN));i++)mm.used.add(sP[i].key);
         mm.used.add(side?eP[up?0:eP.length-1].key:sP[iO].key)}
       // lane start: raw lanes start at their jog; other lanes at the west edge (after the container when the row is inside a dock group), hopping under jog columns
-      const startOf=(idx,yl)=>{const rs=rawStart.get(r+','+idx);if(rs!=null)return{x0:rs};let x0=0;if(usedP.has(yl)){x0=usedP.get(yl)+1;entryBlocked++}else if(chain){if(E){const xa=entryCol.get(r+','+idx);entries.push({x:ox+xa,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,north:true,gx,gy});for(let x=xa+1;x<E;x++)put1(x,yl,0,BELT);x0=E}else{entries.push({x:ox,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,gx,gy});x0=1}}return{x0}};
+      const startOf=(idx,yl)=>{const rs=rawStart.get(r+','+idx);if(rs!=null)return{x0:rs};let x0=0;if(usedP.has(yl)){x0=usedP.get(yl)+1;entryBlocked++}else if(chain){if(E){const xa=entryCol.get(r+','+idx);{const xi=extraItems.indexOf(inItem(idx));entries.push({x:ox+xa,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,north:true,gx,gy,tailY:xi>=0?oy+(xi===0?-1:1)*TW+22+2*r:null})}for(let x=xa+1;x<E;x++)put1(x,yl,0,BELT);x0=E}else{entries.push({x:ox,y:oy+yl,item:inItem(idx),dem:m*inRate(idx),blk:name,gx,gy});x0=1}}return{x0}};
       const withHop=(hop,yl,x0)=>{const mx=crossX(yl,x0);if(mx>=0)hop.set(x0,mx+1)};
       for(let j=0;j<nN;j++){if(j>=kr)continue;const yl=top+j,hop=new Map(),spx=[],st=startOf(j,yl);
         for(let q=0;q<m;q++){const px=X(q)+cN[nN-1-j];spx.push(px);let far=-1;for(let jj=0;jj<j;jj++)far=Math.max(far,X(q)+cN[nN-1-jj]);
