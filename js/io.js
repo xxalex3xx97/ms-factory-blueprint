@@ -1,7 +1,10 @@
 // ---- export / import (blocks: GridLocation = cell x CU; machines: GridLocation = floor cells)
 const CU=CATALOG.cell_units||2;
 // block Name (dock, industrial dock, shipyard core only; not Shipyard Side): optional string, written only when set
-const NMC=["BPO_Dock","BPO_Dock_2","BPO_ShipyardCore","BPO_ShipyardCore_02"],nmOk=c=>{const d=def(c);return!!d&&NMC.includes(d.name)},expNm=(b,e)=>{if(b.nm&&nmOk(b.cls))e.Name=b.nm;return e};
+const NMC=["BPO_Dock","BPO_Dock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ElevatorBlock_03"],nmOk=c=>{const d=def(c);return!!d&&(NMC.includes(d.name)||d.id==="DAT_Teleporter")},
+  DBC=["BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2"],rsOk=c=>{const d=def(c);return!!d&&DBC.includes(d.name)},   // drone bay block: b.rs = resource its drones mine (lowercase item name, e.g. "silica"), JSON Blocks[].Resource
+  RSL=["cobaltore","iridiumore","nickelore","titaniumore","silica","waterice"],
+  expNm=(b,e)=>{if(b.nm&&nmOk(b.cls))e.Name=b.nm;if(b.rs&&rsOk(b.cls))e.Resource=b.rs;return e};
 const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.length)e.Ports=ps.map(p=>({Face:p.f,Index:p.i,Enabled:p.en})).concat(xp);return e};   // extra non-game field, only when non-default
 // game splitter config bytes = [front, right, left] at rot 0, as local faces (port identity is fixed in the machine, so rotation needs no mapping). The back/input face (W at rot 0) is never a game byte.
 const SPL_FACES=["S","E","N"];
@@ -23,6 +26,7 @@ function expCfg(b,d,e,ugn){
 function cfgModel(b,d,e,ugn){
   const k=cfgKind(d.id);if(!k)return;
   if(k==="underground"){const n=ugn.get(b.id);if(n){e.Length=n;e.ConfigHex=cfgEnc(k,{length:n})}return}
+  if(k==="named"){if(b.nm)e.ConfigHex=cfgEnc(k,{name:b.nm});return}
   const ps=portsOf(b),en=ps.map(p=>p.en),off=!!(b.off&&b.off.length);
   if(k==="recipe"){
     if(!b.rec&&!b.recn&&!off)return;
@@ -94,7 +98,7 @@ function parseSav(buf){
     const C=A.cls,pth=i=>i>=0&&i<C.length?C[i]:null;
     const blocks=[],machs=A.machs.slice();
     for(const{b,ms}of A.blocks){machs.push(...ms);const p=pth(b.cls);if(p){const e={Class:p,GridLocation:{X:b.X,Y:b.Y},Height:b.H,GridRotation:b.R,BlockID:b.ID,PaletteID:b.PAL};   // dock name: string in the built-in dock child machine's ConfigHex (kept as an opaque machine too)
-      if(NMC.includes(p.split("/").pop().split(".")[0]))for(const m of ms){const q=pth(m.cls),c=q&&q.split("/").pop().split(".")[0];if(c&&/(StationBlockDock|IndustrialDock|ShipyardBlockDock)/.test(c)&&m.hx){const d=cfgDec(c,m.hx);if(d&&d.name)e.Name=d.name}}
+      {const bn=p.split("/").pop().split(".")[0];if(NMC.includes(bn)||DBC.includes(bn))for(const m of ms){const q=pth(m.cls),c=q&&q.split("/").pop().split(".")[0];if(c&&/(StationBlockDock|IndustrialDock|ShipyardBlockDock|Elevator|MiningDroneBay)/.test(c)&&!/ItemElevator/.test(c)&&m.hx){const d=cfgDec(c,m.hx);if(d&&d.name)e.Name=d.name;if(d&&d.resource)e.Resource=d.resource}}}
       blocks.push(e)}}
     const dm=[],dup=ugDupes(machs,UG);
     for(const m of machs){const p=pth(m.cls);if(p){const c=p.split("/").pop().split(".")[0],e={Class:c,Transform:{GridLocation:{X:m.X,Y:m.Y},Height:m.H,GridRotation:m.R},MachineID:m.MID,PaletteID:m.PAL,...(m.hx?cfgView(c,m.hx):{})};
@@ -151,6 +155,7 @@ function parseSav(buf){
 function impCfg(b,d,m){SV++;
   const k=cfgKind(d.id),dc=k&&cfgDec(d.id,m.ConfigHex);
   if(k==="underground"){const l=n0(m.Length)||(dc?dc.length:0);if(l>1)b.ugl=l;return}   // Length field (world record) first, ConfigHex as fallback
+  if(k==="named"){if(dc&&dc.name)b.nm=dc.name;return}
   if(!dc)return;
   const off=[],ps=portsOf(b),gm=gamePortMap(b);
   if(isSplitterCls(d.id))(dc.ports||[]).forEach((e,g)=>{const q=ps.find(q=>q.f===SPL_FACES[g]);if(e===false&&q&&q.tg)off.push(q.key)});
@@ -190,7 +195,7 @@ function importJson0(txt,quiet){
     const x=cell(gx,4,ox),y=cell(gy,4,oy),nb={id:uid++,cls,x,y,h:Math.round(n(b.Height)/BZ),rot:r,pid:n(b.PaletteID)};
     if(4*x+ox!==Number(gx)||4*y+oy!==Number(gy))nb.raw={x,y,r,X:Number(gx),Y:Number(gy)};   // block never moves on round trip; non-fitting game coords kept via raw
     return nb});
-  S.blocks.forEach((b,i)=>{impPorts(b,o.Blocks[i].Ports);const nm=o.Blocks[i].Name;if(typeof nm==="string"&&nm&&nmOk(b.cls))b.nm=nm});
+  S.blocks.forEach((b,i)=>{impPorts(b,o.Blocks[i].Ports);const nm=o.Blocks[i].Name,rs=o.Blocks[i].Resource;if(typeof nm==="string"&&nm&&nmOk(b.cls))b.nm=nm;if(typeof rs==="string"&&rs&&rsOk(b.cls))b.rs=rs});
   const cd=o.FactoryLayout&&o.FactoryLayout.ClosedDoorways,lg=[];S.closed=[];
   if(Array.isArray(cd))cd.forEach(d=>{if(d&&d.Seg!=null&&"ESWN".includes(d.Edge))S.closed.push(`${n(d.Height)}|${n(d.X)}|${n(d.Y)}|${d.Edge}|${n(d.Seg)}`);else if(d)lg.push(d)});
   // old format (V/H strip, or an edge without Seg): closes every door on that edge
@@ -210,7 +215,7 @@ function importJson0(txt,quiet){
   // a game underground is ONE machine at the entrance with Length: rebuild the exit tile (same rotation/line) unless a UG is already there or the cell is taken. No Length / no partner = single tile (no partner invented).
   S.blocks.filter(b=>b.ugl).forEach(b=>{
     const ex=b.x+DIR[b.rot][0]*(b.ugl-1),ey=b.y+DIR[b.rot][1]*(b.ugl-1);delete b.ugl;
-    if(!S.blocks.some(q=>q.h===b.h&&isM(q)&&q.x===ex&&q.y===ey))S.blocks.push({id:uid++,cls:b.cls,x:ex,y:ey,h:b.h,rot:b.rot,pid:b.pid,mid:0});
+    if(!S.blocks.some(q=>q.h===b.h&&isM(q)&&q.x===ex&&q.y===ey)){const x={id:uid++,cls:b.cls,x:ex,y:ey,h:b.h,rot:b.rot,pid:b.pid,mid:0,pu:b.id};b.pu=x.id;S.blocks.push(x)}
   });
   sel=new Set();$("name").value=S.name;all();if(quiet)return true;fit();
   const unk=S.blocks.filter(b=>!BASE[b.cls]).length;

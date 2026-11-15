@@ -162,13 +162,14 @@ const savShort = c => String(c).split('/').pop().split('.')[0];
 const savKey = (s, x, y, h) => s + '|' + x + '|' + y + '|' + h;
 // Config hex for an in-block default machine. A matching flat machine (fm) wins; else the template hex
 // with its name and filters reset (dock) or the empty named form (elevator/teleporter).
-function savInCfg(s, tpl, fm, blockName) {
+function savInCfg(s, tpl, fm, blockName, res) {
   const k = cfgKind(s); let hex = fm && fm.ConfigHex ? fm.ConfigHex : tpl;
   if (!(fm && fm.ConfigHex)) {
     if (k === 'dock') { const d = cfgDec(s, tpl); hex = d ? cfgEnc('dock', {name: '', filters: d.filters.map(() => ({item: '', bLoading: 0}))}) : tpl; }
     else if (k === 'named') hex = cfgEnc('named', {name: ''});
   }
-  const nm = (k === 'dock' && blockName) || (fm && fm.Name) || '';
+  if (k === 'dronebay' && res) return cfgEnc('dronebay', {resource: res});
+  const nm = ((k === 'dock' || k === 'named') && blockName) || (fm && fm.Name) || '';
   return nm && (k === 'dock' || k === 'named') ? cfgWithName(s, hex, nm) : hex;
 }
 
@@ -274,14 +275,14 @@ function savExport(j, opts) {
     // FIX-1: machine pos = 8*block + rotated offset; Height = 8*block Height + dh; rot = block rot + dr.
     // Config is the template hex as-is (dock name not re-encoded).
     const br = ((b.GridRotation % 4) + 4) % 4;
-    savFind(e, 'DefaultMachines').val = ['sarr', (SAV_DEFM[short] || []).map(m => {
+    savFind(e, 'DefaultMachines').val = ['sarr', (SAV_DEFM[short] || (b.Resource && /^BPO_MiningDroneBayBlock(_2)?$/.test(short) ? [{c: '/Game/Blueprints/Machines/' + short.replace('Block', '') + '.' + short.replace('Block', '') + '_C', dx: 0, dy: 0, dh: 0, dr: 0, hex: ''}] : [])).map(m => {
       let dx = m.dx, dy = m.dy;
       for (let i = 0; i < br; i++) [dx, dy] = [-dy, dx];
       const X = 8 * b.GridLocation.X + dx, Y = 8 * b.GridLocation.Y + dy, H = 8 * b.Height + m.dh;
       const s = savShort(m.c), fm = flat.get(savKey(s, X, Y, H));
       if (fm) used.add(savKey(s, X, Y, H));
       const q = savEntry(protoMac, m.c, X, Y, H, (m.dr + br) & 3, 0, 'MachineID', nextId++);
-      savSetVar(q, 'SerializedMachineConfig', savCfgBytes(savInCfg(s, m.hex, fm, b.Name)));
+      savSetVar(q, 'SerializedMachineConfig', savCfgBytes(savInCfg(s, m.hex, fm, b.Name, b.Resource)));
       return q;
     })];
     (isConn ? conns : blocks).push(e);

@@ -17,8 +17,8 @@ import config_codec
 SIG = bytes.fromhex('02000000' '12000000' 'ff' '01000000')   # BuildBlueprint struct head, then FString DisplayName
 STATION = '/Game/Blueprints/Stations/BP_StationObject.BP_StationObject_C'
 DIRV = [(1, 0), (0, 1), (-1, 0), (0, -1)]   # rot 0..3 = east, south, west, north (raw units, 2 per cell; = js/core.js DIR)
-DOCK_BLOCKS = ('BPO_Dock', 'BPO_Dock_2', 'BPO_ShipyardCore', 'BPO_ShipyardCore_02')   # blocks that carry a Name (js/io.js NMC; not Shipyard Side)
-DOCK_CHILD = re.compile(r'(StationBlockDock|IndustrialDock|ShipyardBlockDock)')   # built-in dock child machine (ConfigHex = dock layout)
+DOCK_BLOCKS = ('BPO_Dock', 'BPO_Dock_2', 'BPO_ShipyardCore', 'BPO_ShipyardCore_02', 'BPO_ElevatorBlock_03', 'BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2')   # blocks that carry a Name (js/io.js NMC; not Shipyard Side)
+DOCK_CHILD = re.compile(r'(StationBlockDock|IndustrialDock|ShipyardBlockDock|Elevator|MiningDroneBay)')   # built-in dock child machine (ConfigHex = dock layout)
 
 def load(path):
     d = open(path, 'rb').read()
@@ -183,9 +183,10 @@ def site_json(A, ug=None):
             if p.rsplit('/', 1)[-1].split('.')[0] in DOCK_BLOCKS:   # dock name: string in the built-in child machine's ConfigHex
                 for m2 in ms:
                     cp = path(m2['cls'])
-                    if cp and DOCK_CHILD.search(cp) and m2['extra']:
+                    if cp and DOCK_CHILD.search(cp) and 'ItemElevator' not in cp and m2['extra']:
                         d2 = config_codec.decode(cp.rsplit('/', 1)[-1].split('.')[0], m2['extra'])
                         if d2 and d2.get('name'): e['Name'] = d2['name']
+                        if d2 and d2.get('resource'): e['Resource'] = d2['resource']
             blocks.append(e)
         else: skipped += 1
     dup = ug_exit_dupes(machs, ug)

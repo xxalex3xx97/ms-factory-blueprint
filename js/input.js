@@ -37,7 +37,7 @@ cv.addEventListener("pointerdown",e=>{
     if(view==="F"&&ugTool(def(active))){
       if(ugPend){   // 2nd click: exit only when the line is valid, else nothing
         const g=ugDrag(ugPend),en=S.blocks.find(b=>b.id===ugPend.id);
-        if(ugOk(g)){const x={id:uid++,cls:active,x:g.b.x,y:g.b.y,h:layer,rot:g.rot,pid:0};en.rot=g.rot;S.blocks.push(x);sel=new Set();placeRot=g.rot;ugPend=null;all()}
+        if(ugOk(g)){const x={id:uid++,cls:active,x:g.b.x,y:g.b.y,h:layer,rot:g.rot,pid:0,pu:en.id};en.rot=g.rot;en.pu=x.id;S.blocks.push(x);sel=new Set();placeRot=g.rot;ugPend=null;all()}
         return;
       }
       const b={id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:placeRot,pid:0};
@@ -200,7 +200,7 @@ function paste(){
 }
 function pasteAt(){
   if(pasting&&pasting.pl)return placerPaste();
-  const nb=clipT(pasting.rot,pasting.fl).map(b=>({...b,id:uid++,mid:0,x:b.x+hover.x,y:b.y+hover.y,h:b.h+layer}));
+  const nb=ugRelink(clipT(pasting.rot,pasting.fl).map(b=>({...b,oid:b.id,id:uid++,mid:0,x:b.x+hover.x,y:b.y+hover.y,h:b.h+layer})));
   if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}
   const ug=ms=>new Map(ugPairs(ms).flatMap(({u,t})=>[[u.id,t.id],[t.id,u.id]])),old=S.blocks.filter(isM),was=ug(old),now=ug(old.concat(nb.filter(isM)));   // pasted undergrounds must not re-pair existing ones
   if([...was].some(([a,b])=>now.get(a)!==b)){toast("Underground would change an existing pair: move it so it does not sit inside or next to another underground on that line");return}
