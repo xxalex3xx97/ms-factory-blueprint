@@ -88,6 +88,7 @@
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
       <label>Rate (items/min) <input id="plnRate" type="number" min="0.001" step="any" value="1" aria-label="Target rate in items per minute"></label>
       <button id="plnBuild" type="button" title="Preview and place machines, belts and source containers for this plan">Build factory</button>
+      <button id="plnBuildAll" type="button" title="Plan and place the whole factory: every recipe as blocks, industrial docks, belts between them">Build whole factory</button>
       <button id="galOpen" type="button" title="Template gallery: one preview per craftable recipe">Templates</button>
       </div>
       <div id="plnMain">
@@ -268,6 +269,7 @@
 <script src="js/cmp_route.js"></script>
 <script src="js/compose.js"></script>
 <script src="js/cmp_groups.js"></script>
+<script src="tools/hand/enginepanel.js"></script>
 <script defer src="js/worker_src.js"></script>
 <script defer src="js/placer.js"></script>
 <script defer src="js/gallery.js"></script>
@@ -308,7 +310,6 @@
   <div class="btns"><button id="plnPlace" type="button">Place</button><button id="plnCancel" type="button">Cancel</button></div>
 </dialog>
 <script>/* ?exo=1: build the hand-designed Exosuit factory (tools/hand) live, block by block */
-if(/[?&]engine=1/.test(location.search))addEventListener("load",()=>{const e=document.createElement("script");e.src="tools/hand/enginepanel.js";document.head.appendChild(e)});   /* ?engine=1: item + rate panel that builds any factory */
 if(/[?&]exo=chain/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{await l("tools/hand/chainplay.js");chainPlay({url:"tools/hand/chain_plan.json",stepMs:500})}catch(e){console.error("exo",e)}});   /* ?exo=chain: replay the planned Advanced Plates chain step by step */
 if(/[?&]exo=dock/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","fblock","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:500,build:()=>fbBuild({mk:1,dock:true})})}catch(e){console.error("exo",e)}});   /* ?exo=dock: one dock-ready block per recipe with a raw input */
 if(/[?&]exo=blocks/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","fblock","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:1500,build:fbBuild})}catch(e){console.error("exo",e)}});   /* ?exo=blocks: one full factory block per machine class */

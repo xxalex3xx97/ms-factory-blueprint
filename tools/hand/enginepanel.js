@@ -1,19 +1,21 @@
-// Engine panel (?engine=1): pick an item + rate, Build = chainBuild (plan, checked) then chainPlay (places it on the site).
-(async function(){
-  const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});
-  for(const f of ["js/dock_apply.js","tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f).catch(()=>{});
-  const items=[...plnBy(false,true).keys()].map(k=>k.replace(/^ITEM_/,'')).sort();
-  const p=document.createElement("div");p.style.cssText="position:fixed;right:12px;bottom:12px;z-index:99;background:#1b2230;color:#dfe6f2;border:1px solid #3a475c;border-radius:8px;padding:10px;font:13px system-ui,sans-serif;display:grid;gap:6px;width:230px";
-  p.innerHTML='<b>Build a factory</b><select id="enI">'+items.map(i=>"<option>"+i+"</option>").join("")+'</select><label>per minute <input id="enR" type="number" min="0.1" step="0.5" value="5" style="width:70px"></label><button id="enB">Build</button><div id="enS" style="min-height:2.6em;color:#9fb0c8"></div>';
-  document.body.appendChild(p);
-  const st=t=>document.getElementById("enS").textContent=t,nx=()=>new Promise(r=>setTimeout(r,30));
-  document.getElementById("enB").onclick=async()=>{
-    const item=document.getElementById("enI").value,rate=+document.getElementById("enR").value||5;
-    st("planning...");await nx();
-    let T;try{T=chainBuild({item,rate,maxStates:60000,hw:3})}catch(e){st("failed: "+e.message);return}
-    const ck=HAND.check(),bad=T.fails.length+ck.bad.length;
-    if(bad){st(bad+" problems ("+T.fails.slice(0,2).join("; ")+"), not placed");return}
-    st(T.blocks.length+" blocks, "+T.machines+" machines, "+T.belts+" belts: placing...");await nx();
-    try{await chainPlay({plan:{blocks:T.blocks,ms:T.ms},fast:true});st("done: "+T.machines+" machines, "+T.belts+" belts")}catch(e){st("place failed: "+e.message)}
+// "Build whole factory" button of the Planner: chainBuild (plan + checks) then chainPlay (places it). Scripts load on the first click.
+(function(){
+  const b=document.getElementById("plnBuildAll");if(!b)return;
+  const l=s=>new Promise(r=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=r;document.head.appendChild(e)}),nx=()=>new Promise(r=>setTimeout(r,30)),t0=b.textContent;
+  b.onclick=async()=>{
+    const item=document.getElementById("plnItem").value,rate=+document.getElementById("plnRate").value;
+    if(!item||!(rate>0)){toast("Pick an item and a rate first");return}
+    b.disabled=true;
+    try{
+      b.textContent="Loading...";await nx();
+      if(typeof chainBuild!=="function")for(const f of ["js/dock_apply.js","tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f);
+      b.textContent="Planning...";await nx();
+      const T=chainBuild({item:item.replace(/^ITEM_/,""),rate,maxStates:60000,hw:3}),bad=T.fails.length+HAND.check().bad.length;
+      if(bad){toast(bad+" problems, nothing placed: "+T.fails.slice(0,2).join("; "));return}
+      b.textContent="Placing...";await nx();
+      await chainPlay({plan:{blocks:T.blocks,ms:T.ms},fast:true});
+      toast("Factory placed: "+T.machines+" machines, "+T.belts+" belts");
+    }catch(e){toast("Build failed: "+e.message)}
+    finally{b.disabled=false;b.textContent=t0}
   };
 })();
