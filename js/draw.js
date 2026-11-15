@@ -10,7 +10,7 @@ const simLive=()=>smOn()&&SIM.t>0;   // sim exists and has run (not reset): colo
 const bnK=()=>simLive()?simView():linksC(layer);
 const bnU=(K,id)=>{const e=K.load.get(id),u=e?e.util:0;return BM==="B"&&simLive()&&smS().full.has(id)?Math.max(u||0,1.25):u};
 function drawBnCells(s){
-  if(ZW&&typeof BIGF==="function"&&BIGF())return;   // big factory, zooming / panning: the bottleneck colours of every belt come back with the full repaint
+  if(typeof LOWD==="function"&&LOWD())return;   // big factory, low-detail mode: the bottleneck colours of every belt are not drawn
   const K=bnK();cx.save();cx.globalAlpha=.6;
   lyBlocks().all.forEach(b=>{if(!isBelt(b)||!inView(b))return;const d=dim(b);cx.fillStyle=bnCol(bnU(K,b.id),BM);cx.fillRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)});
   cx.restore();
@@ -164,7 +164,7 @@ let modeKey="";
 function syncMode(){const m=pasting?"paste":mode||"";if(m===modeKey)return;modeKey=m;document.body.dataset.mode=m;let el=$("modeb");if(!el){el=document.createElement("div");el.id="modeb";document.body.appendChild(el)}el.textContent=MODE_TXT[m]||""}
 let raf=0;
 // zoom with the wheel: the last full paint (a copy) is drawn scaled on each wheel frame; a full paint follows when the wheel pauses. Any other draw drops the copy.
-const BIGF=()=>S.blocks.length>20000,WHEEL_BLIT=false;   // BIGF: a big factory draws zoom/pan frames with less detail (real paints, no scaled copy: that ghosted)   // scaled blit of the last paint on wheel frames: OFF (ghosting); every wheel frame is a full paint
+const BIGF=()=>S.blocks.length>20000,LOWD=()=>BIGF()&&(ZW||V.z<.2),WHEEL_BLIT=false;   // LOWD: big factory while zooming / panning, and always below 20% zoom: belts, links, bottleness colours and floor detail are not drawn   // BIGF: a big factory draws zoom/pan frames with less detail (real paints, no scaled copy: that ghosted)   // scaled blit of the last paint on wheel frames: OFF (ghosting); every wheel frame is a full paint
 let ZS=null,ZW=false,ZT=0,ZC=null,OVC=null;
 const zsKey=()=>view+"|"+layer+"|"+W+"|"+H+"|"+dpr;
 const draw=(zw,quiet)=>{if(!zw)ZS=null;ZW=!!zw;syncMode();DIRTY=true;if(!zw&&!quiet)asv();/* wheel frames and the idle repaint skip the autosave timer (its save of a big factory is slow): the next edit saves the view too */if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()});if(zw&&BIGF()){clearTimeout(ZT);ZT=setTimeout(()=>draw(0,1),160)}   /* detail comes back 160 ms after the last zoom/pan frame */};
@@ -357,7 +357,7 @@ function drawShapeFloor(A,s){
 }
 function paintFloorBase(s){
   const A=typeof HAR==="function"?HAR(layer):areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;   // HAR: the areas() result cached per block set (it was rebuilt on every paint)
-  if(ZW&&BIGF()){cx.fillStyle="rgba(48,60,76,.95)";A.floors.forEach(r=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s;if(x>W||y>H||x+w<0||y+h<0)return;cx.fillRect(x,y,w,h)});return A}   // zooming / panning a big factory: plain floor rects, the full floor comes back 160 ms after the last frame
+  if(LOWD()){cx.fillStyle="rgba(48,60,76,.95)";A.floors.forEach(r=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s;if(x>W||y>H||x+w<0||y+h<0)return;cx.fillRect(x,y,w,h)});return A}   // zooming / panning a big factory: plain floor rects, the full floor comes back 160 ms after the last frame
   // gap strips: only between two facing floor blocks; strip = the distance between their SHELLS, long axis = overlap of their shells
   const SH=A.floors.map(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;return{r,x:r.x-Q,y:r.y-Q,w:r.w+2*Q,h:r.h+2*Q}});
   const own2=new Map();SH.forEach(e=>{const d=fcell(e.r.b);for(let i=0;i<d.cw;i++)for(let j=0;j<d.ch;j++)own2.set((d.cx+i)+","+(d.cy+j),e)});
@@ -420,7 +420,7 @@ function ugLine(a,b,s,over,pv){
   cx.restore();
 }
 function drawUG(s){
-  if(s<ARROW_MIN_S||(ZW&&BIGF()))return;   // zoomed out: same threshold as the belt arrows
+  if(s<ARROW_MIN_S||LOWD())return;   // zoomed out: same threshold as the belt arrows
   const c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s];
   ugPairs(CUR.filter(isM)).forEach(({u,t,n,max})=>{const a=c(u),b=c(t);if(!vis(Math.min(a[0],b[0])-s,Math.min(a[1],b[1])-s,Math.abs(a[0]-b[0])+2*s,Math.abs(a[1]-b[1])+2*s))return;ugLine(a,b,s,n>max)});
 }
@@ -465,7 +465,7 @@ function drawBlocks(list,alpha,useSel){
   const outC=b=>{let v=OUTC.m.get(b.id);if(v===undefined){v=outside(b,RCT);OUTC.m.set(b.id,v)}return v};
   list.forEach(b=>{
     const bf=beltFlat&&isBelt(b);
-    if(bf&&(s<2||ZW))return;   // belts are skipped while zooming / panning a big factory (and below 2px per cell)
+    if(bf&&(s<2||LOWD()))return;   // belts are skipped in the low-detail mode of a big factory (and below 2px per cell)
     const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s;
     if(x>W||y>H||x+w<0||y+h<0)return;
     if((!flat&&!bf)||(useSel&&sel.has(b.id)&&b.h===layer)||(isM(b)&&RCT&&b.h===layer&&outC(b))){full.push(b);return}
