@@ -5,7 +5,7 @@
 // PLANNED ROUTES: a belt may only use the street tracks (pairs of adjacent cell lines of every street row and street column), the output blocks and the entry stubs, so the search is a thin graph, not open floor.
 //   Entry of a block without dock: stub row from the street column to (0,lane row). Entry of a dock block: stub column from the north street down to its approach column inside the block.
 window.chainBuild=function(opts){
-  opts=opts||{};
+  opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.adapt=opts.adapter!=null?opts.adapter:opts.tile!=='BPO_Station_02';   // 2x2 B: docks join the block directly; the open-sided 2x2 C needs a Station Adapter
   // pass 1 measures the lanes every street column and the trunk bands really need (wide streets), pass 2 builds with exactly that much street: a much smaller factory, far fewer pieces
   if(!opts.sws&&!opts.noAdapt){let m=opts.margin||2,r1=chainBuild({...opts,sw:opts.sw0||16,tbs:opts.tbs||8,noAdapt:true,dry:true}),r2=null;
     for(let t=0;t<3;t++){const meas=r1.report.meas,sws=meas.map(c=>Math.max(2,Math.ceil((c.ns+c.nc+2*m)/14))),halfs=meas.map(c=>c.ns+m),tbs=Math.max(3,Math.ceil((r1.report.trunk+m)/14)+0);
