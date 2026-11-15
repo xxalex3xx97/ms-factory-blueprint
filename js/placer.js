@@ -757,9 +757,10 @@ function placerPaste(){
   const hit=bs.some(b=>{const d=dim(b);return S.blocks.some(o=>{if(isM(o)||!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})});
   if(hit){toast("Block overlaps another block");return}
   const ms=P.ms.map(m=>({...m,id:uid++,mid:0,pid:0,x:hover.x*FC+m.x,y:hover.y*FC+m.y,h:layer}));
-  const n0=S.blocks.length;S.blocks.push(...bs);const bad=noBuild(ms.map(mItem));S.blocks.length=n0;
+  const pushAll=(a,l)=>{for(let i=0;i<l.length;i+=20000)a.push(...l.slice(i,i+20000))};   // a spread of 100k+ items overflows the call stack
+  const n0=S.blocks.length;pushAll(S.blocks,bs);const bad=noBuild(ms.map(mItem));S.blocks.length=n0;
   if(bad){toast(NOBUILD);return}
-  push();S.blocks.push(...bs);cutBelts(ms.filter(isBelt));S.blocks.push(...ms);plcPlan=P.plan||null;sel=new Set();pasting=null;all();
+  push();pushAll(S.blocks,bs);cutBelts(ms.filter(isBelt));pushAll(S.blocks,ms);plcPlan=P.plan||null;sel=new Set();pasting=null;all();
 }
 let plcL=null;
 let plcPlan=null;
