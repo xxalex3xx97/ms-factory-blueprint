@@ -3887,6 +3887,8 @@ async function s42(br) {
     {Class: 'DAT_UndergroundBelt', Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}, Length: 10, MachineID: 1, PaletteID: 0},
     {Class: 'DAT_UndergroundBelt', Transform: {GridLocation: {X: 3, Y: 0}, Height: 0, GridRotation: 0}, Length: 4, MachineID: 2, PaletteID: 0}]})); return __fb.ugPairs(S.blocks.filter(isM)).map(p => p.n).sort((a, b) => a - b); });
   chk('42 imported nested game undergrounds (Length 10 and 4) keep both lengths', JSON.stringify(imported) === JSON.stringify([4, 10]), JSON.stringify(imported));
+  const rt0 = await pg.evaluate(() => { const u = (id, x, pu) => ({id, cls: 'DAT_UndergroundBelt', x, y: 5, h: 0, rot: 0, pid: 0, pu}); S.blocks = [u(901, 0, 903), u(902, 3, 904), u(903, 9, 901), u(904, 6, 902)]; __fb.importJson(JSON.stringify(__fb.build())); return __fb.ugPairs(S.blocks.filter(isM)).map(p => p.n).sort((a, b) => a - b); });
+  chk('42 nested undergrounds survive export -> import (refresh / autosave)', JSON.stringify(rt0) === JSON.stringify([4, 10]), JSON.stringify(rt0));
   await reset(pg);
   await imp(pg, bp([{...blk('BPO_MiningDroneBayBlock', 0, 0), Resource: 'silica'}, {...blk('BPO_ElevatorBlock_03', 20, 0), Name: 'Lift A'}, blk('BPO_Station_01', 40, 0)],
     [{Class: 'DAT_Teleporter', Transform: {GridLocation: {X: 80, Y: 80}, Height: 0, GridRotation: 0}, ConfigHex: '020000000000ff', MachineID: 5, PaletteID: 0}]));
