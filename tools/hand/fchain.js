@@ -5,7 +5,7 @@
 // PLANNED ROUTES: a belt may only use the street tracks (pairs of adjacent cell lines of every street row and street column), the output blocks and the entry stubs, so the search is a thin graph, not open floor.
 //   Entry of a block without dock: stub row from the street column to (0,lane row). Entry of a dock block: stub column from the north street down to its approach column inside the block.
 window.chainBuild=function(opts){
-  opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.noDock=opts.docks===false;HAND.nrm=opts.dockType==='nrm';HAND.adapt=opts.adapter!=null?opts.adapter:(opts.tile||'BPO_Station_03')==='BPO_Station_03';   // 2x2 B: docks join the block directly; the open-sided 2x2 C needs a Station Adapter
+  opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.noDock=opts.docks===false;HAND.allRaw=!!opts.single;   // single: one recipe only (template gallery), every input is a sourceHAND.nrm=opts.dockType==='nrm';HAND.adapt=opts.adapter!=null?opts.adapter:(opts.tile||'BPO_Station_03')==='BPO_Station_03';   // 2x2 B: docks join the block directly; the open-sided 2x2 C needs a Station Adapter
   // pass 1 measures the lanes every street column and the trunk bands really need (wide streets), pass 2 builds with exactly that much street: a much smaller factory, far fewer pieces
   if(!opts.noAdapt&&!opts.capsDone){let caps={...(opts.caps||{})};   // normal docks: each block holds fewer machines; find the real capacity per product with dry builds, then plan the block count with it
     for(let i=0;i<4;i++){const r=chainBuild({...opts,caps,sw:opts.sw0||16,tbs:opts.tbs||8,noAdapt:true,dry:true,noRoute:true});let bad=false;(r.specs||[]).forEach(sp=>{const inf=r.info.find(x=>x.name===sp.name);if(inf&&sp.n>inf.cap){caps[sp.item]=Math.min(caps[sp.item]||99,inf.cap);bad=true}});if(!bad)break}
@@ -15,11 +15,14 @@ window.chainBuild=function(opts){
       r2=chainBuild({...opts,sws,halfs,tbs,noAdapt:true});if(!r2.report.failed||t===2)break;m+=2;r1=chainBuild({...opts,sw:opts.sw0||16,tbs:opts.tbs||8,noAdapt:true,dry:true})}
     return r2}
 const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=null?opts.mk:1,TW=32;
-  const P=plan(ITEM,RATE,MK,undefined,undefined,{seedDock:true});
+  // Deep Space Observatory (a block with one machine inside): used for the FINAL product when it is the only way to make it or the planner pick names it; the chain upstream makes its input
+  const dsoR=(plnBy(false,false).get(ITEM)||[]).find(x=>x.c==='CRAFT_DeepSpaceObservatory'&&((opts.pick&&opts.pick[ITEM])?rk(x.r)===opts.pick[ITEM]:!(plnBy(false,true).get(ITEM)||[]).length)),
+    dsoOk=!!dsoR&&HAND.CLS===plcCls('BPO_Station_03'),nDSO=dsoOk?Math.ceil(RATE/(dsoR.r.o[1]*1800/dsoR.r.t)-1e-9):0,
+    P=dsoOk?plan(dsoR.r.i[0][0],nDSO*dsoR.r.i[0][1]*1800/dsoR.r.t,MK,undefined,opts.pick,{seedDock:true}):plan(ITEM,RATE,MK,undefined,opts.pick,{seedDock:true});
   const CM={CRAFT_Refinery:['Refinery','DAT_Refinery',6],CRAFT_Assembler:['Assembler','DAT_Assembler'],CRAFT_GrowthChamber:['GrowthChamber','DAT_GrowthChamber'],CRAFT_Supercomputer:['Supercomputer','DAT_Supercomputer'],CRAFT_AdvancedAssembler:['AdvancedAssembler','DAT_AdvancedAssembler'],CRAFT_Enrichment:['Enrichment','DAT_EnrichmentChamber']};
   const CAPD={Refinery:36,Assembler:15,GrowthChamber:6,Supercomputer:9,AdvancedAssembler:4,Enrichment:4},CAPN={...CAPD,AdvancedAssembler:6,Enrichment:6};
-  const by=plnBy(false,true),isRaw=it=>!by.has(it),rawOf=n=>n.rec.i.some(([it])=>isRaw(it)||it===n.rec.o[0]);
-  const nodes=Object.values(P.nodes).filter(n=>n.crafter&&n.machines>0&&CM[n.crafter]);
+  const by=plnBy(false,true),isRaw=it=>!!opts.single||!by.has(it),rawOf=n=>n.rec.i.some(([it])=>isRaw(it)||it===n.rec.o[0]);
+  const nodes=Object.values(P.nodes).filter(n=>n.crafter&&n.machines>0&&CM[n.crafter]&&(!opts.single||n.item===ITEM));
   const dep={};const dOf=it=>{if(dep[it]!=null)return dep[it];dep[it]=0;let d=0;for(const e of P.edges)if(e.to===it&&e.from!==it&&P.nodes[e.from]&&P.nodes[e.from].crafter)d=Math.max(d,dOf(e.from)+1);return dep[it]=d};
   nodes.forEach(n=>dOf(n.item));
   const blocksOf=n=>{const [cn]=CM[n.crafter],cap=(rawOf(n)?CAPD:CAPN)[cn],nb=Math.ceil(n.machines/Math.min(cap,(opts.caps||{})[n.item]||99)),L=[];let left=n.machines;for(let b=0;b<nb;b++){const m=Math.ceil(left/(nb-b));left-=m;L.push([b,nb,m])}return L};
@@ -29,15 +32,17 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
   Object.keys(byDepth).map(Number).sort((a,b)=>a-b).forEach(c=>{let cur={items:[]};
     for(const n of byDepth[c].sort((a,b)=>b.machines-a.machines))for(const [b,nb,m] of blocksOf(n)){if(cur.items.length>=WRAP){colList.push(cur);cur={items:[]}}cur.items.push({n,b,nb,m})}
     colList.push(cur)});
+  if(!colList.length)colList.push({items:[]});   // only an observatory: one empty column so the east edge has a street to connect to
   let x=0;const specs=[],streetBx=new Set(),westOf={},westOf0={},swMap={};let maxRows=1;
   colList.forEach((col,ci)=>{col.hasRaw=col.items.some(i=>rawOf(i.n));x+=col.hasRaw?4:0;col.gx=x;col.sw=sws[ci]||SW;col.half=(opts.halfs||[])[ci];col.west=ci?colList[ci-1].gx+1+colList[ci-1].sw:null;col.west0=ci?colList[ci-1].gx+2:null;swMap[col.gx+2]={sw:col.sw,half:col.half};x+=2+col.sw;for(let d=2;d<2+col.sw;d++)streetBx.add(col.gx+d);   // block, output block, street 4 strides wide (64 lanes)
-    let cur=0;col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter],nExtra=rawOf(it.n)?Math.max(0,new Set(it.n.rec.i.map(([q])=>q).filter(q=>isRaw(q)||q===it.n.rec.o[0])).size-1):0;westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
+    let cur=0;col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter],nExtra=rawOf(it.n)?Math.max(0,new Set(it.n.rec.i.map(([q])=>q).filter(q=>isRaw(q)||q===it.n.rec.o[0])).size-(HAND.noDock||HAND.nrm?2:1)):0;westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
       if(nExtra)cur+=2;const gyRow=cur;cur+=nExtra?4:2;maxRows=Math.max(maxRows,cur/2);   // a block with extra docks keeps the rows above and below for them
       specs.push({gx:col.gx,gy:TBS+1+gyRow,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),col:dep[it.n.item]})})});
   const lastCol=colList[colList.length-1],lastGx=lastCol.gx,gxO=lastGx+2+lastCol.sw,nLn=Math.ceil(RATE/[60,120,180][MK]-1e-9),nrmO=(opts.outDockType||opts.dockType)==='nrm',nOD=opts.outDock?Math.ceil(nLn/(nrmO?4:8)):0;   // output dock: an extra tile column east of everything (nLn lanes of the final item, 8 lanes per industrial dock)
-  if(nOD){maxRows=Math.max(maxRows,nOD);westOf[gxO]=lastGx+1+lastCol.sw;westOf0[gxO]=lastGx+2}
-  const W=nOD?gxO+1:gxO,H=TBS+1+2*maxRows+TBS,odRow0=nOD?Math.min(Math.min(...specs.filter(q=>q.item===ITEM).map(q=>q.gy))+1,TBS+2*maxRows-2*(nOD-1)):0;   // the output docks sit on the street row right below the final blocks: the belt stays beside them, and its rows never coincide with a box port row   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
-  const nCols=colList.length,report={skipped:Object.values(P.nodes).filter(n=>n.crafter&&n.machines>0&&!CM[n.crafter]).map(n=>n.item.replace('ITEM_','')+' ('+n.crafter.replace('CRAFT_','')+')'),recipes:nodes.length,blocks:specs.length,cols:nCols,rows:maxRows,routed:0,failed:0,entries:0,unsupplied:[]};
+  // Deep Space Observatory (a block, not a machine): only the final product, east of everything, on 2x2 C tiles (its west face has two ports at mid height and needs an open-sided block)
+  if(nOD||nDSO){maxRows=Math.max(maxRows,nOD+nDSO);westOf[gxO]=lastGx+1+lastCol.sw;westOf0[gxO]=lastGx+2}
+  const W=nOD||nDSO?gxO+1:gxO,H=TBS+1+2*maxRows+TBS,odRow0=nOD||nDSO?Math.min(Math.min(...specs.filter(q=>q.item===ITEM).map(q=>q.gy))+1,TBS+2*maxRows-2*(nOD+nDSO-1)):0,dsoRow0=odRow0+2*nOD;   // the output docks sit on the street row right below the final blocks: the belt stays beside them, and its rows never coincide with a box port row   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
+  const nCols=colList.length,report={skipped:Object.values(P.nodes).filter(n=>n.crafter&&n.machines>0&&!CM[n.crafter]&&!(n.crafter==='CRAFT_DeepSpaceObservatory')).map(n=>n.item.replace('ITEM_','')+' ('+n.crafter.replace('CRAFT_','')+')').concat(dsoR&&!dsoOk?[ITEM.replace('ITEM_','')+' (Deep Space Observatory needs 2x2 C blocks)']:[]),recipes:nodes.length,blocks:specs.length,cols:nCols,rows:maxRows,routed:0,failed:0,entries:0,unsupplied:[]};
   const dockZone=new Set();specs.forEach(s=>{if(s.dock)for(let d=1;d<=4;d++)for(let dy=-1;dy<=1;dy++)dockZone.add((s.gx-d)+','+(s.gy+dy))});   // dock + adapter (2 strides) and 3 units of ship space in front (2 strides)
   const outBlk=new Set(specs.map(s=>(s.gx+1)+','+s.gy));
   const t0=Date.now(),odBlk=[];
@@ -48,6 +53,17 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     const src={};anch.forEach(a=>a.exits.forEach(e=>{const ps=e.obj.ports.filter(p=>p.f==='E').sort((a,b)=>a.y-b.y),sp=e.obj.ports.filter(p=>p.f==='S').sort((a,b)=>a.x-b.x);(src[e.item]=src[e.item]||[]).push({obj:e.obj,room:e.rate,x:a.gx,ports:[ps[0],ps[2],sp[0],...ps.filter((q,i)=>i!==0&&i!==2)].filter(Boolean)})}));   // three belts per box: E ports 2 rows apart and the first S port; the other ports follow when a product has more consumers than that
     const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],DH=HAND.D(),PAD=3,lanes=new Map(),Hpx=H*TW;
     // ---- output dock(s): the industrial dock assembly turned around (nlIndAsm, as dock_apply does for a dock east of a block): lane rows 4..7 / 22..25 of an extra tile, tails east through the adapter into the boxes and the dock
+    // ---- observatories: one block per machine on the east edge. Tile row of each: input belt on row 15 (east into the port), output belt on row 16 (west out of the second port) into a box that is the product source
+    for(let k=0;nDSO&&k<nDSO;k++){const rc=dsoR.r,gy=dsoRow0+2*k,ox=gxO*TW,oy=gy*TW,iit=rc.i[0][0],inR=rc.i[0][1]*1800/rc.t,outR=rc.o[1]*1800/rc.t;
+      const pp=(x,y,rot)=>{if(!HAND.piece({cls:BELT,x:ox+x,y:oy+y,rot},true))throw new Error('observatory cell taken '+x+','+y)};
+      if(isRaw(iit)){const sc=HAND.put({cls:'DAT_Container_2',gx:gxO,gy,lx:1,ly:14,force:true,name:'source box',nm:'Source: '+iit.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2')+' '+Math.round(inR)+'/min',ct:[{item:iit,n:0,inf:true}]});if(!sc)throw new Error('observatory source box does not fit');
+        sc.ports.forEach(q=>{if(!(q.f==='E'&&q.y===sc.y+1))sc.used.add(q.key)});for(let x=5;x<=30;x++)pp(x,15,0)}
+      else{for(let x=1;x<=30;x++)pp(x,15,0);ents.push({x:ox,y:oy+15,item:iit,dem:inR,blk:'Observatory',gx:gxO,gy})}
+      pp(30,16,2);pp(29,16,1);pp(29,17,1);
+      const bx=HAND.put({cls:'DAT_Container_2',gx:gxO,gy,lx:26,ly:18,force:true,name:'observatory out',ct:[]});if(!bx)throw new Error('observatory output box does not fit');
+      bx.ports.forEach(q=>{if(q.f!=='W')bx.used.add(q.key)});
+      (src[ITEM]=src[ITEM]||[]).push({obj:bx,room:outR,x:lastGx,ports:bx.ports.filter(q=>q.f==='W').sort((p,q)=>p.y-q.y)});
+      odBlk.push({cls:plcCls('BPO_DeepSpaceObservatory'),x:gxO*2+2,y:gy*2,rot:0,nm:'Observatory: '+ITEM.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2')+' '+Math.round(outR)+'/min'})}
     for(let k=0;nOD&&k<nOD;k++){const A=HAND.adapt?16:0,TRo=[1,0,3,2],asm=nlIndAsm(),per=Math.ceil(nLn/nOD),n=Math.min(per,nLn-k*per),rows=(nrmO?[6,7,22,23]:[4,22,6,24,5,23,7,25]).slice(0,n),gy=odRow0+2*k,ox=gxO*TW,oy=gy*TW;
       if(!nrmO)asm.belts.forEach(kb=>{if(!HAND.piece({cls:BELT,x:ox+45+A-kb.y,y:oy+29-kb.x,rot:TRo[kb.rot]},true))throw new Error('output dock cell taken')});
       rows.forEach(r=>{for(let x=1;x<=(nrmO?30+A:32+A);x++)if(!HAND.piece({cls:BELT,x:ox+x,y:oy+r,rot:0},true))throw new Error('output dock lane taken')});

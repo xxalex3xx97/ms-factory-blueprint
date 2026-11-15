@@ -22,7 +22,7 @@ const lvl=b=>(def(b.cls)||{}).levels||1;
 // blocks b (at level L) and o share a level when their level spans intersect
 const lvHit=(o,b,L)=>o.h<L+lvl(b)&&L<o.h+lvl(o);
 // floor block covering cell (x,y) on level L (cell units), or undefined
-function floorAt(L,x,y){return S.blocks.find(o=>{if(o.h!==L||isM(o)||!floorRect(o))return false;const c=fcell(o);return x>=c.cx&&x<c.cx+c.cw&&y>=c.cy&&y<c.cy+c.ch})}
+function floorAt(L,x,y){return nonM().find(o=>{if(o.h!==L||!floorRect(o))return false;const c=fcell(o);return x>=c.cx&&x<c.cx+c.cw&&y>=c.cy&&y<c.cy+c.ch})}
 // floor cell box of a block (cell units): shipEnd = the end opposite the ship direction (rot); else the whole footprint
 function fcell(b){const o=dim(b);if(!SHIPEND(b))return{cx:b.x,cy:b.y,cw:o.w,ch:o.h};const D=DIR[b.rot&3];return{cx:b.x+(D[0]<0?o.w-1:0),cy:b.y+(D[1]<0?o.h-1:0),cw:D[0]?1:o.w,ch:D[1]?1:o.h}}
 function floorRect(b){
@@ -120,16 +120,26 @@ function areas(L){
 }
 // elevator shaft (blocked 4x4 centre): machines may not overlap it
 let STRICT=true;   // Settings: keep buildables on the floor (no outside / across walls); overlaps are always refused
+let NMBC=null;const nonM=()=>{const k=SV+":"+S.blocks.length;if(!NMBC||NMBC.k!==k)NMBC={k,l:S.blocks.filter(b=>!isM(b))};return NMBC.l};   // the non-machine blocks (tiles), cached: a ghost over a 130k-piece factory scanned every piece on every mouse move
 const hitR=(i,e)=>i.x<e.x+e.w&&i.x+i.w>e.x&&i.y<e.y+e.h&&i.y+i.h>e.y;
 function noBuild(it){const c={},ids=new Set(it.map(i=>i.id).filter(x=>x!=null));
+  // a big paste into a big factory: machine cells and floor rects are looked up in a 64-cell bucket index (it was every item against every block: minutes for 4k items vs 130k blocks)
+  let mIdx=null;const big=it.length*S.blocks.length>2e6;
+  if(big){mIdx=new Map();S.blocks.forEach(o=>{if(!isM(o))return;const e=mItem(o);for(let bx=e.x>>6;bx<=(e.x+e.w-1)>>6;bx++)for(let by=e.y>>6;by<=(e.y+e.h-1)>>6;by++){const k=e.l+"|"+bx+"|"+by;let l=mIdx.get(k);if(!l)mIdx.set(k,l=[]);l.push(e)}})}
+  const hitM=i=>{if(!mIdx)return S.blocks.some(o=>o.h===i.l&&isM(o)&&!ids.has(o.id)&&!(i.belt&&isBelt(o))&&hitR(i,mItem(o)));
+    const seen=new Set();for(let bx=i.x>>6;bx<=(i.x+i.w-1)>>6;bx++)for(let by=i.y>>6;by<=(i.y+i.h-1)>>6;by++){const l=mIdx.get(i.l+"|"+bx+"|"+by);if(l)for(const e of l){if(seen.has(e))continue;seen.add(e);if(!ids.has(e.id)&&!(i.belt&&e.belt)&&hitR(i,e))return true}}return false};
   return it.some(i=>{const a=c[i.l]=c[i.l]||areas(i.l);
     if(a.blocked.some(e=>hitR(i,e))||a.nob.some(e=>hitR(i,e)))return true;
     if(i.id==null)return false;   // preview-only probes without id: shaft check only
     if(STRICT&&!onArea(i.x,i.y,i.w,i.h,a.rects))return true;
-    return S.blocks.some(o=>o.h===i.l&&isM(o)&&!ids.has(o.id)&&!(i.belt&&isBelt(o))&&hitR(i,mItem(o)))})}
+    return hitM(i)})}
 const mItem=b=>{const d=dim(b);return{id:b.id,x:b.x,y:b.y,w:d.w,h:d.h,l:b.h,belt:isBelt(b)}};
 const NOBUILD="Cannot build here: overlap, elevator shaft, or off the floor / across a wall";
+const RIDX=new WeakMap();
 function onArea(x,y,w,h,R){
+  if(R.length>300){let g=RIDX.get(R);if(!g){g=new Map();R.forEach(r=>{for(let bx=r.x>>6;bx<=(r.x+r.w-1)>>6;bx++)for(let by=r.y>>6;by<=(r.y+r.h-1)>>6;by++){const k=bx+","+by;let l=g.get(k);if(!l)g.set(k,l=[]);l.push(r)}});RIDX.set(R,g)}
+    for(let i=x;i<x+w;i++)for(let j=y;j<y+h;j++){const l=g.get((i>>6)+","+(j>>6));if(!l||!l.some(r=>i>=r.x&&i<r.x+r.w&&j>=r.y&&j<r.y+r.h))return false}
+    return true}
   for(let i=x;i<x+w;i++)for(let j=y;j<y+h;j++)
     if(!R.some(r=>i>=r.x&&i<r.x+r.w&&j>=r.y&&j<r.y+r.h))return false;
   return true;

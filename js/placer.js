@@ -754,7 +754,7 @@ function* placerTileGen(L,ok){
 }
 function placerPaste(){
   const P=pasting.pl,bs=P.blocks.map(q=>({id:uid++,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:q.rot||0,pid:0,...(q.nm?{nm:q.nm}:{})}));   // nm: dock names of the build engine
-  const hit=bs.some(b=>{const d=dim(b);return S.blocks.some(o=>{if(isM(o)||!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})});
+  const hit=bs.some(b=>{const d=dim(b);return nonM().some(o=>{if(!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})});
   if(hit){toast("Block overlaps another block");return}
   const ms=P.ms.map(m=>({...m,id:uid++,mid:0,pid:0,x:hover.x*FC+m.x,y:hover.y*FC+m.y,h:layer}));
   const pushAll=(a,l)=>{for(let i=0;i<l.length;i+=20000)a.push(...l.slice(i,i+20000))};   // a spread of 100k+ items overflows the call stack

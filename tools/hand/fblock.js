@@ -8,7 +8,7 @@
 //   Non-raw lanes keep entering at x=0 and hop under the jog columns. Machines start east of the jog columns, so a dock-ready block holds slightly fewer machines.
 window.fbBuild=function(opts){
   opts=opts||{};const MK=opts.mk!=null?opts.mk:1,DOCK=!!opts.dock;HAND.reset({mk:MK});
-  const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],SPL=PLC_SPL[MK],TW=HAND.TW,DH=HAND.D(),by=plnBy(false,true),isRaw=it=>!by.has(it);
+  const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],SPL=PLC_SPL[MK],TW=HAND.TW,DH=HAND.D(),by=plnBy(false,true),isRaw=it=>!!HAND.allRaw||!by.has(it);
   const CLASSES=[['Refinery','DAT_Refinery','CRAFT_Refinery',6],['Assembler','DAT_Assembler','CRAFT_Assembler'],['GrowthChamber','DAT_GrowthChamber','CRAFT_GrowthChamber'],['Supercomputer','DAT_Supercomputer','CRAFT_Supercomputer'],['AdvancedAssembler','DAT_AdvancedAssembler','CRAFT_AdvancedAssembler'],['Enrichment','DAT_EnrichmentChamber','CRAFT_Enrichment']];
   const hopSpan=(ax,a,b)=>{const l=HAND.S.span.get(ax)||[];l.push([a,b]);HAND.S.span.set(ax,l)};   // tell check() the pair is intended
   const info=[],dockBlk=[],anch=[];
@@ -24,9 +24,9 @@ window.fbBuild=function(opts){
         put1(x,y,0,BELT);x++}};
     const s=dim({cls,rot:0}).w,P0=portsOf({cls,x:0,y:0,rot:0,h:0}),cN=P0.filter(p=>p.f==='N').map(p=>p.x).sort((a,b)=>a-b),cE=P0.filter(p=>p.f==='E').map(p=>p.y).sort((a,b)=>a-b),pf=cN.length,kr=rc.i.length,k=Math.max(...RECS[crafter].map(x=>x.i.length));   // block geometry from the class's biggest recipe; this recipe fills the first kr lanes
     const nN=Math.min(k,pf);let nS=k-nN;const side=nS>=pf;if(!side)nS=Math.min(nS,pf-1);
-    const rawList=[...new Set(rc.i.map(([it])=>it).filter(isRawL))],extraItems=chain&&dk?rawList.slice(1):[];   // an industrial dock carries ONE ore: further raw items get their own dock (rows gy-1, gy+1) and arrive like bus items from the north
+    const rawList=[...new Set(rc.i.map(([it])=>it).filter(isRawL))],extraItems=chain&&dk?rawList.slice(HAND.noDock||HAND.nrm?2:1):[];   // source containers / normal docks: the block's own two dock groups carry two different items; an industrial dock carries one   // an industrial dock carries ONE ore: further raw items get their own dock (rows gy-1, gy+1) and arrive like bus items from the north
     const inItem=j=>rc.i[j][0],rawIn=rc.i.map(([it])=>isRawL(it)&&!extraItems.includes(it));   // input index: N lane j = input j, S lane j = input nN+j
-    const nrm=!!(HAND.nrm&&dk&&chain),capRows=!nrm?99:Math.min(...rawList.map(it=>Math.floor((extraItems.includes(it)?2:4)/rc.i.filter(([x])=>x===it).length))),LIM=nrm?2:4;   // normal docks: a dock has 2 belt ports and a block face holds 2 docks, so at most 4 raw lane rows (2 per dock, 2 for an extra item's own dock)
+    const nrm=!!(HAND.nrm&&dk&&chain),capRows=!nrm?99:Math.min(...rawList.map(it=>Math.floor((extraItems.includes(it)?2:rawList.length-extraItems.length>1?2:4)/rc.i.filter(([x])=>x===it).length))),LIM=nrm?2:4;   // normal docks: a dock has 2 belt ports and a block face holds 2 docks, so at most 4 raw lane rows (2 per dock, 2 for an extra item's own dock)
     const yTop=chain&&dk&&rawIn.some(v=>!v)?2:0,   // dock blocks fed from the north: two empty rows on top so the entry belt can turn after the wall tunnel
     band=side?nN+s+nS+2:nN+s+(nS?1:0)+1,rowsN=side?2:Math.floor((30-yTop)/band),pitch=side?s+1:s,iO=nS&&!side?pf-1:0;
     const yStart=r=>side?(r===0?yTop:30-band):yTop+r*band,nRows=Math.min(side?2:rowsN,capRows);
