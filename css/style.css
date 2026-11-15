@@ -201,6 +201,7 @@ header .mnl .hbt{flex-direction:row;min-height:34px;gap:6px;width:100%;justify-c
 #plnPrevView{min-height:320px}
 .star{color:#f5c542;font-size:12px}
 #bayIn{width:100%;box-sizing:border-box}
+.fbtn{display:flex;align-items:center;gap:6px;width:100%;min-height:30px;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:5px 8px;overflow:hidden;white-space:nowrap}.fbtn .ic{width:20px;height:20px;flex:none}.fbtn .caret{margin-left:auto;color:var(--dim);flex:none}
 #bayL{list-style:none;margin:6px 0;padding:0;max-height:40vh;overflow:auto;border:1px solid var(--line);border-radius:6px}
 #bayL li{display:flex;gap:8px;align-items:center;padding:4px 8px;cursor:pointer}
 #bayL li.on,#bayL li:hover{background:color-mix(in oklch,var(--accent) 30%,transparent)}

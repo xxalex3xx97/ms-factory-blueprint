@@ -5,26 +5,34 @@ const {chromium}=require(process.env.PW||'C:/Users/SFidelis/AppData/Roaming/npm/
 const PAGE=pathToFileURL(path.join(path.dirname(fileURLToPath(import.meta.url)),'..','index.html')).href;
 const b=await chromium.launch({executablePath:process.env.CHROME||'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true}),p=await b.newPage();const errs=[];p.on("pageerror",e=>{errs.push(String(e));console.log("PAGEERR",e)});
 await p.goto(PAGE);let bad=0;const ok=(n,c)=>{if(!c)bad++;console.log((c?'PASS ':'FAIL ')+n)};
+// first FITEMS key whose name contains "water" (the picker's Enter picks the first match)
+const expKey=await p.evaluate(()=>{const id=FITEMS.find(id=>ITEMS[id].n.toLowerCase().includes("water"));return id?fkey(id):null});
+const expName=await p.evaluate(k=>ITEMS[FITEMS.find(id=>fkey(id)===k)].n,expKey);
+// inspector filter button: click it, search "water", Enter
+const pickInsp=async s=>{await p.evaluate(()=>{const d=document.querySelector('#insp details[data-sec="filt"]');if(d)d.open=true});await p.click(s);await p.waitForTimeout(200);await p.fill("#bayIn","water");await p.press("#bayIn","Enter");await p.waitForTimeout(200)};
 const r=await p.evaluate(()=>{
   const out={};const put=(cls,x)=>{const id=uid++;S.blocks.push({id,cls,x,y:0,h:0,rot:0,pid:0,mid:0});return id};
-  const set=(i,v)=>{const e=$("fl"+i);e.value=v;e.dispatchEvent(new Event("change",{bubbles:true}))};
-  const d=put(CATALOG.blocks.find(q=>q.name==="BPO_Dock_2").class,0);sel=new Set([d]);all();out.dockSel=document.querySelectorAll('#insp select[data-df]').length;
-  set(2,"waterice");out.df=S.blocks.find(q=>q.id===d).df;
-  const s=put("DAT_Splitter",20);sel=new Set([s]);layer=0;view="F";all();out.splSel=document.querySelectorAll('#insp select[data-fl]').length;
-  set(1,"waterice");out.fl=S.blocks.find(q=>q.id===s).fl;
-  const a=put("DAT_Refinery",40);sel=new Set([a]);all();out.stars=document.querySelectorAll('#insp .rtile .star').length;out.tiles=document.querySelectorAll('#insp .rtile').length;
+  const d=put(CATALOG.blocks.find(q=>q.name==="BPO_Dock_2").class,0);sel=new Set([d]);all();out.dockSel=document.querySelectorAll('#insp button[data-df]').length;out.dockId=d;
   return out});
-ok("industrial dock shows 8 filter slots",r.dockSel===8);ok("dock filter stored",r.df&&r.df.length===8&&r.df[2].item==="waterice");
-ok("splitter shows 3 filter slots",r.splSel===3);ok("splitter filter stored",r.fl&&r.fl[1]==="waterice"&&r.fl.length===3);
-ok("refinery recipes starred (enriched/alternate)",r.stars>0&&r.stars<r.tiles);
+ok("industrial dock shows 8 filter buttons",r.dockSel===8);
+await pickInsp('#insp button[data-df="2"]');
+const rd=await p.evaluate(id=>({df:S.blocks.find(q=>q.id===id).df,txt:document.querySelector('#insp button[data-df="2"]').textContent}),r.dockId);
+ok("dock inspector button: Enter sets slot 3 to "+expKey,!!(rd.df&&rd.df.length===8&&rd.df[2].item===expKey));
+ok("dock inspector button shows item "+expName,rd.txt.includes(expName));
+const rs=await p.evaluate(()=>{const id=uid++;S.blocks.push({id,cls:"DAT_Splitter",x:20,y:0,h:0,rot:0,pid:0,mid:0});sel=new Set([id]);layer=0;view="F";all();return{id,n:document.querySelectorAll('#insp button[data-fl]').length}});
+ok("splitter shows 3 filter buttons",rs.n===3);
+await pickInsp('#insp button[data-fl="1"]');
+const rf=await p.evaluate(id=>({fl:S.blocks.find(q=>q.id===id).fl,txt:document.querySelector('#insp button[data-fl="1"]').textContent}),rs.id);
+ok("splitter inspector button: Enter sets b.fl[1] to "+expKey,!!(rf.fl&&rf.fl.length===3&&rf.fl[1]===expKey));
+ok("splitter inspector button shows item "+expName,rf.txt.includes(expName));
+const st=await p.evaluate(()=>{const a=uid++;S.blocks.push({id:a,cls:"DAT_Refinery",x:40,y:0,h:0,rot:0,pid:0,mid:0});sel=new Set([a]);all();return{stars:document.querySelectorAll('#insp .rtile .star').length,tiles:document.querySelectorAll('#insp .rtile').length}});
+ok("refinery recipes starred (enriched/alternate)",st.stars>0&&st.stars<st.tiles);
 await p.evaluate(()=>{S.blocks=[];const id=uid++;S.blocks.push({id,cls:CATALOG.blocks.find(q=>q.name==="BPO_Dock_2").class,x:2,y:2,h:0,rot:0,pid:0,mid:0});sel=new Set();layer=0;view="F";V.z=Math.max(V.z,1);all();paint0&&0});
 await p.waitForTimeout(300);
 // pan so the centre of BAYHIT[0] (whole square) sits at (300,300); returns its screen rect
 const hit=await p.evaluate(async()=>{const q=BAYHIT[0],cxq=q.x+q.w/2,cyq=q.y+q.h/2;V.ox-=cxq-300;V.oy-=cyq-300;draw(true);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return BAYHIT.length?{n:BAYHIT.length,...BAYHIT[0],b:undefined,cr:cv.getBoundingClientRect().toJSON()}:null});
 ok("dock bay squares hit-testable (8)",hit&&hit.n===8);
 ok("industrial pod square big enough to click (w>10,h>5)",hit&&hit.w>10&&hit.h>5);
-// first matching item key for the search "water" (Enter picks the highlighted = first match)
-const expKey=await p.evaluate(()=>{const id=FITEMS.find(id=>ITEMS[id].n.toLowerCase().includes("water"));return id?fkey(id):null});
 // pixel at the square centre (canvas bitmap coords)
 const pxAt=()=>p.evaluate(h=>{const s=cv.width/cv.getBoundingClientRect().width;const d=cv.getContext('2d').getImageData(Math.round((h.x+h.w/2)*s),Math.round((h.y+h.h/2)*s),1,1).data;return [...d].join(',')},hit);
 if(hit){await p.mouse.click(hit.cr.left+hit.x+4,hit.cr.top+hit.y+4);
@@ -116,7 +124,7 @@ const dir="C:/Users/SFidelis/AppData/Local/Temp/dfshots";require("fs").mkdirSync
 const shotOf=async(name,file)=>{
   await setup([[name,2,2]]);
   await p.evaluate(()=>{const d=S.blocks[0];d.df=Array.from({length:dkN(d.cls)},(_,j)=>({item:j===0?"waterice":"",bLoading:0}));all();draw(true)});
-  await p.evaluate(async()=>{const cx=(Math.min(...BAYHIT.map(q=>q.x))+Math.max(...BAYHIT.map(q=>q.x+q.w)))/2,cy=(Math.min(...BAYHIT.map(q=>q.y))+Math.max(...BAYHIT.map(q=>q.y+q.h)))/2,R=cv.getBoundingClientRect();V.ox-=cx-(innerWidth/2-R.left);V.oy-=cy-(innerHeight/2-R.top);draw(true);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))});
+  await p.evaluate(async()=>{await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));draw(true);const cx=(Math.min(...BAYHIT.map(q=>q.x))+Math.max(...BAYHIT.map(q=>q.x+q.w)))/2,cy=(Math.min(...BAYHIT.map(q=>q.y))+Math.max(...BAYHIT.map(q=>q.y+q.h)))/2,R=cv.getBoundingClientRect();V.ox-=cx-(innerWidth/2-R.left);V.oy-=cy-(innerHeight/2-R.top);draw(true);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))});
   await p.waitForFunction(()=>{const id=fid("waterice"),im=id&&img(id);return !!(im&&im.complete&&im.naturalWidth>0)},null,{timeout:5000}).catch(()=>{});
   await p.evaluate(async()=>{draw(true);await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))});
   const c=await p.evaluate(()=>{const cr=cv.getBoundingClientRect();const x0=Math.min(...BAYHIT.map(q=>q.x))-60,y0=Math.min(...BAYHIT.map(q=>q.y))-60,x1=Math.max(...BAYHIT.map(q=>q.x+q.w))+60,y1=Math.max(...BAYHIT.map(q=>q.y+q.h))+60;return{x:cr.left+x0,y:cr.top+y0,width:x1-x0,height:y1-y0,n:BAYHIT.length}});

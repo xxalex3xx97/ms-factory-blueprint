@@ -29,9 +29,9 @@ const SPL_LBL=["Right","Front","Left"];
 function filtHtml(b){
   const dn=dkN(b.cls),sp=!dn&&isM(b)&&cfgKind(b.cls)==="splitter";if(!dn&&!sp)return"";
   const n=dn||(b.fl?b.fl.length:isBalCls(b.cls)?2:3),cur=i=>dn?((b.df||[])[i]||{}).item||"":(b.fl||[])[i]||"";
-  return sec("filt","Filters",Array.from({length:n},(_,i)=>{const c=cur(i).toLowerCase(),known=FITEMS.some(id=>fkey(id)===c);
-    return `<div class="row"><label for="fl${i}">${dn?i+1:isBalCls(b.cls)?i+1:(SPL_LBL[i]||i+1)}</label><select id="fl${i}" data-${dn?"df":"fl"}="${i}"><option value="">(no filter)</option>`
-      +FITEMS.map(id=>`<option value="${esc(fkey(id))}"${fkey(id)===c?" selected":""}>${esc(ITEMS[id].n)}</option>`).join("")+(c&&!known?`<option value="${esc(c)}" selected>${esc(c)}</option>`:"")+`</select></div>`}).join(""));
+  return sec("filt","Filters",Array.from({length:n},(_,i)=>{const c=cur(i).toLowerCase(),id=FITEMS.find(q=>fkey(q)===c),ic=id&&iurl(id);
+    return `<div class="row"><label for="fl${i}">${dn?i+1:isBalCls(b.cls)?i+1:(SPL_LBL[i]||i+1)}</label><button type="button" id="fl${i}" class="fbtn" data-${dn?"df":"fl"}="${i}">`
+      +(c?(ic?`<img class="ic" alt="" src="${ic}">`:"")+esc(id?ITEMS[id].n:c):"(no filter)")+`<span class="caret">&#9662;</span></button></div>`}).join(""));
 }
 function panel(){
   const bs=S.blocks.filter(b=>sel.has(b.id));
@@ -115,11 +115,6 @@ $("insp").addEventListener("change",e=>{
   const t=e.target,bs=S.blocks.filter(b=>sel.has(b.id));
   if(t.dataset.prio&&bs.length===1){push();togglePrio(bs[0],t.dataset.prio);all();return}
   if(t.dataset.port&&bs.length===1){push();togglePort(bs[0],t.dataset.port);all();return}
-  if((t.dataset.fl!=null||t.dataset.df!=null)&&bs.length===1){
-    const m=bs[0],i=+(t.dataset.fl??t.dataset.df),dn=dkN(m.cls);push();
-    if(dn){const a=Array.from({length:dn},(_,j)=>({item:"",bLoading:0,...((m.df||[])[j]||{})}));a[i].item=t.value;if(a.some(f=>f.item))m.df=a;else delete m.df}
-    else{const n=m.fl?m.fl.length:isBalCls(m.cls)?2:3,a=Array.from({length:n},(_,j)=>(m.fl||[])[j]||"");a[i]=t.value;if(a.some(Boolean))m.fl=a;else delete m.fl}
-    delete m.cfgKeep;all();return}
   if(t.dataset.rs&&bs.length===1){const v=t.value;if(v===(bs[0].rs||""))return;push();if(v)bs[0].rs=v;else delete bs[0].rs;all();return}
   if(t.dataset.nm&&bs.length===1){const v=t.value.trim();if(v===(bs[0].nm||""))return;push();if(v)bs[0].nm=v;else delete bs[0].nm;delete bs[0].cfgKeep;all();return}
   if(t.dataset.ct&&bs.length===1){
@@ -146,6 +141,14 @@ $("insp").addEventListener("change",e=>{
 });
 $("insp").addEventListener("click",e=>{
   const id=e.target.id;
+  const fb=e.target.closest&&e.target.closest("button[data-fl],button[data-df]");
+  if(fb&&S.blocks.filter(q=>sel.has(q.id)).length===1){
+    const m=S.blocks.find(q=>sel.has(q.id)),i=+(fb.dataset.fl??fb.dataset.df),dn=dkN(m.cls);
+    const cur=dn?((m.df||[])[i]||{}).item||"":(m.fl||[])[i]||"";
+    const lbl=dn?"Bay "+(i+1):(isBalCls(m.cls)?"Output "+(i+1):(SPL_LBL[i]||"Output "+(i+1)));
+    pickItem((def(m.cls).label||"Filter")+" "+lbl+" filter",cur,key=>{setSlot(m,i,key);all()});
+    return;
+  }
   const cd=e.target.closest&&e.target.closest("[data-ctdel]");
   if((cd||id==="bCtAdd")&&S.blocks.filter(q=>sel.has(q.id)).length===1){
     const m=S.blocks.find(q=>sel.has(q.id)),ct=m.ct||[];
@@ -164,17 +167,28 @@ $("insp").addEventListener("click",e=>{
 });
 
 
-// click a dock bay number on the canvas: small modal to set that slot's filter
-function bayFilter(b,i){
-  const d=$("dBay"),L=$("bayL"),inp=$("bayIn");$("bayT").textContent=(def(b.cls).label||"Dock")+" bay "+(i+1)+" filter";
-  const cur=((b.df||[])[i]||{}).item||"",rows=[{id:"",n:"(no filter)"},...FITEMS.map(id=>({id,n:ITEMS[id].n}))];
+// write one filter slot of a dock (b.df) or splitter/balancer (b.fl); key "" clears it
+function setSlot(b,i,key){
+  push();const dn=dkN(b.cls);
+  if(dn){const a=Array.from({length:dn},(_,j)=>({item:"",bLoading:0,...((b.df||[])[j]||{})}));a[i].item=key;if(a.some(f=>f.item))b.df=a;else delete b.df}
+  else{const n=b.fl?b.fl.length:isBalCls(b.cls)?2:3,a=Array.from({length:n},(_,j)=>(b.fl||[])[j]||"");a[i]=key;if(a.some(Boolean))b.fl=a;else delete b.fl}
+  delete b.cfgKeep;
+}
+// click a dock bay square (canvas) or a filter button (inspector): select2-style item picker, onPick(key) with key "" = no filter
+function pickItem(title,cur,onPick){
+  const d=$("dBay"),L=$("bayL"),inp=$("bayIn");$("bayT").textContent=title;
+  const rows=[{id:"",n:"(no filter)"},...FITEMS.map(id=>({id,n:ITEMS[id].n}))];
   let shown=rows,on=0;
   const render=()=>{L.innerHTML=shown.map((r,k)=>'<li role="option" data-k="'+k+'"'+(k===on?' class="on" aria-selected="true"':'')+'>'+(iurl(r.id)?'<img class="ic" alt="" src="'+iurl(r.id)+'">':'<span class="ic"></span>')+esc(r.n)+'</li>').join("");const e=L.querySelector(".on");if(e)e.scrollIntoView({block:"nearest"})};
   const find=()=>{const q=inp.value.trim().toLowerCase();shown=[rows[0],...rows.slice(1).filter(r=>!q||r.n.toLowerCase().includes(q))];on=q?Math.min(1,shown.length-1):Math.max(0,shown.findIndex(r=>r.id&&fkey(r.id)===cur));render()};
-  const pick=id=>{push();const n=dkN(b.cls),a=Array.from({length:n},(_,j)=>({item:"",bLoading:0,...((b.df||[])[j]||{})}));a[i].item=id?fkey(id):"";if(a.some(f=>f.item))b.df=a;else delete b.df;delete b.cfgKeep;sel=new Set([b.id]);d.close();all()};
+  const pick=id=>{d.close();onPick(id?fkey(id):"")};
   inp.value="";inp.oninput=find;
   inp.onkeydown=e=>{if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();on=Math.max(0,Math.min(shown.length-1,on+(e.key==="ArrowDown"?1:-1)));render()}else if(e.key==="Enter"){e.preventDefault();if(shown[on])pick(shown[on].id)}};
   L.onclick=e=>{const li=e.target.closest("li");if(li)pick(shown[+li.dataset.k].id)};
   $("bayX").onclick=()=>d.close();
   find();d.showModal();inp.focus();
+}
+// canvas dock square: picker for that bay's slot
+function bayFilter(b,i){
+  pickItem((def(b.cls).label||"Dock")+" bay "+(i+1)+" filter",((b.df||[])[i]||{}).item||"",key=>{setSlot(b,i,key);sel=new Set([b.id]);all()});
 }
