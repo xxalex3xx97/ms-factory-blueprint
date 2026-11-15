@@ -35,7 +35,6 @@
   // settings the chain engine does not have yet are fixed and greyed out
   const fix=force=>{if(force){if(["BPO_Station_01","BPO_Station_2x1"].includes($("plnBk").value))$("plnBk").value="BPO_Station_02";$("plnDk").value="ind";if($("plnDkOT").value==="nrm")$("plnDkOT").value=""}   // values are only forced when building: what the user saved is left alone
     const nr=$("plnDkOT").querySelector('option[value="nrm"]');if(nr){nr.disabled=true;nr.title="Normal docks are not available yet"}
-    ["pvSp","plnBuf","plnLbl"].forEach(i=>{$(i).disabled=true;$(i).title="Not available yet"});["BPO_Station_01","BPO_Station_2x1"].forEach(v=>{const o=$("plnBk").querySelector('option[value="'+v+'"]');if(o){o.disabled=true;o.title="1x1 and 2x1 blocks are not available yet"}});const nd=$("plnDk").querySelector('option[value="nrm"]');if(nd){nd.disabled=true;nd.title="Normal docks are not available yet"}
-    const m=$("pvMk").querySelector('option[value="2"]');if(m){m.disabled=true;m.title="Mk3 is not available yet";if(force&&$("pvMk").value==="2")$("pvMk").value="1"}};
+    ["pvSp","plnBuf","plnLbl"].forEach(i=>{$(i).disabled=true;$(i).title="Not available yet"});["BPO_Station_01","BPO_Station_2x1"].forEach(v=>{const o=$("plnBk").querySelector('option[value="'+v+'"]');if(o){o.disabled=true;o.title="1x1 and 2x1 blocks are not available yet"}});const nd=$("plnDk").querySelector('option[value="nrm"]');if(nd){nd.disabled=true;nd.title="Normal docks are not available yet"}};
   fix(false);$("plnPrev").addEventListener("toggle",()=>fix(true));const run0=placerRun;window.placerRun=function(open){if(open||$("plnPrev").open)fix(true);return run0.apply(this,arguments)};
 })();
