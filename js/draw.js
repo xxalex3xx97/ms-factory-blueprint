@@ -193,8 +193,10 @@ function arrow(x,y,w,h,rot,alpha){
 }
 // entrance marks (Layout, model.js entrances()): door slot = light bar on the edge + white chevron pointing INTO the block; ports side (no doors) = mint bar + chevron pointing out to the ports. Rotates with the block
 const ENT_DOOR_S=44;
+let ENTC=null;   // door/port marks of a block: computed once per block set (it was rebuilt for every block on every paint)
+const entC=(b,force)=>{if(force||b.id==null)return entrances(b,true);const k=PK+"|"+S.closed.length;if(!ENTC||ENTC.k!==k)ENTC={k,m:new Map()};let v=ENTC.m.get(b.id);if(v===undefined){v=entrances(b,true);ENTC.m.set(b.id,v)}return v};
 function entMark(b,x,y,alpha,s,w,h,force){   // force: placement/paste ghost, always show the door marks (they show the rotation)
-  if(alpha<.5||s<5)return;const E=entrances(b,true);if(!E.length)return;   // bar = full door slot length (scales with zoom); only the chevron is capped (r <= 9); door marks (many on stations) only when a cell is >= ENT_DOOR_S px
+  if(alpha<.5||s<5)return;const E=entC(b,force);if(!E.length)return;   // bar = full door slot length (scales with zoom); only the chevron is capped (r <= 9); door marks (many on stations) only when a cell is >= ENT_DOOR_S px
   const t=Math.max(2,Math.min(5,s*.12)),r=Math.min(9,Math.max(3,s*.12)),L=Math.max(5,DOORW/FC*s),lh=s>=18?Math.min(12,Math.max(9,s/3))+6:0;
   E.forEach(e=>{if(!e.port&&s<ENT_DOOR_S&&!force)return;const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,bw=hz?L:t,bh=hz?t:L,
     bx=D[0]>0?ex-t:D[0]<0?ex:ex-L/2,by=D[1]>0?ey-t:D[1]<0?ey:ey-L/2,sg=e.port?1:-1,   // door: chevron looks inward, port: outward
@@ -457,7 +459,7 @@ function paint(pk){
 let OUTC=null;
 let FLAT_S=5;   // let: tests set FLAT_S=0 for exact block pixels. below this zoom (px per cell) blocks are batched as flat rects (no icon/arrow/label/door marks are drawn there anyway)
 function drawBlocks(list,alpha,useSel){
-  const s=sc(),flat=s<FLAT_S,fl=new Map(),st=new Map(),full=[];
+  const s=sc(),flat=s<FLAT_S||(view==="L"&&list.length>300&&s<14),fl=new Map(),st=new Map(),full=[];   // Layout view with hundreds of blocks: flat rects up to 14px per cell (icons and labels cost ~0.1 ms per block)
   // big factories (thousands of pieces): belts, undergrounds and splitters are batched as flat rects up to ARROW_MIN_S (no direction arrows below it anyway) and skipped below 2px per cell;
   // the "outside the buildable floor" test (slow, per piece) is cached per block set
   const bigL=list.length>3000,beltFlat=bigL&&s<ARROW_MIN_S;
