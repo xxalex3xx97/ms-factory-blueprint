@@ -163,10 +163,10 @@ let modeKey="";
 function syncMode(){const m=pasting?"paste":mode||"";if(m===modeKey)return;modeKey=m;document.body.dataset.mode=m;let el=$("modeb");if(!el){el=document.createElement("div");el.id="modeb";document.body.appendChild(el)}el.textContent=MODE_TXT[m]||""}
 let raf=0;
 // zoom with the wheel: the last full paint (a copy) is drawn scaled on each wheel frame; a full paint follows when the wheel pauses. Any other draw drops the copy.
-const WBLIT=()=>S.blocks.length>20000,WHEEL_BLIT=false;   // scaled blit of the last paint on wheel frames: OFF (ghosting); every wheel frame is a full paint
+const BIGF=()=>S.blocks.length>20000,WHEEL_BLIT=false;   // BIGF: a big factory draws zoom/pan frames with less detail (real paints, no scaled copy: that ghosted)   // scaled blit of the last paint on wheel frames: OFF (ghosting); every wheel frame is a full paint
 let ZS=null,ZW=false,ZT=0,ZC=null,OVC=null;
 const zsKey=()=>view+"|"+layer+"|"+W+"|"+H+"|"+dpr;
-const draw=(zw,quiet)=>{if(!zw)ZS=null;ZW=!!zw;syncMode();DIRTY=true;if(!zw&&!quiet)asv();/* wheel frames and the idle repaint skip the autosave timer (its save of a big factory is slow): the next edit saves the view too */if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()});if(zw&&WBLIT()){clearTimeout(ZT);ZT=setTimeout(()=>draw(0,1),160)}};
+const draw=(zw,quiet)=>{if(!zw)ZS=null;ZW=!!zw;syncMode();DIRTY=true;if(!zw&&!quiet)asv();/* wheel frames and the idle repaint skip the autosave timer (its save of a big factory is slow): the next edit saves the view too */if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()});if(zw&&BIGF()){clearTimeout(ZT);ZT=setTimeout(()=>draw(0,1),160)}   /* detail comes back 160 ms after the last zoom/pan frame */};
 
 const SPR=new Map();
 function spr(key,w,h,fn){const k=key+"|"+dpr;let c=SPR.get(k);if(!c){if(SPR.size>800)SPR.clear();c=document.createElement("canvas");c.width=Math.ceil(w*dpr);c.height=Math.ceil(h*dpr);const g=c.getContext("2d");g.scale(dpr,dpr);g.imageSmoothingQuality="high";fn(g);SPR.set(k,c)}return c}
@@ -355,7 +355,8 @@ function drawShapeFloor(A,s){
   });
 }
 function paintFloorBase(s){
-  const A=areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;
+  const A=typeof HAR==="function"?HAR(layer):areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;   // HAR: the areas() result cached per block set (it was rebuilt on every paint)
+  if(ZW&&BIGF()){cx.fillStyle="rgba(48,60,76,.95)";A.floors.forEach(r=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s;if(x>W||y>H||x+w<0||y+h<0)return;cx.fillRect(x,y,w,h)});return A}   // zooming / panning a big factory: plain floor rects, the full floor comes back 160 ms after the last frame
   // gap strips: only between two facing floor blocks; strip = the distance between their SHELLS, long axis = overlap of their shells
   const SH=A.floors.map(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;return{r,x:r.x-Q,y:r.y-Q,w:r.w+2*Q,h:r.h+2*Q}});
   const own2=new Map();SH.forEach(e=>{const d=fcell(e.r.b);for(let i=0;i<d.cw;i++)for(let j=0;j<d.ch;j++)own2.set((d.cx+i)+","+(d.cy+j),e)});
@@ -418,7 +419,7 @@ function ugLine(a,b,s,over,pv){
   cx.restore();
 }
 function drawUG(s){
-  if(s<ARROW_MIN_S)return;   // zoomed out: same threshold as the belt arrows
+  if(s<ARROW_MIN_S||(ZW&&BIGF()))return;   // zoomed out: same threshold as the belt arrows
   const c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s];
   ugPairs(CUR.filter(isM)).forEach(({u,t,n,max})=>{const a=c(u),b=c(t);if(!vis(Math.min(a[0],b[0])-s,Math.min(a[1],b[1])-s,Math.abs(a[0]-b[0])+2*s,Math.abs(a[1]-b[1])+2*s))return;ugLine(a,b,s,n>max)});
 }
@@ -444,11 +445,11 @@ function cached(name,fn){
   cx.setTransform(1,0,0,1,0,0);cx.drawImage(o.c,0,0);cx.setTransform(dpr,0,0,dpr,0,0);
 }
 function paint(pk){
-  if(WBLIT()&&ZW&&ZS&&!USEB&&!smOn()&&ZS.k===zsKey()){   // no blit while the simulation draws (its overlays would be scaled with the base)   // wheel frame: scaled copy of the last full paint (blocks unchanged: any other draw cleared ZS)
+  if(WHEEL_BLIT&&ZW&&ZS&&!USEB&&!smOn()&&ZS.k===zsKey()){   // no blit while the simulation draws (its overlays would be scaled with the base)   // wheel frame: scaled copy of the last full paint (blocks unchanged: any other draw cleared ZS)
     const f=V.z/ZS.z;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.drawImage(ZS.c,dpr*(V.ox-f*ZS.ox),dpr*(V.oy-f*ZS.oy),cv.width*f,cv.height*f);return}
   if(!USEB)DIRTY=true;LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}
   if(view==="F"&&typeof HAR==="function")setTimeout(()=>{try{HAR(layer);HLK(layer);hit({x:-1e9,y:-1e9})}catch(e){}},50);   // hover tables are built right after a paint, not on the first mouse move
-  if(WBLIT()&&!USEB&&!smOn()&&(!ZS||ZS.k!==zsKey())){   // the base is a clean paint: never a simulation frame (moving flow dots would be baked in and smear on zoom)
+  if(WHEEL_BLIT&&!USEB&&!smOn()&&(!ZS||ZS.k!==zsKey())){   // the base is a clean paint: never a simulation frame (moving flow dots would be baked in and smear on zoom)
     if(!ZC||ZC.width!==cv.width||ZC.height!==cv.height){ZC=document.createElement("canvas");ZC.width=cv.width;ZC.height=cv.height}
     ZC.getContext("2d").drawImage(cv,0,0);ZS={c:ZC,z:V.z,ox:V.ox,oy:V.oy,k:zsKey()}}
 }
@@ -463,7 +464,7 @@ function drawBlocks(list,alpha,useSel){
   const outC=b=>{let v=OUTC.m.get(b.id);if(v===undefined){v=outside(b,RCT);OUTC.m.set(b.id,v)}return v};
   list.forEach(b=>{
     const bf=beltFlat&&isBelt(b);
-    if(bf&&s<2)return;
+    if(bf&&(s<2||ZW))return;   // belts are skipped while zooming / panning a big factory (and below 2px per cell)
     const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s;
     if(x>W||y>H||x+w<0||y+h<0)return;
     if((!flat&&!bf)||(useSel&&sel.has(b.id)&&b.h===layer)||(isM(b)&&RCT&&b.h===layer&&outC(b))){full.push(b);return}

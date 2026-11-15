@@ -97,7 +97,7 @@ cv.addEventListener("pointermove",e=>{
       S.blocks.forEach(b=>{if(b.h!==layer||!inView(b))return;const d=dim(b);if(b.x<=z.x&&b.x+d.w-1>=a.x&&b.y<=z.y&&b.y+d.h-1>=a.y)sel.add(b.id)});
     }
   }
-  if(drag||active||pasting||ugPend)draw(!!(drag&&drag.k==="pan"&&!active&&!pasting&&!ugPend&&typeof WBLIT==="function"&&WBLIT()));   // big factory: a pan moves the last paint (crisp repaint 160 ms after the last move); a plain hover changes no painted pixel (tooltip only): no full repaint per mouse move
+  if(drag||active||pasting||ugPend)draw(!!(drag&&drag.k==="pan"&&!active&&!pasting&&!ugPend&&typeof BIGF==="function"&&BIGF()));   // big factory: a pan is drawn with less detail (full detail 160 ms after the last move); a plain hover changes no painted pixel (tooltip only): no full repaint per mouse move
 });
 cv.addEventListener("pointerleave",()=>{hoverIn=false;btip(null);draw()});
 const end=e=>{
