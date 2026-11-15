@@ -264,7 +264,9 @@ $("impSav").onclick=()=>{
   if(!ok)toast("Save folder: "+SAVDIR);
   $("savFile").value="";$("savFile").click()};
 $("savFile").onchange=e=>savOpen(e.target.files[0]);
-const savOpen=async f=>{if(!f)return;try{const ab=await f.arrayBuffer(),l=parseSav(ab);if(!l.length){toast("No player stations found in this save");return}
+const savOpen=async f=>{if(!f)return;try{const ab=await f.arrayBuffer(),dj=typeof savImport==="function"?savImport(new Uint8Array(ab)):null;   // Designs folder blueprint (.sav): import directly
+ if(dj){if(importJson(JSON.stringify(dj)))toast("Imported design \""+dj.DisplayName+"\"");return}
+ const l=parseSav(ab);if(!l.length){toast("No player stations found in this save");return}
  if(l.length===1){if(importJson(JSON.stringify(l[0].json)))svPut(ab,f.name,l,0);return}
  SAVL=l;SAVB=ab;SAVN=f.name;$("savSt").replaceChildren(...l.map((s,i)=>new Option(`${s.name} (${s.json.Blocks.length} blocks, ${s.json.DefaultMachines.length} machines)`,String(i))));$("dSav").showModal()}catch(err){toast("Save read failed: "+err.message)}};
 $("savX").onclick=()=>$("dSav").close();

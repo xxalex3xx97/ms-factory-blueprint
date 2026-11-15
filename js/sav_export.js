@@ -309,6 +309,43 @@ function savExport(j, opts) {
   savFind(bp, 'Machines').val = ['sarr', machines];
   return { bytes: savDump(o), warn: [...new Set(warn)] };
 }
+// ---- Design .sav import (inverse of savExport): GVAS design file -> site JSON (Version 2). Returns null when u8 is not a design file.
+// Machines inside blocks become flat DefaultMachines (as parseSav does for world saves); dock/elevator names and drone bay resource are read from their child configs.
+function savImport(u8) {
+  let o;
+  try { o = savLoad(u8); } catch (e) { return null; }
+  const bpp = o.props.find(x => x.name === 'Blueprint');
+  if (!bpp || bpp.val[0] !== 'props') return null;
+  const bp = bpp.val[1], get = (l, n) => { const r = l.find(x => x.name === n); return r && r.val; };
+  const bl = get(bp, 'Blocks'), cn = get(bp, 'Connectors'), ma = get(bp, 'Machines'), dn = get(bp, 'DisplayName');
+  if (!bl || bl[0] !== 'sarr') return null;   // ship designs have no Machines list
+  const i32 = (l, n) => { const v = get(l, n); return v && v[0] === 'raw' && v[1].length >= 4 ? savDV(v[1]).getInt32(0, true) : 0; };
+  const fs_ = (l, n) => { const v = get(l, n); return v && v[0] === 'raw' ? savFstrR(v[1], 0)[0] : ''; };
+  const xf = l => { const t = get(l, 'Transform'), g = t && get(t[1], 'GridLocation'); const dv = g && savDV(g[1]);
+    return { GridLocation: { X: dv ? dv.getInt32(0, true) : 0, Y: dv ? dv.getInt32(4, true) : 0 }, Height: i32(t[1], 'Height'), GridRotation: i32(t[1], 'GridRotation') }; };
+  const hexOf = l => { const v = get(l, 'SerializedMachineConfig'); if (!v || v[0] !== 'raw' || v[1].length < 4) return ''; const n = savDV(v[1]).getInt32(0, true);
+    return Array.from(v[1].slice(4, 4 + n), b => b.toString(16).padStart(2, '0')).join(''); };
+  const mach = (l, bn) => { const c = savShort(fs_(l, 'Class')), t = xf(l), hx = hexOf(l);
+    return { Class: c, Transform: { GridLocation: t.GridLocation, Height: t.Height, GridRotation: t.GridRotation }, MachineID: i32(l, 'MachineID'), PaletteID: i32(l, 'PaletteID'), ...(hx ? cfgView(c, hx) : {}) }; };
+  const blocks = [], machs = [];
+  const addBlock = l => {
+    const cls = fs_(l, 'Class'), t = xf(l), e = { Class: cls, GridLocation: t.GridLocation, Height: t.Height, GridRotation: t.GridRotation, BlockID: i32(l, 'BlockID'), PaletteID: i32(l, 'PaletteID') };
+    const dm = get(l, 'DefaultMachines');
+    for (const m of (dm && dm[0] === 'sarr' ? dm[1] : [])) {
+      const q = mach(m), d = q.ConfigHex && cfgDec(q.Class, q.ConfigHex);
+      if (d && d.name && (cfgKind(q.Class) === 'dock' || cfgKind(q.Class) === 'named')) e.Name = d.name;
+      if (d && d.resource) e.Resource = d.resource;
+      machs.push(q);
+    }
+    blocks.push(e);
+  };
+  bl[1].forEach(addBlock);
+  if (cn && cn[0] === 'sarr') cn[1].forEach(addBlock);
+  if (ma && ma[0] === 'sarr') ma[1].forEach(m => machs.push(mach(m)));
+  machs.sort((a, b) => a.MachineID - b.MachineID);
+  const name = dn && dn[0] === 'raw' && dn[1].length > 9 ? savFstrR(dn[1], 9)[0] : 'Imported';
+  return { Version: 2, DisplayName: name, Blocks: blocks, DefaultMachines: machs };
+}
 // S4: Download .sav button (browser only). Same name rules as the .json download.
 if(typeof document!=="undefined"&&document.getElementById("expSav")){
   document.getElementById("expSav").onclick=()=>{
