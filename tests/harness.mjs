@@ -3902,6 +3902,8 @@ async function s42(br) {
   chk('42 teleporter Name exports (config + Name) and re-imports', !!tp && tp.name === 'Hub' && tp.back === 'Hub', JSON.stringify(tp));
   const sel = await pg.evaluate(() => { const b = S.blocks.find(b => (def(b.cls) || {}).name === 'BPO_MiningDroneBayBlock'); sel = new Set([b.id]); all(); return !!document.getElementById('frs'); });
   chk('42 drone bay inspector has the Mines select', sel);
+  const adp = await pg.evaluate(() => { importJson(JSON.stringify({Version: 1, DisplayName: 't', Blocks: [{Class: '/Game/Blueprints/BuildingBlocks/BPO_StationAdapter_01.BPO_StationAdapter_01_C', GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []})); const b = S.blocks[0]; return {n: entrances(b, true).length, sides: entText(b) && entText(b).sides.join('')}; });
+  chk('42 station adapter: Layout door marks (W, 2xE, N, S = 5 marks on 4 sides)', adp.n === 5 && adp.sides === 'ESWN', JSON.stringify(adp));
   await ctx.close();
 }
 // ================= 40 rename docks: Name on Dock / Industrial Dock / Shipyard Core (+_02), not Shipyard Side (2026-11-09 brief rename-docks-shipyards, slice A)

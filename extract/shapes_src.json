@@ -954,6 +954,7 @@
         "kind": "doors",
         "evidence": "decoded BPO_StationAdapter_01 colliders; rotation vs site axes unverified"
       },
+      "lgaps": [["W", 0, 4, 0, 26], ["E", 14, 4, 14, 10], ["E", 14, 20, 14, 26], ["N", 4, 0, 10, 0], ["S", 4, 30, 10, 30]],
       "ground": true,
       "source": "decoded from EA files (BPO StationAdapter_01: colliders, BlockBounds, ItemCost); not tested in game",
       "description": "Station Adapter",
