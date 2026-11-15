@@ -17,7 +17,7 @@ window.HAND=(function(){
   // put({cls,gx,gy,lx,ly,rec,ct,name}) -> machine record, or null when the spot is taken / outside the floor
   function put(o){
     const x=o.gx*TW+o.lx,y=o.gy*TW+o.ly,d=dim({cls:o.cls,rot:0});
-    for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)if(!inFloor(x+i,y+j)||S.occ.has(k(x+i,y+j)))return null;
+    for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)if((!o.force&&!inFloor(x+i,y+j))||S.occ.has(k(x+i,y+j)))return null;   // force: cell outside every block floor (dock blocks)
     const m={id:S.M.length,cls:o.cls,x,y,w:d.w,h:d.h,rec:o.rec,ct:o.ct,name:o.name||o.cls,ports:portsOf({cls:o.cls,x,y,rot:0,h:0}),used:new Set()};
     m.ports.forEach(p=>{const kk=k(p.x+p.nx,p.y+p.ny);S.door.set(kk,(S.door.get(kk)||0)+1)});   // doorway cell of every port: other belts should keep out
     for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++)S.occ.set(k(x+i,y+j),m.id);
@@ -123,6 +123,6 @@ window.HAND=(function(){
   // prune(): drop every block that holds nothing (no machine and no belt piece)
   function prune(){const keep=new Set();S.occ.forEach((_,kk)=>{const [x,y]=kk.split(',').map(Number);keep.add(k(Math.floor(x/TW),Math.floor(y/TW)))});[...S.blocks.keys()].forEach(kk=>{if(!keep.has(kk))S.blocks.delete(kk)})}
   // piece(p): drop one ready-made piece (belt, underground, splitter) on a free cell; false if the cell is taken or off the floor
-  function piece(p){const kk=k(p.x,p.y);if(!inFloor(p.x,p.y)||S.occ.has(kk))return false;S.occ.set(kk,'p');S.pcs.push({h:0,pid:0,...p});return true}
+  function piece(p,force){const kk=k(p.x,p.y);if((!force&&!inFloor(p.x,p.y))||S.occ.has(kk))return false;S.occ.set(kk,'p');S.pcs.push({h:0,pid:0,...p});return true}
   return{reset,block,put,link,reserve,lane,prune,piece,setMk,D:()=>MAXA-1,result,check,verify,S,TW,FW,CLS,free,inFloor};
 })();
