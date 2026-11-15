@@ -20,7 +20,7 @@ function galBuild(k){   // the build engine (tools/hand chainBuild, one recipe, 
   try{
     if(typeof chainBuild!=="function")throw new Error("engine not loaded");
     if(!["CRAFT_Refinery","CRAFT_Assembler","CRAFT_GrowthChamber","CRAFT_Supercomputer","CRAFT_AdvancedAssembler","CRAFT_Enrichment"].includes(k.c))throw new Error("no block for this machine yet ("+k.cls+")");
-    if(new Set(k.r.i.map(([x])=>x)).size>3)throw new Error("more than 3 different inputs: the engine has source slots for 3");
+    if(new Set(k.r.i.map(([x])=>x)).size>4)throw new Error("more than 4 different inputs: the engine has source slots for 4");
     const pick={};if(k.idx>0)pick[k.item]=rk(k.r);
     const R=chainBuild({item:k.item.replace(/^ITEM_/,""),rate:k.base,single:true,docks:false,tile:$("plnBk").value,pick,maxStates:60000,hw:3});
     if(R.report.skipped&&R.report.skipped.length)why="no block for this machine yet ("+k.cls+")";
@@ -61,7 +61,7 @@ function galCard(k){
   e.innerHTML=`<h4>${galEsc(k.name)}</h4><div class="sub">${galEsc(k.cls)} &middot; ${k.grp} &middot; in/machine ${k.inRate.toFixed(1)}/min &middot; ${k.M}/Mk2 belt &middot; base ${k.base}/min</div>`+
     (r?`<div class="chips">${r.ok?`<span class="gch eng">Built by: ${galEsc(r.engName)}</span>`:""}<span class="gch ${r.chip[0]} stat" title="${galEsc(r.fb||r.why||"")}">${galEsc(r.chip[1])}</span></div>`:`<div class="chips"><span class="gch">not built</span></div>`)+
     (r&&r.ok?`<canvas width="320" height="200" aria-label="${galEsc(k.name)} template"></canvas><div class="st">${r.cnt.mach} machines, ${r.cnt.belt} belts, ${r.cnt.ug} UG, ${r.cnt.spl} splitters, ${r.blocks} blocks, ${r.w}x${r.h} cells, ${(r.cnt.belt/Math.max(1,r.cnt.mach)).toFixed(1)} belts/machine</div>`:"")+
-    `<div class="btns">${r?"":`<button data-gb>Build</button>`}${r&&r.ok?`<button data-gx>Export snippet</button>`:""}</div>`;
+    `<div class="btns">${r?"":`<button data-gb>Build</button>`}${r&&r.ok?`<button data-gx>Export snippet</button><button data-gp>Place</button>`:""}</div>`;
   const c=e.querySelector("canvas");if(c)galDraw(r.T,c);
 }
 function galShow(){
@@ -86,5 +86,7 @@ function galStats(){const o={};GAL.cards.forEach(k=>{if(!k.res)return;const key=
   ["galQ","galM","galG","galS"].forEach(i=>$(i).addEventListener("input",galShow));
   $("galAll").onclick=galAll;$("galClose").onclick=()=>d.close();
   $("galExAll").onclick=()=>{GAL.cards.filter(k=>!k.res).forEach(galStep);galShow();galFile(GAL.cards.map(galSnip).filter(Boolean),"template-library.json")};
-  $("galGrid").onclick=e=>{const el=e.target.closest(".galC");if(!el)return;const k=GAL.byKey.get(el.dataset.key);if(e.target.dataset.gb!=null)galStep(k);else if(e.target.dataset.gx!=null)galFile([galSnip(k)],k.name+".json")};
+  $("galGrid").onclick=e=>{const el=e.target.closest(".galC");if(!el)return;const k=GAL.byKey.get(el.dataset.key);if(e.target.dataset.gb!=null)galStep(k);else if(e.target.dataset.gx!=null)galFile([galSnip(k)],k.name+".json");else if(e.target.dataset.gp!=null){   // Place: the template follows the cursor as a ghost, click puts it down next to what you already have (Esc cancels)
+      const T=galBuild(k).T;$("galDlg").close();setView("L");clip=[];active=null;mode=null;sel=new Set();
+      pasting={rot:0,fl:false,pl:{blocks:T.blocks,ms:T.ms,plan:{item:k.item,rate:k.base}}};toast("Click to place "+k.name+" ("+T.blocks.length+" blocks). Esc cancels");all();if(!$("pln").classList.contains("col"))$("plnC").click()}};   // planner out of the way;
 })();

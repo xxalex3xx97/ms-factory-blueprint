@@ -24,7 +24,7 @@ for (const n of names) {
     const e = k.el;
     return {img: !!e.querySelector('canvas'), eng: (e.querySelector('.eng') || {}).textContent || '', chip: e.querySelector('.stat').textContent, st: (e.querySelector('.st') || {}).textContent || ''};
   }, n);
-  const gold = ['Nickel Plates', 'Silicon Wafers', 'Basic Circuits', 'Enzyme'].includes(n);   // Advanced Circuits: 4 different inputs, more than the engine has source slots for
+  const gold = ['Nickel Plates', 'Silicon Wafers', 'Basic Circuits', 'Enzyme', 'Advanced Circuits'].includes(n);
   check(r && (gold ? r.img && /Build engine/.test(r.eng) && /Golden/.test(r.chip) && /machines/.test(r.st) : !r.img && /^Not supported yet: ./.test(r.chip)), n + ': ' + JSON.stringify(r && [r.eng, r.chip, r.st]));
 }
 const ex = await pg.evaluate(() => JSON.parse(galExport(GAL.cards.find(c => c.name === 'Nickel Plates').key)));
