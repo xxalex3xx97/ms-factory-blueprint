@@ -13,7 +13,8 @@ window.fbBuild=function(opts){
   const hopSpan=(ax,a,b)=>{const l=HAND.S.span.get(ax)||[];l.push([a,b]);HAND.S.span.set(ax,l)};   // tell check() the pair is intended
   const info=[],dockBlk=[],anch=[];
   function one(gx,gy,name,cls,crafter,rc,perOv,nTot,chain){
-    const dk=DOCK||(chain&&rc.i.some(([it])=>isRaw(it)));
+    const isRawL=it=>isRaw(it)||(chain&&it===rc.o[0]);   // an input that is the recipe's own product (growth seed) arrives from a dock like a raw item: no loop of the output into itself
+    const dk=DOCK||(chain&&rc.i.some(([it])=>isRawL(it)));
     const ox=gx*TW,oy=gy*TW,put1=(x,y,rot,c,extra)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+y,rot,...extra}))throw new Error(name+': cell taken '+x+','+y)};
     const spl=(x,y,keep)=>put1(x,y,0,SPL,{off:pfSplOff(SPL,0,keep),pr:[0,-1]});
     // horizontal lane on row y from x=x0: splitters at spx, UG hops hop(x)->exit, belts elsewhere, up to the last splitter
@@ -23,8 +24,8 @@ window.fbBuild=function(opts){
         put1(x,y,0,BELT);x++}};
     const s=dim({cls,rot:0}).w,P0=portsOf({cls,x:0,y:0,rot:0,h:0}),cN=P0.filter(p=>p.f==='N').map(p=>p.x).sort((a,b)=>a-b),cE=P0.filter(p=>p.f==='E').map(p=>p.y).sort((a,b)=>a-b),pf=cN.length,kr=rc.i.length,k=Math.max(...RECS[crafter].map(x=>x.i.length));   // block geometry from the class's biggest recipe; this recipe fills the first kr lanes
     const nN=Math.min(k,pf);let nS=k-nN;const side=nS>=pf;if(!side)nS=Math.min(nS,pf-1);
-    const rawList=[...new Set(rc.i.map(([it])=>it).filter(isRaw))],extraItems=chain&&dk?rawList.slice(1):[];   // an industrial dock carries ONE ore: further raw items get their own dock (rows gy-1, gy+1) and arrive like bus items from the north
-    const inItem=j=>rc.i[j][0],rawIn=rc.i.map(([it])=>isRaw(it)&&!extraItems.includes(it));   // input index: N lane j = input j, S lane j = input nN+j
+    const rawList=[...new Set(rc.i.map(([it])=>it).filter(isRawL))],extraItems=chain&&dk?rawList.slice(1):[];   // an industrial dock carries ONE ore: further raw items get their own dock (rows gy-1, gy+1) and arrive like bus items from the north
+    const inItem=j=>rc.i[j][0],rawIn=rc.i.map(([it])=>isRawL(it)&&!extraItems.includes(it));   // input index: N lane j = input j, S lane j = input nN+j
     const nrm=!!(HAND.nrm&&dk&&chain),capRows=!nrm?99:Math.min(...rawList.map(it=>Math.floor((extraItems.includes(it)?2:4)/rc.i.filter(([x])=>x===it).length))),LIM=nrm?2:4;   // normal docks: a dock has 2 belt ports and a block face holds 2 docks, so at most 4 raw lane rows (2 per dock, 2 for an extra item's own dock)
     const yTop=chain&&dk&&rawIn.some(v=>!v)?2:0,   // dock blocks fed from the north: two empty rows on top so the entry belt can turn after the wall tunnel
     band=side?nN+s+nS+2:nN+s+(nS?1:0)+1,rowsN=side?2:Math.floor((30-yTop)/band),pitch=side?s+1:s,iO=nS&&!side?pf-1:0;
@@ -57,7 +58,7 @@ window.fbBuild=function(opts){
     }
     const X0=dk?Math.max(1,J+1):1,per=Math.min(perOv||99,Math.floor((28-X0+(side?1:0))/pitch)),cap=nRows*per,nUse=nTot?Math.min(nTot,cap):cap;HAND.block(gx,gy);if(chain)HAND.block(gx+1,gy);   // chain: the output block (gx+1) holds the boxes
     groups.forEach(g=>{for(let i=g.length-1;i>=0;i--)if(g[i].r*per>=nUse)g.splice(i,1)});   // machine rows that stay empty get no dock lane (it would end in nothing)
-    const entries=[],exits=[],inRate=idx=>rc.i[idx][1]*1800/rc.t,prodRate=rc.o[1]*1800/rc.t,selfFeed=rc.i.some(([it])=>it===rc.o[0]);
+    const entries=[],exits=[],inRate=idx=>rc.i[idx][1]*1800/rc.t,prodRate=rc.o[1]*1800/rc.t,selfFeed=false;
     // industrial dock west of the block (2x2 C: station adapter between block and dock, assembly shifted 16 cells): the 8 lane belts arrive at x=0 on rows 4..7 / 22..25
     const rawStart=new Map(),usedP=new Map();
     const xDock=extraItems.map((it,xi)=>({dy:xi===0?-1:1,item:it}));   // extra docks   // 'r,idx' -> start x of the raw lane; port row -> jog column of the lane on it

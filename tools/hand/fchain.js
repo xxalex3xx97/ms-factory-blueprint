@@ -18,7 +18,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
   const P=plan(ITEM,RATE,MK);
   const CM={CRAFT_Refinery:['Refinery','DAT_Refinery',6],CRAFT_Assembler:['Assembler','DAT_Assembler'],CRAFT_GrowthChamber:['GrowthChamber','DAT_GrowthChamber'],CRAFT_Supercomputer:['Supercomputer','DAT_Supercomputer'],CRAFT_AdvancedAssembler:['AdvancedAssembler','DAT_AdvancedAssembler'],CRAFT_Enrichment:['Enrichment','DAT_EnrichmentChamber']};
   const CAPD={Refinery:36,Assembler:15,GrowthChamber:6,Supercomputer:9,AdvancedAssembler:4,Enrichment:4},CAPN={...CAPD,AdvancedAssembler:6,Enrichment:6};
-  const by=plnBy(false,true),isRaw=it=>!by.has(it),rawOf=n=>n.rec.i.some(([it])=>isRaw(it));
+  const by=plnBy(false,true),isRaw=it=>!by.has(it),rawOf=n=>n.rec.i.some(([it])=>isRaw(it)||it===n.rec.o[0]);
   const nodes=Object.values(P.nodes).filter(n=>n.crafter&&n.machines>0&&CM[n.crafter]);
   const dep={};const dOf=it=>{if(dep[it]!=null)return dep[it];dep[it]=0;let d=0;for(const e of P.edges)if(e.to===it&&e.from!==it&&P.nodes[e.from]&&P.nodes[e.from].crafter)d=Math.max(d,dOf(e.from)+1);return dep[it]=d};
   nodes.forEach(n=>dOf(n.item));
@@ -31,7 +31,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     colList.push(cur)});
   let x=0;const specs=[],streetBx=new Set(),westOf={},westOf0={},swMap={};let maxRows=1;
   colList.forEach((col,ci)=>{col.hasRaw=col.items.some(i=>rawOf(i.n));x+=col.hasRaw?4:0;col.gx=x;col.sw=sws[ci]||SW;col.half=(opts.halfs||[])[ci];col.west=ci?colList[ci-1].gx+1+colList[ci-1].sw:null;col.west0=ci?colList[ci-1].gx+2:null;swMap[col.gx+2]={sw:col.sw,half:col.half};x+=2+col.sw;for(let d=2;d<2+col.sw;d++)streetBx.add(col.gx+d);   // block, output block, street 4 strides wide (64 lanes)
-    let cur=0;col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter],nExtra=rawOf(it.n)?Math.max(0,new Set(it.n.rec.i.map(([q])=>q).filter(isRaw)).size-1):0;westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
+    let cur=0;col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter],nExtra=rawOf(it.n)?Math.max(0,new Set(it.n.rec.i.map(([q])=>q).filter(q=>isRaw(q)||q===it.n.rec.o[0])).size-1):0;westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
       if(nExtra)cur+=2;const gyRow=cur;cur+=nExtra?4:2;maxRows=Math.max(maxRows,cur/2);   // a block with extra docks keeps the rows above and below for them
       specs.push({gx:col.gx,gy:TBS+1+gyRow,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),col:dep[it.n.item]})})});
   const lastCol=colList[colList.length-1],lastGx=lastCol.gx,gxO=lastGx+2+lastCol.sw,nLn=Math.ceil(RATE/[60,120,180][MK]-1e-9),nrmO=(opts.outDockType||opts.dockType)==='nrm',nOD=opts.outDock?Math.ceil(nLn/(nrmO?4:8)):0;   // output dock: an extra tile column east of everything (nLn lanes of the final item, 8 lanes per industrial dock)
