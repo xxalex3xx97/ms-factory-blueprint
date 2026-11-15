@@ -163,7 +163,7 @@ const savShort = c => String(c).split('/').pop().split('.')[0];
 const savKey = (s, x, y, h) => s + '|' + x + '|' + y + '|' + h;
 // Config hex for an in-block default machine. A matching flat machine (fm) wins; else the template hex
 // with its name and filters reset (dock) or the empty named form (elevator/teleporter).
-function savInCfg(s, tpl, fm, blockName, res) {
+function savInCfg(s, tpl, fm, blockName, res, bf) {
   const k = cfgKind(s); let hex = fm && fm.ConfigHex ? fm.ConfigHex : tpl;
   if (!(fm && fm.ConfigHex)) {
     if (k === 'dock') { const d = cfgDec(s, tpl); hex = d ? cfgEnc('dock', {name: '', filters: d.filters.map(() => ({item: '', bLoading: 0}))}) : tpl; }
@@ -171,7 +171,9 @@ function savInCfg(s, tpl, fm, blockName, res) {
   }
   if (k === 'dronebay' && res) return cfgEnc('dronebay', {resource: res});
   const nm = ((k === 'dock' || k === 'named') && blockName) || (fm && fm.Name) || '';
-  return nm && (k === 'dock' || k === 'named') ? cfgWithName(s, hex, nm) : hex;
+  const out = nm && (k === 'dock' || k === 'named') ? cfgWithName(s, hex, nm) : hex;
+  const d = k === 'dock' && bf && bf.length ? cfgDec(s, out) : null;   // block Filters (site b.df) fill the dock's slots
+  return d ? cfgEnc('dock', {name: d.name, filters: d.filters.map((f, i) => bf[i] || f)}) : out;
 }
 
 // Clone of a template entry (props list) with Class, Transform, id and palette set.
@@ -283,7 +285,7 @@ function savExport(j, opts) {
       const s = savShort(m.c), fm = flat.get(savKey(s, X, Y, H));
       if (fm) used.add(savKey(s, X, Y, H));
       const q = savEntry(protoMac, m.c, X, Y, H, (m.dr + br) & 3, 0, 'MachineID', nextId++);
-      savSetVar(q, 'SerializedMachineConfig', savCfgBytes(savInCfg(s, m.hex, fm, b.Name, b.Resource)));
+      savSetVar(q, 'SerializedMachineConfig', savCfgBytes(savInCfg(s, m.hex, fm, b.Name, b.Resource, b.Filters)));
       return q;
     })];
     (isConn ? conns : blocks).push(e);

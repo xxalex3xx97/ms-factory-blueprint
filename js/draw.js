@@ -360,7 +360,7 @@ function drawShapeFloor(A,s){
       (sh.iports||[]).forEach(([sd,x,y])=>{const[ex,ey]=t.f(x,y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),v=("EW".includes(sd))!==!!odd,w=v?Tk:Ln,h=v?Ln:Tk;   // info ports (elevator): same bar, vertical on E/W sides, display only
         cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
       if(s>=10){cx.font="600 "+Math.min(13,Math.max(9,s*.6))+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillStyle="rgba(255,255,255,.9)";
-        marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(p.bay),tx,ty)})}
+        const bm=Math.max(...marks.map(p=>p.bay||0));marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(dock?bm+1-p.bay:p.bay),tx,ty)})}
       cx.restore()}
   });
 }

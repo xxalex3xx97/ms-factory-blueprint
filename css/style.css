@@ -199,3 +199,4 @@ header .mnl .hbt{flex-direction:row;min-height:34px;gap:6px;width:100%;justify-c
 #pvOptB{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:flex-end;padding:4px 0}
 #pvLine{margin-top:6px;font-size:13px;font-family:var(--mono)}#pvLine:empty{display:none}
 #plnPrevView{min-height:320px}
+.star{color:#f5c542;font-size:12px}

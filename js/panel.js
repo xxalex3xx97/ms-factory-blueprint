@@ -3,7 +3,8 @@ function recipesHtml(d,b){
   const nm=id=>(ITEMS[id]||{}).n||String(id).replace(/^ITEM_/,"");
   return `<h2>Recipes (${rs.length})</h2><div class="pad"><div class="rgrid">`
     +rs.map(r=>{const tip=r.i.map(x=>x[1]+"x "+nm(x[0])).join(" + ")+" -> "+r.o[1]+"x "+nm(r.o[0])+(r.t==null?"":" | "+secs(r.t)+" s")+" | "+rateTxt(pm(r.o[1],r.t));
-      return `<div class="rtile${b&&b.rec===rk(r)?" sel":""}"${b?` data-rk="${esc(rk(r))}" role="button" tabindex="0"`:""} title="${esc(tip)}">${iurl(r.o[0])?`<img class="ic" alt="" src="${iurl(r.o[0])}">`:""}<span class="rn">${esc(nm(r.o[0]))}</span></div>`}).join("")
+      const en=r.i.some(x=>/^ITEM_Enriched.*Ore$/.test(x[0])),alt=rs.some(q=>q!==r&&q.o[0]===r.o[0]),st=en||alt?` <span class="star">&#9733;</span>`:"";   // star: uses enriched raw ore, or an alternate recipe for the same output
+      return `<div class="rtile${b&&b.rec===rk(r)?" sel":""}"${b?` data-rk="${esc(rk(r))}" role="button" tabindex="0"`:""} title="${esc(tip+(en?" | enriched ore":"")+(alt?" | alternate recipe":""))}">${iurl(r.o[0])?`<img class="ic" alt="" src="${iurl(r.o[0])}">`:""}<span class="rn">${esc(nm(r.o[0]))}${st}</span></div>`}).join("")
     +`</div>`+(b&&b.rec?`<div class="btns"><button id="bRecClr">Clear recipe</button></div>`:"")
     +`</div>`;
 }
@@ -22,6 +23,16 @@ function sumBody(b,d){
   if(l&&isBelt(b))x+='<div class="kv">load <b>'+l.tot+(l.cap?" / "+l.cap:"")+'</b> /min</div>';
   return x;
 }
+// item filters: splitter / balancer outputs (b.fl, strings like "waterice") and dock slots (b.df {item,bLoading}); empty = no filter
+const fkey=id=>id.slice(5).toLowerCase(),FITEMS=Object.keys(ITEMS).sort((a,b)=>ITEMS[a].n.localeCompare(ITEMS[b].n));
+const SPL_LBL=["Right","Front","Left"];
+function filtHtml(b){
+  const dn=dkN(b.cls),sp=!dn&&isM(b)&&cfgKind(b.cls)==="splitter";if(!dn&&!sp)return"";
+  const n=dn||(b.fl?b.fl.length:isBalCls(b.cls)?2:3),cur=i=>dn?((b.df||[])[i]||{}).item||"":(b.fl||[])[i]||"";
+  return sec("filt","Filters",Array.from({length:n},(_,i)=>{const c=cur(i).toLowerCase(),known=FITEMS.some(id=>fkey(id)===c);
+    return `<div class="row"><label for="fl${i}">${dn?i+1:isBalCls(b.cls)?i+1:(SPL_LBL[i]||i+1)}</label><select id="fl${i}" data-${dn?"df":"fl"}="${i}"><option value="">(no filter)</option>`
+      +FITEMS.map(id=>`<option value="${esc(fkey(id))}"${fkey(id)===c?" selected":""}>${esc(ITEMS[id].n)}</option>`).join("")+(c&&!known?`<option value="${esc(c)}" selected>${esc(c)}</option>`:"")+`</select></div>`}).join(""));
+}
 function panel(){
   const bs=S.blocks.filter(b=>sel.has(b.id));
   const one=bs.length===1?bs[0]:null;
@@ -39,6 +50,7 @@ function panel(){
     if(one){
       if(rsOk(one.cls)){const rs=one.rs||"",ol=RSL.includes(rs)||!rs?RSL:RSL.concat(rs);h+='<div class="row"><label for="frs">Mines</label><select id="frs" data-rs="1"><option value="">(not set)</option>'+ol.map(v=>'<option value="'+esc(v)+'"'+(v===rs?" selected":"")+'>'+esc((CATALOG.items["ITEM_"+(Object.keys(CATALOG.items).map(k=>k.slice(5)).find(k=>k.toLowerCase()===v)||v)]||{}).n||v)+'</option>').join("")+'</select></div>'}
       if(nmOk(one.cls))h+='<div class="row"><label for="fnm">Name</label><input id="fnm" type="text" data-nm="1" value="'+esc(one.nm||"")+'"></div>';
+      h+=filtHtml(one);
       const et=entText(one);if(et)h+='<div class="sub" title="'+esc(ENT_HINT)+'" id="entInfo"><b>'+et.kind+':</b> '+et.sides.join(", ")+'<br>'+esc(ENT_HINT)+'.</div>';
       if(F){
         if(one.h===layer&&outside(one,A.rects))h+='<div class="warnline">'+esc(WARN)+'</div>';
@@ -103,6 +115,11 @@ $("insp").addEventListener("change",e=>{
   const t=e.target,bs=S.blocks.filter(b=>sel.has(b.id));
   if(t.dataset.prio&&bs.length===1){push();togglePrio(bs[0],t.dataset.prio);all();return}
   if(t.dataset.port&&bs.length===1){push();togglePort(bs[0],t.dataset.port);all();return}
+  if((t.dataset.fl!=null||t.dataset.df!=null)&&bs.length===1){
+    const m=bs[0],i=+(t.dataset.fl??t.dataset.df),dn=dkN(m.cls);push();
+    if(dn){const a=Array.from({length:dn},(_,j)=>({item:"",bLoading:0,...((m.df||[])[j]||{})}));a[i].item=t.value;if(a.some(f=>f.item))m.df=a;else delete m.df}
+    else{const n=m.fl?m.fl.length:isBalCls(m.cls)?2:3,a=Array.from({length:n},(_,j)=>(m.fl||[])[j]||"");a[i]=t.value;if(a.some(Boolean))m.fl=a;else delete m.fl}
+    delete m.cfgKeep;all();return}
   if(t.dataset.rs&&bs.length===1){const v=t.value;if(v===(bs[0].rs||""))return;push();if(v)bs[0].rs=v;else delete bs[0].rs;all();return}
   if(t.dataset.nm&&bs.length===1){const v=t.value.trim();if(v===(bs[0].nm||""))return;push();if(v)bs[0].nm=v;else delete bs[0].nm;delete bs[0].cfgKeep;all();return}
   if(t.dataset.ct&&bs.length===1){

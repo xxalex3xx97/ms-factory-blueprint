@@ -4,7 +4,7 @@ const CU=CATALOG.cell_units||2;
 const NMC=["BPO_Dock","BPO_Dock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ElevatorBlock_03"],nmOk=c=>{const d=def(c);return!!d&&(NMC.includes(d.name)||d.id==="DAT_Teleporter")},
   DBC=["BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2"],rsOk=c=>{const d=def(c);return!!d&&DBC.includes(d.name)},   // drone bay block: b.rs = resource its drones mine (lowercase item name, e.g. "silica"), JSON Blocks[].Resource
   RSL=["cobaltore","iridiumore","nickelore","titaniumore","silica","waterice"],
-  expNm=(b,e)=>{if(b.nm&&nmOk(b.cls))e.Name=b.nm;if(b.rs&&rsOk(b.cls))e.Resource=b.rs;return e};
+  expNm=(b,e)=>{if(b.nm&&nmOk(b.cls))e.Name=b.nm;if(b.df&&dkN(b.cls))e.Filters=b.df;if(b.rs&&rsOk(b.cls))e.Resource=b.rs;return e};
 const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.length)e.Ports=ps.map(p=>({Face:p.f,Index:p.i,Enabled:p.en})).concat(xp);return e};   // extra non-game field, only when non-default
 // game splitter config bytes = [front, right, left] at rot 0, as local faces (port identity is fixed in the machine, so rotation needs no mapping). The back/input face (W at rot 0) is never a game byte.
 const SPL_FACES=["S","E","N"];
@@ -98,7 +98,7 @@ function parseSav(buf){
     const C=A.cls,pth=i=>i>=0&&i<C.length?C[i]:null;
     const blocks=[],machs=A.machs.slice();
     for(const{b,ms}of A.blocks){machs.push(...ms);const p=pth(b.cls);if(p){const e={Class:p,GridLocation:{X:b.X,Y:b.Y},Height:b.H,GridRotation:b.R,BlockID:b.ID,PaletteID:b.PAL};   // dock name: string in the built-in dock child machine's ConfigHex (kept as an opaque machine too)
-      {const bn=p.split("/").pop().split(".")[0];if(NMC.includes(bn)||DBC.includes(bn))for(const m of ms){const q=pth(m.cls),c=q&&q.split("/").pop().split(".")[0];if(c&&/(StationBlockDock|IndustrialDock|ShipyardBlockDock|Elevator|MiningDroneBay)/.test(c)&&!/ItemElevator/.test(c)&&m.hx){const d=cfgDec(c,m.hx);if(d&&d.name)e.Name=d.name;if(d&&d.resource)e.Resource=d.resource}}}
+      {const bn=p.split("/").pop().split(".")[0];if(NMC.includes(bn)||DBC.includes(bn))for(const m of ms){const q=pth(m.cls),c=q&&q.split("/").pop().split(".")[0];if(c&&/(StationBlockDock|IndustrialDock|ShipyardBlockDock|Elevator|MiningDroneBay)/.test(c)&&!/ItemElevator/.test(c)&&m.hx){const d=cfgDec(c,m.hx);if(d&&d.name)e.Name=d.name;if(d&&d.resource)e.Resource=d.resource;if(d&&d.filters&&d.filters.some(f=>f.item))e.Filters=d.filters}}}
       blocks.push(e)}}
     const dm=[],dup=ugDupes(machs,UG);
     for(const m of machs){const p=pth(m.cls);if(p){const c=p.split("/").pop().split(".")[0],e={Class:c,Transform:{GridLocation:{X:m.X,Y:m.Y},Height:m.H,GridRotation:m.R},MachineID:m.MID,PaletteID:m.PAL,...(m.hx?cfgView(c,m.hx):{})};
@@ -206,7 +206,7 @@ function importJson0(txt,quiet){
     const x=cell(gx,4,ox),y=cell(gy,4,oy),nb={id:uid++,cls,x,y,h:Math.round(n(b.Height)/BZ),rot:r,pid:n(b.PaletteID)};
     if(4*x+ox!==Number(gx)||4*y+oy!==Number(gy))nb.raw={x,y,r,X:Number(gx),Y:Number(gy)};   // block never moves on round trip; non-fitting game coords kept via raw
     return nb});
-  S.blocks.forEach((b,i)=>{impPorts(b,o.Blocks[i].Ports);const nm=o.Blocks[i].Name,rs=o.Blocks[i].Resource;if(typeof nm==="string"&&nm&&nmOk(b.cls))b.nm=nm;if(typeof rs==="string"&&rs&&rsOk(b.cls))b.rs=rs});
+  S.blocks.forEach((b,i)=>{impPorts(b,o.Blocks[i].Ports);const nm=o.Blocks[i].Name,rs=o.Blocks[i].Resource;if(Array.isArray(o.Blocks[i].Filters)&&dkN(b.cls))b.df=o.Blocks[i].Filters.map(f=>({item:String(f.item||""),bLoading:f.bLoading|0}));if(typeof nm==="string"&&nm&&nmOk(b.cls))b.nm=nm;if(typeof rs==="string"&&rs&&rsOk(b.cls))b.rs=rs});
   const cd=o.FactoryLayout&&o.FactoryLayout.ClosedDoorways,lg=[];S.closed=[];
   if(Array.isArray(cd))cd.forEach(d=>{if(d&&d.Seg!=null&&"ESWN".includes(d.Edge))S.closed.push(`${n(d.Height)}|${n(d.X)}|${n(d.Y)}|${d.Edge}|${n(d.Seg)}`);else if(d)lg.push(d)});
   // old format (V/H strip, or an edge without Seg): closes every door on that edge
