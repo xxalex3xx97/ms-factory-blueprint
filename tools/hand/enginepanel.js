@@ -33,8 +33,9 @@
   };
   $("plnPlace").onclick=placerPlace;
   // settings the chain engine does not have yet are fixed and greyed out
-  const fix=()=>{$("plnBk").value="BPO_Station_03";$("plnDk").value="ind";if($("plnDkOT").value==="nrm")$("plnDkOT").value="";const nr=$("plnDkOT").querySelector('option[value="nrm"]');if(nr){nr.disabled=true;nr.title="Normal docks are not available yet"}
-    ["plnBk","pvSp","plnBuf","plnLbl","plnDk"].forEach(i=>{$(i).disabled=true;$(i).title="Not available yet"});
-    const m=$("pvMk").querySelector('option[value="2"]');if(m){m.disabled=true;m.title="Mk3 is not available yet";if($("pvMk").value==="2")$("pvMk").value="1"}};
-  $("plnDkI").checked=true;fix();$("plnPrev").addEventListener("toggle",fix);const run0=placerRun;window.placerRun=function(){fix();return run0.apply(this,arguments)};
+  const fix=force=>{if(force){$("plnBk").value="BPO_Station_03";$("plnDk").value="ind";if($("plnDkOT").value==="nrm")$("plnDkOT").value=""}   // values are only forced when building: what the user saved is left alone
+    const nr=$("plnDkOT").querySelector('option[value="nrm"]');if(nr){nr.disabled=true;nr.title="Normal docks are not available yet"}
+    ["plnBk","pvSp","plnBuf","plnLbl"].forEach(i=>{$(i).disabled=true;$(i).title="Not available yet"});const nd=$("plnDk").querySelector('option[value="nrm"]');if(nd){nd.disabled=true;nd.title="Normal docks are not available yet"}
+    const m=$("pvMk").querySelector('option[value="2"]');if(m){m.disabled=true;m.title="Mk3 is not available yet";if(force&&$("pvMk").value==="2")$("pvMk").value="1"}};
+  fix(false);$("plnPrev").addEventListener("toggle",()=>fix(true));const run0=placerRun;window.placerRun=function(open){if(open||$("plnPrev").open)fix(true);return run0.apply(this,arguments)};
 })();
