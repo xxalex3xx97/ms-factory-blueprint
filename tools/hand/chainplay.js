@@ -3,7 +3,7 @@
 // The plan was already checked against the site's placement rules, so the per-paste checks (noBuild scans every placed piece, push copies the undo state, cutBelts scans every belt) are switched off while it plays: that was the lag.
 window.chainPlay=async function(o){
   o=o||{};const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-  const T=await (await fetch(o.url)).json(),TW=32;
+  const T=o.plan||await (await fetch(o.url)).json(),TW=32;
   setView("L");S.blocks=[];sel=new Set();all();
   const cnt={};T.blocks.forEach(b=>cnt[b.cls]=(cnt[b.cls]||0)+1);const tileCls=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a])[0];
   const d=dim({cls:tileCls,rot:0});
