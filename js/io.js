@@ -225,11 +225,12 @@ function importJson0(txt,quiet){
   });
   // a game underground is ONE machine at the entrance with Length: rebuild the exit tile (same rotation/line) unless a UG is already there or the cell is taken. No Length / no partner = single tile (no partner invented).
   const ents=new Set(S.blocks.filter(b=>b.ugl).map(b=>b.id));   // entrance tiles: never taken as another pair's exit
+  const mAt=new Map();S.blocks.forEach(q=>{if(isM(q)){const k=q.h+"|"+q.x+"|"+q.y;if(!mAt.has(k))mAt.set(k,q)}});   // one lookup table: a find() per underground made a 130k-piece import take 85 s
   S.blocks.filter(b=>b.ugl).forEach(b=>{
     const ex=b.x+DIR[b.rot][0]*(b.ugl-1),ey=b.y+DIR[b.rot][1]*(b.ugl-1);delete b.ugl;
-    const ox=S.blocks.find(q=>q.h===b.h&&isM(q)&&q.x===ex&&q.y===ey);   // a plain exit tile already there (own export / autosave): link it, so nested pairs survive a refresh
+    const ox=mAt.get(b.h+"|"+ex+"|"+ey);   // a plain exit tile already there (own export / autosave): link it, so nested pairs survive a refresh
     if(ox){if(!ents.has(ox.id)&&!ox.pu&&ox.cls===b.cls&&ox.rot===b.rot){ox.pu=b.id;b.pu=ox.id}}
-    else{const x={id:uid++,cls:b.cls,x:ex,y:ey,h:b.h,rot:b.rot,pid:b.pid,mid:0,pu:b.id};b.pu=x.id;S.blocks.push(x)}
+    else{const x={id:uid++,cls:b.cls,x:ex,y:ey,h:b.h,rot:b.rot,pid:b.pid,mid:0,pu:b.id};b.pu=x.id;S.blocks.push(x);mAt.set(x.h+"|"+x.x+"|"+x.y,x)}
   });
   sel=new Set();$("name").value=S.name;all();if(quiet)return true;fit();
   const unk=S.blocks.filter(b=>!BASE[b.cls]).length;
