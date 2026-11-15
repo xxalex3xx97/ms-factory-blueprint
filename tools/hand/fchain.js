@@ -13,19 +13,26 @@ window.chainBuild=function(opts){
   const dep={};const dOf=it=>{if(dep[it]!=null)return dep[it];dep[it]=0;let d=0;for(const e of P.edges)if(e.to===it&&e.from!==it&&P.nodes[e.from]&&P.nodes[e.from].crafter)d=Math.max(d,dOf(e.from)+1);return dep[it]=d};
   nodes.forEach(n=>dOf(n.item));
   const cols={};nodes.forEach(n=>(cols[dep[n.item]]=cols[dep[n.item]]||[]).push(n));
-  const specs=[],COLW=5,WRAP=opts.wrap||8;let cb=0,maxRows=1;
-  Object.keys(cols).map(Number).sort((a,b)=>a-b).forEach(c=>{let gyN=0;
-    for(const n of cols[c].sort((a,b)=>b.machines-a.machines)){const [cn,cls,pov]=CM[n.crafter],rc=n.rec,raw=rc.i.some(([it])=>isRaw(it)),cap=(raw?CAPD:CAPN)[cn],nb=Math.ceil(n.machines/cap);
-      let left=n.machines;for(let b=0;b<nb;b++){const m=Math.ceil(left/(nb-b));left-=m;if(gyN>=WRAP){cb++;gyN=0}specs.push({gx:2+cb*COLW,gy:1+2*gyN,name:cn+': '+n.item.replace('ITEM_','')+(nb>1?' '+(b+1)+'/'+nb:''),cls,crafter:n.crafter,rc,perOv:pov,n:m,item:n.item,dock:raw,col:c});gyN++;maxRows=Math.max(maxRows,gyN)}}
+  const specs=[],COLW=6,WRAP=opts.wrap||8;let cb=0,maxRows=1;
+  // docks need open space: every raw-fed block goes in the WEST column (one tall stack, docks on the outer edge); the other blocks follow by depth
+  const place=(n,b,nb,m,col,gyN)=>{const [cn,cls,pov]=CM[n.crafter],rc=n.rec,raw=rc.i.some(([it])=>isRaw(it));
+    specs.push({gx:2+col*COLW,gy:1+2*gyN,name:cn+': '+n.item.replace('ITEM_','')+(nb>1?' '+(b+1)+'/'+nb:''),cls,crafter:n.crafter,rc,perOv:pov,n:m,item:n.item,dock:raw,col:dep[n.item]});maxRows=Math.max(maxRows,gyN+1)};
+  const blocksOf=n=>{const [cn]=CM[n.crafter],raw=n.rec.i.some(([it])=>isRaw(it)),cap=(raw?CAPD:CAPN)[cn],nb=Math.ceil(n.machines/cap),L=[];let left=n.machines;for(let b=0;b<nb;b++){const m=Math.ceil(left/(nb-b));left-=m;L.push([b,nb,m])}return L};
+  const rawNodes=nodes.filter(n=>n.rec.i.some(([it])=>isRaw(it))).sort((a,b)=>dep[a.item]-dep[b.item]),restNodes=nodes.filter(n=>!n.rec.i.some(([it])=>isRaw(it)));
+  let g0=0;rawNodes.forEach(n=>blocksOf(n).forEach(([b,nb,m])=>{place(n,b,nb,m,0,g0++)}));
+  cb=1;
+  const rcols={};restNodes.forEach(n=>(rcols[dep[n.item]]=rcols[dep[n.item]]||[]).push(n));
+  Object.keys(rcols).map(Number).sort((a,b)=>a-b).forEach(c=>{let gyN=0;
+    for(const n of rcols[c].sort((a,b)=>b.machines-a.machines))for(const [b,nb,m] of blocksOf(n)){if(gyN>=WRAP){cb++;gyN=0}place(n,b,nb,m,cb,gyN);gyN++}
     cb++});
   const nCols=cb,report={recipes:nodes.length,blocks:specs.length,cols:nCols,rows:maxRows,routed:0,failed:0,entries:0,unsupplied:[]};
   const dockZone=new Set();specs.forEach(s=>{if(s.dock){dockZone.add((s.gx-1)+','+s.gy);dockZone.add((s.gx-2)+','+s.gy)}});
   const outBlk=new Set(specs.map(s=>(s.gx+1)+','+s.gy));
   const t0=Date.now();
   const R=fbBuild({mk:MK,plan:specs,after:(anch)=>{
-    const W=2+nCols*COLW,H=2*maxRows+2;for(let gx=0;gx<W;gx++)for(let gy=0;gy<H;gy++)if(!dockZone.has(gx+','+gy))HAND.block(gx,gy);
+    const W=2+nCols*COLW,H=2*maxRows+2;for(let gx=2;gx<W;gx++)for(let gy=0;gy<H;gy++)if(!dockZone.has(gx+','+gy))HAND.block(gx,gy);   // strides 0..1 stay empty: the docks of the west column face open space
     HAND.maxStates=opts.maxStates||300000;HAND.hw=opts.hw||3;
-    const streetCol=bx=>bx>=4&&bx%COLW===4,stubs=new Set();
+    const streetCol=bx=>bx>=4&&(bx%COLW===4||bx%COLW===5),stubs=new Set();
     const ents=[];anch.forEach(a=>a.entries.forEach(e=>ents.push(e)));report.entries=ents.length;
     ents.forEach(e=>{if(e.north){for(let y=(e.gy-1)*TW;y<=e.y;y++)stubs.add(e.x+','+y)}else{for(let x=(e.gx-3)*TW+28;x<=e.x;x++)stubs.add(x+','+e.y)}});
     const allowed=(x,y)=>{const bx=Math.floor(x/TW),by=Math.floor(y/TW),lx=x-bx*TW,ly=y-by*TW;
