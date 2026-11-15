@@ -12,7 +12,8 @@ window.HAND=(function(){
   function block(gx,gy){S.blocks.set(k(gx,gy),{gx,gy})}
   function inFloor(x,y){const gx=Math.floor(x/TW),gy=Math.floor(y/TW);if(!S.blocks.has(k(gx,gy)))return false;return x-gx*TW<FW&&y-gy*TW<FW}
   let cur=null;   // owner label of the link being routed: it may use cells reserved for itself
-  const free=(x,y)=>{const kk=k(x,y);if(!inFloor(x,y)||S.occ.has(kk))return false;const r=S.res.get(kk);return r===undefined||r===cur};
+  let only=null;   // optional cell filter of the belt being routed (planned corridors: the belt may only use these cells)
+  const free=(x,y)=>{const kk=k(x,y);if(!inFloor(x,y)||S.occ.has(kk))return false;if(only&&!only(x,y))return false;const r=S.res.get(kk);return r===undefined||r===cur};
   function reserve(cells,owner){cells.forEach(([x,y])=>{const kk=k(x,y);if(inFloor(x,y)&&!S.occ.has(kk)&&!S.res.has(kk))S.res.set(kk,owner)})}
   // put({cls,gx,gy,lx,ly,rec,ct,name}) -> machine record, or null when the spot is taken / outside the floor
   function put(o){
@@ -33,7 +34,7 @@ window.HAND=(function(){
   function heapPop(h){const t=h[0],l=h.pop();if(h.length){h[0]=l;let i=0;for(;;){let a=i*2+1,b=a+1,m=i;if(a<h.length&&h[a].f<h[m].f)m=a;if(b<h.length&&h[b].f<h[m].f)m=b;if(m===i)break;[h[m],h[i]]=[h[i],h[m]];i=m}}return t}
   function spanFree(ax,a,b){const l=S.span.get(ax);if(!l)return true;const lo=Math.min(a,b),hi=Math.max(a,b);return !l.some(([c,d])=>!(hi<c||lo>d))}
   function findPath(sx,sy,gx,gy,gdir,sback,cfn){   // cfn(x,y) = extra cost of stepping on a cell (used to keep long belts on the block-edge streets)
-    const g=new Map(),prev=new Map(),H=[],hh=(x,y)=>Math.abs(x-gx)+Math.abs(y-gy);
+    const g=new Map(),prev=new Map(),H=[],hh=(x,y)=>(HAND.hw||1)*(Math.abs(x-gx)+Math.abs(y-gy));
     for(let d=0;d<4;d++){if(d===sback)continue;const key=nk(sx,sy,d,0);g.set(key,0);prev.set(key,null);heapPush(H,{f:hh(sx,sy),c:0,x:sx,y:sy,d,t:0,key})}
     {const d=(sback+2)%4;const key=nk(sx,sy,d,1);g.set(key,3);prev.set(key,null);heapPush(H,{f:3+hh(sx,sy),c:3,x:sx,y:sy,d,t:1,key})}
     const node=new Map();let n=0;
@@ -122,7 +123,17 @@ window.HAND=(function(){
   function lane(a,pa,b,pb,path,label){commit(path,a,pa,b,pb,label);return path.length}
   // prune(): drop every block that holds nothing (no machine and no belt piece)
   function prune(){const keep=new Set();S.occ.forEach((_,kk)=>{const [x,y]=kk.split(',').map(Number);keep.add(k(Math.floor(x/TW),Math.floor(y/TW)))});[...S.blocks.keys()].forEach(kk=>{if(!keep.has(kk))S.blocks.delete(kk)})}
+  // route(a,gx,gy,gdir,label,opt): belt from an unused port of a to the cell (gx,gy), arriving there with belt direction gdir (the goal cell gets the last piece). 0 + a logged failure when none.
+  function route(a,gx,gy,gdir,label,opt){
+    only=(opt&&opt.only)||null;
+    try{const ca=cands(a,gx,gy,opt&&opt.pa).slice(0,6);
+    for(const A of ca){const sback=dirOf(-A.p.nx,-A.p.ny);
+      const path=findPath(A.o[0],A.o[1],gx,gy,gdir,sback,opt&&opt.cfn);
+      if(path){path.forEach(q=>{S.occ.set(k(q.x,q.y),'p');S.pcs.push({cls:q.t?UG:BELT,x:q.x,y:q.y,rot:q.d,h:0,pid:0,...(opt&&opt.tag?{g:opt.tag}:{})})});
+        for(let i=0;i<path.length-1;i++){const q=path[i],r=path[i+1];if(q.t===1&&r.t===2){const ax=q.d%2===0?'h'+q.y:'v'+q.x;const l=S.span.get(ax)||[];l.push(q.d%2===0?[Math.min(q.x,r.x),Math.max(q.x,r.x)]:[Math.min(q.y,r.y),Math.max(q.y,r.y)]);S.span.set(ax,l)}}
+        a.used.add(A.p.key);return path.length}}
+    S.fails.push((label||'')+' '+a.name+' -> '+gx+','+gy+' [free ports '+cands(a,0,0,opt&&opt.pa).length+']');return 0}finally{only=null}}
   // piece(p): drop one ready-made piece (belt, underground, splitter) on a free cell; false if the cell is taken or off the floor
   function piece(p,force){const kk=k(p.x,p.y);if((!force&&!inFloor(p.x,p.y))||S.occ.has(kk))return false;S.occ.set(kk,'p');S.pcs.push({h:0,pid:0,...p});return true}
-  return{reset,block,put,link,reserve,lane,prune,piece,setMk,D:()=>MAXA-1,result,check,verify,S,TW,FW,CLS,free,inFloor};
+  return{reset,block,put,link,route,reserve,lane,prune,piece,setMk,D:()=>MAXA-1,result,check,verify,S,TW,FW,CLS,free,inFloor};
 })();
