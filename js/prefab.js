@@ -7,7 +7,7 @@ const pfNid=()=>++PF_NID;
 const pfKey=(proto,args)=>JSON.stringify([proto,args,PF_GRID]);
 // memoised prefab: same proto+args+grid -> same object (do not mutate)
 function pfPrefab(proto,args){
-  const k=pfKey(proto,args);
+  const k=pfKey(proto,args)+'|'+PLC_BOX;   // the buffer container choice changes every prefab
   if(PF_MEMO.has(k))return PF_MEMO.get(k);
   const p=PF_BUILD[proto](...args);PF_MEMO.set(k,p);return p;
 }
@@ -69,14 +69,15 @@ function pfAssignA(cls,k,flows){
   return r;
 }
 // COL prefab: m machines of one stage stacked in a column (pitch from pfAssign). One trunk per input (1 item per belt): container head at N edge, belt trunk south, splitter on each feed row (feeds the port belt, continues south). Trunks PF_TP apart; a feed crossing a nearer trunk goes under it (UG entrance/exit beside it). Output: east along the out row (UG under E trunks) -> collector north -> sink container at N edge. Cols 0 and w-1 stay empty (seams). N/S overflow inputs: not built yet (refused).
-const PF_TP=4;   // trunk pitch in cells
+const PF_TP=4;   // trunk pitch in cells for the 2x2 container (bw+2); pfCol scales it with the chosen container
 PF_BUILD.pfCol=(cls,k,flows,m,mk,dn)=>{   // dn (step 1 outDown): sink box at the bottom, collector belts south from the top out row, out port on S
   const a=pfAssign(cls,k,flows);
   if(!a.ok)return{ok:false,why:a.why};
   if(a.S.length)return{ok:false,why:'S overflow inputs not built yet'};
   if(a.N.length>1)return{ok:false,why:'more than one N overflow input per machine not built yet'};
-  const nN=a.N.length,d=dim({cls,rot:0}),Wd=d.w,P=a.pitch,Y0=2,Ym=nN?4:2,OX=1,bc=PLC_BELT[mk],ug=PLC_UG[mk],sc=PLC_SPL[mk],nW=a.W.length,nE=a.E.length;
-  const x0=OX+(nW?3+PF_TP*(nW-1):0),wx=j=>x0-3-PF_TP*j,ex=j=>x0+Wd+2+PF_TP*j,xC=x0+Wd+2+PF_TP*nE,tx=xC+4;   // tx: the N overflow trunk, east of the collector
+  const bxp=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}),bwB=def(PLC_BOX).w,bhB=def(PLC_BOX).h,sxB=Math.min(...bxp.filter(p=>p.f==='S').map(p=>p.x)),nxB=Math.min(...bxp.filter(p=>p.f==='N').map(p=>p.x)),TP=bwB+2;   // chosen container: footprint, S port x (heads/trunks), N port x (collector sink)
+  const nN=a.N.length,d=dim({cls,rot:0}),Wd=d.w,P=a.pitch,Y0=bhB,Ym=nN?bhB+2:bhB,OX=1,bc=PLC_BELT[mk],ug=PLC_UG[mk],sc=PLC_SPL[mk],nW=a.W.length,nE=a.E.length;
+  const x0=OX+(nW?3+TP*(nW-1):0),wx=j=>x0-3-TP*j,ex=j=>x0+Wd+2+TP*j,xC=x0+Wd+2+TP*nE,tx=xC+TP;   // tx: the N overflow trunk, east of the collector
   const ym=i=>Ym+i*P,gap=i=>ym(i)-2,tcols=new Set([...a.W.map((_,j)=>wx(j)),...a.E.map((_,j)=>ex(j))]),gcols=new Set([...tcols,xC,...(nN?[tx]:[])]),it=[];
   // belts/UG from start to end (inclusive) along dir (+1 east, -1 west), skipping trunk columns; a cell before a trunk is a UG entrance, a cell after one (not the origin trunk) the exit
   const feed=(start,end,y,dir,origin,set=tcols)=>{const rot=dir>0?0:2;
@@ -90,7 +91,7 @@ PF_BUILD.pfCol=(cls,k,flows,m,mk,dn)=>{   // dn (step 1 outDown): sink box at th
     const rows=[];for(let i=0;i<m;i++)rows.push(ym(i)+r);const spl=new Set(rows),last=rows[rows.length-1];
     for(let y=Y0;y<=last;y++)it.push(spl.has(y)?{cls:sc,x,y,rot:1}:{cls:bc,x,y,rot:1});
   };
-  const head=(x,item)=>it.push({cls:PLC_BOX,x,y:0,rot:0,ct:[{item,n:0,inf:true}]});   // infinite source container at the N edge
+  const head=(x,item)=>it.push({cls:PLC_BOX,x:x-sxB,y:0,rot:0,ct:[{item,n:0,inf:true}]});   // infinite source container at the N edge
   a.W.forEach((p,j)=>{trunk(wx(j),p.row);head(wx(j),p.item)});
   a.E.forEach((p,j)=>{trunk(ex(j),p.row);head(ex(j),p.item)});
   if(nN){   // N overflow trunk: splitter on each gap row (gap(i) = the row above machine i's N port belt), belt along the gap row (under nearer trunks) then down into the port
@@ -106,10 +107,10 @@ PF_BUILD.pfCol=(cls,k,flows,m,mk,dn)=>{   // dn (step 1 outDown): sink box at th
     if(nN){const px=x0+a.N[0].row,G=gap(i);feed(tx-1,px+1,G,-1,tx,gcols);it.push({cls:bc,x:px,y:G,rot:1},{cls:bc,x:px,y:G+1,rot:1})}
   }
   const lowOut=ym(m-1)+a.out.row;
-  if(dn){for(let y=ym(0)+a.out.row;y<=lowOut;y++)it.push({cls:bc,x:xC,y,rot:1});it.push({cls:PLC_BOX,x:xC,y:lowOut+1,rot:0,ct:[]})}
-  else{for(let y=Y0;y<=lowOut;y++)it.push({cls:bc,x:xC,y,rot:3});it.push({cls:PLC_BOX,x:xC,y:0,rot:0,ct:[]})}
+  if(dn){for(let y=ym(0)+a.out.row;y<=lowOut;y++)it.push({cls:bc,x:xC,y,rot:1});it.push({cls:PLC_BOX,x:xC-nxB,y:lowOut+1,rot:0,ct:[]})}
+  else{for(let y=Y0;y<=lowOut;y++)it.push({cls:bc,x:xC,y,rot:3});it.push({cls:PLC_BOX,x:xC-sxB,y:0,rot:0,ct:[]})}
   const ports=[...a.W.map((p,j)=>({edge:'N',off:wx(j),dir:'in',belts:1,slot:j,mk})),...a.E.map((p,j)=>({edge:'N',off:ex(j),dir:'in',belts:1,slot:nW+j,mk})),...(nN?[{edge:'N',off:tx,dir:'in',belts:1,slot:nW+nE,mk}]:[]),{edge:dn?'S':'N',off:xC,dir:'out',belts:1,slot:-1,mk}];
-  return{proto:'pfCol',args:dn?[cls,k,flows,m,mk,true]:[cls,k,flows,m,mk],w:(nN?tx:xC)+3,h:dn?Math.max(ym(m-1)+d.h,lowOut+3):ym(m-1)+d.h,items:it,ports,fits:[],out:a.out,nIn:nN?{px:x0+a.N[0].row,tx}:null};
+  return{proto:'pfCol',args:dn?[cls,k,flows,m,mk,true]:[cls,k,flows,m,mk],w:(nN?tx:xC)+bwB+1,h:dn?Math.max(ym(m-1)+d.h,lowOut+1+bhB):ym(m-1)+d.h,items:it,ports,fits:[],out:a.out,nIn:nN?{px:x0+a.N[0].row,tx}:null};
 };
 const pfCol=(cls,k,flows,m,mk,dn)=>pfPrefab('pfCol',dn?[cls,k,flows,m,mk,true]:[cls,k,flows,m,mk]);   // north args unchanged (memo key)
 // GROWTH prefab: the verified growth layout (plcGrowthLane = one lane per machine, stacked) for item at rate/min. Built by calling placer.js, not reimplemented. Lane count = plan machines. Coordinates already start at (0,0). Ports: none in (seed and Biomass are containers inside); net output = sink container S at the bottom (edge 'S', off = its x).
@@ -158,9 +159,10 @@ function pfColumns(cls,k,flows,sizes,mk,outFlow,hubAt,dn,org){
   if(outFlow>MKS[mk][1])return no('output above belt cap: out stack not built');
   const pw=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}).find(p=>p.f==='W');if(!pw)return no('box has no W port');
   if(dn&&hubAt)return no('hub W entry with outDown not built');
+  const bxq=portsOf({cls:PLC_BOX,x:0,y:0,rot:0,off:[]}),pnx=Math.min(...bxq.filter(p=>p.f==='N').map(p=>p.x)),psx=Math.min(...bxq.filter(p=>p.f==='S').map(p=>p.x));
   const Rb=pw.y,SH=dn?0:Rb+1,it=[],xs=[],cols=[],xs0=[];let x=0;
   for(const [ci,mc] of sizes.entries()){const C=pfCol(cls,k,flows,mc,mk,dn);if(C.ok===false)return no(C.why);if(org)x=org[ci];xs0.push(x);
-    const xC=C.ports.find(p=>p.dir==='out').off,isB=q=>q.cls===PLC_BOX&&q.x===xC&&!(q.ct&&q.ct.length)&&(dn||q.y===0);
+    const xC=C.ports.find(p=>p.dir==='out').off,isB=q=>q.cls===PLC_BOX&&q.x===xC-(dn?pnx:psx)&&!(q.ct&&q.ct.length)&&(dn||q.y===0);
     C.items.forEach(q=>{if(isB(q))return;it.push({...q,x:q.x+x,y:q.y+SH})});
     if(dn)cols.push({xc:xC+x,bY:C.items.find(isB).y,h:C.h});   // outDown: stub south from the collector into the shared row below
     else it.push({cls:bc,x:xC+x,y:SH,rot:3},{cls:bc,x:xC+x,y:SH+1,rot:3});   // collector stub north into the shared row
@@ -1133,6 +1135,7 @@ function pfChainDown(P,item,mk,spMk,o={}){
 }
 let PF_DOWN=false;   // step 1: single-stage pfCompose builds outDown (test hook, default off)
 function pfCompose(P,item,mk,spMk,o={}){
+  if(o.eng==='cmp')return cmpCompose(P,item,mk,spMk,o);
   const no=why=>({ok:false,why}),T=P.nodes[item],BX=o.box||PLC_BOX;
   if(!T||!T.rec)return no('no recipe');
   if(T.rec.i.some(([x])=>x===item))return no('growth not built in prefab');

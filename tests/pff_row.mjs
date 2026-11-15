@@ -12,7 +12,7 @@ const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrom
 const pg = await (await br.newContext()).newPage();
 const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
-await pg.goto(pathToFileURL(ROOT + '/index.html').href);
+await pg.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=old');
 await pg.waitForFunction(() => window.__fb && typeof pfCompose === 'function' && typeof placerLayout === 'function' && typeof placerTile === 'function' && typeof simAdvance === 'function' && typeof pfFactTree === 'function' && typeof pfTileFact === 'function' && typeof pfTileRow === 'function' && typeof pfFactSizeTile === 'function' && typeof pfFactRow === 'function');
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };

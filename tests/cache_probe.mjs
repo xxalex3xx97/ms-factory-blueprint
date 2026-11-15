@@ -8,7 +8,7 @@ import {fileURLToPath, pathToFileURL} from 'url';
 const require = createRequire(import.meta.url);
 const {chromium} = require('C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const PAGE = pathToFileURL(path.join(HERE, '..', 'index.html')).href;
+const PAGE = pathToFileURL(path.join(HERE, '..', 'index.html')).href + '?engine=old';
 const TXT = fs.readFileSync(process.env.JSONF || 'C:/Users/SFidelis/Downloads/Beta_Honor_3_Central.json', 'utf8');
 let total = 0, fail = 0;
 const chk = (name, ok, detail = '') => { total++; if (!ok) fail++; console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? ' :: ' + detail : ''}`) };

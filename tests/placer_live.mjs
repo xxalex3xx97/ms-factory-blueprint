@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href;
+const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href + '?engine=old';
 const SHOTS = path.join(HERE, 'shots');
 const ITEM = 'ITEM_CobaltPlates';
 const ALL = ['plnBk11', 'plnBk21', 'plnBk22'];
@@ -22,7 +22,7 @@ function chk(name, cond, detail = '') {
   else { fails.push({name, detail}); console.log(`FAIL ${name}${detail ? '\n     ' + detail : ''}`); }
 }
 async function setTicks(pg, ids) {   // real clicks on the modal's block checkboxes
-  for (const id of ALL) await pg.setChecked('#' + id, ids.includes(id));
+  await pg.selectOption('#plnBk', {plnBk11: 'BPO_Station_01', plnBk21: 'BPO_Station_2x1', plnBk22: 'BPO_Station_02'}[ids[ids.length - 1]]);   // UI has one block type: several ticks = the largest
 }
 async function openPlanner(pg) {
   await pg.evaluate(() => { if (document.getElementById('pln').hidden) document.getElementById('plnB').click(); });
@@ -114,13 +114,15 @@ try {
     chk('(b) buffer change redraws the preview', b1.hash !== a2.hash);
     await pg.selectOption('#plnBuf', 'DAT_Container');
 
-    // (c) modular build
+    // (c) modular build is not offered in the UI any more: the checkbox is hidden and ticking it never makes the preview modular; the modular code stays reachable by calling placerLayout with mod:true
     const c0 = await snap(pg);
-    await pg.click('label:has(#plnMod)');
+    chk('(c) #plnMod label is hidden', await pg.evaluate(() => $('plnMod').closest('label').hidden === true && $('plnMod').offsetParent === null));
+    await pg.evaluate(() => { $('plnMod').checked = true; $('plnMod').dispatchEvent(new Event('change')) });
     const c1 = await snap(pg);
-    chk('(c) #plnMod ticked: #pvIO text changes to IN west / OUT east', c1.io !== c0.io && /IN west/.test(c1.io) && c1.L.mod === true, `${c0.io} -> ${c1.io}`);
-    await pg.click('label:has(#plnMod)');
-    chk('(c) #plnMod unticked: #pvIO back to the closed text', (await snap(pg)).io === c0.io);
+    chk('(c) #plnMod ticked by script: preview stays closed (mod false, #pvIO unchanged)', c1.io === c0.io && c1.L.mod === false, `${c0.io} -> ${c1.io}`);
+    await pg.evaluate(() => { $('plnMod').checked = false; $('plnMod').dispatchEvent(new Event('change')) });
+    const cm = await pg.evaluate(() => { const x = placerPlan(), L = placerLayout(x.P, x.it, x.mk, x.sp ?? x.mk, {box: $('plnBuf').value, mod: true}); return {ok: L.ok, mod: L.mod} });
+    chk('(c) placerLayout called directly with mod:true still builds a modular layout', cm.ok && cm.mod === true, JSON.stringify(cm));
 
     // (d) Mk sync both ways
     const d0 = await snap(pg);

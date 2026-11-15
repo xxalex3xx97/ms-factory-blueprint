@@ -10,8 +10,9 @@ const simLive=()=>smOn()&&SIM.t>0;   // sim exists and has run (not reset): colo
 const bnK=()=>simLive()?simView():linksC(layer);
 const bnU=(K,id)=>{const e=K.load.get(id),u=e?e.util:0;return BM==="B"&&simLive()&&smS().full.has(id)?Math.max(u||0,1.25):u};
 function drawBnCells(s){
+  if(typeof LOWD==="function"&&LOWD())return;   // big factory, low-detail mode: the bottleneck colours of every belt are not drawn
   const K=bnK();cx.save();cx.globalAlpha=.6;
-  lyBlocks().all.forEach(b=>{if(!isBelt(b)||!inView(b))return;const d=dim(b);cx.fillStyle=bnCol(bnU(K,b.id),BM);cx.fillRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)});
+  CUR.forEach(b=>{if(!isBelt(b))return;const d=dim(b);cx.fillStyle=bnCol(bnU(K,b.id),BM);cx.fillRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)});
   cx.restore();
 }
 const AMB="hsl(40,95%,55%)";
@@ -81,7 +82,7 @@ const portBox=(b,s)=>{const r=(def(b.cls)||{}).elevator&&floorRect(b);
 function drawPorts(s,only){   // only: [block] = a placement/paste ghost (not in S.blocks), drawn with the same bars + chevrons
   if(s<6)return;
   const Ln=Math.min(.6*s,18),T=Math.min(5,Math.max(3,.2*s));cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
-  (only||lyBlocks().all).forEach(b=>{if(!vis(...portBox(b,s)))return;const bars=barPorts(b);
+  (only||(view==="F"&&CUR.length?lyBlocks().nm.concat(CUR):lyBlocks().all)).forEach(b=>{if(!vis(...portBox(b,s)))return;const bars=barPorts(b);
     // splitter input (back) face: no bar; small neutral chevron pointing into the machine (not clickable, no hover state)
     portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.min(8,Math.max(3,s*.2)),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
       cx.strokeStyle="rgba(230,240,255,.45)";cx.lineWidth=Math.max(1.5,s*.08);cx.beginPath();
@@ -96,11 +97,12 @@ function drawPorts(s,only){   // only: [block] = a placement/paste ghost (not in
       cx.stroke();cx.restore();return}
     const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,w=p.nx?T:Ln,h=p.nx?Ln:T;
     cx.fillStyle=p.en?"hsl(140,70%,48%)":"hsl(0,75%,55%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1);
-    if(p.dir&&s>=10){const r=Math.min(8,Math.max(3,s*.2)),sg=p.dir==="in"?-1:1,dx=p.nx*sg,dy=p.ny*sg,qx=ex+p.nx*.35*s*(p.dir==="in"?-.2:.2),qy=ey+p.ny*.35*s*(p.dir==="in"?-.2:.2);
-      cx.fillStyle="#fff";cx.beginPath();cx.moveTo(qx+dx*r,qy+dy*r);cx.lineTo(qx-dx*r*.6-dy*r*.8,qy-dy*r*.6+dx*r*.8);cx.lineTo(qx-dx*r*.6+dy*r*.8,qy-dy*r*.6-dx*r*.8);cx.closePath();cx.fill();cx.stroke()}
+    if(p.dir&&s>=10){for(let k=p.pr?-1:0;k<=0;k++){const r=Math.min(8,Math.max(3,s*.2)),sg=p.dir==="in"?-1:1,dx=p.nx*sg,dy=p.ny*sg,qx=ex+p.nx*(.35*s*(p.dir==="in"?-.2:.2)+k*r*1.1),qy=ey+p.ny*(.35*s*(p.dir==="in"?-.2:.2)+k*r*1.1);
+      cx.fillStyle="#fff";cx.beginPath();cx.moveTo(qx+dx*r,qy+dy*r);cx.lineTo(qx-dx*r*.6-dy*r*.8,qy-dy*r*.6+dx*r*.8);cx.lineTo(qx-dx*r*.6+dy*r*.8,qy-dy*r*.6-dx*r*.8);cx.closePath();cx.fill();cx.stroke()}}
   })});
   cx.restore();
 }
+let PLC_LBL=false;   // preview: per-machine rate labels (off by default)
 let PLC_PREV=false;   // true only while placer.js paints the preview modal: no block-size labels, container badges only when they fit their box
 function drawBadges(s){
   if(s<10)return;
@@ -115,7 +117,7 @@ function drawBadges(s){
     cx.font="bold "+fs+"px system-ui,sans-serif";
     const ln=sm&&sto?txt.split(" · in "):[txt];if(ln.length>1)ln[1]="in "+ln[1];
     const nl=ln.length,pw=Math.min(W-4,Math.max(...ln.map(t=>cx.measureText(t).width))+8),mx=mx0;
-    const txtOk=!(PLC_PREV&&(pw>bw||sz+gap+th>bh));   // preview: text wider/taller than its box would collide with neighbour labels; icon stays
+    const txtOk=!(PLC_PREV&&(pw>bw||sz+gap+th>bh||(!sto&&!PLC_LBL)));   // preview: text wider/taller than its box would collide with neighbour labels; icon stays
     cx.globalAlpha=.9;cx.shadowColor="rgba(0,0,0,.6)";cx.shadowBlur=4;cx.shadowOffsetY=1;
     if(ic&&ic.complete)cx.drawImage(ic,mx-sz/2,top,sz,sz);
     cx.shadowBlur=0;cx.shadowOffsetY=0;cx.globalAlpha=1;
@@ -162,10 +164,10 @@ let modeKey="";
 function syncMode(){const m=pasting?"paste":mode||"";if(m===modeKey)return;modeKey=m;document.body.dataset.mode=m;let el=$("modeb");if(!el){el=document.createElement("div");el.id="modeb";document.body.appendChild(el)}el.textContent=MODE_TXT[m]||""}
 let raf=0;
 // zoom with the wheel: the last full paint (a copy) is drawn scaled on each wheel frame; a full paint follows when the wheel pauses. Any other draw drops the copy.
-const WHEEL_BLIT=false;   // scaled blit of the last paint on wheel frames: OFF (ghosting); every wheel frame is a full paint
+const BIGF=()=>S.blocks.length>20000,LOWD=()=>BIGF()&&V.z<.2,WHEEL_BLIT=false;   // LOWD: big factory below 20% zoom (always, also while zooming or panning): belts, links, bottleneck colours and floor detail are not drawn   // BIGF: a big factory draws zoom/pan frames with less detail (real paints, no scaled copy: that ghosted)   // scaled blit of the last paint on wheel frames: OFF (ghosting); every wheel frame is a full paint
 let ZS=null,ZW=false,ZT=0,ZC=null,OVC=null;
 const zsKey=()=>view+"|"+layer+"|"+W+"|"+H+"|"+dpr;
-const draw=(zw,quiet)=>{if(!zw)ZS=null;ZW=!!zw;syncMode();DIRTY=true;if(!zw&&!quiet)asv();/* wheel frames and the idle repaint skip the autosave timer (its save of a big factory is slow): the next edit saves the view too */if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()});if(zw&&WHEEL_BLIT){clearTimeout(ZT);ZT=setTimeout(()=>draw(0,1),160)}};
+const draw=(zw,quiet)=>{if(!zw)ZS=null;ZW=!!zw;syncMode();DIRTY=true;if(!zw&&!quiet)asv();/* wheel frames and the idle repaint skip the autosave timer (its save of a big factory is slow): the next edit saves the view too */if(!raf)raf=requestAnimationFrame(ts=>{raf=0;if(PF===ts)return;PF=ts;paint()});if(zw&&BIGF()&&V.z<.2){clearTimeout(ZT);ZT=setTimeout(()=>draw(0,1),160)}   /* detail comes back 160 ms after the last zoom/pan frame */};
 
 const SPR=new Map();
 function spr(key,w,h,fn){const k=key+"|"+dpr;let c=SPR.get(k);if(!c){if(SPR.size>800)SPR.clear();c=document.createElement("canvas");c.width=Math.ceil(w*dpr);c.height=Math.ceil(h*dpr);const g=c.getContext("2d");g.scale(dpr,dpr);g.imageSmoothingQuality="high";fn(g);SPR.set(k,c)}return c}
@@ -191,8 +193,10 @@ function arrow(x,y,w,h,rot,alpha){
 }
 // entrance marks (Layout, model.js entrances()): door slot = light bar on the edge + white chevron pointing INTO the block; ports side (no doors) = mint bar + chevron pointing out to the ports. Rotates with the block
 const ENT_DOOR_S=44;
+let ENTC=null;   // door/port marks of a block: computed once per block set (it was rebuilt for every block on every paint)
+const entC=(b,force)=>{if(force||b.id==null)return entrances(b,true);const k=PK+"|"+S.closed.length;if(!ENTC||ENTC.k!==k)ENTC={k,m:new Map()};let v=ENTC.m.get(b.id);if(v===undefined){v=entrances(b,true);ENTC.m.set(b.id,v)}return v};
 function entMark(b,x,y,alpha,s,w,h,force){   // force: placement/paste ghost, always show the door marks (they show the rotation)
-  if(alpha<.5||s<5)return;const E=entrances(b,true);if(!E.length)return;   // bar = full door slot length (scales with zoom); only the chevron is capped (r <= 9); door marks (many on stations) only when a cell is >= ENT_DOOR_S px
+  if(alpha<.5||s<5)return;const E=entC(b,force);if(!E.length)return;   // bar = full door slot length (scales with zoom); only the chevron is capped (r <= 9); door marks (many on stations) only when a cell is >= ENT_DOOR_S px
   const t=Math.max(2,Math.min(5,s*.12)),r=Math.min(9,Math.max(3,s*.12)),L=Math.max(5,DOORW/FC*s),lh=s>=18?Math.min(12,Math.max(9,s/3))+6:0;
   E.forEach(e=>{if(!e.port&&s<ENT_DOOR_S&&!force)return;const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,Lm=e.len?Math.max(5,e.len*s):L,bw=hz?Lm:t,bh=hz?t:Lm,   // e.len: wider/narrower than the standard door slot (adapter gaps)
     bx=D[0]>0?ex-t:D[0]<0?ex:ex-Lm/2,by=D[1]>0?ey-t:D[1]<0?ey:ey-Lm/2,sg=e.port?1:-1,   // door: chevron looks inward, port: outward
@@ -324,7 +328,8 @@ function hatchShape(b,t,s){
 }
 function drawShapeFloor(A,s){
   const X=x=>Math.round(V.ox+x*s),Y=y=>Math.round(V.oy+y*s),ST="rgba(150,165,190,.6)",WF="#262e3c";
-  A.floors.forEach(r=>{const b=r.b,t=shapeTf(b);if(!t)return;
+  A.floors.forEach(r=>{if(r.w!=null&&!vis(V.ox+(r.x-24)*s,V.oy+(r.y-24)*s,(r.w+48)*s,(r.h+48)*s))return;   // off screen (a shape reaches at most ~24 cells past its floor)
+    const b=r.b,t=shapeTf(b);if(!t)return;
     const sh=t.sh,dock=SHIPEND(b),tr=(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
     const rc=(q,f,g=0)=>{cx.fillStyle=f;const x0=X(q.x),y0=Y(q.y);cx.fillRect(x0-g,y0-g,X(q.x+q.w)-x0+2*g,Y(q.y+q.h)-y0+2*g)};
     if((dock||r.w!=null)&&sh.hatch)hatchShape(b,t,s);   // floored blocks (dock, elevator): hatch behind the shape   // Industrial Dock: grey hatch inside the walls, minus the buildable floor box, behind everything
@@ -360,20 +365,25 @@ function drawShapeFloor(A,s){
   });
 }
 function paintFloorBase(s){
-  const A=areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;
+  const A=typeof HAR==="function"?HAR(layer):areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;   // HAR: the areas() result cached per block set (it was rebuilt on every paint)
+  if(LOWD()){cx.fillStyle="rgba(48,60,76,.95)";A.floors.forEach(r=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s;if(x>W||y>H||x+w<0||y+h<0)return;cx.fillRect(x,y,w,h)});return A}   // zooming / panning a big factory: plain floor rects, the full floor comes back 160 ms after the last frame
   // gap strips: only between two facing floor blocks; strip = the distance between their SHELLS, long axis = overlap of their shells
-  const SH=A.floors.map(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;return{r,x:r.x-Q,y:r.y-Q,w:r.w+2*Q,h:r.h+2*Q}});
-  const own2=new Map();SH.forEach(e=>{const d=fcell(e.r.b);for(let i=0;i<d.cw;i++)for(let j=0;j<d.ch;j++)own2.set((d.cx+i)+","+(d.cy+j),e)});
+  if(!A.strips){   // the gap strips are found once per areas() result (they were rebuilt on every paint)
+    const SH=A.floors.map(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;return{r,x:r.x-Q,y:r.y-Q,w:r.w+2*Q,h:r.h+2*Q}}),st=[];
+    const own2=new Map();SH.forEach(e=>{const d=fcell(e.r.b);for(let i=0;i<d.cw;i++)for(let j=0;j<d.ch;j++)own2.set((d.cx+i)+","+(d.cy+j),e)});
+    SH.forEach(e=>{const d=fcell(e.r.b),seen=new Set();
+      const put=(nb,ax)=>{if(!nb||nb===e||seen.has(nb))return;seen.add(nb);if(!passage(e.r.b,nb.r.b,ax==="x"?0:1))return;   // no door passage (corridor long side, no matching door): no tint between the blocks
+        if(ax==="x"){if(nb.x<=e.x+e.w)return;const y0=Math.max(e.y,nb.y),y1=Math.min(e.y+e.h,nb.y+nb.h);if(y1<=y0)return;st.push({x:e.x+e.w,y:y0,w:nb.x-(e.x+e.w),h:y1-y0})}
+        else{if(nb.y<=e.y+e.h)return;const x0=Math.max(e.x,nb.x),x1=Math.min(e.x+e.w,nb.x+nb.w);if(x1<=x0)return;st.push({x:x0,y:e.y+e.h,w:x1-x0,h:nb.y-(e.y+e.h)})}};
+      for(let j=0;j<d.ch;j++)put(own2.get((d.cx+d.cw)+","+(d.cy+j)),"x");
+      for(let i=0;i<d.cw;i++)put(own2.get((d.cx+i)+","+(d.cy+d.ch)),"y");
+    });A.strips=st}
   cx.fillStyle="rgba(70,80,100,.5)";
-  SH.forEach(e=>{const d=fcell(e.r.b),seen=new Set();
-    const put=(nb,ax)=>{if(!nb||nb===e||seen.has(nb))return;seen.add(nb);if(!passage(e.r.b,nb.r.b,ax==="x"?0:1))return;   // no door passage (corridor long side, no matching door): no tint between the blocks
-      if(ax==="x"){if(nb.x<=e.x+e.w)return;const y0=Math.max(e.y,nb.y),y1=Math.min(e.y+e.h,nb.y+nb.h);if(y1<=y0)return;R({x:e.x+e.w,y:y0,w:nb.x-(e.x+e.w),h:y1-y0},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}
-      else{if(nb.y<=e.y+e.h)return;const x0=Math.max(e.x,nb.x),x1=Math.min(e.x+e.w,nb.x+nb.w);if(x1<=x0)return;R({x:x0,y:e.y+e.h,w:x1-x0,h:nb.y-(e.y+e.h)},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}};
-    for(let j=0;j<d.ch;j++)put(own2.get((d.cx+d.cw)+","+(d.cy+j)),"x");
-    for(let i=0;i<d.cw;i++)put(own2.get((d.cx+i)+","+(d.cy+d.ch)),"y");
-  });
+  A.strips.forEach(q=>R(q,(X,Y,W2,H2)=>{if(vis(X,Y,W2,H2))cx.fillRect(X,Y,W2,H2)}));
   A.floors.forEach(r=>{
-    const T=.5,Q=((def(r.b.cls)||{}).floorInset)||0,sx=r.x-Q,sy=r.y-Q,sw=r.w+2*Q,sn=r.h+2*Q,noShape=!shapeTf(r.b);   // shell = floor + inset ring (elevator 1): same 0.5 wall band as a station
+    const T=.5,Q=((def(r.b.cls)||{}).floorInset)||0,sx=r.x-Q,sy=r.y-Q,sw=r.w+2*Q,sn=r.h+2*Q;
+    if(!vis(V.ox+(sx-T)*s-4,V.oy+(sy-T)*s-4,(sw+2*T)*s+8,(sn+2*T)*s+8))return;   // off screen
+    const noShape=!shapeTf(r.b);   // shell = floor + inset ring (elevator 1): same 0.5 wall band as a station
     const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s,c=catOf(r.b),pr=polyRects(r.b);   // pr: real polygon floor (Corner): cut cells stay dark
     if(Q){cx.fillStyle="rgba(150,190,230,.08)";R({x:sx,y:sy,w:sw,h:sn},(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))}   // inset ring inside the shell: floor colour
     cx.fillStyle="rgba(150,190,230,.08)";if(pr)pr.ok.forEach(q=>R(q,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2)));else cx.fillRect(x,y,w,h);
@@ -390,7 +400,7 @@ function paintFloorBase(s){
     if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(doorTxt(r.b)?" · "+doorTxt(r.b):""),x,y,w);if(!(def(r.b.cls)||{}).elevator)nameTag(r.b,x,y,w)}
   });
   drawShapeFloor(A,s);
-  const NF=lyBlocks().all.filter(b=>!isM(b)&&nfRect(b));
+  const NF=lyBlocks().nf;
   NF.forEach(b=>{const r=nfOut(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
   NF.forEach(b=>{const t=shapeTf(b);if(t&&t.sh.hatch)return hatchShape(b,t,s);const r=nfRect(b);nbHatch(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s,true)});   // grey no-build hatch on the whole tile, behind the shape
   drawShapeFloor({floors:NF.map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
@@ -429,17 +439,27 @@ function ugLine(a,b,s,over,pv,col){
   if(col){cx.setLineDash([]);cx.fillStyle=col;[a,b].forEach(p=>{cx.beginPath();cx.arc(p[0],p[1],Math.max(3,s*.12),0,7);cx.fill()})}   // overlapping pair: coloured ends
   cx.restore();
 }
+// all underground pairs of the block set + the overlap index of each (found once per block set; drawing only culls)
+function ugDrawList(){const L=lyBlocks();if(L.ugd)return L.ugd;
+  const ps=ugPairs(L.v),sp=ps.map(q=>{const[dx]=DIR[q.u.rot];return[Math.min(dx?q.u.x:q.u.y,dx?q.t.x:q.t.y),Math.max(dx?q.u.x:q.u.y,dx?q.t.x:q.t.y),[q.u.cls,q.u.rot,dx?q.u.y:q.u.x].join("|")]}),by=new Map();
+  sp.forEach((z,i)=>(by.get(z[2])||by.set(z[2],[]).get(z[2])).push(i));
+  return L.ugd=ps.map((q,i)=>{const g=by.get(sp[i][2]).filter(j=>sp[j][0]<=sp[i][1]&&sp[i][0]<=sp[j][1]);return{q,k:g.length>1?g.sort((x,y)=>x-y).indexOf(i):-1}})}
 function drawUG(s){
-  if(s<ARROW_MIN_S)return;   // zoomed out: same threshold as the belt arrows
+  if(s<ARROW_MIN_S||LOWD())return;   // zoomed out: same threshold as the belt arrows
   const c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s];
-  const ps=ugPairs(CUR.filter(isM)),span=q=>{const[dx]=DIR[q.u.rot];return[Math.min(dx?q.u.x:q.u.y,dx?q.t.x:q.t.y),Math.max(dx?q.u.x:q.u.y,dx?q.t.x:q.t.y),[q.u.cls,q.u.rot,dx?q.u.y:q.u.x].join("|")]},sp=ps.map(span),ix=new Map();
-  // pairs whose spans overlap on one line get distinct colours + a small sideways offset (order drawn = order in the line group)
-  ps.forEach((q,i)=>{const g=sp.map((z,j)=>j).filter(j=>sp[j][2]===sp[i][2]&&sp[j][0]<=sp[i][1]&&sp[i][0]<=sp[j][1]);if(g.length>1)ix.set(i,g)});
-  ps.forEach((q,i)=>{const g=ix.get(i);if(!g){ugLine(c(q.u),c(q.t),s,q.n>q.max);return}
-    const k=[...new Set(g.concat(i))].sort((x,y)=>x-y).indexOf(i),[dx]=DIR[q.u.rot],o=(k%3-1)*s*.14,f=p=>dx?[p[0],p[1]+o]:[p[0]+o,p[1]];
-    ugLine(f(c(q.u)),f(c(q.t)),s,q.n>q.max,false,"hsl("+(k*95+20)%360+",90%,62%)")})
+  ugDrawList().forEach(({q,k})=>{const a=c(q.u),b=c(q.t);if(!vis(Math.min(a[0],b[0])-s,Math.min(a[1],b[1])-s,Math.abs(a[0]-b[0])+2*s,Math.abs(a[1]-b[1])+2*s))return;
+    if(k<0){ugLine(a,b,s,q.n>q.max);return}
+    const [dx]=DIR[q.u.rot],o=(k%3-1)*s*.14,f=p=>dx?[p[0],p[1]+o]:[p[0]+o,p[1]];   // pairs whose spans overlap on one line get distinct colours + a small sideways offset
+    ugLine(f(a),f(b),s,q.n>q.max,false,"hsl("+(k*95+20)%360+",90%,62%)")});
 }
-let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(b=>b.h===layer);LYB={k,all,v:all.filter(inView)}}return LYB}
+let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(b=>b.h===layer);LYB={k,all,v:all.filter(inView),nm:all.filter(b=>!inView(b)),nf:all.filter(b=>!isM(b)&&nfRect(b))}}return LYB}
+// F view of a big factory: only the blocks near the viewport (bucket grid of 64 cells built once per block set); m = margin in px
+function vpBlocks(m){
+  const L=lyBlocks(),v=L.v;if(view!=="F"||v.length<3000)return v;
+  if(!L.g){const g=new Map();let mw=1,mh=1;v.forEach((b,i)=>{const d=dim(b);if(d.w>mw)mw=d.w;if(d.h>mh)mh=d.h;const k=(b.x>>6)+","+(b.y>>6);let a=g.get(k);if(!a)g.set(k,a=[]);a.push(i)});L.g=g;L.mw=mw;L.mh=mh}
+  const s=sc(),mg=Math.ceil(m/s)+1,f=n=>Math.floor(n/64),ix=[];
+  for(let i=f(-V.ox/s-mg-L.mw);i<=f((W-V.ox)/s+mg);i++)for(let j=f(-V.oy/s-mg-L.mh);j<=f((H-V.oy)/s+mg);j++){const a=L.g.get(i+","+j);if(a)for(const n of a)ix.push(n)}
+  const r=ix.sort((a,b)=>a-b).map(n=>v[n]);r.tot=v.length;return r}
 let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k!==k)GHB={k,v:S.blocks.filter(b=>b.h!==layer&&inView(b))};return GHB.v}
 let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(lyBlocks().all.map(b=>[b.id,b]));return LBM.get(id)};
 const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
@@ -469,18 +489,26 @@ function paint(pk){
     if(!ZC||ZC.width!==cv.width||ZC.height!==cv.height){ZC=document.createElement("canvas");ZC.width=cv.width;ZC.height=cv.height}
     ZC.getContext("2d").drawImage(cv,0,0);ZS={c:ZC,z:V.z,ox:V.ox,oy:V.oy,k:zsKey()}}
 }
+let OUTC=null;
 let FLAT_S=5;   // let: tests set FLAT_S=0 for exact block pixels. below this zoom (px per cell) blocks are batched as flat rects (no icon/arrow/label/door marks are drawn there anyway)
 function drawBlocks(list,alpha,useSel){
-  const s=sc(),flat=s<FLAT_S,fl=new Map(),st=new Map(),full=[];
+  const s=sc(),flat=s<FLAT_S||(view==="L"&&list.length>300&&s<14),fl=new Map(),st=new Map(),full=[];   // Layout view with hundreds of blocks: flat rects up to 14px per cell (icons and labels cost ~0.1 ms per block)
+  // big factories (thousands of pieces): belts, undergrounds and splitters are batched as flat rects up to ARROW_MIN_S (no direction arrows below it anyway) and skipped below 2px per cell;
+  // the "outside the buildable floor" test (slow, per piece) is cached per block set
+  const bigL=(list.tot||list.length)>3000,beltFlat=bigL&&s<ARROW_MIN_S;
+  if(!OUTC||OUTC.k!==PK||OUTC.r!==RCT){OUTC={k:PK,r:RCT,m:new Map()}}
+  const outC=b=>{let v=OUTC.m.get(b.id);if(v===undefined){v=outside(b,RCT);OUTC.m.set(b.id,v)}return v};
   list.forEach(b=>{
+    const bf=beltFlat&&isBelt(b);
+    if(bf&&(s<2||LOWD()))return;   // belts are skipped in the low-detail mode of a big factory (and below 2px per cell)
     const d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s;
     if(x>W||y>H||x+w<0||y+h<0)return;
-    if(!flat||(useSel&&sel.has(b.id)&&b.h===layer)||(isM(b)&&RCT&&b.h===layer&&outside(b,RCT))){full.push(b);return}
+    if((!flat&&!bf)||(useSel&&sel.has(b.id)&&b.h===layer)||(isM(b)&&RCT&&b.h===layer&&outC(b))){full.push(b);return}
     const k=tileKey(b);
     let p=fl.get(k);if(!p)fl.set(k,p=new Path2D());p.rect(x,y,w,h);
     if(s>=3){let q=st.get(k);if(!q)st.set(k,q=new Path2D());q.rect(x+.5,y+.5,w-1,h-1)}
   });
-  if(flat){
+  if(flat||beltFlat){
     fl.forEach((p,k)=>{cx.fillStyle=kFill(k,alpha*.8);cx.fill(p)});
     cx.lineWidth=1;st.forEach((q,k)=>{cx.strokeStyle=kStroke(k,alpha);cx.stroke(q)});
   }
@@ -495,7 +523,7 @@ function paint0(){
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8,F?GRIDOFF:0);
   if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*Math.abs(b.h-layer));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
-  const cur=lyBlocks().v;CUR=cur;
+  const cur=vpBlocks(CULLM+20*s);CUR=cur;   // +20 cells: an underground pair (max 13 cells) is found whole at the screen edge
   drawBlocks(cur,.92,true);   // viewport cull inside drawBlocks
   cx.fillStyle="rgba(255,60,60,.5)";
   // overlap marks: the duplicate cells of this layer, found once per paint key (all blocks; only the ones on screen are drawn, same pixels as before)
@@ -519,6 +547,7 @@ function paint0(){
   }
   if(F&&smOn())drawBeltItems(s);
   if(F&&smOn())drawSimRouters(s);
+  if(F&&window.EXO_LANES)drawExoLanes(s);
   if(F){drawPorts(s);drawBadges(s)}
   if(F){
     cx.save();cx.setLineDash([5,3]);cx.lineWidth=1.5;cx.strokeStyle="hsl(45,95%,62%)";cx.fillStyle="hsl(45,95%,62%)";cx.font="11px system-ui,sans-serif";cx.textBaseline="bottom";

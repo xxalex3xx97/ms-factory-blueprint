@@ -37,13 +37,13 @@ function cfgModel(b,d,e,ugn){
   }else if(k==="splitter"){
     if(!b.fl&&!b.pr&&!off)return;
     if(b.fl)e.Filters=b.fl;
-    const n=b.fl?b.fl.length:3;   // game config: one filter + one port flag per output (3 for a splitter); the last n site ports (UNVERIFIED mapping)
-    e.ConfigHex=cfgEnc(k,{filters:b.fl||Array(n).fill(""),prioA:b.pr?b.pr[0]:-1,prioB:b.pr?b.pr[1]:-1,ports:isSplitterCls(b.cls)?SPL_FACES.map(f=>{const q=ps.find(q=>q.f===f);return!q||q.en}):en.slice(-n)});
+    const n=b.fl?b.fl.length:isBalCls(b.cls)?2:3;   // game config: one filter + one port flag per output (3 for a splitter); the last n site ports (UNVERIFIED mapping)
+    e.ConfigHex=cfgEnc(k,{filters:b.fl||Array(n).fill(""),prioA:b.pr?b.pr[0]:-1,prioB:b.pr?b.pr[1]:-1,ports:isBalCls(b.cls)?balOuts(ps).map(q=>!q||q.en):isSplitterCls(b.cls)?SPL_FACES.map(f=>{const q=ps.find(q=>q.f===f);return!q||q.en}):en.slice(-n)});
   }
 }
 function build(){
   const bl=S.blocks.filter(b=>!isM(b)),ms=S.blocks.filter(isM),UGN=new Map(ugPairs(ms).map(q=>[q.u.id,q.n]));
-  let base=Math.max(0,...S.dm.map(m=>Number(m&&m.MachineID)||0),...ms.map(b=>b.mid||0));
+  let base=0;S.dm.forEach(m=>{base=Math.max(base,Number(m&&m.MachineID)||0)});ms.forEach(b=>{if((b.mid||0)>base)base=b.mid});   // no spread: 100k+ machines overflow the call stack
   // Version 2 out: inverse of importJson v2 (block 4 units/cell, footprint centre; machine 2 units/floor cell, +W-14, Height 16 per level)
   const RB=b=>{if(b.raw&&b.raw.x===b.x&&b.raw.y===b.y&&b.raw.r===b.rot)return{X:b.raw.X,Y:b.raw.Y};   // game coords that the site footprint cannot express: written back untouched until moved/rotated
     const f=dim(b),o=SHIPEND(b)?dockOrg(b.rot):null;return o?{X:4*b.x+o.X,Y:4*b.y+o.Y}:{X:4*b.x+2*(f.w-1),Y:4*b.y+2*(f.h-1)}},RM=b=>{const f=dim(b);return{X:2*b.x+f.w-14,Y:2*b.y+f.h-14}};
@@ -104,6 +104,8 @@ function parseSav(buf){
     for(const m of machs){const p=pth(m.cls);if(p){const c=p.split("/").pop().split(".")[0],e={Class:c,Transform:{GridLocation:{X:m.X,Y:m.Y},Height:m.H,GridRotation:m.R},MachineID:m.MID,PaletteID:m.PAL,...(m.hx?cfgView(c,m.hx):{})};
       if(dup.has(m.MID)){delete e.ConfigHex;delete e.Length}   // mod-built exit record: a tile, not a second tunnel
       else if(UG[m.MID]!==undefined)e.Length=UG[m.MID];      // world record wins (config is empty unless reconfigured)
+      const lv=PR[m.MID];if(lv&&lv.x===m.X&&lv.y===m.Y){const dc=m.hx&&cfgDec(c,m.hx),n=lv.ports.length;   // live splitter/balancer record wins over the blueprint ConfigHex (priority output + port flags)
+        if(dc||lv.c!==-1||lv.ports.some(f=>!f))e.ConfigHex=cfgEnc("splitter",{filters:dc&&dc.filters.length===n?dc.filters:Array(n).fill(""),prioA:lv.c,prioB:dc?dc.prioB:-1,ports:lv.ports})}
       if(CT[m.MID])e.Contents=CT[m.MID];
       dm.push(e)}}
     dm.sort((a,b)=>a.MachineID-b.MachineID);
@@ -142,6 +144,14 @@ function parseSav(buf){
           if(nm&&c>0)m.set(nm,(m.get(nm)||0)+c)}
         if(m.size)CT[mid]=[...m].map(([it,c])=>({Item:IDS[nrm(it)]||IDS[nrm(it)+"s"]||IDS[nrm(it).replace(/(\d+)$/,"mk$1")]||it,Count:c,Infinite:false}));
       }catch(e){}}}
+  // live splitter/balancer config from the world tree: record [class idx, mid, fx, fy, ...] (+ `41465 X Y` at word 13..15), then `n, ports bool[n], i32 LastInputIndex, i32 PriorityInputIndex, i32 PriorityOutputIndex` (byte aligned, n = 3 splitter / 2 balancer; the head also holds earlier n-count words, so take the last valid one in the first words)
+  const PR={};
+  for(let ci=0;ci<top.length;ci++){const n=/Splitter/.test(top[ci])?3:/BeltBalancer/.test(top[ci])?2:0;if(!n)continue;
+    for(let q=0;q+200<=L;q++){if(I(q)!==ci)continue;
+      const mid=I(q+4);if(mid<=0||I(q+48)!==6)continue;
+      let r=null;for(let p=q+64;p<=q+144;p+=4){if(I(p)!==n)continue;const v=[];for(let k=0;k<3;k++)v.push(I(p+4+n+4*k));
+        if(v.every(x=>x>=-1&&x<4)&&[...u8.slice(p+4,p+4+n)].every(x=>x<2))r={x:I(q+56),y:I(q+60),ports:[...u8.slice(p+4,p+4+n)].map(x=>!!x),c:v[2]}}
+      if(r&&!PR[mid])PR[mid]=r}}
   const out=[];
   for(let p=o+56;p+13<=L;p++){
     if(u8[p]!==2||!hasAt(p,SIG))continue;
@@ -159,6 +169,7 @@ function impCfg(b,d,m){SV++;
   if(!dc)return;
   const off=[],ps=portsOf(b),gm=gamePortMap(b);
   if(isSplitterCls(d.id))(dc.ports||[]).forEach((e,g)=>{const q=ps.find(q=>q.f===SPL_FACES[g]);if(e===false&&q&&q.tg)off.push(q.key)});
+  else if(isBalCls(d.id))(dc.ports||[]).forEach((e,g)=>{const q=balOuts(ps)[g];if(e===false&&q&&q.tg)off.push(q.key)});
   else if(gm&&dc.ports&&dc.ports.length===gm.length)dc.ports.forEach((e,g)=>{const q=ps[gm[g]];if(e===false&&q.tg)off.push(q.key)});
   else{const sk=k==="splitter"?Math.max(0,ps.length-(dc.ports||[]).length):0;(dc.ports||[]).forEach((e,i)=>{const q=ps[sk+i];if(e===false&&q&&q.tg)off.push(q.key)})}
   if(off.length)b.off=off;
@@ -171,7 +182,7 @@ const bbs=CATALOG.buildables;
 function matchM(m){
   const c=m&&m.Class;if(!c)return null;
   const ug=c.replace(/^BPO?_/,"").replace(/Object(?=_|$)/,"");   // game saves name the Mk2/Mk3 undergrounds BP_UndergroundBeltObject_2/_3 (catalog machineClass is the Mk1 name)
-  const l=bbs.filter(d=>d.machineClass===c||d.id===c||"BPO_"+d.id.slice(4)===c||d.id===m.DefaultName||(d.category==="Undergrounds"&&"DAT_"+ug===d.id));
+  const l=bbs.filter(d=>d.machineClass===c||d.id===c||"BPO_"+d.id.slice(4)===c||d.id===m.DefaultName||(["Undergrounds","Splitters"].includes(d.category)&&"DAT_"+ug===d.id));
   return l.find(d=>d.id===m.DefaultName)||l[0]||null;
 }
 function importJson(txt,quiet){const ok=importJson0(txt,quiet);if(ok){stHide();if(!quiet)lvAuto()}return ok}
@@ -214,11 +225,12 @@ function importJson0(txt,quiet){
   });
   // a game underground is ONE machine at the entrance with Length: rebuild the exit tile (same rotation/line) unless a UG is already there or the cell is taken. No Length / no partner = single tile (no partner invented).
   const ents=new Set(S.blocks.filter(b=>b.ugl).map(b=>b.id));   // entrance tiles: never taken as another pair's exit
+  const mAt=new Map();S.blocks.forEach(q=>{if(isM(q)){const k=q.h+"|"+q.x+"|"+q.y;if(!mAt.has(k))mAt.set(k,q)}});   // one lookup table: a find() per underground made a 130k-piece import take 85 s
   S.blocks.filter(b=>b.ugl).forEach(b=>{
     const ex=b.x+DIR[b.rot][0]*(b.ugl-1),ey=b.y+DIR[b.rot][1]*(b.ugl-1);delete b.ugl;
-    const ox=S.blocks.find(q=>q.h===b.h&&isM(q)&&q.x===ex&&q.y===ey);   // a plain exit tile already there (own export / autosave): link it, so nested pairs survive a refresh
+    const ox=mAt.get(b.h+"|"+ex+"|"+ey);   // a plain exit tile already there (own export / autosave): link it, so nested pairs survive a refresh
     if(ox){if(!ents.has(ox.id)&&!ox.pu&&ox.cls===b.cls&&ox.rot===b.rot){ox.pu=b.id;b.pu=ox.id}}
-    else{const x={id:uid++,cls:b.cls,x:ex,y:ey,h:b.h,rot:b.rot,pid:b.pid,mid:0,pu:b.id};b.pu=x.id;S.blocks.push(x)}
+    else{const x={id:uid++,cls:b.cls,x:ex,y:ey,h:b.h,rot:b.rot,pid:b.pid,mid:0,pu:b.id};b.pu=x.id;S.blocks.push(x);mAt.set(x.h+"|"+x.x+"|"+x.y,x)}
   });
   sel=new Set();$("name").value=S.name;all();if(quiet)return true;fit();
   const unk=S.blocks.filter(b=>!BASE[b.cls]).length;

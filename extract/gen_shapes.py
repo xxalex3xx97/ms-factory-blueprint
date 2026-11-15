@@ -28,7 +28,7 @@ import base64, json, os, sys
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 EX = os.path.join(ROOT, 'extract')
 OUT = os.path.join(ROOT, 'js', 'shapes.js')
-SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'drop', 'chain', 'hatch', 'clip', 'shapeOf', 'flipY', 'wallsOverride', 'hatchAdd', 'lgaps')
+SHAPE_ONLY = ('floorOrigin', 'polys', 'ground', 'solid', 'fill', 'add', 'iconFile', 'mirrorOf', 'entrance', 'wallIdx', 'ring', 'drop', 'chain', 'hatch', 'clip', 'shapeOf', 'flipY', 'wallsOverride', 'hatchAdd', 'size', 'lgaps')
 
 
 def rd(name):
@@ -102,7 +102,7 @@ def build():
         cols = f.get('colliders_raw', [])
         if p.get('flipY'):   # flipY: mirror the collider y (floor frame) when the decoded BPO is upside down vs the Layout
             cols = [[[a, -y1, c], [d, -y0, e]] for (a, y0, c), (d, y1, e) in cols]
-        size = f['hull']['size'] if 'hull' in f else None
+        size = p.get('size') or (f['hull']['size'] if 'hull' in f else None)   # size: [w,h] hull override
         walls, props, arms = [], [], []
         ring_idx = set((p.get('ring') or {}).get('idx', []))
         for ci, ((x0, y0, z0), (x1, y1, z1)) in enumerate(cols):

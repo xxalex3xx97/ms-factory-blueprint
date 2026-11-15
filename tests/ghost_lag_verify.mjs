@@ -28,7 +28,7 @@ const pageErrs = [];
 async function open(dir) {
   const pg = await (await br.newContext({viewport: {width: 1400, height: 900}})).newPage();
   pg.on('pageerror', e => pageErrs.push(dir + ': ' + e.message));
-  await pg.goto(pathToFileURL(dir + '/index.html').href);
+  await pg.goto(pathToFileURL(dir + '/index.html').href + '?engine=old');
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
   await pg.evaluate(t => __fb.importJson(t, true), TXT);
   return pg;

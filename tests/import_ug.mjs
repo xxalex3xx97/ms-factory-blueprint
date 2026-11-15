@@ -15,7 +15,7 @@ const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href;
+const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href + '?engine=old';
 const SAV = process.argv[2] || 'C:/Users/SFidelis/AppData/Local/MainSequence/Saved/SaveGames/blueprint module-Autosave_S.sav';
 const STN = 'Starter Station';
 if (!fs.existsSync(SAV)) { console.error(`save not found: ${SAV}`); process.exit(1); }

@@ -6,6 +6,7 @@
 <title>MS Factory Blueprint</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23101a24%27/%3E%3Cpath d=%27M5 22h22M5 22V12l7 5v-5l7 5v-9h5v14%27 fill=%27none%27 stroke=%27%2342d4e8%27 stroke-width=%272.6%27 stroke-linejoin=%27round%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/gallery.css">
 </head>
 <body>
 <header>
@@ -87,6 +88,7 @@
       <label>Item <select id="plnItem" aria-label="Target item"></select></label>
       <label>Rate (items/min) <input id="plnRate" type="number" min="0.001" step="any" value="1" aria-label="Target rate in items per minute"></label>
       <button id="plnBuild" type="button" title="Preview and place machines, belts and source containers for this plan">Build factory</button>
+      <button id="galOpen" type="button" title="Template gallery: one preview per craftable recipe">Templates</button>
       </div>
       <div id="plnMain">
       <div id="plnOut" tabindex="0" role="region" aria-label="Planner flow diagram"></div>
@@ -249,7 +251,27 @@
 <script defer src="js/inspector.js"></script>
 <script defer src="js/planner.js"></script>
 <script defer src="js/prefab.js"></script>
+<script src="js/dock_apply.js"></script>
+<script src="js/tpl/iface.js"></script>
+<script src="js/tpl/bundle.js"></script>
+<script src="js/tpl/registry.js"></script>
+<script src="js/cmp_hub.js"></script>
+<script src="js/cmp_dock.js"></script>
+<script src="js/cmp_asm.js"></script>
+<script src="js/rb_pack.js"></script>
+<script src="js/rb_grid.js"></script>
+<script src="js/rb_size.js"></script>
+<script src="js/rb_build.js"></script>
+<script src="js/city_build.js"></script>
+<script src="js/rb_run.js"></script>
+<script src="js/cmp_layout.js"></script>
+<script src="js/cmp_route.js"></script>
+<script src="js/compose.js"></script>
+<script src="js/cmp_groups.js"></script>
+<script defer src="js/worker_src.js"></script>
 <script defer src="js/placer.js"></script>
+<script defer src="tools/hand/enginepanel.js"></script>
+<script defer src="js/gallery.js"></script>
 <script defer src="js/panel.js"></script>
 <script defer src="js/io.js"></script>
 <script defer src="js/simui.js"></script>
@@ -264,24 +286,36 @@
 <dialog id="plnPrev" aria-labelledby="plnPrevT">
   <div class="pvHd"><h3 id="plnPrevT">Factory preview</h3><div class="pvTb" role="toolbar" aria-label="Preview zoom"><button id="plnZo" type="button" aria-label="Zoom out" title="Zoom out">&minus;</button><button id="plnZi" type="button" aria-label="Zoom in" title="Zoom in">+</button><button id="plnZf" type="button" aria-label="Fit to view" title="Fit to view">Fit</button></div></div>
   <div id="pvSet">
-    <fieldset id="plnBk" title="Block types the factory may use. None ticked = factory only, into an existing floor"><legend>Blocks</legend>
-      <label class="chk"><input type="checkbox" id="plnBk11" value="BPO_Station_01" checked> 1x1</label>
-      <label class="chk"><input type="checkbox" id="plnBk21" value="BPO_Station_2x1" checked> 2x1</label>
-      <label class="chk"><input type="checkbox" id="plnBk22" value="BPO_Station_02" checked> 2x2</label>
-    </fieldset>
-    <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2" selected>Large Container</option></select></label>
-    <label>Belt <select id="pvMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
-    <label>Splitter <select id="pvSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
     <label>Rate (items/min) <input id="pvRate" type="number" min="0.001" step="any" aria-label="Target rate in items per minute"></label>
-    <label>Engine <select id="pvEngine" aria-label="Layout engine"><option value="old">Old (stable)</option><option value="new">New (experimental)</option></select></label>
-    <label class="chk" title="Open-ended chainable module: input on west edge, output on east edge, no source/sink containers"><input type="checkbox" id="plnMod"> Modular build</label>
+    <label>Belt <select id="pvMk"aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+    <label>Blocks <select id="plnBk" aria-label="Block type" title="Block type the factory is cut from"><option value="BPO_Station_01">1x1</option><option value="BPO_Station_2x1">2x1</option><option value="BPO_Station_02A">2x2 A</option><option value="BPO_Station_02" selected>2x2 B</option><option value="BPO_Station_03">2x2 C</option></select></label>
+    <span id="plnEngBadge" role="status" title="Layout template used for this preview"></span>
   </div>
+  <div id="pvDocks"><span class="pvGt">Docks</span>
+    <label class="chk"><input type="checkbox" id="plnDkI"> Raw inputs from docks</label>
+    <label>Dock <select id="plnDk" aria-label="Dock type"><option value="ind">Industrial</option><option value="nrm">Normal</option></select></label>
+    <label class="chk"><input type="checkbox" id="plnDkO"> Output to a dock</label>
+    <label>Output dock <select id="plnDkOT" aria-label="Output dock type"><option value="">Same as input</option><option value="ind">Industrial</option><option value="nrm">Normal</option></select></label>
+  </div>
+  <details id="pvOpt"><summary>Options</summary><div id="pvOptB">
+    <label>Splitter <select id="pvSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+    <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2" selected>Large Container</option></select></label>
+    <label class="chk"><input type="checkbox" id="plnLbl"> Machine rate labels</label>
+    <label class="chk" hidden style="display:none" title="Open-ended chainable module: input on west edge, output on east edge, no source/sink containers"><input type="checkbox" id="plnMod"> Modular build</label>
+  </div></details>
   <div id="plnPrevView"><canvas id="plnPrevMap" width="300" height="180" aria-label="Factory layout preview"></canvas></div>
-  <dl id="plnPrevCnt"><dt>Machines</dt><dd id="pvMach"></dd><dt>Belts</dt><dd id="pvBelt"></dd><dt>Splitters</dt><dd id="pvSpl"></dd><dt>Containers</dt><dd id="pvBox"></dd><dt>Undergrounds</dt><dd id="pvUg"></dd><dt>Blocks</dt><dd id="pvBlk"></dd><dt>Cells</dt><dd id="pvCell"></dd><dt>In/Out</dt><dd id="pvIO"></dd></dl>
-  <div id="plnPrevNote"></div>
+  <div id="pvLine"></div>
+  <details id="pvDet"><summary>Details</summary><dl id="plnPrevCnt"><dt>Machines</dt><dd id="pvMach"></dd><dt>Belts</dt><dd id="pvBelt"></dd><dt>Splitters</dt><dd id="pvSpl"></dd><dt>Containers</dt><dd id="pvBox"></dd><dt>Undergrounds</dt><dd id="pvUg"></dd><dt>Blocks</dt><dd id="pvBlk"></dd><dt>Cells</dt><dd id="pvCell"></dd><dt>In/Out</dt><dd id="pvIO"></dd></dl>
+  <div id="plnPrevNote"></div></details>
   <p id="plnPrevErr" role="alert"></p>
   <p id="plnPrevBig" role="status"></p>
   <div class="btns"><button id="plnPlace" type="button">Place</button><button id="plnCancel" type="button">Cancel</button></div>
 </dialog>
+<script>/* ?exo=1: build the hand-designed Exosuit factory (tools/hand) live, block by block */
+if(/[?&]exo=chain/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{await l("tools/hand/chainplay.js");chainPlay({url:"tools/hand/chain_plan.json",stepMs:500})}catch(e){console.error("exo",e)}});   /* ?exo=chain: replay the planned Advanced Plates chain step by step */
+if(/[?&]exo=dock/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","fblock","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:500,build:()=>fbBuild({mk:1,dock:true})})}catch(e){console.error("exo",e)}});   /* ?exo=dock: one dock-ready block per recipe with a raw input */
+if(/[?&]exo=blocks/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","fblock","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:1500,build:fbBuild})}catch(e){console.error("exo",e)}});   /* ?exo=blocks: one full factory block per machine class */
+if(/[?&]exo=bus/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","exosuit_spec","exobus","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:500,build:exoBus})}catch(e){console.error("exo",e)}});   /* ?exo=bus: the row-bus layout */
+if(/[?&]exo=1/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","exosuit_spec","exosuit","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:900})}catch(e){console.error("exo",e)}});</script>
 </body>
 </html>

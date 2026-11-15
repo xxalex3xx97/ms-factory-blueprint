@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href;
+const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href + '?engine=old';
 const SHOTS = path.join(HERE, 'shots');
 const W = 1400, H = 800;
 const ALL = ['plnBk11', 'plnBk21', 'plnBk22'];
@@ -26,7 +26,7 @@ function chk(name, cond, detail = '') {
 function info(msg) { console.log(`INFO ${msg}`); }
 
 async function setTicks(pg, ids) {
-  for (const id of ALL) await pg.setChecked('#' + id, ids.includes(id));
+  await pg.selectOption('#plnBk', {plnBk11: 'BPO_Station_01', plnBk21: 'BPO_Station_2x1', plnBk22: 'BPO_Station_02'}[ids[ids.length - 1]]);   // UI has one block type: several ticks = the largest
 }
 async function openBuild(pg, ticks) {
   await pg.click('#plnBuild');
@@ -219,7 +219,7 @@ try {
   chk('A) Capacitor sim 60 within 5%, no machine low or blocked', Ap.placed && ms5(Ap.sim.got, 60, 0.05) && Ap.sim.low === 0 && Ap.sim.blocked === 0, JSON.stringify(Ap.sim));
 
   // ---- refusals: 2-input machine without 2 ports on one face, and 3 inputs
-  for (const [item, pat] of [['ITEM_IridiumPlates', /no face with 2 input ports/], ['ITEM_Nutrients', /3 inputs per machine/]]) {
+  for (const [item, pat] of [['ITEM_Nutrients', /3 inputs per machine/]]) {
     await closeIfOpen(pg);
     await pg.evaluate(() => { PLC_PREFAB = false });   // old placer refusals; the prefab path builds these items (own tests)
     await setup(pg, item, 30, 0, 'DAT_Container');

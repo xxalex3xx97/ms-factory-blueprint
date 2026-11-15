@@ -6,7 +6,7 @@ import {fileURLToPath, pathToFileURL} from 'url';
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const PAGE = pathToFileURL(path.join(HERE, '..', 'index.html')).href;
+const PAGE = pathToFileURL(path.join(HERE, '..', 'index.html')).href + '?engine=old';
 const OUT = path.join(HERE, 'shots', 'hd-icons-layout.png');
 
 const br = await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
