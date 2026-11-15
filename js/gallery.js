@@ -19,13 +19,13 @@ function galBuild(k){   // the build engine (tools/hand chainBuild, one recipe, 
   const t0=performance.now();let T=null,why="";
   try{
     if(typeof chainBuild!=="function")throw new Error("engine not loaded");
-    if(!["CRAFT_Refinery","CRAFT_Assembler","CRAFT_GrowthChamber","CRAFT_Supercomputer","CRAFT_AdvancedAssembler","CRAFT_Enrichment"].includes(k.c))throw new Error("no block for this machine yet ("+k.cls+")");
+    if(!["CRAFT_Refinery","CRAFT_Assembler","CRAFT_GrowthChamber","CRAFT_Supercomputer","CRAFT_AdvancedAssembler","CRAFT_Enrichment","CRAFT_DeepSpaceObservatory"].includes(k.c))throw new Error("no block for this machine yet ("+k.cls+")");
     if(new Set(k.r.i.map(([x])=>x)).size>4)throw new Error("more than 4 different inputs: the engine has source slots for 4");
     const pick={};if(k.idx>0)pick[k.item]=rk(k.r);
-    const R=chainBuild({item:k.item.replace(/^ITEM_/,""),rate:k.base,single:true,docks:false,tile:$("plnBk").value,pick,maxStates:60000,hw:3});
+    const R=chainBuild({item:k.item.replace(/^ITEM_/,""),rate:k.base,single:true,docks:false,tile:k.c==="CRAFT_DeepSpaceObservatory"?"BPO_Station_03":$("plnBk").value,pick,maxStates:60000,hw:3});
     if(R.report.skipped&&R.report.skipped.length)why="no block for this machine yet ("+k.cls+")";
     else if(R.fails.length)why=R.fails[0];
-    else if(!R.ms.some(m=>m.rec))why="nothing built";
+    else if(!R.ms.some(m=>m.rec)&&!R.blocks.some(b=>/DeepSpace/.test(b.cls)))why="nothing built";
     else{const mx=Math.min(...R.blocks.map(q=>q.x)),my=Math.min(...R.blocks.map(q=>q.y));   // start at the origin (preview and snippets)
       T={blocks:R.blocks.map(q=>({...q,x:q.x-mx,y:q.y-my})),ms:R.ms.map(q=>({...q,x:q.x-mx*FC,y:q.y-my*FC}))}}
   }catch(e){why=/^(no block|more than)/.test(e.message)?e.message:"internal error ("+e.message+")"}

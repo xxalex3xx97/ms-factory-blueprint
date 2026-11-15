@@ -13,7 +13,7 @@
     $("pvLine").textContent="Building...";$("plnPrevMap").style.opacity=".45";await nx();
     if(typeof chainBuild!=="function")for(const f of ["tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f);
     if(me!==tok)return;
-    let T;try{T=chainBuild({item:item.replace(/^ITEM_/,""),rate,mk,tile:$("plnBk").value,dockType:$("plnDk").value,outDockType:$("plnDkOT").value||$("plnDk").value,docks:$("plnDkI").checked,outDock:$("plnDkO").checked,maxStates:60000,hw:3})}catch(e){$("pvLine").textContent="Build failed";$("plnPrevErr").textContent=e.message;$("plnPrevMap").style.opacity="";return}
+    let T;try{T=chainBuild({item:item.replace(/^ITEM_/,""),rate,mk,pick:typeof PLN_PICK==="object"?PLN_PICK:undefined,tile:$("plnBk").value,dockType:$("plnDk").value,outDockType:$("plnDkOT").value||$("plnDk").value,docks:$("plnDkI").checked,outDock:$("plnDkO").checked,maxStates:60000,hw:3})}catch(e){$("pvLine").textContent="Build failed";$("plnPrevErr").textContent=e.message;$("plnPrevMap").style.opacity="";return}
     const bad=T.fails.length+HAND.check().bad.length,mach=T.ms.filter(m=>m.rec).length,boxes=T.ms.filter(m=>/Container/.test(m.cls)).length,docks=T.blocks.filter(b=>/Dock/.test(b.cls)).length;
     T.machines=mach;ENG={T};const mx=Math.min(...T.blocks.map(q=>q.x)),my=Math.min(...T.blocks.map(q=>q.y));plcT={ok:true,blocks:T.blocks.map(q=>({...q,x:q.x-mx,y:q.y-my})),ms:T.ms.map(q=>({...q,x:q.x-mx*FC,y:q.y-my*FC}))};   // the preview starts at the origin (its axes and fit assume that)
     plcL={items:[],src:{}};   // the preview is drawn by placerShot (the factory renderer) from plcT
