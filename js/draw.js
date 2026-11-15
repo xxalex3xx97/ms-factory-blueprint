@@ -397,6 +397,12 @@ function paintFloorBase(s){
     cx.fillStyle="rgba(255,70,70,.14)";cx.fillRect(x,y,w,h);hatch(x,y,w,h,"rgba(255,110,110,.5)");
     cx.save();cx.setLineDash([5,3]);cx.lineWidth=1.5;cx.strokeStyle="hsl(0,75%,62%)";cx.strokeRect(x+.5,y+.5,w-1,h-1);cx.restore();
     if(w>60)note("Elevator shaft: no build",x,y,w,"hsl(0,80%,78%)");
+    if(e.b&&e.b.nm&&w>=40){   // elevator name, centred on the shaft
+      cx.save();cx.beginPath();cx.rect(x+2,y+2,w-4,h-4);cx.clip();
+      const fs=Math.min(18,Math.max(11,w/9));cx.font="bold "+fs+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";
+      let t=e.b.nm;while(t.length>1&&cx.measureText(t).width>w-10)t=t.slice(0,-1);if(t!==e.b.nm)t+="…";
+      cx.shadowColor="rgba(0,0,0,.9)";cx.shadowBlur=4;cx.fillStyle="#fff";cx.fillText(t,x+w/2,y+h/2);cx.restore();
+    }
   }));
   A.doors.forEach(r=>R(r,(x,y,w,h)=>{
     cx.save();
