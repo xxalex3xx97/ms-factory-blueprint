@@ -291,7 +291,7 @@ function savExport(j, opts) {
   // Flat machines. Config from site ConfigHex; underground exit has none, so empty config (unverified in game).
   for (const m of j.DefaultMachines || []) {
     const s = savShort(m.Class);
-    let path = SAV_PATHS[s];
+    let path = SAV_PATHS[s] || (s === 'DAT_Teleporter' && '/Game/Blueprints/Machines/BPO_Teleporter.BPO_Teleporter_C');   // class path seen in a real save
     if (!path) { path = `/Game/Blueprints/Machines/${s}.${s}_C`; warn.push('guessed path ' + s); }
     const t = m.Transform;
     if (used.has(savKey(s, t.GridLocation.X, t.GridLocation.Y, t.Height))) continue;
