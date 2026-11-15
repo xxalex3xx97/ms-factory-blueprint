@@ -33,7 +33,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
       specs.push({gx:col.gx,gy:TBS+1+gyRow,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),col:dep[it.n.item]})})});
   const lastCol=colList[colList.length-1],lastGx=lastCol.gx,gxO=lastGx+2+lastCol.sw,nLn=Math.ceil(RATE/[60,120,180][MK]-1e-9),nOD=opts.outDock?Math.ceil(nLn/8):0;   // output dock: an extra tile column east of everything (nLn lanes of the final item, 8 lanes per industrial dock)
   if(nOD){maxRows=Math.max(maxRows,nOD);westOf[gxO]=lastGx+1+lastCol.sw;westOf0[gxO]=lastGx+2}
-  const W=nOD?gxO+1:gxO,H=TBS+1+2*maxRows+TBS,odRow0=nOD?Math.min(Math.min(...specs.filter(q=>q.item===ITEM).map(q=>q.gy)),TBS+1+2*(maxRows-nOD)):0;   // the output docks sit on the rows of the final blocks   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
+  const W=nOD?gxO+1:gxO,H=TBS+1+2*maxRows+TBS,odRow0=nOD?Math.min(Math.min(...specs.filter(q=>q.item===ITEM).map(q=>q.gy))+1,TBS+2*maxRows-2*(nOD-1)):0;   // the output docks sit on the street row right below the final blocks: the belt stays beside them, and its rows never coincide with a box port row   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
   const nCols=colList.length,report={recipes:nodes.length,blocks:specs.length,cols:nCols,rows:maxRows,routed:0,failed:0,entries:0,unsupplied:[]};
   const dockZone=new Set();specs.forEach(s=>{if(s.dock)for(let d=1;d<=4;d++)for(let dy=-1;dy<=1;dy++)dockZone.add((s.gx-d)+','+(s.gy+dy))});   // dock + adapter (2 strides) and 3 units of ship space in front (2 strides)
   const outBlk=new Set(specs.map(s=>(s.gx+1)+','+s.gy));
@@ -83,10 +83,8 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
         if(lay(cl,e.gx+','+e.gy))report.routed++;else{report.failed++;HAND.S.fails.push(e.item.replace('ITEM_','')+' > '+e.blk+' no route (dock tail)')}continue}
       const L=src[e.item];if(!L||!L.length){report.unsupplied.push(e.item.replace('ITEM_','')+' > '+e.blk);continue}
       if(e.out){let done=0;for(const [s,p] of src[e.item].flatMap(s=>s.ports.map(p=>[s,p]))){const bx1=s.x+2,bx2=westOf0[e.gx];if(bx1!==bx2)continue;
-          const sx=p.x+p.nx,sy=p.y+p.ny,Yb=(e.gy-1)*TW,lo=Math.min(sy,Yb),hi=Math.max(sy,Yb+TW,e.y);
-          const k1=take('v'+bx1,lo,hi,halfOf(bx1));if(k1<0)continue;const k2=take('v'+bx2,Math.min(Yb,e.y),Math.max(Yb+TW,e.y),nlOf(bx2),halfOf(bx2));if(k2<0)continue;
-          const X1=laneX(bx1,k1),X2=laneX(bx2,k2),kh=take('h'+(e.gy-1),Math.min(X1,X2),Math.max(X1,X2),14);if(kh<0)continue;const Yh=Yb+2+2*kh;
-          const wps=[[sx,sy],[X1,sy],[X1,Yh],[X2,Yh],[X2,e.y],[e.x,e.y]].filter((w,i,a)=>i===0||w[0]!==a[i-1][0]||w[1]!==a[i-1][1]);
+          const sx=p.x+p.nx,sy=p.y+p.ny,k2=take('v'+bx2,Math.min(sy,e.y),Math.max(sy,e.y),nlOf(bx2),halfOf(bx2));if(k2<0)continue;   // same street, same rows: straight east on the port's row (tunnelling the other lanes), then along a consumer lane to the dock entry
+          const X2=laneX(bx2,k2),wps=[[sx,sy],[X2,sy],[X2,e.y],[e.x,e.y]].filter((w,i,a)=>i===0||w[0]!==a[i-1][0]||w[1]!==a[i-1][1]);
           if(lay(wps,e.gx+','+e.gy)){s.obj.used.add(p.key);s.ports.splice(s.ports.indexOf(p),1);s.room-=e.dem;done=1;break}}
         if(done){report.routed++;continue}}
       let ok=0,why='';const order=L.slice().sort((a,b)=>Math.abs(a.x-e.gx)-Math.abs(b.x-e.gx)||b.room-a.room);
