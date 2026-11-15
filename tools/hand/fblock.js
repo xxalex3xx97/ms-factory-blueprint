@@ -1,60 +1,101 @@
-// FBLOCK: one FULL factory block per machine class (HAND toolkit), designed from the machine's real ports. fbBuild({mk:1}) -> HAND.result() + {info}.
-// Rule: take the recipe of the class with the most inputs; inputs go on the N face first (far lane -> rightmost used port, drops cross nearer lanes by an underground hop),
-// the rest on the S face (near lane -> leftmost port); the output goes on the last free S port, or on an E side port when the S face is full of inputs (growth chamber, 4 inputs:
-// the user's own design: machines 1 cell apart, output drops through the gap under the lanes, two rows with their collectors facing each other).
-// Machines in a row touch otherwise (east/west ports blocked); collector belt runs to the east edge. Splitter per machine on every lane, priority to the machine.
+// FBLOCK: full factory blocks per machine class (HAND toolkit), designed from the machine's real ports.
+//   fbBuild({mk:1})            -> one block per class, the recipe with the most inputs
+//   fbBuild({mk:1,dock:true})  -> one DOCK-READY block per recipe that has at least one raw input (a raw item is one nothing in the game crafts)
+// Rule: inputs go on the N face first (far lane -> rightmost used port, drops cross nearer lanes by an underground hop), the rest on the S face (near lane -> leftmost port);
+// the output goes on the last free S port, or on an E side port when the S face is full of inputs (growth chamber, 4 inputs: the user's design, 2 rows with facing collectors).
+// DOCK-READY: raw lanes come from an industrial dock. Its interface is fixed: container group 1 flush at the west edge rows 4..7, group 2 rows 22..25, each group ONE item and up to 4 lanes
+//   (E doorway column x=4). Each raw lane belt leaves its port row, jogs (one column per jog, farthest target first) to the lane row of its factory row and runs east to the machines.
+//   Non-raw lanes keep entering at x=0 and hop under the jog columns. Machines start east of the jog columns, so a dock-ready block holds slightly fewer machines.
 window.fbBuild=function(opts){
-  opts=opts||{};const MK=opts.mk!=null?opts.mk:1;HAND.reset({mk:MK});
-  const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],SPL=PLC_SPL[MK],TW=HAND.TW;
-  const PLANS=[['Refinery','DAT_Refinery','CRAFT_Refinery',6],['Assembler','DAT_Assembler','CRAFT_Assembler'],['GrowthChamber','DAT_GrowthChamber','CRAFT_GrowthChamber'],['Supercomputer','DAT_Supercomputer','CRAFT_Supercomputer'],['AdvancedAssembler','DAT_AdvancedAssembler','CRAFT_AdvancedAssembler'],['Enrichment','DAT_EnrichmentChamber','CRAFT_Enrichment']];
+  opts=opts||{};const MK=opts.mk!=null?opts.mk:1,DOCK=!!opts.dock;HAND.reset({mk:MK});
+  const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],SPL=PLC_SPL[MK],TW=HAND.TW,DH=HAND.D(),by=plnBy(false,true),isRaw=it=>!by.has(it);
+  const CLASSES=[['Refinery','DAT_Refinery','CRAFT_Refinery',6],['Assembler','DAT_Assembler','CRAFT_Assembler'],['GrowthChamber','DAT_GrowthChamber','CRAFT_GrowthChamber'],['Supercomputer','DAT_Supercomputer','CRAFT_Supercomputer'],['AdvancedAssembler','DAT_AdvancedAssembler','CRAFT_AdvancedAssembler'],['Enrichment','DAT_EnrichmentChamber','CRAFT_Enrichment']];
   const hopSpan=(ax,a,b)=>{const l=HAND.S.span.get(ax)||[];l.push([a,b]);HAND.S.span.set(ax,l)};   // tell check() the pair is intended
-  const info=[],put1=(x,y,rot,cls,extra)=>{if(!HAND.piece({cls,x,y,rot,...extra}))throw new Error('cell taken '+x+','+y)};
-  const spl=(x,y,keep)=>put1(x,y,0,SPL,{off:pfSplOff(SPL,0,keep),pr:[0,-1]});
-  // horizontal lane on row y: splitters at spx (keep per x), UG hops hop(x)->exit, belts elsewhere, from x=0 to the last splitter
-  const hlane=(ox,y,spx,keepFn,hop)=>{const xEnd=Math.max(...spx);let x=0;
-    while(x<=xEnd){if(spx.includes(x)){spl(ox+x,y,keepFn(x===xEnd));x++;continue}
-      if(hop.has(x)){put1(ox+x,y,0,UGC);put1(ox+hop.get(x),y,0,UGC);hopSpan('h'+y,ox+x,ox+hop.get(x));x=hop.get(x)+1;continue}
-      put1(ox+x,y,0,BELT);x++}};
-  PLANS.forEach(([name,cls,crafter,perOv],bi)=>{
-    let rc=null;for(const x of RECS[crafter])if(!rc||x.i.length>rc.i.length)rc=x;
-    const s=dim({cls,rot:0}).w,P0=portsOf({cls,x:0,y:0,rot:0,h:0}),cN=P0.filter(p=>p.f==='N').map(p=>p.x).sort((a,b)=>a-b),cE=P0.filter(p=>p.f==='E').map(p=>p.y).sort((a,b)=>a-b),pf=cN.length,k=rc.i.length;
-    const nN=Math.min(k,pf);let nS=k-nN;const side=nS>=pf;   // S face full of inputs: the output goes on an E side port
-    if(!side)nS=Math.min(nS,pf-1);
-    const pitch=side?s+1:s,ox=bi*TW,per=perOv||Math.floor((27+(side?1:0))/pitch),iO=nS&&!side?pf-1:0;HAND.block(bi,0);
-    // row bands: normal row = N lanes, machine, S lanes, [exit row], collector; with side output the two rows face each other (collector on top for row 2)
-    const band=side?nN+s+nS+2:nN+s+(nS?1:0)+1,rowsN=side?2:Math.floor(30/(nN+s+(nS?1:0)+1)),cap=side?2*per:rowsN*per;
-    const yStart=r=>side?(r===0?0:30-band):r*band;
-    for(let r=0;r<(side?2:rowsN);r++){
-      const y0=yStart(r),up=side&&r===1,m=Math.min(per,cap-r*per),X=q=>1+q*pitch;
-      const top=y0+(up?2:0),my=top+nN,rS=my+s;   // top = first N lane row; up row has collector+exit rows above
-      const rC=side?(up?y0:y0+band-1):(nS?rS+1:rS),rExit=side?(up?y0+1:y0+band-2):-1;
-      const mach=[];
-      for(let q=0;q<m;q++){const mm=HAND.put({cls,gx:bi,gy:0,lx:X(q),ly:my,rec:rk(rc),name:name+'#'+(r*per+q)});if(!mm)throw new Error(name+' machine does not fit');
+  const info=[];
+  function one(gx,gy,name,cls,crafter,rc,perOv){
+    const ox=gx*TW,oy=gy*TW,put1=(x,y,rot,c,extra)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+y,rot,...extra}))throw new Error(name+': cell taken '+x+','+y)};
+    const spl=(x,y,keep)=>put1(x,y,0,SPL,{off:pfSplOff(SPL,0,keep),pr:[0,-1]});
+    // horizontal lane on row y from x=x0: splitters at spx, UG hops hop(x)->exit, belts elsewhere, up to the last splitter
+    const hlane=(y,x0,spx,keepFn,hop)=>{const xEnd=Math.max(...spx);let x=x0;
+      while(x<=xEnd){if(spx.includes(x)){spl(x,y,keepFn(x===xEnd));x++;continue}
+        if(hop.has(x)){put1(x,y,0,UGC);put1(hop.get(x),y,0,UGC);hopSpan('h'+(oy+y),ox+x,ox+hop.get(x));x=hop.get(x)+1;continue}
+        put1(x,y,0,BELT);x++}};
+    const s=dim({cls,rot:0}).w,P0=portsOf({cls,x:0,y:0,rot:0,h:0}),cN=P0.filter(p=>p.f==='N').map(p=>p.x).sort((a,b)=>a-b),cE=P0.filter(p=>p.f==='E').map(p=>p.y).sort((a,b)=>a-b),pf=cN.length,kr=rc.i.length,k=Math.max(...RECS[crafter].map(x=>x.i.length));   // block geometry from the class's biggest recipe; this recipe fills the first kr lanes
+    const nN=Math.min(k,pf);let nS=k-nN;const side=nS>=pf;if(!side)nS=Math.min(nS,pf-1);
+    const inItem=j=>rc.i[j][0],rawIn=rc.i.map(([it])=>isRaw(it));   // input index: N lane j = input j, S lane j = input nN+j
+    const band=side?nN+s+nS+2:nN+s+(nS?1:0)+1,rowsN=side?2:Math.floor(30/band),pitch=side?s+1:s,iO=nS&&!side?pf-1:0;
+    const yStart=r=>side?(r===0?0:30-band):r*band,nRows=side?2:rowsN;
+    // ---- dock hub: which lane rows are raw, grouped by item
+    const targets=new Map();   // item -> [{row,key}]
+    const laneRow=(r,idx)=>{const y0=yStart(r),up=side&&r===1,top=y0+(up?2:0),my=top+nN;return idx<nN?top+idx:my+s+(idx-nN)};
+    if(DOCK)for(let r=0;r<nRows;r++)for(let idx=0;idx<kr;idx++)if(rawIn[idx]){const it=inItem(idx);(targets.get(it)||targets.set(it,[]).get(it)).push({row:laneRow(r,idx),r,idx})}
+    const placed=[],items=[...targets.keys()],lanesInfo=[];let J=0,jogRows=[],entryBlocked=0,undocked=0;
+    const groups=[[],[]],gitem=[null,null];
+    if(DOCK){
+      if(items.length===1){const all=targets.get(items[0]).sort((a,b)=>a.row-b.row),h=Math.min(4,Math.ceil(all.length/2)>4?4:Math.max(Math.ceil(all.length/2),all.length>4?4:all.length));
+        const g1=all.length<=4?all:all.slice(0,Math.ceil(all.length/2)),g2=all.length<=4?[]:all.slice(Math.ceil(all.length/2));groups[0]=g1;groups[1]=g2;gitem[0]=gitem[1]=items[0]}
+      else{groups[0]=(targets.get(items[0])||[]).sort((a,b)=>a.row-b.row);gitem[0]=items[0];if(items[1]){groups[1]=targets.get(items[1]).sort((a,b)=>a.row-b.row);gitem[1]=items[1]}
+        for(let i=2;i<items.length;i++)undocked+=targets.get(items[i]).length}
+      groups.forEach((g,gi)=>{if(g.length>4){undocked+=g.length-4;g.length=4}});
+      const base=[4,22];
+      groups.forEach((g,gi)=>{if(!g.length)return;const n=g.length;let best=0,bs=1e9;
+        for(let st=0;st+n<=4;st++){let sum=0;g.forEach((t,i)=>sum+=Math.abs(base[gi]+st+i-t.row));if(sum<bs){bs=sum;best=st}}
+        g.forEach((t,i)=>{t.p=base[gi]+best+i;t.gi=gi});
+        const ups=g.filter(t=>t.row<t.p).sort((a,b)=>a.row-b.row),downs=g.filter(t=>t.row>t.p).sort((a,b)=>b.row-a.row);
+        g.filter(t=>t.row===t.p).forEach(t=>{t.xj=null});
+        // smallest free jog column: no overlapping vertical on it, and the cell after the turn must not be another lane's vertical
+        [...ups,...downs].forEach(t=>{const a=Math.min(t.p,t.row),b=Math.max(t.p,t.row);let c=5;
+          const clash=c2=>placed.some(o=>(o.x===c2&&o.a<=b+1&&a<=o.b+1)||(o.x===c2+1&&t.row>=o.a&&t.row<=o.b)||(o.x===c2-1&&o.row>=a&&o.row<=b)||(o.x<c2&&t.p>=o.a&&t.p<=o.b)||(c2<o.x&&o.p>=a&&o.p<=b));
+          while(clash(c))c++;t.xj=c;placed.push({x:c,a,b,row:t.row,p:t.p});J=Math.max(J,c-4)})})
+    }
+    const X0=DOCK?5+J:1,per=Math.min(perOv||99,Math.floor((28-X0+(side?1:0))/pitch)),cap=nRows*per;HAND.block(gx,gy);
+    // containers + jogs
+    const rawStart=new Map();   // 'r,idx' -> start x of the raw lane
+    if(DOCK){
+      groups.forEach((g,gi)=>{if(!g.length)return;const it=gitem[gi];
+        const c=HAND.put({cls:'DAT_Container_2',gx,gy,lx:0,ly:[4,22][gi],name:'dock '+(gi+1)+' '+it.replace('ITEM_',''),ct:[{item:it,n:0,inf:true}]});if(!c)throw new Error(name+': dock container does not fit');
+        c.ports.forEach(p=>{if(p.f==='W')c.used.add(p.key)});   // west face = the dock side, stays on
+        g.forEach(t=>{const e=c.ports.filter(p=>p.f==='E').sort((a,b)=>a.y-b.y)[t.p-[4,22][gi]];c.used.add(e.key);
+          const xe=4;if(t.xj==null){rawStart.set(t.r+','+t.idx,xe);return}
+          for(let x=xe;x<t.xj;x++)put1(x,t.p,0,BELT);
+          const dir=t.row<t.p?3:1;put1(t.xj,t.p,dir,BELT);
+          for(let y=t.p+(dir===1?1:-1);y!==t.row;y+=dir===1?1:-1)put1(t.xj,y,dir,BELT);
+          put1(t.xj,t.row,0,BELT);rawStart.set(t.r+','+t.idx,t.xj+1);jogRows.push({x:t.xj,a:Math.min(t.p,t.row),b:Math.max(t.p,t.row)})})})}
+    window.__dbg=window.__dbg||[];window.__dbg.push({name,band,nN,nS,side,J,rows:nRows,groups:groups.map(g=>g.map(t=>({row:t.row,p:t.p,xj:t.xj,r:t.r,idx:t.idx})))});
+    const crossX=(yy,x0)=>DOCK?jogRows.filter(c=>c.x>=x0&&yy>=c.a&&yy<=c.b).reduce((m,c)=>Math.max(m,c.x),-1):-1;
+    const contRow=yy=>DOCK&&((groups[0].length&&yy>=4&&yy<=7)||(groups[1].length&&yy>=22&&yy<=25));
+    for(let r=0;r<nRows;r++){
+      const y0=yStart(r),up=side&&r===1,m=Math.min(per,cap-r*per),X=q=>X0+q*pitch;
+      const top=y0+(up?2:0),my=top+nN,rS=my+s,rC=side?(up?y0:y0+band-1):(nS?rS+1:rS),rExit=side?(up?y0+1:y0+band-2):-1;
+      for(let q=0;q<m;q++){const mm=HAND.put({cls,gx,gy,lx:X(q),ly:my,rec:rk(rc),name:name+'#'+(r*per+q)});if(!mm)throw new Error(name+' machine does not fit');
         const nP=mm.ports.filter(p=>p.f==='N').sort((a,b)=>a.x-b.x),sP=mm.ports.filter(p=>p.f==='S').sort((a,b)=>a.x-b.x),eP=mm.ports.filter(p=>p.f==='E').sort((a,b)=>a.y-b.y);
-        for(let i=0;i<nN;i++)mm.used.add(nP[i].key);for(let i=0;i<nS;i++)mm.used.add(sP[i].key);
-        mm.used.add(side?eP[up?0:eP.length-1].key:sP[iO].key);mach.push(mm)}
-      // N lanes: lane j (0 = farthest row) feeds N port nN-1-j
-      for(let j=0;j<nN;j++){const yl=top+j,hop=new Map(),spx=[];
+        for(let i=0;i<Math.min(nN,kr);i++)mm.used.add(nP[nN-1-i].key);for(let i=0;i<Math.min(nS,Math.max(0,kr-nN));i++)mm.used.add(sP[i].key);
+        mm.used.add(side?eP[up?0:eP.length-1].key:sP[iO].key)}
+      // lane start: raw lanes start at their jog; other lanes at the west edge (after the container when the row is inside a dock group), hopping under jog columns
+      const startOf=(idx,yl)=>{const rs=rawStart.get(r+','+idx);if(rs!=null)return{x0:rs};let x0=0;if(contRow(yl)){x0=4;entryBlocked++}return{x0}};
+      const withHop=(hop,yl,x0)=>{const mx=crossX(yl,x0);if(mx>=0)hop.set(Math.max(4,x0),mx+1)};
+      for(let j=0;j<nN;j++){if(j>=kr)continue;const yl=top+j,hop=new Map(),spx=[],st=startOf(j,yl);
         for(let q=0;q<m;q++){const px=X(q)+cN[nN-1-j];spx.push(px);let far=-1;for(let jj=0;jj<j;jj++)far=Math.max(far,X(q)+cN[nN-1-jj]);
           if(q<m-1&&far>=0)hop.set(px+1,far+1);
-          if(j<nN-1)for(let yy=yl+1;yy<=my-1;yy++)put1(ox+px,yy,1,BELT)}
-        hlane(ox,yl,spx,last=>last?['S']:['E','S'],hop)}
-      // S lanes: lane j (0 = nearest row) feeds S port j; far lanes feed up through a drop; the output drop (non-side) is crossed by lane 0
-      for(let j=0;j<nS;j++){const yl=rS+j,hop=new Map(),spx=[];
+          if(j<nN-1)for(let yy=yl+1;yy<=my-1;yy++)put1(px,yy,1,BELT)}
+        withHop(hop,yl,st.x0);hlane(yl,st.x0,spx,last=>last?['S']:['E','S'],hop)}
+      for(let j=0;j<nS;j++){if(nN+j>=kr)continue;const yl=rS+j,hop=new Map(),spx=[],st=startOf(nN+j,yl);
         for(let q=0;q<m;q++){const px=X(q)+cN[j];spx.push(px);let far=px;for(let jj=j+1;jj<nS;jj++)far=Math.max(far,X(q)+cN[jj]);
           if(!side&&j===0)far=Math.max(far,X(q)+cN[iO]);
           if(q<m-1&&far>px)hop.set(px+1,far+1);
-          if(j>0)for(let yy=yl-1;yy>=rS;yy--)put1(ox+px,yy,3,BELT);
-          if(!side&&j===0)put1(ox+X(q)+cN[iO],rS,1,BELT)}
-        hlane(ox,yl,spx,last=>last?['N']:['E','N'],hop)}
-      if(side){   // output drop through the gap beside each machine, under the lanes, into this row's collector
-        const col=q=>X(q)+s,drow=up?my+cE[0]:my+cE[cE.length-1];
-        for(let q=0;q<m;q++){const x=ox+col(q);
-          if(!up){put1(x,drow,1,BELT);for(let y=drow+1;y<rExit-3;y++)put1(x,y,1,BELT);put1(x,rExit-3,1,UGC);put1(x,rExit,1,UGC);hopSpan('v'+x,rExit-3,rExit)}
-          else{put1(x,drow,3,BELT);let y=drow-1;for(;y>rExit+3;y--)put1(x,y,3,BELT);put1(x,y,3,UGC);put1(x,rExit,3,UGC);hopSpan('v'+x,rExit,y)}}}
-      // collector, east to the block edge
-      const c0=side?X(0)+s:X(0)+cN[iO];
-      for(let x=c0;x<=29;x++)put1(ox+x,rC,0,BELT)}
-    info.push({name,cls,recipe:rk(rc),k,pf,nN,nS,side,band,rows:side?2:rowsN,per,cap,machines:cap})});
+          if(j>0)for(let yy=yl-1;yy>=rS;yy--)put1(px,yy,3,BELT);
+        }
+        withHop(hop,yl,st.x0);hlane(yl,st.x0,spx,last=>last?['N']:['E','N'],hop)}
+      if(!side&&nS)for(let q=0;q<m;q++)put1(X(q)+cN[iO],rS,1,BELT);   // output drop of every machine into the collector row
+      if(side){const col=q=>X(q)+s,drow=up?my+cE[0]:my+cE[cE.length-1];
+        for(let q=0;q<m;q++){const x=col(q);
+          if(!up){put1(x,drow,1,BELT);for(let y=drow+1;y<rExit-3;y++)put1(x,y,1,BELT);put1(x,rExit-3,1,UGC);put1(x,rExit,1,UGC);hopSpan('v'+(ox+x),oy+rExit-3,oy+rExit)}
+          else{put1(x,drow,3,BELT);let y=drow-1;for(;y>rExit+3;y--)put1(x,y,3,BELT);put1(x,y,3,UGC);put1(x,rExit,3,UGC);hopSpan('v'+(ox+x),oy+rExit,oy+y)}}}
+      for(let x=(side?X(0)+s:X(0)+cN[iO]);x<=29;x++)put1(x,rC,0,BELT)}
+    info.push({name,cls,recipe:rk(rc),k,pf,raw:rawIn.map((v,i)=>v?inItem(i).replace('ITEM_',''):null).filter(Boolean).join('+'),J,X0,band,rows:nRows,per,cap,undocked,entryBlocked,side})}
+  if(!DOCK){CLASSES.forEach(([name,cls,crafter,perOv],bi)=>{let rc=null;for(const x of RECS[crafter])if(!rc||x.i.length>rc.i.length)rc=x;one(bi,0,name,cls,crafter,rc,perOv)})}
+  else{let n=0;const list=[];
+    CLASSES.forEach(([cn,cls,crafter,perOv])=>{const seen=new Set();by.forEach(l=>{for(const {r,c} of l)if(c===crafter&&r.i.some(([x])=>isRaw(x))&&!seen.has(rk(r))){seen.add(rk(r));list.push([cn,cls,crafter,perOv,r])}})});
+    list.forEach(([cn,cls,crafter,perOv,r],i)=>one(i%6,Math.floor(i/6),cn+': '+r.o[0].replace('ITEM_',''),cls,crafter,r,perOv))}
   const R=HAND.result();R.info=info;return R;
 };
