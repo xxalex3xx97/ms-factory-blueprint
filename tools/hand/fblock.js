@@ -56,6 +56,7 @@ window.fbBuild=function(opts){
           while(clash(c))c++;t.xj=c;placed.push({x:c,a,b,row:t.row,p:t.p});J=Math.max(J,c)})})
     }
     const X0=dk?Math.max(1,J+1):1,per=Math.min(perOv||99,Math.floor((28-X0+(side?1:0))/pitch)),cap=nRows*per,nUse=nTot?Math.min(nTot,cap):cap;HAND.block(gx,gy);if(chain)HAND.block(gx+1,gy);   // chain: the output block (gx+1) holds the boxes
+    groups.forEach(g=>{for(let i=g.length-1;i>=0;i--)if(g[i].r*per>=nUse)g.splice(i,1)});   // machine rows that stay empty get no dock lane (it would end in nothing)
     const entries=[],exits=[],inRate=idx=>rc.i[idx][1]*1800/rc.t,prodRate=rc.o[1]*1800/rc.t,selfFeed=rc.i.some(([it])=>it===rc.o[0]);
     // industrial dock west of the block (2x2 C: station adapter between block and dock, assembly shifted 16 cells): the 8 lane belts arrive at x=0 on rows 4..7 / 22..25
     const rawStart=new Map(),usedP=new Map();
