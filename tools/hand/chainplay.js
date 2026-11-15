@@ -26,7 +26,7 @@ window.chainPlay=async function(o){
     const street=tiles.filter(t=>!fac.has(tkey(t)));
     for(const c of chunks(street,400)){paste(c,[],'street');await sleep(0)}
     redraw();window.__exoLog.push('street floors '+street.length);
-    for(const b of order){const k=tkey(b),mine=groups.get(k)||[],ex=extra.filter(e=>Math.abs(e.y-b.y)<=2&&(e.x===b.x-4||e.x===b.x-1)),ms=mine.filter(m=>!isBelt(m));
+    for(const b of order){const k=tkey(b),mine=groups.get(k)||[],ex=extra.filter(e=>Math.abs(e.y-b.y)<=2&&(e.x===b.x-4||e.x===b.x-3||e.x===b.x-1)),ms=mine.filter(m=>!isBelt(m));
       ex.forEach(e=>usedEx.add(e));paste([b,...ex],ms,'block '+k);window.__exoLog.push('block '+k+': '+ms.length+' machines');
       if(!o.fast){redraw();await sleep(o.stepMs||300)}}
     {const left=extra.filter(e=>!usedEx.has(e));if(left.length)paste(left,[],'extra')}   // blocks not next to a factory tile (output docks)

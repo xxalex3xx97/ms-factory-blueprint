@@ -12,7 +12,7 @@
     $("pvLine").textContent="Building...";$("plnPrevMap").style.opacity=".45";await nx();
     if(typeof chainBuild!=="function")for(const f of ["tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f);
     if(me!==tok)return;
-    let T;try{T=chainBuild({item:item.replace(/^ITEM_/,""),rate,mk,docks:$("plnDkI").checked,outDock:$("plnDkO").checked,maxStates:60000,hw:3})}catch(e){$("pvLine").textContent="Build failed";$("plnPrevErr").textContent=e.message;$("plnPrevMap").style.opacity="";return}
+    let T;try{T=chainBuild({item:item.replace(/^ITEM_/,""),rate,mk,tile:$("plnBk").value,docks:$("plnDkI").checked,outDock:$("plnDkO").checked,maxStates:60000,hw:3})}catch(e){$("pvLine").textContent="Build failed";$("plnPrevErr").textContent=e.message;$("plnPrevMap").style.opacity="";return}
     const bad=T.fails.length+HAND.check().bad.length,mach=T.ms.filter(m=>m.rec).length,boxes=T.ms.filter(m=>/Container/.test(m.cls)).length,docks=T.blocks.filter(b=>/Dock/.test(b.cls)).length;
     T.machines=mach;ENG={T};const mx=Math.min(...T.blocks.map(q=>q.x)),my=Math.min(...T.blocks.map(q=>q.y));plcT={ok:true,blocks:T.blocks.map(q=>({...q,x:q.x-mx,y:q.y-my})),ms:T.ms.map(q=>({...q,x:q.x-mx*FC,y:q.y-my*FC}))};   // the preview starts at the origin (its axes and fit assume that)
     plcL={items:[],src:{}};   // the preview is drawn by placerShot (the factory renderer) from plcT
@@ -33,9 +33,9 @@
   };
   $("plnPlace").onclick=placerPlace;
   // settings the chain engine does not have yet are fixed and greyed out
-  const fix=force=>{if(force){$("plnBk").value="BPO_Station_03";$("plnDk").value="ind";if($("plnDkOT").value==="nrm")$("plnDkOT").value=""}   // values are only forced when building: what the user saved is left alone
+  const fix=force=>{if(force){if(["BPO_Station_01","BPO_Station_2x1"].includes($("plnBk").value))$("plnBk").value="BPO_Station_02";$("plnDk").value="ind";if($("plnDkOT").value==="nrm")$("plnDkOT").value=""}   // values are only forced when building: what the user saved is left alone
     const nr=$("plnDkOT").querySelector('option[value="nrm"]');if(nr){nr.disabled=true;nr.title="Normal docks are not available yet"}
-    ["plnBk","pvSp","plnBuf","plnLbl"].forEach(i=>{$(i).disabled=true;$(i).title="Not available yet"});const nd=$("plnDk").querySelector('option[value="nrm"]');if(nd){nd.disabled=true;nd.title="Normal docks are not available yet"}
+    ["pvSp","plnBuf","plnLbl"].forEach(i=>{$(i).disabled=true;$(i).title="Not available yet"});["BPO_Station_01","BPO_Station_2x1"].forEach(v=>{const o=$("plnBk").querySelector('option[value="'+v+'"]');if(o){o.disabled=true;o.title="1x1 and 2x1 blocks are not available yet"}});const nd=$("plnDk").querySelector('option[value="nrm"]');if(nd){nd.disabled=true;nd.title="Normal docks are not available yet"}
     const m=$("pvMk").querySelector('option[value="2"]');if(m){m.disabled=true;m.title="Mk3 is not available yet";if(force&&$("pvMk").value==="2")$("pvMk").value="1"}};
   fix(false);$("plnPrev").addEventListener("toggle",()=>fix(true));const run0=placerRun;window.placerRun=function(open){if(open||$("plnPrev").open)fix(true);return run0.apply(this,arguments)};
 })();
