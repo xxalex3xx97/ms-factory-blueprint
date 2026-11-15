@@ -365,7 +365,7 @@ function links1(L,inj){
     else if(sinkM.has(id)){const m=sinkM.get(id),r=recOf(m),x=r&&r.i.find(q=>q[0]===k);v=x?pm(x[1],r.t)||0:0}
     v=Math.min(v,c==null?Infinity:c);accM.set(key,v);return v};
   const prM=new Map();spR.forEach(r=>r.ins.forEach(i=>{if(r.pr!=null)prM.set(i,r.pr)}));
-  const ctx={acc,pr:prM};
+  const ctx={acc,pr:prM};o.ctx=ctx;   // sim.js theoLevel reuses it so theoretical production splits like the panel
   o.load=flowLoad(nx,src,cp,sp,ctx);
   // unstocked container relays its inflow: each pull belt carries min(belt speed, inflow / pull belts), split by item share; repeat until the relayed flow stops changing (long container->container chains)
   const fed=o.ports.filter(e=>{const p=e.port,d=DIR[e.b.rot];return isStore(e.m)&&!ctFirst(e.m)&&!(d[0]===-p.nx&&d[1]===-p.ny)&&live(e)});   // dead-end output belts take no share (same rule as machine outputs)
