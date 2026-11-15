@@ -429,7 +429,7 @@ function ugLine(a,b,s,over,pv){
 function drawUG(s){
   if(s<ARROW_MIN_S||LOWD())return;   // zoomed out: same threshold as the belt arrows
   const c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s];
-  ugPairs(CUR.filter(isM)).forEach(({u,t,n,max})=>{const a=c(u),b=c(t);if(!vis(Math.min(a[0],b[0])-s,Math.min(a[1],b[1])-s,Math.abs(a[0]-b[0])+2*s,Math.abs(a[1]-b[1])+2*s))return;ugLine(a,b,s,n>max)});
+  (L=>L.ug||(L.ug=ugPairs(L.v)))(lyBlocks()).forEach(({u,t,n,max})=>{const a=c(u),b=c(t);if(!vis(Math.min(a[0],b[0])-s,Math.min(a[1],b[1])-s,Math.abs(a[0]-b[0])+2*s,Math.abs(a[1]-b[1])+2*s))return;ugLine(a,b,s,n>max)});
 }
 let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(b=>b.h===layer);LYB={k,all,v:all.filter(inView),nm:all.filter(b=>!inView(b)),nf:all.filter(b=>!isM(b)&&nfRect(b))}}return LYB}
 // F view of a big factory: only the blocks near the viewport (bucket grid of 64 cells built once per block set); m = margin in px
