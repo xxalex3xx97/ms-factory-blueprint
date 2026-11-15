@@ -200,3 +200,8 @@ header .mnl .hbt{flex-direction:row;min-height:34px;gap:6px;width:100%;justify-c
 #pvLine{margin-top:6px;font-size:13px;font-family:var(--mono)}#pvLine:empty{display:none}
 #plnPrevView{min-height:320px}
 .star{color:#f5c542;font-size:12px}
+#bayIn{width:100%;box-sizing:border-box}
+#bayL{list-style:none;margin:6px 0;padding:0;max-height:40vh;overflow:auto;border:1px solid var(--line);border-radius:6px}
+#bayL li{display:flex;gap:8px;align-items:center;padding:4px 8px;cursor:pointer}
+#bayL li.on,#bayL li:hover{background:color-mix(in oklch,var(--accent) 30%,transparent)}
+#bayL .ic{width:24px;height:24px;flex:none}

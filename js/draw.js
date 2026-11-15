@@ -223,10 +223,6 @@ function drawBlock(b,alpha,isSel){
   cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
   entMark(b,x,y,alpha,s,w,h);
-  if(!m&&dkN(b.cls)===2&&s>=18&&alpha>.5){   // station dock: 2 numbered filter slots on the tile, click = filter modal (BAYHIT)
-    const r=Math.min(9,w/5);cx.save();cx.font="600 "+Math.max(8,r*1.3)+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";
-    for(let i=0;i<2;i++){const qx=x+w*(i?.7:.3),qy=y+h-r-4;cx.beginPath();cx.arc(qx,qy,r,0,6.3);cx.fillStyle=((b.df||[])[i]||{}).item?"hsl(140,70%,38%)":"rgba(0,0,0,.55)";cx.fill();cx.strokeStyle="rgba(255,255,255,.8)";cx.lineWidth=1;cx.stroke();cx.fillStyle="#fff";cx.fillText(String(i+1),qx,qy+.5);BAYHIT.push({b,i,x:qx,y:qy})}
-    cx.restore()}
   if(isSel){cx.lineWidth=2.5;cx.strokeStyle="#fff";cx.strokeRect(x+1,y+1,w-2,h-2)}
   if(s>=(m?10:18)&&alpha>.5&&(!m||Math.max(w,h)>=2*s)&&!(df&&df.directional)){
     const t0=b.nm&&nmOk(b.cls)?b.nm:df?lab(df):shortCls(b.cls),fs=Math.min(12,Math.max(9,s/3));
@@ -240,6 +236,13 @@ function drawBlock(b,alpha,isSel){
     cx.restore();
   }
 }
+const fid=k=>FITEMS.find(id=>fkey(id)===k);
+function bayBox(b,i,x,y,w,h,bg){
+  const f=((b.df||[])[i]||{}).item;
+  if(bg){cx.fillStyle=f?"rgba(40,110,70,.9)":"rgba(0,0,0,.55)";cx.fillRect(x,y,w,h)}
+  cx.lineWidth=f?2:1;cx.strokeStyle=f?"hsl(140,70%,48%)":"rgba(255,255,255,.8)";cx.strokeRect(x+.5,y+.5,w-1,h-1);
+  if(f){const id=fid(f),im=id&&img(id),z=Math.min(w,h)*.72;if(im&&im.complete&&im.naturalWidth&&z>=10)cx.drawImage(im,x+(w-z)/2,y+(h-z)/2,z,z)}
+  BAYHIT.push({b,i,x,y,w,h})}
 function hatch(x,y,w,h,c){
   cx.save();cx.beginPath();cx.rect(x,y,w,h);cx.clip();
   cx.strokeStyle=c||"rgba(255,255,255,.13)";cx.lineWidth=1;cx.beginPath();
@@ -357,6 +360,9 @@ function drawShapeFloor(A,s){
     const path=pg=>{cx.beginPath();pg.forEach((v,i)=>i?cx.lineTo(v[0],v[1]):cx.moveTo(v[0],v[1]));cx.closePath()};
     wr.forEach(q=>rc(q,ST,1));poly.forEach(pg=>{path(pg);cx.fillStyle=ST;cx.strokeStyle=ST;cx.lineWidth=2;cx.stroke();cx.fill()});
     wr.forEach(q=>rc(q,WF));poly.forEach(pg=>{path(pg);cx.fillStyle=WF;cx.fill()});
+    if(s>=10){
+      if(dock){const bm=Math.max(...pods.map(p=>p.bay||0));pods.forEach(p=>{const x0=X(p.q.x),y0=Y(p.q.y);bayBox(b,bm-p.bay,x0,y0,X(p.q.x+p.q.w)-x0,Y(p.q.y+p.q.h)-y0)})}
+      else if(dkN(b.cls)===2&&sh.props[0]){const pr=sh.props[0];sh.ports.slice().sort((a,c)=>a[2]-c[2]).forEach((pt,i)=>{const q=tr(pr[0],pt[2]-.5,pr[2],pt[2]+.5),x0=X(q.x),y0=Y(q.y);bayBox(b,i,x0,y0,X(q.x+q.w)-x0,Y(q.y+q.h)-y0)})}}
     // ports (display only): green bar on each port's edge (dock: pod floor-facing edge), bay number only on numbered ports
     if(s>=6){const Ln=Math.min(.6*s,18),Tk=Math.min(5,Math.max(3,.2*s)),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
       marks.forEach(p=>{const[ex,ey]=t.f(p.x,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),w=odd?Ln:Tk,h=odd?Tk:Ln;
@@ -364,7 +370,7 @@ function drawShapeFloor(A,s){
       (sh.iports||[]).forEach(([sd,x,y])=>{const[ex,ey]=t.f(x,y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),v=("EW".includes(sd))!==!!odd,w=v?Tk:Ln,h=v?Ln:Tk;   // info ports (elevator): same bar, vertical on E/W sides, display only
         cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
       if(s>=10){cx.font="600 "+Math.min(13,Math.max(9,s*.6))+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillStyle="rgba(255,255,255,.9)";
-        const bm=Math.max(...marks.map(p=>p.bay||0));marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(dock?bm+1-p.bay:p.bay),tx,ty);if(dock)BAYHIT.push({b,i:bm-p.bay,x:tx,y:ty})})}
+        const bm=Math.max(...marks.map(p=>p.bay||0));marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(dock?bm+1-p.bay:p.bay),tx,ty)})}
       cx.restore()}
   });
 }

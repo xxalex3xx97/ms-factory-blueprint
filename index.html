@@ -218,8 +218,9 @@
 </dialog>
 <dialog id="dBay" aria-labelledby="bayT" style="width:min(340px,94vw)">
   <h3 id="bayT">Bay filter</h3>
-  <input id="bayIn" type="text" list="bayL" placeholder="Item name (empty = no filter)" aria-label="Filter item" autocomplete="off"><datalist id="bayL"></datalist>
-  <div class="btns"><button id="bayOk" class="pri">Set</button><button id="bayClr">Clear</button><button id="bayX">Cancel</button></div>
+  <input id="bayIn" type="text" placeholder="Search item..." aria-label="Search item" autocomplete="off" role="combobox" aria-controls="bayL">
+  <ul id="bayL" role="listbox"></ul>
+  <div class="btns"><button id="bayX">Cancel</button></div>
 </dialog>
 <dialog id="dExp" aria-labelledby="dExpT">
   <h3 id="dExpT">Export JSON</h3>
