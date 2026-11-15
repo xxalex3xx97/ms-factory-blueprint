@@ -154,7 +154,7 @@ const plnFillItems=()=>{const cur=$("plnItem").value;$("plnItem").innerHTML='<op
 plnFillItems();
 $("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribute("aria-pressed",!d.hidden);if(!d.hidden&&PLNO===null)plnOptFold(d.clientWidth<720);plnDraw();if(!d.hidden)plnFit()};
 $("plnX").onclick=()=>{$("pln").hidden=true;$("plnB").setAttribute("aria-pressed",false);$("plnB").focus()};
-$("plnC").onclick=()=>{const c=$("pln").classList.toggle("col");$("plnC").setAttribute("aria-expanded",!c);$("plnC").title=c?"Expand":"Collapse to title bar"};
+$("plnC").onclick=()=>{const c=$("pln").classList.toggle("col");$("plnC").setAttribute("aria-expanded",!c);$("plnC").title=c?"Expand":"Collapse to title bar";if(!c)plnDraw()};   // arrows are measured from the boxes: a redraw while collapsed (hidden, zero size) leaves them broken, so redraw on expand
 // rate default = what one machine of the crafter makes at 100% (plan pmach), rounded down to 2 decimals, min 1
 const plnDefRate=()=>{const it=$("plnItem").value;if(!it)return;const P=plan(it,1,+$("plnMk").value,{},{},{proto:plnProto(),enr:$("plnEnr").checked,obs:true}),m=P.nodes[it]&&P.nodes[it].pmach;if(m)$("plnRate").value=Math.max(1,Math.floor(m*100+1e-9)/100)};
 $("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDefRate();plnDraw();plnFit()};
