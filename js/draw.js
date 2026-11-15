@@ -223,6 +223,10 @@ function drawBlock(b,alpha,isSel){
   cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
   entMark(b,x,y,alpha,s,w,h);
+  if(!m&&dkN(b.cls)===2&&s>=18&&alpha>.5){   // station dock: 2 numbered filter slots on the tile, click = filter modal (BAYHIT)
+    const r=Math.min(9,w/5);cx.save();cx.font="600 "+Math.max(8,r*1.3)+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";
+    for(let i=0;i<2;i++){const qx=x+w*(i?.7:.3),qy=y+h-r-4;cx.beginPath();cx.arc(qx,qy,r,0,6.3);cx.fillStyle=((b.df||[])[i]||{}).item?"hsl(140,70%,38%)":"rgba(0,0,0,.55)";cx.fill();cx.strokeStyle="rgba(255,255,255,.8)";cx.lineWidth=1;cx.stroke();cx.fillStyle="#fff";cx.fillText(String(i+1),qx,qy+.5);BAYHIT.push({b,i,x:qx,y:qy})}
+    cx.restore()}
   if(isSel){cx.lineWidth=2.5;cx.strokeStyle="#fff";cx.strokeRect(x+1,y+1,w-2,h-2)}
   if(s>=(m?10:18)&&alpha>.5&&(!m||Math.max(w,h)>=2*s)&&!(df&&df.directional)){
     const t0=b.nm&&nmOk(b.cls)?b.nm:df?lab(df):shortCls(b.cls),fs=Math.min(12,Math.max(9,s/3));
@@ -360,10 +364,11 @@ function drawShapeFloor(A,s){
       (sh.iports||[]).forEach(([sd,x,y])=>{const[ex,ey]=t.f(x,y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),v=("EW".includes(sd))!==!!odd,w=v?Tk:Ln,h=v?Ln:Tk;   // info ports (elevator): same bar, vertical on E/W sides, display only
         cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
       if(s>=10){cx.font="600 "+Math.min(13,Math.max(9,s*.6))+"px system-ui,sans-serif";cx.textAlign="center";cx.textBaseline="middle";cx.fillStyle="rgba(255,255,255,.9)";
-        const bm=Math.max(...marks.map(p=>p.bay||0));marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(dock?bm+1-p.bay:p.bay),tx,ty)})}
+        const bm=Math.max(...marks.map(p=>p.bay||0));marks.forEach(p=>{if(p.bay==null)return;const[tx,ty]=t.f(p.x+1,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s);cx.fillText(String(dock?bm+1-p.bay:p.bay),tx,ty);if(dock)BAYHIT.push({b,i:bm-p.bay,x:tx,y:ty})})}
       cx.restore()}
   });
 }
+const BAYHIT=[];   // dock bay number labels of the last paint: {b,i (0-based filter slot),x,y screen px}
 function paintFloorBase(s){
   const A=typeof HAR==="function"?HAR(layer):areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;   // HAR: the areas() result cached per block set (it was rebuilt on every paint)
   if(LOWD()){cx.fillStyle="rgba(48,60,76,.95)";A.floors.forEach(r=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s;if(x>W||y>H||x+w<0||y+h<0)return;cx.fillRect(x,y,w,h)});return A}   // zooming / panning a big factory: plain floor rects, the full floor comes back 160 ms after the last frame
@@ -520,6 +525,7 @@ function paint0(){
   if(F&&SM&&SIM&&SIM.sig!==PK){simReset();SIM.sig=PK;smClkUp()}
   cached("base",()=>{
   RCT=null;
+  BAYHIT.length=0;
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8,F?GRIDOFF:0);
   if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*Math.abs(b.h-layer));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}

@@ -24,6 +24,7 @@ cv.addEventListener("pointerdown",e=>{
   cv.focus();const p=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
   if(e.button===1||e.button===2||(e.button===0&&space)){const uc=e.button===2&&ugCancel();drag={k:"pan",px:p.x,py:p.y,d:0,rc:e.button===2&&!uc};cv.style.cursor="grabbing";return}
   if(e.button!==0)return;
+  const bh=!pasting&&!mode&&BAYHIT.find(q=>Math.abs(q.x-p.x)<9&&Math.abs(q.y-p.y)<9);if(bh){bayFilter(bh.b,bh.i);return}
   const c=toCell(p.x,p.y);
   if(pasting){hover=c;pasteAt();return}
   if(mode){

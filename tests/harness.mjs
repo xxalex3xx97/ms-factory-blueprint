@@ -2662,7 +2662,9 @@ async function s27(br) {
   const palHtml = label => pg.evaluate(l => { const b = [...document.querySelectorAll('#palList button.item')].find(x => x.querySelector('.n') && x.querySelector('.n').textContent === l); return b ? b.outerHTML : null }, label);
   const selectAt = async (cls, X, Y) => {
     await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(cls, X, Y, 0, 0)], DefaultMachines: []}));
-    await pg.evaluate(() => { __fb.setView('L'); const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
+    await pg.evaluate(() => __fb.setView('L'));
+    await pg.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));   // hit-test index is rebuilt by the paint: click after it
+    await pg.evaluate(() => { const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
     return pg.evaluate(() => { const b = __fb.S.blocks.find(q => __fb.sel.has(q.id)); return b ? b.cls : null });
   };
   const dockSel = await selectAt('BPO_Dock_2', 18, 2);

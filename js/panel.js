@@ -163,3 +163,19 @@ $("insp").addEventListener("click",e=>{
   else if(id==="bResetCat"){if(confirm("Discard all catalog edits (size, floor, category, verified)?")){push();OV={};saveOV();all()}}
 });
 
+
+// click a dock bay number on the canvas: small modal to set that slot's filter
+function bayFilter(b,i){
+  const d=$("dBay");$("bayT").textContent=(def(b.cls).label||"Dock")+" bay "+(i+1)+" filter";
+  const cur=((b.df||[])[i]||{}).item||"",it=FITEMS.find(id=>fkey(id)===cur.toLowerCase());
+  $("bayL").innerHTML=FITEMS.map(id=>'<option value="'+esc(ITEMS[id].n)+'">').join("");
+  $("bayIn").value=it?ITEMS[it].n:cur;
+  d.onclose=null;
+  const done=()=>{const v=$("bayIn").value.trim().toLowerCase(),id=FITEMS.find(x=>ITEMS[x].n.toLowerCase()===v||fkey(x)===v);
+    if(v&&!id){toast("Unknown item");return false}
+    push();const n=dkN(b.cls),a=Array.from({length:n},(_,j)=>({item:"",bLoading:0,...((b.df||[])[j]||{})}));a[i].item=id?fkey(id):"";if(a.some(f=>f.item))b.df=a;else delete b.df;delete b.cfgKeep;
+    sel=new Set([b.id]);d.close();all();return true};
+  $("bayOk").onclick=done;$("bayClr").onclick=()=>{$("bayIn").value="";done()};$("bayX").onclick=()=>d.close();
+  $("bayIn").onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();done()}};
+  d.showModal();$("bayIn").select();
+}
