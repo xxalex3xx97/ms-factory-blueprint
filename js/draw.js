@@ -194,8 +194,8 @@ const ENT_DOOR_S=44;
 function entMark(b,x,y,alpha,s,w,h,force){   // force: placement/paste ghost, always show the door marks (they show the rotation)
   if(alpha<.5||s<5)return;const E=entrances(b,true);if(!E.length)return;   // bar = full door slot length (scales with zoom); only the chevron is capped (r <= 9); door marks (many on stations) only when a cell is >= ENT_DOOR_S px
   const t=Math.max(2,Math.min(5,s*.12)),r=Math.min(9,Math.max(3,s*.12)),L=Math.max(5,DOORW/FC*s),lh=s>=18?Math.min(12,Math.max(9,s/3))+6:0;
-  E.forEach(e=>{if(!e.port&&s<ENT_DOOR_S&&!force)return;const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,bw=hz?L:t,bh=hz?t:L,
-    bx=D[0]>0?ex-t:D[0]<0?ex:ex-L/2,by=D[1]>0?ey-t:D[1]<0?ey:ey-L/2,sg=e.port?1:-1,   // door: chevron looks inward, port: outward
+  E.forEach(e=>{if(!e.port&&s<ENT_DOOR_S&&!force)return;const D=DIR[e.ed],ex=V.ox+e.x*s,ey=V.oy+e.y*s,hz=D[0]===0,Lm=e.len?Math.max(5,e.len*s):L,bw=hz?Lm:t,bh=hz?t:Lm,   // e.len: wider/narrower than the standard door slot (adapter gaps)
+    bx=D[0]>0?ex-t:D[0]<0?ex:ex-Lm/2,by=D[1]>0?ey-t:D[1]<0?ey:ey-Lm/2,sg=e.port?1:-1,   // door: chevron looks inward, port: outward
     dd=r+t+(D[1]<0?lh:0),cx0=ex-D[0]*dd,cy0=ey-D[1]*dd;
     cx.save();cx.fillStyle=e.port?`hsla(140,85%,75%,${alpha})`:`hsla(${hue(catOf(b)||"")},90%,86%,${alpha*.9})`;cx.strokeStyle=`rgba(0,0,0,${alpha*.6})`;cx.lineWidth=1;
     cx.fillRect(bx,by,bw,bh);cx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
@@ -247,6 +247,12 @@ function nbHatch(x,y,w,h,bd){
 function note(t,x,y,w,c){
   cx.save();cx.beginPath();cx.rect(x+2,y+2,w-4,40);cx.clip();
   cx.fillStyle=c||"rgba(255,255,255,.75)";cx.font="11px system-ui,sans-serif";cx.textBaseline="top";cx.fillText(t,x+5,y+4);cx.restore();
+}
+// block Name (dock, industrial dock, shipyard core, elevator...) under the class note, top-left of the block on the Factory floor
+function nameTag(b,x,y,w){if(!b||!b.nm||!nmOk(b.cls)||w<40)return;
+  cx.save();cx.beginPath();cx.rect(x+2,y+2,w-4,40);cx.clip();cx.font="bold 12px system-ui,sans-serif";cx.textBaseline="top";
+  let t=b.nm;while(t.length>1&&cx.measureText(t).width>w-10)t=t.slice(0,-1);if(t!==b.nm)t+="…";
+  cx.shadowColor="rgba(0,0,0,.9)";cx.shadowBlur=3;cx.fillStyle="#fff";cx.fillText(t,x+5,y+19);cx.restore();
 }
 const GRIDOFF=1;   // Factory floor: floor model puts a floor at its tile origin and the 1-thick hull 1 unit outside it, so the grid lines (cell borders) sit 1 unit before the model origin: hulls land exactly on the cell lines
 function grid(major,off=0){
@@ -381,14 +387,14 @@ function paintFloorBase(s){
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
       });
     }
-    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(doorTxt(r.b)?" · "+doorTxt(r.b):""),x,y,w)}
+    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(doorTxt(r.b)?" · "+doorTxt(r.b):""),x,y,w);if(!(def(r.b.cls)||{}).elevator)nameTag(r.b,x,y,w)}
   });
   drawShapeFloor(A,s);
   const NF=lyBlocks().all.filter(b=>!isM(b)&&nfRect(b));
   NF.forEach(b=>{const r=nfOut(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
   NF.forEach(b=>{const t=shapeTf(b);if(t&&t.sh.hatch)return hatchShape(b,t,s);const r=nfRect(b);nbHatch(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s,true)});   // grey no-build hatch on the whole tile, behind the shape
   drawShapeFloor({floors:NF.map(b=>({b}))},s);   // nofloor blocks (solar, turret, drone bay): roofless collider plan, no floor tint
-  NF.forEach(b=>{const r=nfOut(b),w=r.w*s;if(w>70)note(`${lab(def(b.cls))}  ${r.w}×${r.h}`,V.ox+r.x*s,V.oy+r.y*s,w)});   // label like floor blocks: name + tile size, top-left
+  NF.forEach(b=>{const r=nfOut(b),w=r.w*s;{if(w>70)note(`${lab(def(b.cls))}  ${r.w}×${r.h}`,V.ox+r.x*s,V.oy+r.y*s,w);nameTag(b,V.ox+r.x*s,V.oy+r.y*s,w)}});   // label like floor blocks: name + tile size, top-left
   A.floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;   // elevator: ring cells inside the door slot are open buildable floor
     cx.fillStyle="rgba(150,190,230,.08)";
     for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>{const v=ed%2===0,ring=ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q};R(ring,(X,Y,W2,H2)=>cx.fillRect(X,Y,W2,H2))});
