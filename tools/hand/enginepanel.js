@@ -10,7 +10,7 @@
     $("plnPlace").disabled=true;$("plnPlace").textContent="Place";
     if(!item||!(rate>0)){$("pvLine").textContent="Pick an item and a rate first";plcDo();return}
     $("pvLine").textContent="Building...";$("plnPrevMap").style.opacity=".45";await nx();
-    if(typeof chainBuild!=="function")for(const f of ["js/dock_apply.js","tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f);
+    if(typeof chainBuild!=="function")for(const f of ["tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f);
     if(me!==tok)return;
     let T;try{T=chainBuild({item:item.replace(/^ITEM_/,""),rate,mk,docks:$("plnDkI").checked,maxStates:60000,hw:3})}catch(e){$("pvLine").textContent="Build failed";$("plnPrevErr").textContent=e.message;$("plnPrevMap").style.opacity="";return}
     const bad=T.fails.length+HAND.check().bad.length,mach=T.ms.filter(m=>m.rec).length,boxes=T.ms.filter(m=>/Container/.test(m.cls)).length,docks=T.blocks.filter(b=>/Dock/.test(b.cls)).length;
@@ -24,9 +24,11 @@
     $("plnPrevErr").textContent=bad?bad+" problems, not placeable: "+T.fails.slice(0,2).join("; "):"";
     $("plnPlace").disabled=!!bad;placerFitView();
   };
-  window.placerPlace=async function(){
-    if(!ENG)return;const T=ENG.T;ENG=null;$("plnPrev").close();
-    try{await chainPlay({plan:{blocks:T.blocks,ms:T.ms},fast:true});toast("Factory placed: "+T.machines+" machines, "+T.belts+" belts")}catch(e){toast("Place failed: "+e.message)}
+  window.placerPlace=function(){   // the factory follows the cursor as a ghost: click to put it down next to what you already have (Esc cancels)
+    if(!ENG)return;const T=ENG.T,P=plcT;ENG=null;$("plnPrev").close();
+    setView("L");clip=[];active=null;mode=null;sel=new Set();
+    pasting={rot:0,fl:false,pl:{blocks:P.blocks,ms:P.ms,plan:{item:$("plnItem").value,rate:+$("pvRate").value||+$("plnRate").value}}};
+    toast("Click to place the factory ("+T.blocks.length+" blocks), then connect it to your blocks. Esc cancels");all();
     if(!$("pln").classList.contains("col"))$("plnC").click();
   };
   $("plnPlace").onclick=placerPlace;

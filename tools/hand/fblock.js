@@ -62,7 +62,7 @@ window.fbBuild=function(opts){
     const TR=[1,0,3,2],A=HAND.adapt?16:0,DKX=HAND.adapt?4:3,dkTiles=(ux,uy)=>[{cls:HAND.CLS,x:ux-4,y:uy,rot:0},{cls:HAND.CLS,x:ux-2,y:uy,rot:0}],putF=(x,y,rot,c,extra)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+y,rot,...extra},true))throw new Error(name+': dock cell taken '+x+','+y)};
     if(dk&&groups.some(g=>g.length)){
       const asm=nlIndAsm(),nice=it=>it.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2');
-      const gRate=g=>g.reduce((sum,t)=>sum+Math.max(0,Math.min(per,nUse-t.r*per))*inRate(t.idx),0),gNm=gi=>groups[gi].length?(HAND.noDock?'Source: ':'Dock: ')+nice(gitem[gi])+' '+Math.round(gRate(groups[gi]))+'/min':null;   // the name tells the player which cargo to assign
+      const gRate=g=>g.reduce((sum,t)=>sum+Math.max(0,Math.min(per,nUse-t.r*per))*inRate(t.idx),0),gNm=gi=>groups[gi].length&&gRate(groups[gi])>0?(HAND.noDock?'Source: ':'Dock: ')+nice(gitem[gi])+' '+Math.round(gRate(groups[gi]))+'/min':null;   // the name tells the player which cargo to assign
       asm.boxes.forEach(b=>{const gi=b.y===9&&(b.x===4||b.x===22)?(b.x===4?0:1):-1,it=gi>=0&&groups[gi].length?gitem[gi]:null;
         const c=HAND.put({cls:'DAT_Container_2',gx,gy,lx:-16-A+b.y,ly:b.x,force:true,name:'dock box',nm:it?gNm(gi):undefined,ct:it?[{item:it,n:0,inf:true}]:[]});if(!c)throw new Error(name+': dock box does not fit');
         if(it)c.ports.forEach(q=>{if(q.f==='W'||q.f==='E')c.used.add(q.key)})
