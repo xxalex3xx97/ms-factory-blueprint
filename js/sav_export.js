@@ -173,7 +173,7 @@ function savInCfg(s, tpl, fm, blockName, res, bf) {
   const nm = ((k === 'dock' || k === 'named') && blockName) || (fm && fm.Name) || '';
   const out = nm && (k === 'dock' || k === 'named') ? cfgWithName(s, hex, nm) : hex;
   const d = k === 'dock' && bf && bf.length ? cfgDec(s, out) : null;   // block Filters (site b.df) fill the dock's slots
-  return d ? cfgEnc('dock', {name: d.name, filters: d.filters.map((f, i) => bf[i] || f)}) : out;
+  return d ? cfgEnc('dock', {name: d.name, filters: d.filters.map((f, i) => bf[i] && bf[i].item ? {item: bf[i].item, bLoading: bf[i].bLoading | 0} : f)}) : out;
 }
 
 // Clone of a template entry (props list) with Class, Transform, id and palette set.

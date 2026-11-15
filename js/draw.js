@@ -236,7 +236,7 @@ function drawBlock(b,alpha,isSel){
     cx.restore();
   }
 }
-const fid=k=>FITEMS.find(id=>fkey(id)===k);
+const fid=k=>FITEMS.find(id=>fkey(id)===String(k||"").toLowerCase());
 function bayBox(b,i,x,y,w,h,bg){
   const f=((b.df||[])[i]||{}).item;
   if(bg){cx.fillStyle=f?"rgba(40,110,70,.9)":"rgba(0,0,0,.55)";cx.fillRect(x,y,w,h)}
@@ -361,7 +361,7 @@ function drawShapeFloor(A,s){
     wr.forEach(q=>rc(q,ST,1));poly.forEach(pg=>{path(pg);cx.fillStyle=ST;cx.strokeStyle=ST;cx.lineWidth=2;cx.stroke();cx.fill()});
     wr.forEach(q=>rc(q,WF));poly.forEach(pg=>{path(pg);cx.fillStyle=WF;cx.fill()});
     if(s>=10){
-      if(dock){const bm=Math.max(...pods.map(p=>p.bay||0));pods.forEach(p=>{const x0=X(p.q.x),y0=Y(p.q.y);bayBox(b,bm-p.bay,x0,y0,X(p.q.x+p.q.w)-x0,Y(p.q.y+p.q.h)-y0)})}
+      if(dock){const pb=pods.filter(p=>p.bay!=null),bm=Math.max(...pb.map(p=>p.bay));pb.forEach(p=>{const x0=X(p.q.x),y0=Y(p.q.y);bayBox(b,bm-p.bay,x0,y0,X(p.q.x+p.q.w)-x0,Y(p.q.y+p.q.h)-y0)})}
       else if(dkN(b.cls)===2&&sh.props[0]){const pr=sh.props[0];sh.ports.slice().sort((a,c)=>a[2]-c[2]).forEach((pt,i)=>{const q=tr(pr[0],pt[2]-.5,pr[2],pt[2]+.5),x0=X(q.x),y0=Y(q.y);bayBox(b,i,x0,y0,X(q.x+q.w)-x0,Y(q.y+q.h)-y0)})}}
     // ports (display only): green bar on each port's edge (dock: pod floor-facing edge), bay number only on numbered ports
     if(s>=6){const Ln=Math.min(.6*s,18),Tk=Math.min(5,Math.max(3,.2*s)),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";

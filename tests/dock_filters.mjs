@@ -134,4 +134,14 @@ const shotOf=async(name,file)=>{
 const s1=await shotOf("BPO_Dock_2","industrial.png");
 const s2=await shotOf("BPO_Dock","normal.png");
 ok(`(f) screenshots written (industrial ${s1.n} squares ${s1.f} B; normal ${s2.n} squares ${s2.f} B)`,s1.n===8&&s2.n===2&&s1.f>0&&s2.f>0);
+// (g) import: non-object Filters entries -> empty slot; list padded/capped to the dock's 8 slots
+await setup([["BPO_Dock_2",2,2]]);
+const gi=await p.evaluate(()=>{const j=JSON.parse(JSON.stringify(__fb.build()));j.Blocks[0].Filters=Array.from({length:10},(_,k)=>k===2?{item:"WaterIce",bLoading:0}:k===1?"junk":null);const ok=__fb.importJson(JSON.stringify(j));const df=S.blocks[0].df||[];return{ok,n:df.length,i2:df[2]&&df[2].item,nonEmpty:df.filter(f=>f&&f.item).length}});
+ok("(g) import Filters: non-object entries and overflow tolerated, 8 slots, slot 3 = WaterIce",gi.ok===true&&gi.n===8&&gi.i2==="WaterIce"&&gi.nonEmpty===1);
+// (h) uppercase filter string still resolves to its item (icon lookup)
+const gu=await p.evaluate(k=>{const id=fid(k);return{id:id||null,img:!!(id&&img(id))}},expKey.toUpperCase());
+ok("(h) uppercase filter string resolves to item "+expKey+" (icon)",gu.id!==null&&gu.img);
+// (i) sav export: block Filters merge only non-empty items into the dock config
+const gs=await p.evaluate(()=>{const cls=CATALOG.blocks.find(q=>q.name==="BPO_Dock_2").class;const n=dkN(cls);const tpl=cfgEnc("dock",{name:"",filters:Array.from({length:n},()=>({item:"",bLoading:0}))});const d=cfgDec(cls,savInCfg(cls,tpl,null,"","",[{item:"waterice",bLoading:2}]));return{f0:d.filters[0],rest:d.filters.slice(1).map(f=>f.item).join("|")}});
+ok("(i) savInCfg: slot 1 = waterice/2, other slots stay empty",gs.f0.item==="waterice"&&gs.f0.bLoading===2&&gs.rest.replace(/\|/g,"")==="");
 ok("no page errors "+errs.join(";"),!errs.length);await b.close();process.exit(bad?1:0);

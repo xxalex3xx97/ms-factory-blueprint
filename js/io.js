@@ -206,7 +206,7 @@ function importJson0(txt,quiet){
     const x=cell(gx,4,ox),y=cell(gy,4,oy),nb={id:uid++,cls,x,y,h:Math.round(n(b.Height)/BZ),rot:r,pid:n(b.PaletteID)};
     if(4*x+ox!==Number(gx)||4*y+oy!==Number(gy))nb.raw={x,y,r,X:Number(gx),Y:Number(gy)};   // block never moves on round trip; non-fitting game coords kept via raw
     return nb});
-  S.blocks.forEach((b,i)=>{impPorts(b,o.Blocks[i].Ports);const nm=o.Blocks[i].Name,rs=o.Blocks[i].Resource;if(Array.isArray(o.Blocks[i].Filters)&&dkN(b.cls))b.df=o.Blocks[i].Filters.map(f=>({item:String(f.item||""),bLoading:f.bLoading|0}));if(typeof nm==="string"&&nm&&nmOk(b.cls))b.nm=nm;if(typeof rs==="string"&&rs&&rsOk(b.cls))b.rs=rs});
+  S.blocks.forEach((b,i)=>{impPorts(b,o.Blocks[i].Ports);const nm=o.Blocks[i].Name,rs=o.Blocks[i].Resource;if(Array.isArray(o.Blocks[i].Filters)&&dkN(b.cls))b.df=Array.from({length:dkN(b.cls)},(_,j)=>{const f=o.Blocks[i].Filters[j];return f&&typeof f==="object"?{item:String(f.item||""),bLoading:f.bLoading|0}:{item:"",bLoading:0}});if(typeof nm==="string"&&nm&&nmOk(b.cls))b.nm=nm;if(typeof rs==="string"&&rs&&rsOk(b.cls))b.rs=rs});
   const cd=o.FactoryLayout&&o.FactoryLayout.ClosedDoorways,lg=[];S.closed=[];
   if(Array.isArray(cd))cd.forEach(d=>{if(d&&d.Seg!=null&&"ESWN".includes(d.Edge))S.closed.push(`${n(d.Height)}|${n(d.X)}|${n(d.Y)}|${d.Edge}|${n(d.Seg)}`);else if(d)lg.push(d)});
   // old format (V/H strip, or an edge without Seg): closes every door on that edge
