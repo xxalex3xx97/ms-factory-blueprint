@@ -22,6 +22,7 @@ function savI32(...vals) {
 function savFstrR(u8, p) {
   const n = savDV(u8).getInt32(p, true); p += 4;
   if (n === 0) return ['', p];
+  if (Math.abs(n) * (n < 0 ? 2 : 1) > u8.length - p) throw new Error('sav: bad string length');
   if (n > 0) {
     let s = '';
     for (let i = 0; i < n - 1; i++) s += String.fromCharCode(u8[p + i]);
@@ -162,13 +163,14 @@ const savShort = c => String(c).split('/').pop().split('.')[0];
 const savKey = (s, x, y, h) => s + '|' + x + '|' + y + '|' + h;
 // Config hex for an in-block default machine. A matching flat machine (fm) wins; else the template hex
 // with its name and filters reset (dock) or the empty named form (elevator/teleporter).
-function savInCfg(s, tpl, fm, blockName) {
+function savInCfg(s, tpl, fm, blockName, res) {
   const k = cfgKind(s); let hex = fm && fm.ConfigHex ? fm.ConfigHex : tpl;
   if (!(fm && fm.ConfigHex)) {
     if (k === 'dock') { const d = cfgDec(s, tpl); hex = d ? cfgEnc('dock', {name: '', filters: d.filters.map(() => ({item: '', bLoading: 0}))}) : tpl; }
     else if (k === 'named') hex = cfgEnc('named', {name: ''});
   }
-  const nm = (k === 'dock' && blockName) || (fm && fm.Name) || '';
+  if (k === 'dronebay' && res) return cfgEnc('dronebay', {resource: res});
+  const nm = ((k === 'dock' || k === 'named') && blockName) || (fm && fm.Name) || '';
   return nm && (k === 'dock' || k === 'named') ? cfgWithName(s, hex, nm) : hex;
 }
 
@@ -274,14 +276,14 @@ function savExport(j, opts) {
     // FIX-1: machine pos = 8*block + rotated offset; Height = 8*block Height + dh; rot = block rot + dr.
     // Config is the template hex as-is (dock name not re-encoded).
     const br = ((b.GridRotation % 4) + 4) % 4;
-    savFind(e, 'DefaultMachines').val = ['sarr', (SAV_DEFM[short] || []).map(m => {
+    savFind(e, 'DefaultMachines').val = ['sarr', (SAV_DEFM[short] || (b.Resource && /^BPO_MiningDroneBayBlock(_2)?$/.test(short) && !(j.DefaultMachines || []).some(m => /^BPO_MiningDroneBay(_2)?$/.test(m.Class) && m.Transform && Math.abs(m.Transform.GridLocation.X - 8 * b.GridLocation.X) <= 24 && Math.abs(m.Transform.GridLocation.Y - 8 * b.GridLocation.Y) <= 24) ? [{c: '/Game/Blueprints/Machines/' + short.replace('Block', '') + '.' + short.replace('Block', '') + '_C', dx: 0, dy: 0, dh: 0, dr: 0, hex: ''}] : [])).map(m => {
       let dx = m.dx, dy = m.dy;
       for (let i = 0; i < br; i++) [dx, dy] = [-dy, dx];
       const X = 8 * b.GridLocation.X + dx, Y = 8 * b.GridLocation.Y + dy, H = 8 * b.Height + m.dh;
       const s = savShort(m.c), fm = flat.get(savKey(s, X, Y, H));
       if (fm) used.add(savKey(s, X, Y, H));
       const q = savEntry(protoMac, m.c, X, Y, H, (m.dr + br) & 3, 0, 'MachineID', nextId++);
-      savSetVar(q, 'SerializedMachineConfig', savCfgBytes(savInCfg(s, m.hex, fm, b.Name)));
+      savSetVar(q, 'SerializedMachineConfig', savCfgBytes(savInCfg(s, m.hex, fm, b.Name, b.Resource)));
       return q;
     })];
     (isConn ? conns : blocks).push(e);
@@ -290,13 +292,14 @@ function savExport(j, opts) {
   // Flat machines. Config from site ConfigHex; underground exit has none, so empty config (unverified in game).
   for (const m of j.DefaultMachines || []) {
     const s = savShort(m.Class);
-    let path = SAV_PATHS[s];
+    let path = SAV_PATHS[s] || (s === 'DAT_Teleporter' && '/Game/Blueprints/Machines/BPO_Teleporter.BPO_Teleporter_C');   // class path seen in a real save
     if (!path) { path = `/Game/Blueprints/Machines/${s}.${s}_C`; warn.push('guessed path ' + s); }
     const t = m.Transform;
     if (used.has(savKey(s, t.GridLocation.X, t.GridLocation.Y, t.Height))) continue;
     const e = savEntry(protoMac, path, t.GridLocation.X, t.GridLocation.Y, t.Height, t.GridRotation,
       m.PaletteID || 0, 'MachineID', nextId++);
     let hx = m.ConfigHex || SAV_DEFCFG[s] || '';
+    if (cfgKind(s) === 'dronebay') { const bb = (j.Blocks || []).find(b => b.Resource && /MiningDroneBayBlock/.test(b.Class) && Math.abs(t.GridLocation.X - 8 * b.GridLocation.X) <= 24 && Math.abs(t.GridLocation.Y - 8 * b.GridLocation.Y) <= 24); if (bb) hx = cfgEnc('dronebay', {resource: bb.Resource}); }
     const k = cfgKind(s);
     if (typeof m.Name === 'string' && m.Name && (k === 'dock' || k === 'named')) hx = cfgWithName(s, hx, m.Name);
     savSetVar(e, 'SerializedMachineConfig', savCfgBytes(hx));
@@ -307,6 +310,43 @@ function savExport(j, opts) {
   savFind(bp, 'Connectors').val = ['sarr', conns];
   savFind(bp, 'Machines').val = ['sarr', machines];
   return { bytes: savDump(o), warn: [...new Set(warn)] };
+}
+// ---- Design .sav import (inverse of savExport): GVAS design file -> site JSON (Version 2). Returns null when u8 is not a design file.
+// Machines inside blocks become flat DefaultMachines (as parseSav does for world saves); dock/elevator names and drone bay resource are read from their child configs.
+function savImport(u8) { try { return savImport0(u8); } catch (e) { return null; } }
+function savImport0(u8) {
+  const o = savLoad(u8);
+  const bpp = o.props.find(x => x.name === 'Blueprint');
+  if (!bpp || bpp.val[0] !== 'props') return null;
+  const bp = bpp.val[1], get = (l, n) => { const r = l.find(x => x.name === n); return r && r.val; };
+  const bl = get(bp, 'Blocks'), cn = get(bp, 'Connectors'), ma = get(bp, 'Machines'), dn = get(bp, 'DisplayName');
+  if (!bl || bl[0] !== 'sarr') return null;   // ship designs have no Machines list
+  const i32 = (l, n) => { const v = get(l, n); return v && v[0] === 'raw' && v[1].length >= 4 ? savDV(v[1]).getInt32(0, true) : 0; };
+  const fs_ = (l, n) => { const v = get(l, n); return v && v[0] === 'raw' ? savFstrR(v[1], 0)[0] : ''; };
+  const xf = l => { const t = get(l, 'Transform'), g = t && get(t[1], 'GridLocation'); const dv = g && savDV(g[1]);
+    return { GridLocation: { X: dv ? dv.getInt32(0, true) : 0, Y: dv ? dv.getInt32(4, true) : 0 }, Height: i32(t[1], 'Height'), GridRotation: i32(t[1], 'GridRotation') }; };
+  const hexOf = l => { const v = get(l, 'SerializedMachineConfig'); if (!v || v[0] !== 'raw' || v[1].length < 4) return ''; const n = savDV(v[1]).getInt32(0, true);
+    return Array.from(v[1].slice(4, 4 + n), b => b.toString(16).padStart(2, '0')).join(''); };
+  const mach = (l, bn) => { const c = savShort(fs_(l, 'Class')), t = xf(l), hx = hexOf(l);
+    return { Class: c, Transform: { GridLocation: t.GridLocation, Height: t.Height, GridRotation: t.GridRotation }, MachineID: i32(l, 'MachineID'), PaletteID: i32(l, 'PaletteID'), ...(hx ? cfgView(c, hx) : {}) }; };
+  const blocks = [], machs = [];
+  const addBlock = l => {
+    const cls = fs_(l, 'Class'), t = xf(l), e = { Class: cls, GridLocation: t.GridLocation, Height: t.Height, GridRotation: t.GridRotation, BlockID: i32(l, 'BlockID'), PaletteID: i32(l, 'PaletteID') };
+    const dm = get(l, 'DefaultMachines');
+    for (const m of (dm && dm[0] === 'sarr' ? dm[1] : [])) {
+      const q = mach(m), d = q.ConfigHex && cfgDec(q.Class, q.ConfigHex);
+      if (d && d.name && (cfgKind(q.Class) === 'dock' || cfgKind(q.Class) === 'named')) e.Name = d.name;
+      if (d && d.resource) e.Resource = d.resource;
+      machs.push(q);
+    }
+    blocks.push(e);
+  };
+  bl[1].forEach(addBlock);
+  if (cn && cn[0] === 'sarr') cn[1].forEach(addBlock);
+  if (ma && ma[0] === 'sarr') ma[1].forEach(m => machs.push(mach(m)));
+  machs.sort((a, b) => a.MachineID - b.MachineID);
+  const name = dn && dn[0] === 'raw' && dn[1].length > 9 ? savFstrR(dn[1], 9)[0] : 'Imported';
+  return blocks.length ? { Version: 2, DisplayName: name, Blocks: blocks, DefaultMachines: machs } : null;
 }
 // S4: Download .sav button (browser only). Same name rules as the .json download.
 if(typeof document!=="undefined"&&document.getElementById("expSav")){

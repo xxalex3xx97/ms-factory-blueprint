@@ -136,9 +136,16 @@ const outside=(b,R)=>{const d=dim(b);return !onArea(b.x,b.y,d.w,d.h,R)};
 const WARN="Not fully on the buildable floor (block floors + open doors). Allowed, but may not work in game";
 // underground belts: entrance+exit = two UG machines of the same class/height/rotation on one line. Per line, sorted along the flow, pair 1+2, 3+4 ...
 // (skip a tile whose follower is too far when the next one is in range). n = cells entrance..exit inclusive; the game limit is d.maxApart (Mk max length).
+// explicit pu (partner id, set when the player places entrance+exit, pasted, or imported) wins, so nested / overlapping pairs follow the order they were drawn
 function ugPairs(ms){
-  const g=new Map(),out=[];
-  ms.forEach(u=>{const d=def(u.cls);if(!d||d.category!=="Undergrounds")return;const[dx]=DIR[u.rot],k=[u.cls,u.h,u.rot,dx?u.y:u.x].join("|");(g.get(k)||g.set(k,[]).get(k)).push(u)});
+  const g=new Map(),out=[],byId=new Map(),used=new Set();
+  ms.forEach(u=>{const d=def(u.cls);if(d&&d.category==="Undergrounds")byId.set(u.id,u)});
+  byId.forEach(u=>{
+    const t=byId.get(u.pu);if(!t||t.pu!==u.id||used.has(u.id)||used.has(t.id)||t.cls!==u.cls||t.h!==u.h||t.rot!==u.rot)return;
+    const[dx,dy]=DIR[u.rot];if(dx?t.y!==u.y:t.x!==u.x)return;const n=dx?(t.x-u.x)*dx+1:(t.y-u.y)*dy+1;if(n<2)return;
+    used.add(u.id);used.add(t.id);out.push({u,t,n,max:def(u.cls).maxApart});
+  });
+  ms.forEach(u=>{if(used.has(u.id))return;const d=def(u.cls);if(!d||d.category!=="Undergrounds")return;const[dx]=DIR[u.rot],k=[u.cls,u.h,u.rot,dx?u.y:u.x].join("|");(g.get(k)||g.set(k,[]).get(k)).push(u)});
   g.forEach(l=>{
     const[dx,dy]=DIR[l[0].rot],pos=u=>dx?u.x*dx:u.y*dy,mx=def(l[0].cls).maxApart;l.sort((a,b)=>pos(a)-pos(b));
     for(let i=0;i+1<l.length;i++){
@@ -149,6 +156,8 @@ function ugPairs(ms){
   });
   return out;
 }
+// copies carry oid (source id): remap pu to the copied partner, drop it when the partner was not copied
+function ugRelink(nb){const m=new Map(nb.map(b=>[b.oid,b.id]));nb.forEach(b=>{if(b.pu!=null){if(m.has(b.pu))b.pu=m.get(b.pu);else delete b.pu}delete b.oid});return nb}
 let UWC=null;
 function ugWarn(){
   if(LKP&&UWC&&UWC.k===PK)return UWC.v;

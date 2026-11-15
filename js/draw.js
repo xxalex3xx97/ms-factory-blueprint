@@ -410,16 +410,22 @@ function paintFloorBase(s){
 let LKC=null,LKP=false,PK="";   // links() cache persists across paints, keyed by layer + block-set key
 const linksC=L=>{if(!LKP)return links(L);if(!LKC||LKC.L!==L||LKC.k!==PK)LKC={L,k:PK,K:links(L)};return LKC.K};
 // underground belt tunnel: thin dashed line (dark halo + light core) entrance centre -> exit centre; the gap cells stay free
-function ugLine(a,b,s,over,pv){
+function ugLine(a,b,s,over,pv,col){
   cx.save();cx.lineCap="round";cx.beginPath();cx.moveTo(a[0],a[1]);cx.lineTo(b[0],b[1]);
   cx.strokeStyle="rgba(0,0,0,.55)";cx.lineWidth=Math.max(3,s*.14)+2;cx.stroke();
-  cx.setLineDash(pv?[2,Math.max(4,s*.2)]:[Math.max(4,s*.3),Math.max(3,s*.2)]);cx.strokeStyle=over?"hsl(0,85%,65%)":pv?"hsl(215,95%,62%)":"hsl(190,90%,72%)";cx.lineWidth=Math.max(2,s*.1);cx.stroke();
+  cx.setLineDash(pv?[2,Math.max(4,s*.2)]:[Math.max(4,s*.3),Math.max(3,s*.2)]);cx.strokeStyle=over?"hsl(0,85%,65%)":col||(pv?"hsl(215,95%,62%)":"hsl(190,90%,72%)");cx.lineWidth=Math.max(2,s*.1);cx.stroke();
+  if(col){cx.setLineDash([]);cx.fillStyle=col;[a,b].forEach(p=>{cx.beginPath();cx.arc(p[0],p[1],Math.max(3,s*.12),0,7);cx.fill()})}   // overlapping pair: coloured ends
   cx.restore();
 }
 function drawUG(s){
   if(s<ARROW_MIN_S)return;   // zoomed out: same threshold as the belt arrows
   const c=b=>[V.ox+(b.x+.5)*s,V.oy+(b.y+.5)*s];
-  ugPairs(CUR.filter(isM)).forEach(({u,t,n,max})=>ugLine(c(u),c(t),s,n>max));
+  const ps=ugPairs(CUR.filter(isM)),span=q=>{const[dx]=DIR[q.u.rot];return[Math.min(dx?q.u.x:q.u.y,dx?q.t.x:q.t.y),Math.max(dx?q.u.x:q.u.y,dx?q.t.x:q.t.y),[q.u.cls,q.u.rot,dx?q.u.y:q.u.x].join("|")]},sp=ps.map(span),ix=new Map();
+  // pairs whose spans overlap on one line get distinct colours + a small sideways offset (order drawn = order in the line group)
+  ps.forEach((q,i)=>{const g=sp.map((z,j)=>j).filter(j=>sp[j][2]===sp[i][2]&&sp[j][0]<=sp[i][1]&&sp[i][0]<=sp[j][1]);if(g.length>1)ix.set(i,g)});
+  ps.forEach((q,i)=>{const g=ix.get(i);if(!g){ugLine(c(q.u),c(q.t),s,q.n>q.max);return}
+    const k=[...new Set(g.concat(i))].sort((x,y)=>x-y).indexOf(i),[dx]=DIR[q.u.rot],o=(k%3-1)*s*.14,f=p=>dx?[p[0],p[1]+o]:[p[0]+o,p[1]];
+    ugLine(f(c(q.u)),f(c(q.t)),s,q.n>q.max,false,"hsl("+(k*95+20)%360+",90%,62%)")})
 }
 let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(b=>b.h===layer);LYB={k,all,v:all.filter(inView)}}return LYB}
 let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k!==k)GHB={k,v:S.blocks.filter(b=>b.h!==layer&&inView(b))};return GHB.v}
