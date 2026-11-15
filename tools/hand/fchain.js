@@ -15,7 +15,7 @@ window.chainBuild=function(opts){
       r2=chainBuild({...opts,sws,halfs,tbs,noAdapt:true});if(!r2.report.failed||t===2)break;m+=2;r1=chainBuild({...opts,sw:opts.sw0||16,tbs:opts.tbs||8,noAdapt:true,dry:true})}
     return r2}
 const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=null?opts.mk:1,TW=32;
-  const P=plan(ITEM,RATE,MK);
+  const P=plan(ITEM,RATE,MK,undefined,undefined,{seedDock:true});
   const CM={CRAFT_Refinery:['Refinery','DAT_Refinery',6],CRAFT_Assembler:['Assembler','DAT_Assembler'],CRAFT_GrowthChamber:['GrowthChamber','DAT_GrowthChamber'],CRAFT_Supercomputer:['Supercomputer','DAT_Supercomputer'],CRAFT_AdvancedAssembler:['AdvancedAssembler','DAT_AdvancedAssembler'],CRAFT_Enrichment:['Enrichment','DAT_EnrichmentChamber']};
   const CAPD={Refinery:36,Assembler:15,GrowthChamber:6,Supercomputer:9,AdvancedAssembler:4,Enrichment:4},CAPN={...CAPD,AdvancedAssembler:6,Enrichment:6};
   const by=plnBy(false,true),isRaw=it=>!by.has(it),rawOf=n=>n.rec.i.some(([it])=>isRaw(it)||it===n.rec.o[0]);
@@ -88,9 +88,9 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
       if(e.out){let done=0;for(const [s,p] of src[e.item].flatMap(s=>s.ports.map(p=>[s,p]))){const bx1=s.x+2,bx2=westOf0[e.gx];if(bx1!==bx2)continue;
           const sx=p.x+p.nx,sy=p.y+p.ny,k2=take('v'+bx2,Math.min(sy,e.y),Math.max(sy,e.y),nlOf(bx2),halfOf(bx2));if(k2<0)continue;   // same street, same rows: straight east on the port's row (tunnelling the other lanes), then along a consumer lane to the dock entry
           const X2=laneX(bx2,k2),wps=[[sx,sy],[X2,sy],[X2,e.y],[e.x,e.y]].filter((w,i,a)=>i===0||w[0]!==a[i-1][0]||w[1]!==a[i-1][1]);
-          if(lay(wps,e.gx+','+e.gy)){s.obj.used.add(p.key);s.ports.splice(s.ports.indexOf(p),1);s.room-=e.dem;done=1;break}}
+          if(lay(wps,e.gx+','+e.gy)){s.obj.used.add(p.key);s.obj.routed=(s.obj.routed||0)+1;s.ports.splice(s.ports.indexOf(p),1);s.room-=e.dem;done=1;break}}
         if(done){report.routed++;continue}}
-      let ok=0,why='';const order=L.slice().sort((a,b)=>Math.abs(a.x-e.gx)-Math.abs(b.x-e.gx)||b.room-a.room);
+      let ok=0,why='';const order=L.slice().sort((a,b)=>(a.room<e.dem-1e-6)-(b.room<e.dem-1e-6)||((a.obj.routed||0)>0)-((b.obj.routed||0)>0)||Math.abs(a.x-e.gx)-Math.abs(b.x-e.gx)||b.room-a.room);   // a box nothing leaves yet comes first: every box (= every machine row of the product) gets a belt
       for(const [s,p] of order.flatMap(s=>s.ports.map(p=>[s,p]))){const sx=p.x+p.nx,sy=p.y+p.ny;
         const bx1=s.x+2,dock=!!e.north,bx2=dock?e.gx+2:westOf0[e.gx],tgtY=dock?(e.gy-1)*TW:e.y;
         const pr=pre.get(e),top=(pr&&typeof pr==='object')?pr.top:(sy+tgtY)<=(2*Hpx-sy-tgtY),tk=top?'tT':'tB',tBase=top?0:(H-TBS)*TW;
@@ -102,9 +102,10 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
           wps=[[sx,sy],[X1,sy],...(Yt!=null?[[X1,Yt],[X2,Yt]]:[]),[X2,Yh],[e.x,Yh],[e.x,e.y]]}
         else wps=[[sx,sy],[X1,sy],...(Yt!=null?[[X1,Yt],[X2,Yt]]:[]),[X2,e.y],[e.x,e.y]];
         const clean=wps.filter((w,i)=>i===0||w[0]!==wps[i-1][0]||w[1]!==wps[i-1][1]);
-        if(lay(clean,e.gx+','+e.gy)){s.obj.used.add(p.key);s.ports.splice(s.ports.indexOf(p),1);s.room-=e.dem;ok=1;break}else why='blocked '+JSON.stringify((()=>{const c=LB.cell,q=c&&HAND.S.pcs.find(p=>p.x===c[0]&&p.y===c[1]);return q?{g:q.g,cls:q.cls.slice(-4),rot:q.rot}:{floor:c&&HAND.inFloor(c[0],c[1]),occ:c&&HAND.S.occ.get(c[0]+','+c[1])}})())+' '+JSON.stringify(LB.cell)+' '+JSON.stringify(LB.run)+' dock='+dock+' wps='+JSON.stringify(clean)}
+        if(lay(clean,e.gx+','+e.gy)){s.obj.used.add(p.key);s.obj.routed=(s.obj.routed||0)+1;s.ports.splice(s.ports.indexOf(p),1);s.room-=e.dem;ok=1;break}else why='blocked '+JSON.stringify((()=>{const c=LB.cell,q=c&&HAND.S.pcs.find(p=>p.x===c[0]&&p.y===c[1]);return q?{g:q.g,cls:q.cls.slice(-4),rot:q.rot}:{floor:c&&HAND.inFloor(c[0],c[1]),occ:c&&HAND.S.occ.get(c[0]+','+c[1])}})())+' '+JSON.stringify(LB.cell)+' '+JSON.stringify(LB.run)+' dock='+dock+' wps='+JSON.stringify(clean)}
       if(ok)report.routed++;else{report.failed++;HAND.S.fails.push(e.item.replace('ITEM_','')+' > '+e.blk+' no route ('+why+')')}}
     // measure the lanes used per street column and trunk band (the second pass sizes the streets from this)
+    report.idle=[];anch.forEach(a=>a.exits.forEach(e=>{if(!e.obj.routed)report.idle.push(a.name+' ('+e.item.replace('ITEM_','')+')')}));   // product boxes no belt leaves: their machines would produce into a dead end
     report.meas=colList.map(col=>{const bx0=col.gx+2,l=lanes.get('v'+bx0)||[],h=halfOf(bx0);let ns=0,nc=0;l.forEach((a,k)=>{if(a&&a.length){if(k<h)ns=Math.max(ns,k+1);else nc=Math.max(nc,k+1-h)}});return{bx0,ns,nc}});
     report.trunk=Math.max(0,...['tT','tB'].map(k=>{const l=lanes.get(k)||[];let m=0;l.forEach((a,i)=>{if(a&&a.length)m=Math.max(m,i+1)});return m}));
     report.ms=Date.now()-t0;HAND.prune()}});
