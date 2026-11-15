@@ -31,17 +31,27 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     let cur=0;col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter],nExtra=rawOf(it.n)?Math.max(0,new Set(it.n.rec.i.map(([q])=>q).filter(isRaw)).size-1):0;westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
       if(nExtra)cur+=2;const gyRow=cur;cur+=nExtra?4:2;maxRows=Math.max(maxRows,cur/2);   // a block with extra docks keeps the rows above and below for them
       specs.push({gx:col.gx,gy:TBS+1+gyRow,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),col:dep[it.n.item]})})});
-  const lastGx=colList[colList.length-1].gx,W=lastGx+2+colList[colList.length-1].sw,H=TBS+1+2*maxRows+TBS;   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
+  const lastCol=colList[colList.length-1],lastGx=lastCol.gx,gxO=lastGx+2+lastCol.sw,nLn=Math.ceil(RATE/[60,120,180][MK]-1e-9),nOD=opts.outDock?Math.ceil(nLn/8):0;   // output dock: an extra tile column east of everything (nLn lanes of the final item, 8 lanes per industrial dock)
+  if(nOD){maxRows=Math.max(maxRows,nOD);westOf[gxO]=lastGx+1+lastCol.sw;westOf0[gxO]=lastGx+2}
+  const W=nOD?gxO+1:gxO,H=TBS+1+2*maxRows+TBS;   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
   const nCols=colList.length,report={recipes:nodes.length,blocks:specs.length,cols:nCols,rows:maxRows,routed:0,failed:0,entries:0,unsupplied:[]};
   const dockZone=new Set();specs.forEach(s=>{if(s.dock)for(let d=1;d<=4;d++)for(let dy=-1;dy<=1;dy++)dockZone.add((s.gx-d)+','+(s.gy+dy))});   // dock + adapter (2 strides) and 3 units of ship space in front (2 strides)
   const outBlk=new Set(specs.map(s=>(s.gx+1)+','+s.gy));
-  const t0=Date.now();
+  const t0=Date.now(),odBlk=[];
   const R=fbBuild({mk:MK,plan:specs,after:(anch)=>{
     for(let gx=0;gx<W;gx++)for(let gy=0;gy<H;gy++)if(!dockZone.has(gx+','+gy))HAND.block(gx,gy);
     // ---- rule-based lanes: every belt = source box -> street lane up/down to a trunk band -> along the trunk -> consumer street lane -> (street row lane + stub column | stub row) -> entry. No search.
     const ents=[];anch.forEach(a=>a.entries.forEach(e=>ents.push(e)));report.entries=ents.length;
     const src={};anch.forEach(a=>a.exits.forEach(e=>{const ps=e.obj.ports.filter(p=>p.f==='E').sort((a,b)=>a.y-b.y),sp=e.obj.ports.filter(p=>p.f==='S').sort((a,b)=>a.x-b.x);(src[e.item]=src[e.item]||[]).push({obj:e.obj,room:e.rate,x:a.gx,ports:[ps[0],ps[2],sp[0],...ps.filter((q,i)=>i!==0&&i!==2),...sp.slice(1)].filter(Boolean)})}));   // three belts per box: E ports 2 rows apart and the first S port; the other ports follow when a product has more consumers than that
     const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],DH=HAND.D(),PAD=3,lanes=new Map(),Hpx=H*TW;
+    // ---- output dock(s): the industrial dock assembly turned around (nlIndAsm, as dock_apply does for a dock east of a block): lane rows 4..7 / 22..25 of an extra tile, tails east through the adapter into the boxes and the dock
+    for(let k=0;nOD&&k<nOD;k++){const A=HAND.adapt?16:0,TRo=[1,0,3,2],asm=nlIndAsm(),per=Math.ceil(nLn/nOD),n=Math.min(per,nLn-k*per),rows=[4,22,6,24,5,23,7,25].slice(0,n),gy=TBS+1+2*k,ox=gxO*TW,oy=gy*TW;
+      asm.belts.forEach(kb=>{if(!HAND.piece({cls:BELT,x:ox+45+A-kb.y,y:oy+29-kb.x,rot:TRo[kb.rot]},true))throw new Error('output dock cell taken')});
+      rows.forEach(r=>{for(let x=1;x<=32+A;x++)if(!HAND.piece({cls:BELT,x:ox+x,y:oy+r,rot:0},true))throw new Error('output dock lane taken')});
+      asm.boxes.forEach(b=>{const c=HAND.put({cls:'DAT_Container_2',gx:gxO,gy,lx:42+A-b.y,ly:26-b.x,force:true,name:'output box',ct:[]});if(!c)throw new Error('output dock box does not fit');c.ports.forEach(q=>c.used.add(q.key))});
+      rows.forEach(r=>ents.push({x:ox,y:oy+r,item:ITEM,dem:RATE/nLn,blk:'Output dock',gx:gxO,gy}));
+      odBlk.push({cls:plcCls('BPO_Dock_2'),x:gxO*2+2+(A?1:0),y:gy*2,rot:0,nm:'Output dock: '+ITEM.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2')+' '+Math.round(RATE*n/nLn)+'/min'});
+      if(A)odBlk.push({cls:plcCls('BPO_StationAdapter_01'),x:gxO*2+2,y:gy*2,rot:0})}
     const laneX=(bx0,k)=>(bx0+Math.floor(k/14))*TW+2+2*(k%14),NT=14*TBS,nlOf=bx0=>14*swMap[bx0].sw,halfOf=bx0=>swMap[bx0].half!=null?swMap[bx0].half:nlOf(bx0)/2;   // lanes on every 2nd cell line, never next to a wall (cell lines 2..28 of a stride)   // street column = 4 strides, a lane on every 2nd cell line
     const take=(key,a,b,n,lo=0)=>{const l=lanes.get(key)||lanes.set(key,[]).get(key);for(let k=lo;k<n;k++){if(!l[k])l[k]=[];if(!l[k].some(([c,d])=>!(b+PAD<c||a-PAD>d))){l[k].push([a,b]);return k}}return -1};
     const LB={},sgn=v=>v>0?1:v<0?-1:0,dirOf=(dx,dy)=>dx>0?0:dy>0?1:dx<0?2:3;
@@ -90,5 +100,5 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     report.meas=colList.map(col=>{const bx0=col.gx+2,l=lanes.get('v'+bx0)||[],h=halfOf(bx0);let ns=0,nc=0;l.forEach((a,k)=>{if(a&&a.length){if(k<h)ns=Math.max(ns,k+1);else nc=Math.max(nc,k+1-h)}});return{bx0,ns,nc}});
     report.trunk=Math.max(0,...['tT','tB'].map(k=>{const l=lanes.get(k)||[];let m=0;l.forEach((a,i)=>{if(a&&a.length)m=Math.max(m,i+1)});return m}));
     report.ms=Date.now()-t0;HAND.prune()}});
-  R.report=report;return R;
+  odBlk.forEach(b=>R.blocks.push(b));R.report=report;return R;
 };

@@ -21,13 +21,15 @@ window.chainPlay=async function(o){
   const redraw=()=>{all();if(typeof fit==='function')fit()};
   window.__exoLog=[];
   const order=tiles.filter(t=>fac.has(tkey(t))).sort((a,b)=>(a.x-b.x)||(a.y-b.y));
+  const usedEx=new Set();
   try{
     const street=tiles.filter(t=>!fac.has(tkey(t)));
     for(const c of chunks(street,400)){paste(c,[],'street');await sleep(0)}
     redraw();window.__exoLog.push('street floors '+street.length);
     for(const b of order){const k=tkey(b),mine=groups.get(k)||[],ex=extra.filter(e=>Math.abs(e.y-b.y)<=2&&(e.x===b.x-4||e.x===b.x-1)),ms=mine.filter(m=>!isBelt(m));
-      paste([b,...ex],ms,'block '+k);window.__exoLog.push('block '+k+': '+ms.length+' machines');
+      ex.forEach(e=>usedEx.add(e));paste([b,...ex],ms,'block '+k);window.__exoLog.push('block '+k+': '+ms.length+' machines');
       if(!o.fast){redraw();await sleep(o.stepMs||300)}}
+    {const left=extra.filter(e=>!usedEx.has(e));if(left.length)paste(left,[],'extra')}   // blocks not next to a factory tile (output docks)
     redraw();
     for(const b of order){const k=tkey(b),belts=(groups.get(k)||[]).filter(isBelt);
       for(const c of chunks(belts,6000)){if(c.length)paste([],c,'belts '+k)}
