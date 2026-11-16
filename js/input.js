@@ -11,7 +11,7 @@ const pt=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.cl
 // hit-test index: cell -> blocks covering it (in S.blocks order), rebuilt when the blocks or layer/view change; topmost in-view block wins, as before
 let HIX=null;const HK=(x,y)=>(x+524288)*1048576+(y+524288);
 const hit=c=>{const k=PK+"|"+layer+"|"+view;
-  if(!HIX||HIX.k!==k){HIX={k,m:new Map()};for(const b of S.blocks){if(b.h!==layer)continue;const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const q=HK(b.x+i,b.y+j);let a=HIX.m.get(q);if(!a)HIX.m.set(q,a=[]);a.push(b)}}}
+  if(!HIX||HIX.k!==k){HIX={k,m:new Map()};for(const b of S.blocks){if(!onLv(b))continue;const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const q=HK(b.x+i,b.y+j);let a=HIX.m.get(q);if(!a)HIX.m.set(q,a=[]);a.push(b)}}}
   const a=HIX.m.get(HK(c.x,c.y));if(!a)return null;
   for(let i=a.length-1;i>=0;i--)if(inView(a[i]))return a[i];return null};
 // hover memo: areas and the link graph are built once per paint (PK) instead of on every mouse move (both are full scans of all blocks)

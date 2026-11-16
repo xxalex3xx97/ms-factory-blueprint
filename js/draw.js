@@ -460,7 +460,9 @@ function drawUG(s){
     const [dx]=DIR[q.u.rot],o=(k%3-1)*s*.14,f=p=>dx?[p[0],p[1]+o]:[p[0]+o,p[1]];   // pairs whose spans overlap on one line get distinct colours + a small sideways offset
     ugLine(f(a),f(b),s,q.n>q.max,false,"hsl("+(k*95+20)%360+",90%,62%)")});
 }
-let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(b=>b.h===layer);LYB={k,all,v:all.filter(inView),nm:all.filter(b=>!inView(b)),nf:all.filter(b=>!isM(b)&&nfRect(b))}}return LYB}
+// Layout view: a block spanning several levels (catalog `levels`) shows on every level it covers
+const onLv=b=>b.h===layer||(view!=="F"&&b.h<layer&&layer<b.h+lvl(b));
+let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(onLv);LYB={k,all,v:all.filter(inView),nm:all.filter(b=>!inView(b)),nf:all.filter(b=>!isM(b)&&nfRect(b))}}return LYB}
 // F view of a big factory: only the blocks near the viewport (bucket grid of 64 cells built once per block set); m = margin in px
 function vpBlocks(m){
   const L=lyBlocks(),v=L.v;if(view!=="F"||v.length<3000)return v;
@@ -468,7 +470,7 @@ function vpBlocks(m){
   const s=sc(),mg=Math.ceil(m/s)+1,f=n=>Math.floor(n/64),ix=[];
   for(let i=f(-V.ox/s-mg-L.mw);i<=f((W-V.ox)/s+mg);i++)for(let j=f(-V.oy/s-mg-L.mh);j<=f((H-V.oy)/s+mg);j++){const a=L.g.get(i+","+j);if(a)for(const n of a)ix.push(n)}
   const r=ix.sort((a,b)=>a-b).map(n=>v[n]);r.tot=v.length;return r}
-let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k!==k)GHB={k,v:S.blocks.filter(b=>b.h!==layer&&inView(b))};return GHB.v}
+let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k!==k)GHB={k,v:S.blocks.filter(b=>!onLv(b)&&inView(b))};return GHB.v}
 let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(lyBlocks().all.map(b=>[b.id,b]));return LBM.get(id)};
 const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
 // static layer cache: only smFrame paints (USEB) read it; any other paint (edits, resize, export) repaints fresh and marks DIRTY
