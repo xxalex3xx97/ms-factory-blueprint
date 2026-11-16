@@ -117,7 +117,7 @@
         "source": "decoded BPO_Station_02: gaps -11..-5 and 5..11 on all sides"
       },
       "note": null,
-      "levels": 4
+      "levels": 2
     },
     "BPO_ElevatorBlock_03": {
       "w": 1,
@@ -173,7 +173,7 @@
       ],
       "floor": null,
       "note": null,
-      "levels": 4,
+      "levels": 2,
       "label": "Solar Panels Mk. 2"
     },
     "BPO_StationTurretBlock_01": {
@@ -903,7 +903,7 @@
       ],
       "confidence": "decoded from EA assets, untested in game",
       "icon": "BPO_Station_03",
-      "levels": 4,
+      "levels": 2,
       "cost": [
         [
           "ITEM_ReinforcedPlates",
@@ -1056,7 +1056,7 @@
       ],
       "confidence": "decoded from EA assets, untested in game",
       "icon": "BPO_StationCorridor_02",
-      "levels": 4,
+      "levels": 2,
       "cost": [
         [
           "ITEM_HullPlates",
@@ -1094,7 +1094,7 @@
       "confidence": "decoded from EA assets, untested in game",
       "icon": null,
       "iconNote": "EA icon property T_Station has no texture in the extracted files: placeholder",
-      "levels": 4,
+      "levels": 2,
       "cost": [
         [
           "ITEM_ReinforcedPlates",
@@ -1842,7 +1842,7 @@
       ],
       "confidence": "decoded from EA assets, untested in game",
       "icon": "BPO_ElevatorBlock_02A",
-      "levels": 4,
+      "levels": 2,
       "cost": [
         [
           "ITEM_ReinforcedPlates",
@@ -2332,7 +2332,7 @@
         "RSC_DeepSpaceObservatory"
       ],
       "icon": "BPO_DeepSpaceObservatory",
-      "levels": 4,
+      "levels": 2,
       "cost": [
         [
           "ITEM_ReinforcedPlates",
@@ -2474,7 +2474,7 @@
       ],
       "confidence": "decoded from EA assets, untested in game",
       "icon": "BPO_SolarPanelBlock_03",
-      "levels": 5,
+      "levels": 2,
       "cost": [
         [
           "ITEM_IridiumPlates",

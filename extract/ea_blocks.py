@@ -110,7 +110,8 @@ for k, v in rsc.items():
 
 def levels(n):
     bb = fl[n].get('block_bounds_decoded')
-    return max(1, math.ceil(bb[1][2] / 4 - 0.05)) if bb and bb[1][2] > 0.5 else 1
+    # user 2026-11-16: every building is at most 2 levels high (BlockBounds z overstates it)
+    return min(2, max(1, math.ceil(bb[1][2] / 4 - 0.05))) if bb and bb[1][2] > 0.5 else 1
 
 
 def size(n):
