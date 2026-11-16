@@ -43,7 +43,7 @@
         "source": "decoded BPO_Station_01: gaps y -3..3 (W,E) and x -3..3 (N,S)"
       },
       "note": null,
-      "levels": 2
+      "levels": 1
     },
     "BPO_Station_2x1": {
       "w": 2,
