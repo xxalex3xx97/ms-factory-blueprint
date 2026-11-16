@@ -3046,7 +3046,7 @@ async function s28(br) {
     __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 1, BlockID: 1, PaletteID: 0}],
       DefaultMachines: [{Class: 'BPO_MiningDroneBay_2', DefaultName: 'BPO_MiningDroneBay_2', Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}, MachineID: 1, PaletteID: 0}, {Class: 'BPO_MiningDroneBay', DefaultName: 'BPO_MiningDroneBay', Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}, MachineID: 2, PaletteID: 0}]}));
     const o = __fb.build();
-    return {blocks: __fb.S.blocks.map(b => b.cls), dm: __fb.S.dm.length, out: o.Blocks.map(b => ({Class: b.Class, GridLocation: b.GridLocation, Height: b.Height, GridRotation: b.GridRotation}))};
+    return {blocks: __fb.S.blocks.map(b => b.cls), dm: __fb.S.dm.length, out: o.Blocks.filter(b => !/Connector/.test(b.Class)).map(b => ({Class: b.Class, GridLocation: b.GridLocation, Height: b.Height, GridRotation: b.GridRotation}))};   // doorway connectors are generated on export (js/conn.js), not part of this check
   }, MK2);
   chk('28 Mk.2 save: Class imports as BPO_MiningDroneBayBlock_2 (1 block)', rt.blocks.length === 1 && rt.blocks[0] === MK2, JSON.stringify(rt));
   chk('28 Mk.2 save: exports back unchanged (Class, GridLocation {40,40}, GridRotation 1)', JSON.stringify(rt.out) === JSON.stringify([{Class: MK2, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 1}]), JSON.stringify(rt.out));
@@ -3632,8 +3632,8 @@ async function s37(br) {
   await pg.click('#impGo');
   await pg.waitForFunction(() => !$('dImp').open);
   const j1 = await pg.evaluate(() => ({n: S.blocks.length, lv: $('lvW').hidden}));
-  const jb = await pg.evaluate(() => __fb.build().Blocks.length);
-  chk(`37 JSON import (Import JSON -> file -> Import) applies the blueprint (${jsonObj.Blocks.length} blocks)`, jb === jsonObj.Blocks.length, `build() blocks ${jb}, json ${jsonObj.Blocks.length}`);
+  const isCn = b => /Connector/.test(b.Class), jb = await pg.evaluate(() => __fb.build().Blocks.filter(b => !/Connector/.test(b.Class)).length), jn = jsonObj.Blocks.filter(b => !isCn(b)).length;   // connectors are regenerated on export, so compare the real blocks
+  chk(`37 JSON import (Import JSON -> file -> Import) applies the blueprint (${jn} blocks)`, jb === jn, `build() blocks ${jb}, json ${jn}`);
   chk(`37 JSON import: Level window ${levelsOf(jsonObj.Blocks) >= 2 ? 'opens' : 'stays closed'} (${levelsOf(jsonObj.Blocks)} levels)`, (levelsOf(jsonObj.Blocks) >= 2) === !j1.lv, JSON.stringify(j1));
 
   // .sav import: Import save -> file chooser -> station dialog -> Import
@@ -3935,7 +3935,7 @@ async function s40(br) {
   await imp(pg, bp(named));
   const st = await pg.evaluate(() => S.blocks.map(b => b.nm ?? null));
   chk('40 JSON Name imports on Dock, Industrial Dock, Shipyard Core (+_02) only', JSON.stringify(st) === JSON.stringify([NM, 'Industrial \u2713', 'Yard A', 'Yard B', null, null]), JSON.stringify(st));
-  const ex = await pg.evaluate(() => __fb.build().Blocks.map(e => ['Name' in e ? e.Name : null]));
+  const ex = await pg.evaluate(() => __fb.build().Blocks.filter(e => !/Connector/.test(e.Class)).map(e => ['Name' in e ? e.Name : null]));
   chk('40 export writes Name on the 4 classes only (Shipyard Side and other blocks have no Name key)', JSON.stringify(ex.flat()) === JSON.stringify([NM, 'Industrial \u2713', 'Yard A', 'Yard B', null, null]), JSON.stringify(ex));
   const rt = await pg.evaluate(() => { const a = __fb.build().Blocks.map(e => e.Name ?? null); __fb.importJson(JSON.stringify(__fb.build())); return {a, b: __fb.build().Blocks.map(e => e.Name ?? null)}; });
   chk('40 export -> import -> export keeps every Name (non-ASCII too)', JSON.stringify(rt.a) === JSON.stringify(rt.b) && rt.b[0] === NM, JSON.stringify(rt));
