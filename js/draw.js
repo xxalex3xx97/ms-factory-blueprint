@@ -599,7 +599,7 @@ function paint0(){
     pasting.pl.ms.forEach(m=>{const e=dim(m);cx.fillRect(V.ox+(hover.x+m.x/FC)*s,V.oy+(hover.y+m.y/FC)*s,e.w/FC*s,e.h/FC*s)});cx.restore();
     bs.forEach(b=>{const d=dim(b);if(nonM().some(o=>{if(!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)}});
   }else if(pasting&&!drag&&hoverIn){
-    const g=clipT(pasting.rot,pasting.fl).map(b=>({...b,x:b.x+hover.x,y:b.y+hover.y,h:layer}));
+    const kk=clip.some(q=>!isM(q))?FC:1,g=clipT(pasting.rot,pasting.fl).map(b=>({...b,x:b.x+(isM(b)?kk:1)*hover.x,y:b.y+(isM(b)?kk:1)*hover.y,h:layer})).filter(b=>view==="F"||!isM(b));
     g.forEach(b=>{drawBlock(b,.45,false);if(!isM(b)){const d=dim(b);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)}});
     if(F)drawPorts(s,g.filter(isM));   // ports show the rotation
     if(noBuild(g.filter(isM).map(mItem))){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;g.forEach(b=>{const d=dim(b);cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)})}

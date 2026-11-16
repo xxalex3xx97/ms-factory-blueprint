@@ -166,7 +166,13 @@ $("insp").addEventListener("click",e=>{
   if(id==="bRot")rotate();
   else if(id==="bDel")del();
   else if(id==="bCfgCopy"&&typeof cfgCopy==="function")cfgCopy();else if(id==="bCfgPaste"&&typeof cfgPasteMode==="function")cfgPasteMode();
-  else if(id==="bDup"){const nb=ugRelink(S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null,oid:b.id,id:uid++,mid:0,x:b.x+1,y:b.y+1})));if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}push();S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));all()}
+  else if(id==="bDup"){
+    const L=view==="L",src=S.blocks.filter(b=>sel.has(b.id)),fl=L?[...floorOn(src.filter(b=>!isM(b)))].filter(q=>!sel.has(q.id)):[],o=b=>L&&isM(b)?FC:1;
+    const nb=ugRelink(src.concat(fl).map(b=>({...b,raw:null,oid:b.id,id:uid++,mid:0,x:b.x+o(b),y:b.y+o(b)})));
+    const nn=nb.filter(b=>!isM(b)),nbs=new Set(nn.map(b=>b.id));S.blocks.push(...nn);
+    let bad;try{bad=noBuild(nb.filter(isM).map(mItem))}finally{S.blocks=S.blocks.filter(b=>!nbs.has(b.id))}
+    if(bad){toast(NOBUILD);return}
+    push();S.blocks.push(...nb);sel=new Set((L&&nn.length?nn:nb).map(b=>b.id));all()}
   else if(id==="bStop"){active=null;all()}
   else if(id==="bClear"){if(S.blocks.length&&confirm("Remove all blocks and buildables?")){push();S.blocks=[];S.closed=[];S.conn=[];sel=new Set();all()}}
   else if(id==="bResetCat"){if(confirm("Discard all catalog edits (size, floor, category, verified)?")){push();OV={};saveOV();all()}}
