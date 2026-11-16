@@ -52,9 +52,9 @@ function simInit(o={}){
   Z.M.forEach(M=>{if(M.pb.length)Z.prod.push(M)});
   Z.E.forEach(r=>[r.h+1,r.h-1].forEach(h=>{const o=elvO.get([r.x,r.y,h,r.pk].join());if(o)r.outs.push(o)}));   // destinations: adjacent levels up/down (round-robin via simRoute)
   if(fl!=null)Z.E.forEach(r=>r.outs.push({sink:1}));   // floor-only mode: elevator = sink
-  // output dock = unlimited sink: a belt whose front cell is a BPO_Dock footprint cell takes any item (BPO_Dock has no ports, so links() never sees it)
-  const dkC=plcCls('BPO_Dock'),dkCells=new Set();S.blocks.filter(b=>b.cls===dkC&&(fl==null||b.h===fl)).forEach(b=>{const e=dim({cls:b.cls,rot:b.rot||0});for(let i=0;i<e.w*FC;i++)for(let j=0;j<e.h*FC;j++)dkCells.add((b.x*FC+i)+','+(b.y*FC+j))});
-  Z.dS=new Map();K.belts.forEach(b=>{const d=DIR[b.rot];if(d&&[1,2].some(n=>dkCells.has((b.x+d[0]*n)+','+(b.y+d[1]*n))))add(Z.dS,K.chain(b.id),{belt:b})});
+  // docks: per-bay filters (see dockBelts in model.js)
+  Z.dS=new Map();const dkB=dockBelts(S.blocks,K.belts,fl);
+  K.belts.forEach(b=>{const r=dkB.get(b.id);if(!r)return;const c=K.chain(b.id);if(r.v)add(Z.dS,c,{belt:b,f:r.f});else Z.pull.push({cn:r.cn,belt:b,c})});
   Z.dkN=0;
   Z.stat=simCalc();Z.sm=Object.assign(simCalc(SIM_SMW),{t:0,steady:false,stId:new Set()});return true;
 }
@@ -65,7 +65,7 @@ function simRoute(c,item,eb,src,vis){
   const dn=simDn(eb);
   for(const k of Z.mS.get(c)||[])if(dn.has(k.belt.id)&&simCanM(k.M,item))return[{c,eb,xb:k.belt.id,mk:k.M}];
   for(const k of Z.cS.get(c)||[]){const cn=Z.C.get(k.m.id);if(k.m!==src&&dn.has(k.belt.id)&&simCanC(cn,item))return[{c,eb,xb:k.belt.id,ck:cn}]}
-  for(const k of Z.dS.get(c)||[])if(dn.has(k.belt.id))return[{c,eb,xb:k.belt.id,dk:1}];
+  for(const k of Z.dS.get(c)||[])if(dn.has(k.belt.id)&&(!k.f||k.f===item))return[{c,eb,xb:k.belt.id,dk:1}];
   for(const r of Z.rI.get(c)||[]){
     const ib=r.ins.find(q=>q.c===c&&dn.has(q.belt.id));
     if(!ib||!r.outs.length||vis.has(r.id)||!simOk(r.id))continue;
@@ -164,9 +164,9 @@ function theoLevel(L,inj){
   let load;
   for(let pass=0;pass<10;pass++){
     const dem=base.map(s=>({id:s.id,item:s.item,rate:s.rate*(s.m==null?1:f.get(s.m))}));
-    const dl=flowLoad(K.nx,dem,K.cp,sp);
+    const dl=flowLoad(K.nx,dem,K.cp,sp,null,K.dk);
     th=new Map();dem.forEach(s=>{if(!th.has(s.id))th.set(s.id,1/Math.max(1,util(dl,s.id)))});
-    load=flowLoad(K.nx,dem.map(s=>({...s,rate:s.rate*tf(s.id)})),K.cp,sp);
+    load=flowLoad(K.nx,dem.map(s=>({...s,rate:s.rate*tf(s.id)})),K.cp,sp,null,K.dk);
     // machine supply from its input belts (each belt scaled down to its capacity), f = min over inputs of supply/need
     const sup=new Map();ins.forEach(e=>{const l=load.get(e.b.id);if(!l)return;let s=sup.get(e.m.id);if(!s){s=new Map();sup.set(e.m.id,s)}
       const k=Math.max(1,l.util||1);l.items.forEach((v,it)=>s.set(it,(s.get(it)||0)+v/k))});

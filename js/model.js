@@ -54,6 +54,27 @@ function shapeTf(b){const fl=floorRect(b),r=fl||nfRect(b),d=def(b.cls),sh=r&&d&&
   const gp=sh.gaps&&sh.gaps.length,pt=sh.entrance&&sh.entrance.kind==="ports"&&sh.ports.length;
   if(!pt&&!gp&&sh.hatch!=="interior")return{sh,f:f0,f0};   // no ports and no door (solar, turret, armour): exact tile placement, no shift
   return{sh,f0,f:(u,v)=>{const[p,q]=f0(u,v);return[p-NFQ,q-NFQ]}}}   // f0 = unshifted (real tile frame), f = site floor model frame (Factory floor): every shaped block (ports or door gap) takes the full (-1,-1) like the neighbouring floor blocks
+// dock pods (industrial dock): one per decoded port cell, x extent from arm rows; tr = shape->floor rect fn
+const podsOf=(sh,tr)=>sh.ports.map(([bay,x,y])=>{const rs=sh.arms.filter(a=>(a[1]+a[3])/2>=y-.5&&(a[1]+a[3])/2<y+.5);if(!rs.length)return null;
+  return{bay,x,y,q:tr(Math.min(...rs.map(a=>a[0])),y-.46,Math.max(...rs.map(a=>a[2])),y+.46)}}).filter(Boolean);
+const trOf=t=>(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
+// filter slots of a dock (BPO_Dock 2, BPO_Dock_2 8): [{i,x,y,w,h}] floor units; i = index into b.df
+function bayRects(b){const t=shapeTf(b);if(!t)return[];const sh=t.sh,tr=trOf(t);
+  if(SHIPEND(b)){const pb=podsOf(sh,tr).filter(p=>p.bay!=null);if(!pb.length)return[];const bm=Math.max(...pb.map(p=>p.bay));return pb.map(p=>({i:bm-p.bay,...p.q}))}
+  const pr=sh.props[0];if(dkN(b.cls)!==2||!pr)return[];return sh.ports.slice().sort((a,c)=>a[2]-c[2]).map((pt,i)=>({i,...tr(pr[0],pt[2]-.5,pr[2],pt[2]+.5)}))}
+// dock belt roles, shared by sim.js simInit and links1 (no canvas). belts need id,x,y,rot. Map belt.id -> {v:1,f,b} void sink (f "" = any item, "?" = unknown item, matches nothing) | {s:1,f,cn,b} infinite source of item f (cn = sim container stub). b = dock block.
+function dockBelts(blocks,belts,fl){
+  const dkC=plcCls('BPO_Dock'),cells=new Map(),bayAt=new Map(),o=new Map();
+  blocks.filter(b=>dkN(b.cls)&&(fl==null||b.h===fl)).forEach(b=>{
+    if(b.cls===dkC){const e=dim({cls:b.cls,rot:b.rot||0});for(let i=0;i<e.w*FC;i++)for(let j=0;j<e.h*FC;j++)cells.set(b.h+','+(b.x*FC+i)+','+(b.y*FC+j),b)}
+    bayRects(b).forEach(q=>{const k=((b.df||[])[q.i]||{}).item,f=k?Object.keys(ITEMS).find(id=>id.slice(5).toLowerCase()===k)||"?":"",bay={b,f,cn:f&&f!=="?"?{b,st:new Map([[f,{n:0,inf:true}]]),cap:null}:null};
+      for(let x=Math.round(q.x);x<Math.round(q.x+q.w);x++)for(let y=Math.round(q.y);y<Math.round(q.y+q.h);y++)bayAt.set(b.h+','+x+','+y,bay)})});
+  belts.forEach(b=>{const d=DIR[b.rot];if(!d)return;const fr=bayAt.get(b.h+','+(b.x+d[0])+','+(b.y+d[1]));
+    if(fr){o.set(b.id,{v:1,f:fr.f,b:fr.b});return}
+    for(const n of [1,2]){const c=cells.get(b.h+','+(b.x+d[0]*n)+','+(b.y+d[1]*n));if(c){o.set(b.id,{v:1,f:"",b:c});return}}
+    if(bayAt.has(b.h+','+b.x+','+b.y))return;
+    for(const[a,e]of DIR){const nb=bayAt.get(b.h+','+(b.x+a)+','+(b.y+e));if(nb&&nb.cn){o.set(b.id,{s:1,f:nb.f,cn:nb.cn,b:nb.b});break}}});
+  return o}
 // entrances (Layout marks + inspector): real door slots (same geometry as areas(): per cell along each open side of the floor cell box, none on the dock's ship side)
 // or, for a no-floor shaped block whose SHAPES entry says entrance.kind==="ports", the side of its output ports. Points in cell units on the footprint edge; ed = world edge 0..3 (E,S,W,N)
 // real=true (Layout): TRUE block-frame positions (door slot +NFQ along the edge = middle of a station tile edge; ports on the real tile edge, f0); default = site floor model positions
@@ -199,7 +220,7 @@ function portsOf(b){
 // estimate over ALL levels, cached PER LEVEL (a placement only recomputes the level it touched, plus levels whose elevator inflow changed): an elevator input forwards what its belt carries to the same port on the levels above/below (same rule as the sim: even split over existing outputs); passes repeat until the flow stops changing
 const sh=s=>{let h=0;s=String(s);for(let i=0;i<s.length;i++)h=(Math.imul(h,31)+s.charCodeAt(i))|0;return h};
 const lvHash=()=>{const m=new Map(),cl=sh(JSON.stringify(S.closed||[])+JSON.stringify(OV||{}));   // OV = rate overrides (Settings)
-  S.blocks.forEach(b=>{let h=m.has(b.h)?m.get(b.h):cl;h=(Math.imul(h,31)+b.id+b.x*7+b.y*13+b.rot*19+(b.pid|0)*23+(b.mid|0)*29+(b.off?sh(b.off.join()):0)+(b.rec?sh(b.rec):0)+sh(b.cls))|0;
+  S.blocks.forEach(b=>{let h=m.has(b.h)?m.get(b.h):cl;h=(Math.imul(h,31)+b.id+b.x*7+b.y*13+b.rot*19+(b.pid|0)*23+(b.mid|0)*29+(b.off?sh(b.off.join()):0)+(b.rec?sh(b.rec):0)+(b.df?sh(JSON.stringify(b.df)):0)+sh(b.cls))|0;
     if(b.ct)b.ct.forEach(x=>{h=(Math.imul(h,31)+(+x.n||0)+(x.inf?7:0)+sh(x.item))|0});m.set(b.h,h)});return m};
 const L1M=new Map();
 const links1c=(l,inj,hk)=>{const ik=inj&&inj.length?inj.map(x=>x.id+x.item+r2(x.rate)).join():"",k=(hk.get(l)||0)+"|"+ik+"|"+LK,c=L1M.get(l);
@@ -250,11 +271,12 @@ function splitShare(F,L,pj){
   return res;
 }
 // ctx (links1 only): {acc(beltId,item) = downstream acceptance limit, pr = Map(splitter input belt -> priority output belt)}. Without ctx (sim.js) the old even split stays.
-function flowLoad(next,src,cap,sp,ctx){
+function flowLoad(next,src,cap,sp,ctx,dk0){
   const o=new Map();
   const add=(i,item,rate)=>{let e=o.get(i);if(!e){e={items:new Map(),tot:0,cap:cap.get(i)||null,util:null,mixed:false};o.set(i,e)}
     e.items.set(item,(e.items.get(item)||0)+rate);e.tot+=rate};
-  const walk=(id,item,rate,seen)=>{
+  const unadd=(i,item,rate)=>{const e=o.get(i);if(!e)return;const v=(e.items.get(item)||0)-rate;if(v>1e-9)e.items.set(item,v);else e.items.delete(item);e.tot-=rate};
+  const walk=(id,item,rate,seen,path=[])=>{
     for(let i=id;i!=null&&!seen.has(i);i=next.get(i)){seen.add(i);
       const outs=sp&&sp.get(i);
       if(outs&&outs.length){
@@ -262,7 +284,9 @@ function flowLoad(next,src,cap,sp,ctx){
         const got=sh.reduce((a,b)=>a+b,0);if(!(got>1e-9))return;
         add(i,item,got);   // input belt carries only what the outputs take
         outs.forEach((b,j)=>{if(sh[j]>1e-9)walk(b,item,sh[j],new Set(seen))});return}
-      add(i,item,rate)}};
+      const dk=ctx&&ctx.dk||dk0;
+      if(next.get(i)==null&&dk&&dk.has(i)){const f=dk.get(i);if(f&&f!==item){for(const j of path)unadd(j,item,rate);return}}   // dock void with another filter item: nothing flows
+      add(i,item,rate);path.push(i)}};
   src.forEach(({id,item,rate})=>walk(id,item,rate,new Set()));
   o.forEach(e=>{e.mixed=e.items.size>1;e.util=e.cap?e.tot/e.cap:null});
   return o;
@@ -327,6 +351,8 @@ function links1(L,inj){
   // chain -> machines
   belts.forEach(b=>{const r=root(b.id);if(!o.mach.has(r))o.mach.set(r,new Set())});
   o.ports.forEach(p=>o.mach.get(root(p.b.id)).add(p.m));
+  const dkB=dockBelts(S.blocks,belts,L),dkV=new Map();   // docks: void belts count as a machine at the chain end (not a dead end), source belts below
+  dkB.forEach((r,id)=>{if(r.v){o.mach.get(root(id)).add(r.b);dkV.set(id,r.f)}});
   o.chainMachines=b=>isBelt(b)?[...(o.mach.get(root(b.id))||[])]:[...new Set((o.nb.get(b.id)||[]).filter(e=>e.k==="port").flatMap(e=>[...o.mach.get(root(e.b.id))]))].filter(m=>m!==b);
   const nx=new Map(),src=[],cp=new Map();
   belts.forEach(b=>cp.set(b.id,beltMax(b)));
@@ -341,6 +367,7 @@ function links1(L,inj){
   o.ports.forEach(e=>{if(!isStore(e.m))return;const d=DIR[e.b.rot],p=e.port;
     if(!(d[0]===-p.nx&&d[1]===-p.ny)){const it=ctFirst(e.m),c=beltMax(e.b);if(it&&c){src.push({id:e.b.id,item:it.item,rate:c});o.pull.push({m:e.m,belt:e.b,item:it.item,rate:c})}}
     else if(d[0]===-p.nx&&d[1]===-p.ny)o.push.push({m:e.m,belt:e.b})});
+  dkB.forEach((r,id)=>{if(!r.s)return;const bl=belts.find(b=>b.id===id),c=beltMax(bl);if(c){src.push({id,item:r.f,rate:c});o.pull.push({m:r.b,belt:bl,item:r.f,rate:c})}});   // belt beside a filtered bay pulls the filter item at belt speed
   o.elvIn=[];o.elvOut=new Map();   // elevator ports on this level: input belt (key, belt id), output belt key -> belt id
   o.ports.forEach(e=>{if(!(def(e.m.cls)||{}).elevator)return;const p=e.port,d=DIR[e.b.rot],k=[e.m.x,e.m.y,p.key].join();
     if(d[0]===p.io[0]&&d[1]===p.io[1])o.elvIn.push({k,id:e.b.id});else o.elvOut.set(k,e.b.id)});
@@ -361,11 +388,12 @@ function links1(L,inj){
     const outs=sp.get(id),nxt=nx.get(id),c=cp.get(id);let v=0;
     if(outs&&outs.length)v=outs.reduce((a,b)=>a+acc(b,k),0);
     else if(nxt!=null)v=acc(nxt,k);
+    else if(dkV.has(id)){const f=dkV.get(id);v=!f||f===k?Infinity:0}   // dock void: any item (no filter) or only the filter item
     else if(infS.has(id))v=Infinity;
     else if(sinkM.has(id)){const m=sinkM.get(id),r=recOf(m),x=r&&r.i.find(q=>q[0]===k);v=x?pm(x[1],r.t)||0:0}
     v=Math.min(v,c==null?Infinity:c);accM.set(key,v);return v};
   const prM=new Map();spR.forEach(r=>r.ins.forEach(i=>{if(r.pr!=null)prM.set(i,r.pr)}));
-  const ctx={acc,pr:prM};
+  const ctx={acc,pr:prM,dk:dkV};o.acc=acc;o.dk=dkV;
   o.load=flowLoad(nx,src,cp,sp,ctx);
   // unstocked container relays its inflow: each pull belt carries min(belt speed, inflow / pull belts), split by item share; repeat until the relayed flow stops changing (long container->container chains)
   const fed=o.ports.filter(e=>{const p=e.port,d=DIR[e.b.rot];return isStore(e.m)&&!ctFirst(e.m)&&!(d[0]===-p.nx&&d[1]===-p.ny)&&live(e)});   // dead-end output belts take no share (same rule as machine outputs)
