@@ -69,8 +69,11 @@ function dockBelts(blocks,belts,fl){
     if(b.cls===dkC){const e=dim({cls:b.cls,rot:b.rot||0});for(let i=0;i<e.w*FC;i++)for(let j=0;j<e.h*FC;j++)cells.set(b.h+','+(b.x*FC+i)+','+(b.y*FC+j),b)}
     bayRects(b).forEach(q=>{const k=((b.df||[])[q.i]||{}).item,f=k?Object.keys(ITEMS).find(id=>id.slice(5).toLowerCase()===k)||"?":"",bay={b,f,cn:f&&f!=="?"?{b,st:new Map([[f,{n:0,inf:true}]]),cap:null}:null};
       for(let x=Math.round(q.x);x<Math.round(q.x+q.w);x++)for(let y=Math.round(q.y);y<Math.round(q.y+q.h);y++)bayAt.set(b.h+','+x+','+y,bay)})});
+  blocks.filter(b=>b.rs&&rsOk(b.cls)&&(fl==null||b.h===fl)).forEach(b=>{const t=shapeTf(b);if(!t)return;   // drone bay with a selected ore: constant source of it at each output port (the cell inside the port edge is the "bay"; no void sink)
+    const f=Object.keys(ITEMS).find(id=>id.slice(5).toLowerCase()===b.rs)||"?",bay={b,f,s:1,cn:f!=="?"?{b,st:new Map([[f,{n:0,inf:true}]]),cap:null}:null},d=DIR[(2+(b.rot|0))&3];
+    t.sh.ports.forEach(pt=>{const[px,py]=t.f(pt[1],pt[2]);bayAt.set(b.h+','+Math.floor(px-d[0]*.5)+','+Math.floor(py-d[1]*.5),bay)})});
   belts.forEach(b=>{const d=DIR[b.rot];if(!d)return;const fr=bayAt.get(b.h+','+(b.x+d[0])+','+(b.y+d[1]));
-    if(fr){o.set(b.id,{v:1,f:fr.f,b:fr.b});return}
+    if(fr){if(!fr.s)o.set(b.id,{v:1,f:fr.f,b:fr.b});return}   // drone bay port: a belt pointing into it carries nothing, no sink
     for(const n of [1,2]){const c=cells.get(b.h+','+(b.x+d[0]*n)+','+(b.y+d[1]*n));if(c){o.set(b.id,{v:1,f:"",b:c});return}}
     if(bayAt.has(b.h+','+b.x+','+b.y))return;
     for(const[a,e]of DIR){const nb=bayAt.get(b.h+','+(b.x+a)+','+(b.y+e));if(nb&&nb.cn){o.set(b.id,{s:1,f:nb.f,cn:nb.cn,b:nb.b});break}}});
