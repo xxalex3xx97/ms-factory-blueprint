@@ -343,8 +343,7 @@ function drawShapeFloor(A,s){
     const d=def(b.cls),R0=floorRect(b),hall=dock?tr(0,0,Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0])),d.fh):R0&&{x:R0.x,y:R0.y,w:R0.w,h:R0.h};   // dock: hall up to the partition (shaft beyond); other blocks: whole floor; no-floor blocks: no tint
     if(hall&&!sh.polys)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
     // pods (dock only): one per decoded port cell (1 cell, contiguous), x extent from the arm mesh rows of that cell
-    const pods=!dock?[]:sh.ports.map(([bay,x,y])=>{const rs=sh.arms.filter(a=>(a[1]+a[3])/2>=y-.5&&(a[1]+a[3])/2<y+.5);if(!rs.length)return null;
-      return{bay,x,y,q:tr(Math.min(...rs.map(a=>a[0])),y-.46,Math.max(...rs.map(a=>a[2])),y+.46)}}).filter(Boolean);
+    const pods=!dock?[]:podsOf(sh,tr);
     const marks=dock?pods:sh.ports.map(([bay,x,y])=>({bay,x,y}));   // port markers: dock = one per pod (numbered); other shapes = one per SHAPES port (unnumbered)
     const props=sh.props.map(a=>tr(...a));
     // ring (Command Module / Blueprint Unit): true annulus with the door opening cut flush at the gap edges (horizontal ends), from the fitted circle radii
@@ -360,9 +359,7 @@ function drawShapeFloor(A,s){
     const path=pg=>{cx.beginPath();pg.forEach((v,i)=>i?cx.lineTo(v[0],v[1]):cx.moveTo(v[0],v[1]));cx.closePath()};
     wr.forEach(q=>rc(q,ST,1));poly.forEach(pg=>{path(pg);cx.fillStyle=ST;cx.strokeStyle=ST;cx.lineWidth=2;cx.stroke();cx.fill()});
     wr.forEach(q=>rc(q,WF));poly.forEach(pg=>{path(pg);cx.fillStyle=WF;cx.fill()});
-    if(s>=10){
-      if(dock){const pb=pods.filter(p=>p.bay!=null),bm=Math.max(...pb.map(p=>p.bay));pb.forEach(p=>{const x0=X(p.q.x),y0=Y(p.q.y);bayBox(b,bm-p.bay,x0,y0,X(p.q.x+p.q.w)-x0,Y(p.q.y+p.q.h)-y0)})}
-      else if(dkN(b.cls)===2&&sh.props[0]){const pr=sh.props[0];sh.ports.slice().sort((a,c)=>a[2]-c[2]).forEach((pt,i)=>{const q=tr(pr[0],pt[2]-.5,pr[2],pt[2]+.5),x0=X(q.x),y0=Y(q.y);bayBox(b,i,x0,y0,X(q.x+q.w)-x0,Y(q.y+q.h)-y0)})}}
+    if(s>=10)bayRects(b).forEach(q=>{const x0=X(q.x),y0=Y(q.y);bayBox(b,q.i,x0,y0,X(q.x+q.w)-x0,Y(q.y+q.h)-y0)});
     // ports (display only): green bar on each port's edge (dock: pod floor-facing edge), bay number only on numbered ports
     if(s>=6){const Ln=Math.min(.6*s,18),Tk=Math.min(5,Math.max(3,.2*s)),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
       marks.forEach(p=>{const[ex,ey]=t.f(p.x,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),w=odd?Ln:Tk,h=odd?Tk:Ln;

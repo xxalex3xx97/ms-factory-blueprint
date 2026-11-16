@@ -54,6 +54,14 @@ function shapeTf(b){const fl=floorRect(b),r=fl||nfRect(b),d=def(b.cls),sh=r&&d&&
   const gp=sh.gaps&&sh.gaps.length,pt=sh.entrance&&sh.entrance.kind==="ports"&&sh.ports.length;
   if(!pt&&!gp&&sh.hatch!=="interior")return{sh,f:f0,f0};   // no ports and no door (solar, turret, armour): exact tile placement, no shift
   return{sh,f0,f:(u,v)=>{const[p,q]=f0(u,v);return[p-NFQ,q-NFQ]}}}   // f0 = unshifted (real tile frame), f = site floor model frame (Factory floor): every shaped block (ports or door gap) takes the full (-1,-1) like the neighbouring floor blocks
+// dock pods (industrial dock): one per decoded port cell, x extent from arm rows; tr = shape->floor rect fn
+const podsOf=(sh,tr)=>sh.ports.map(([bay,x,y])=>{const rs=sh.arms.filter(a=>(a[1]+a[3])/2>=y-.5&&(a[1]+a[3])/2<y+.5);if(!rs.length)return null;
+  return{bay,x,y,q:tr(Math.min(...rs.map(a=>a[0])),y-.46,Math.max(...rs.map(a=>a[2])),y+.46)}}).filter(Boolean);
+const trOf=t=>(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
+// filter slots of a dock (BPO_Dock 2, BPO_Dock_2 8): [{i,x,y,w,h}] floor units; i = index into b.df
+function bayRects(b){const t=shapeTf(b);if(!t)return[];const sh=t.sh,tr=trOf(t);
+  if(SHIPEND(b)){const pb=podsOf(sh,tr).filter(p=>p.bay!=null);if(!pb.length)return[];const bm=Math.max(...pb.map(p=>p.bay));return pb.map(p=>({i:bm-p.bay,...p.q}))}
+  const pr=sh.props[0];if(dkN(b.cls)!==2||!pr)return[];return sh.ports.slice().sort((a,c)=>a[2]-c[2]).map((pt,i)=>({i,...tr(pr[0],pt[2]-.5,pr[2],pt[2]+.5)}))}
 // entrances (Layout marks + inspector): real door slots (same geometry as areas(): per cell along each open side of the floor cell box, none on the dock's ship side)
 // or, for a no-floor shaped block whose SHAPES entry says entrance.kind==="ports", the side of its output ports. Points in cell units on the footprint edge; ed = world edge 0..3 (E,S,W,N)
 // real=true (Layout): TRUE block-frame positions (door slot +NFQ along the edge = middle of a station tile edge; ports on the real tile edge, f0); default = site floor model positions
