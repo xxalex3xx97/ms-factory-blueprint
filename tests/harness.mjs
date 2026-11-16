@@ -3004,7 +3004,7 @@ async function s28(br) {
     const n = names[i], c = cat[i], sh = shapes[i], src = srcBlocks[n];
     chk(`28 ${n}: SHAPES entry exists`, !!sh, String(sh));
     if (src.mirrorOf) {   // mirror pair: same shape as its base block, no catalog entry (palette shows the base only)
-      const same = await pg.evaluate(([a, b]) => JSON.stringify(SHAPES[a]) === JSON.stringify(SHAPES[b]), [n, src.mirrorOf]);
+      const same = await pg.evaluate(([a, b]) => (o => JSON.stringify(o(SHAPES[a])) === JSON.stringify(o(SHAPES[b])))(x => JSON.parse(JSON.stringify(x, (k, v) => k === '_wps' || k === '_in' ? undefined : v))), [n, src.mirrorOf]);
       chk(`28 ${n}: mirror of ${src.mirrorOf}: SHAPES identical, no catalog entry`, same && !c, JSON.stringify(c));
       continue;
     }
@@ -3046,12 +3046,13 @@ async function s28(br) {
     __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 1, BlockID: 1, PaletteID: 0}],
       DefaultMachines: [{Class: 'BPO_MiningDroneBay_2', DefaultName: 'BPO_MiningDroneBay_2', Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}, MachineID: 1, PaletteID: 0}, {Class: 'BPO_MiningDroneBay', DefaultName: 'BPO_MiningDroneBay', Transform: {GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0}, MachineID: 2, PaletteID: 0}]}));
     const o = __fb.build();
-    return {blocks: __fb.S.blocks.map(b => b.cls), dm: __fb.S.dm.length, out: o.Blocks.map(b => ({Class: b.Class, GridLocation: b.GridLocation, Height: b.Height, GridRotation: b.GridRotation}))};
+    return {blocks: __fb.S.blocks.map(b => b.cls), dm: __fb.S.dm.length, out: o.Blocks.filter(b => !/Connector/.test(b.Class)).map(b => ({Class: b.Class, GridLocation: b.GridLocation, Height: b.Height, GridRotation: b.GridRotation}))};   // doorway connectors are generated on export (js/conn.js), not part of this check
   }, MK2);
   chk('28 Mk.2 save: Class imports as BPO_MiningDroneBayBlock_2 (1 block)', rt.blocks.length === 1 && rt.blocks[0] === MK2, JSON.stringify(rt));
   chk('28 Mk.2 save: exports back unchanged (Class, GridLocation {40,40}, GridRotation 1)', JSON.stringify(rt.out) === JSON.stringify([{Class: MK2, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 1}]), JSON.stringify(rt.out));
   chk('28 machines BPO_MiningDroneBay_2 and BPO_MiningDroneBay both kept in "other machines" (no buildable maps them, like Mk.1)', rt.dm === 2, `dm ${rt.dm}`);
   // entrance key: shapes_src.json entrance {kind, evidence} on dock (doors) + drone bays (ports), carried to SHAPES; Layout arrows from entrances()
+  await pg.evaluate(() => { ENTL = true; });   // Layout hides marks on shaped blocks by default; these checks cover the mark drawing itself
   const ents = names.filter(n => srcBlocks[n].entrance);
   chk('28 entrance: dock + Command Module + Blueprint Unit + 3 shipyards + Corner + Corridor + Adapter + Corridor 2x2 + 2x2 C (doors), Mk.1 + Mk.2 drone bays (ports); no other block', JSON.stringify(ents.sort()) === '["BPO_BlueprintUnit","BPO_CommandModule","BPO_Dock_2","BPO_ElevatorBlock_02A","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ShipyardSide","BPO_StationAdapter_01","BPO_StationCorner_01","BPO_StationCorridor_01","BPO_StationCorridor_02","BPO_Station_03"]', JSON.stringify(ents));
   for (const n of names) {
@@ -3068,7 +3069,7 @@ async function s28(br) {
     const at = (px, py) => { const q = g.getImageData(Math.round(px * k), Math.round(py * k), 1, 1).data; return q[0] + q[1] + q[2] };
     const E = entrances(b, true);
     return {eds: E.map(e => e.ed).sort(), ports: E.map(e => e.port), txt: entText(b), diff: E.map(e => { const D = DIR[e.ed], ex = V.ox + e.x * s, ey = V.oy + e.y * s,
-      m = at(ex - D[0] * 1.5, ey - D[1] * 1.5), ref = D[0] ? at(ex - D[0] * 1.5, y0 + 3) : at(x0 + 3, ey - D[1] * 1.5); return Math.abs(m - ref) }), s};
+      m = at(ex - D[0] * 1.5, ey - D[1] * 1.5), ref = at(ex + D[0] * 4, ey + D[1] * 4); return Math.abs(m - ref) }), s};
   }, [`${P}${n}.${n}_C`, r]);
   const want = {BPO_Dock_2: r => [0, 1, 2, 3].filter(e => e !== r), BPO_Station_2x1: r => [0, 2].map(e => (e + r) & 3), BPO_Station_01: () => [0, 1, 2, 3], BPO_MiningDroneBayBlock: r => [(2 + r) & 3], BPO_MiningDroneBayBlock_2: r => [(2 + r) & 3], BPO_CommandModule: r => [(2 + r) & 3], BPO_BlueprintUnit: r => [(2 + r) & 3], BPO_ShipyardSide: r => [(2 + r) & 3], BPO_ShipyardCore: r => [(2 + r) & 3], BPO_ShipyardCore_02: r => [(2 + r) & 3]};
   for (const n of Object.keys(want)) for (const r of [0, 1, 2, 3]) {
@@ -3286,7 +3287,7 @@ async function s28(br) {
   const sync = await pg.evaluate(() => {
     __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [], DefaultMachines: []}));
     __fb.setView('L'); const VL = __fb.V; VL.ox = 123.4; VL.oy = -77.7; VL.z = .83; const w = innerWidth, o = {};
-    const ctr = () => { const s = sc(), k = view === 'F' ? FC : 1; return [(W / 2 - V.ox) / s / k, (H / 2 - V.oy) / s / k, s * k] };   // centre in block cells, px per block cell
+    const ctr = () => { const s = sc(), k = view === 'F' ? FC : 1, g = view === 'F' ? 1 / FC : 0; return [(W / 2 - V.ox) / s / k + g, (H / 2 - V.oy) / s / k + g, s * k] };   // Factory floor origin = tile origin + 1 floor cell (hull outside it, GRIDOFF), so the walls land where Layout draws them   // centre in block cells, px per block cell
     const a = ctr(); __fb.setView('F'); const f = ctr(); __fb.setView('L'); const b = ctr();
     const vl = JSON.stringify([__fb.V.ox, __fb.V.oy, __fb.V.z]);
     __fb.setView('F'); const F = __fb.V; F.z = 2.5; F.ox = -310; F.oy = 95; const c = ctr(); __fb.setView('L'); const d = ctr(); __fb.setView('F');
@@ -3631,8 +3632,8 @@ async function s37(br) {
   await pg.click('#impGo');
   await pg.waitForFunction(() => !$('dImp').open);
   const j1 = await pg.evaluate(() => ({n: S.blocks.length, lv: $('lvW').hidden}));
-  const jb = await pg.evaluate(() => __fb.build().Blocks.length);
-  chk(`37 JSON import (Import JSON -> file -> Import) applies the blueprint (${jsonObj.Blocks.length} blocks)`, jb === jsonObj.Blocks.length, `build() blocks ${jb}, json ${jsonObj.Blocks.length}`);
+  const isCn = b => /Connector/.test(b.Class), jb = await pg.evaluate(() => __fb.build().Blocks.filter(b => !/Connector/.test(b.Class)).length), jn = jsonObj.Blocks.filter(b => !isCn(b)).length;   // connectors are regenerated on export, so compare the real blocks
+  chk(`37 JSON import (Import JSON -> file -> Import) applies the blueprint (${jn} blocks)`, jb === jn, `build() blocks ${jb}, json ${jn}`);
   chk(`37 JSON import: Level window ${levelsOf(jsonObj.Blocks) >= 2 ? 'opens' : 'stays closed'} (${levelsOf(jsonObj.Blocks)} levels)`, (levelsOf(jsonObj.Blocks) >= 2) === !j1.lv, JSON.stringify(j1));
 
   // .sav import: Import save -> file chooser -> station dialog -> Import
@@ -3934,7 +3935,7 @@ async function s40(br) {
   await imp(pg, bp(named));
   const st = await pg.evaluate(() => S.blocks.map(b => b.nm ?? null));
   chk('40 JSON Name imports on Dock, Industrial Dock, Shipyard Core (+_02) only', JSON.stringify(st) === JSON.stringify([NM, 'Industrial \u2713', 'Yard A', 'Yard B', null, null]), JSON.stringify(st));
-  const ex = await pg.evaluate(() => __fb.build().Blocks.map(e => ['Name' in e ? e.Name : null]));
+  const ex = await pg.evaluate(() => __fb.build().Blocks.filter(e => !/Connector/.test(e.Class)).map(e => ['Name' in e ? e.Name : null]));
   chk('40 export writes Name on the 4 classes only (Shipyard Side and other blocks have no Name key)', JSON.stringify(ex.flat()) === JSON.stringify([NM, 'Industrial \u2713', 'Yard A', 'Yard B', null, null]), JSON.stringify(ex));
   const rt = await pg.evaluate(() => { const a = __fb.build().Blocks.map(e => e.Name ?? null); __fb.importJson(JSON.stringify(__fb.build())); return {a, b: __fb.build().Blocks.map(e => e.Name ?? null)}; });
   chk('40 export -> import -> export keeps every Name (non-ASCII too)', JSON.stringify(rt.a) === JSON.stringify(rt.b) && rt.b[0] === NM, JSON.stringify(rt));

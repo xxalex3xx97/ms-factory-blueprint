@@ -11,7 +11,7 @@ const pt=e=>{const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.cl
 // hit-test index: cell -> blocks covering it (in S.blocks order), rebuilt when the blocks or layer/view change; topmost in-view block wins, as before
 let HIX=null;const HK=(x,y)=>(x+524288)*1048576+(y+524288);
 const hit=c=>{const k=PK+"|"+layer+"|"+view;
-  if(!HIX||HIX.k!==k){HIX={k,m:new Map()};for(const b of S.blocks){if(b.h!==layer)continue;const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const q=HK(b.x+i,b.y+j);let a=HIX.m.get(q);if(!a)HIX.m.set(q,a=[]);a.push(b)}}}
+  if(!HIX||HIX.k!==k){HIX={k,m:new Map()};for(const b of S.blocks){if(!onLv(b))continue;const d=dim(b);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const q=HK(b.x+i,b.y+j);let a=HIX.m.get(q);if(!a)HIX.m.set(q,a=[]);a.push(b)}}}
   const a=HIX.m.get(HK(c.x,c.y));if(!a)return null;
   for(let i=a.length-1;i>=0;i--)if(inView(a[i]))return a[i];return null};
 // hover memo: areas and the link graph are built once per paint (PK) instead of on every mouse move (both are full scans of all blocks)
@@ -96,7 +96,7 @@ cv.addEventListener("pointermove",e=>{
       drag.px=p.x;drag.py=p.y;
       const r=boxRect(),a=toCell(r.x,r.y),z=toCell(r.x+r.w,r.y+r.h);
       sel=new Set(drag.add?drag.base:[]);
-      S.blocks.forEach(b=>{if(b.h!==layer||!inView(b))return;const d=dim(b);if(b.x<=z.x&&b.x+d.w-1>=a.x&&b.y<=z.y&&b.y+d.h-1>=a.y)sel.add(b.id)});
+      S.blocks.forEach(b=>{if(!onLv(b)||!inView(b))return;const d=dim(b);if(b.x<=z.x&&b.x+d.w-1>=a.x&&b.y<=z.y&&b.y+d.h-1>=a.y)sel.add(b.id)});
     }
   }
   if(drag||active||pasting||ugPend)draw(!!(drag&&drag.k==="pan"&&!active&&!pasting&&!ugPend&&typeof BIGF==="function"&&BIGF()));   // big factory: a pan is drawn with less detail (full detail 160 ms after the last move); a plain hover changes no painted pixel (tooltip only): no full repaint per mouse move
@@ -140,8 +140,8 @@ function setView(v){
   if(v===view)return;
   smStop();pasting=null;mode=null;
   // sync: the world point under the viewport centre stays under it, and a block cell keeps its on-screen size (Layout cell = CELLS.L*z px, Factory floor block cell = FC floor cells = FC*CELLS.F*z px)
-  const o=V,n=v==="F"?VF:VL,pl=CELLS.L,pf=CELLS.F*FC,po=view==="F"?pf:pl,pn=v==="F"?pf:pl,cxc=(W/2-o.ox)/(po*o.z),cyc=(H/2-o.oy)/(po*o.z);
-  n.z=o.z*po/pn;n.ox=W/2-cxc*pn*n.z;n.oy=H/2-cyc*pn*n.z;if(v==="F")VF.init=true;
+  const o=V,n=v==="F"?VF:VL,pl=CELLS.L,pf=CELLS.F*FC,po=view==="F"?pf:pl,pn=v==="F"?pf:pl,fo=(v==="F"?1:view==="F"?-1:0)*pn/FC,cxc=(W/2-o.ox)/(po*o.z),cyc=(H/2-o.oy)/(po*o.z);   // Factory floor draws the 1-thick hull 1 floor cell outside the tile origin (GRIDOFF): its origin sits 1 cell right/down of the Layout tile edge, so the walls land where Layout draws them
+  n.z=o.z*po/pn;n.ox=W/2-cxc*pn*n.z+fo*n.z;n.oy=H/2-cyc*pn*n.z+fo*n.z;if(v==="F")VF.init=true;
   view=v;V=n;tab=v==="F"?"m":"b";active=null;sel=new Set();drag=null;
   all();
 }

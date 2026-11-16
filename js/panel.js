@@ -107,7 +107,7 @@ function panel(){
   }
   if(!one&&F&&SM&&SIM)h+=sec("sim","Simulation live",'<div id="simLive">'+simLiveHtml(null)+'</div>');
   const nOv=Object.keys(OV).length,nM=S.blocks.filter(isM).length,dc=A.doors.filter(r=>!r.open).length;
-  h+=sec("ov","Overview",'<div class="sub">'+(S.blocks.length-nM)+' blocks &middot; '+nM+' buildables &middot; '+S.blocks.filter(b=>b.h===layer&&inView(b)).length+' on level '+(layer+1)+' here &middot; '+(A.doors.length-dc)+' doors open / '+dc+' closed (level '+(layer+1)+') &middot; '+S.dm.length+' other default machines kept &middot; '+nOv+' catalog overrides</div>'
+  h+=sec("ov","Overview",'<div class="sub">'+(S.blocks.length-nM)+' blocks &middot; '+nM+' buildables &middot; '+S.blocks.filter(b=>onLv(b)&&inView(b)).length+' on level '+(layer+1)+' here &middot; '+(A.doors.length-dc)+' doors open / '+dc+' closed (level '+(layer+1)+') &middot; '+S.dm.length+' other default machines kept &middot; '+nOv+' catalog overrides</div>'
   +'<div class="btns"><button id="bClear" class="danger">Clear all</button><button id="bResetCat" '+(nOv?"":"disabled")+'>Reset catalog edits</button></div>');
   $("insp").innerHTML=h;
 }

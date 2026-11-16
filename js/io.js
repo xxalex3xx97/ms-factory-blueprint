@@ -41,6 +41,8 @@ function cfgModel(b,d,e,ugn){
     e.ConfigHex=cfgEnc(k,{filters:b.fl||Array(n).fill(""),prioA:b.pr?b.pr[0]:-1,prioB:b.pr?b.pr[1]:-1,ports:isBalCls(b.cls)?balOuts(ps).map(q=>!q||q.en):isSplitterCls(b.cls)?SPL_FACES.map(f=>{const q=ps.find(q=>q.f===f);return!q||q.en}):en.slice(-n)});
   }
 }
+// the game turns the Station Corner a quarter turn (cw) further than the site plan drawn at rotation 0: game rotation = site rotation + 1 (checked on the game's own designs: the site drew them as a pinwheel)
+const rotOff=c=>/StationCorner_01/.test(String(c))?1:0;
 function build(){
   const bl=S.blocks.filter(b=>!isM(b)),ms=S.blocks.filter(isM),UGN=new Map(ugPairs(ms).map(q=>[q.u.id,q.n]));
   let base=0;S.dm.forEach(m=>{base=Math.max(base,Number(m&&m.MachineID)||0)});ms.forEach(b=>{if((b.mid||0)>base)base=b.mid});   // no spread: 100k+ machines overflow the call stack
@@ -48,7 +50,7 @@ function build(){
   const RB=b=>{if(b.raw&&b.raw.x===b.x&&b.raw.y===b.y&&b.raw.r===b.rot)return{X:b.raw.X,Y:b.raw.Y};   // game coords that the site footprint cannot express: written back untouched until moved/rotated
     const f=dim(b),o=SHIPEND(b)?dockOrg(b.rot):null;return o?{X:4*b.x+o.X,Y:4*b.y+o.Y}:{X:4*b.x+2*(f.w-1),Y:4*b.y+2*(f.h-1)}},RM=b=>{const f=dim(b);return{X:2*b.x+f.w-14,Y:2*b.y+f.h-14}};
   return{Version:2,DisplayName:S.name,
-    Blocks:bl.map((b,i)=>expNm(b,expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h*2,GridRotation:b.rot,BlockID:i+1,PaletteID:b.pid||0}))).concat((S.conn||[]).map((c,i)=>({...c,BlockID:bl.length+i+1}))),
+    Blocks:(B=>B.concat(connGen(B).map((c,i)=>({...c,BlockID:B.length+i+1}))))(bl.map((b,i)=>expNm(b,expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h*2,GridRotation:(b.rot+rotOff(b.cls))&3,BlockID:i+1,PaletteID:b.pid||0})))),   // doorway pieces: generated (js/conn.js), what the game's Designer would keep
     DefaultMachines:ms.map(b=>{const d=def(b.cls),e={Class:d.machineClass||d.id,Transform:{GridLocation:RM(b),Height:b.h*16,GridRotation:b.rot},MachineID:b.mid||++base,PaletteID:b.pid||0,DefaultName:d.id};
       if(b.rec)e.Recipe=b.rec;expCfg(b,d,e,UGN);expPorts(b,e);expCt(b,e);return e}).concat(S.dm).map((e,i)=>({e,i,k:Number(e&&e.MachineID)})).sort((a,b)=>(isFinite(a.k)&&isFinite(b.k)?a.k-b.k:isFinite(a.k)?-1:isFinite(b.k)?1:0)||a.i-b.i).map(x=>x.e),   // keep original MachineID order
     FactoryLayout:{FloorCellsPerBlock:FC,DoorwayCells:DW,ClosedDoorways:S.closed.map(k=>{const a=k.split("|");return{Height:+a[0],X:+a[1],Y:+a[2],Edge:a[3],Seg:+a[4]}})},
@@ -202,7 +204,7 @@ function importJson0(txt,quiet){
   const rot=v=>((n(v)%4)+4)%4;
   const isConn=b=>v2&&/Connector(_\d+[A-Z]?)?$/.test(String(b&&b.Class||"").split(".").pop().replace(/_C$/,""));   // v2 only: build() writes v2 coordinates back
   S.conn=o.Blocks.filter(isConn);o.Blocks=o.Blocks.filter(b=>!isConn(b));   // connector pieces (incl. Connector_07B/08T, LargeSideConnector): kept aside, never drawn
-  S.blocks=o.Blocks.map(b=>{const r=rot(b.GridRotation),gx=b.GridLocation&&b.GridLocation.X,gy=b.GridLocation&&b.GridLocation.Y,cls=String(b.Class||"");
+  S.blocks=o.Blocks.map(b=>{const r=rot(n(b.GridRotation)-rotOff(b.Class)),gx=b.GridLocation&&b.GridLocation.X,gy=b.GridLocation&&b.GridLocation.Y,cls=String(b.Class||"");
     if(!v2)return{id:uid++,cls,x:hf(gx),y:hf(gy),h:n(b.Height),rot:r,pid:n(b.PaletteID)};
     const f=dim({cls,rot:r}),o=SHIPEND({cls})?dockOrg(r):null,ox=o?o.X:2*(f.w-1),oy=o?o.Y:2*(f.h-1);   // shipEnd: footprint 3x2, anchor = dockOrg (floor on station side)
     const x=cell(gx,4,ox),y=cell(gy,4,oy),nb={id:uid++,cls,x,y,h:Math.round(n(b.Height)/BZ),rot:r,pid:n(b.PaletteID)};

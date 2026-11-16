@@ -4,7 +4,7 @@ usage: python -I extract/ea_blocks.py            (idempotent; then python -I ext
 Inputs: extract/floors.json (EA colliders/BlockBounds/cost, see ea_floors.py), extract/rea/blocks_raw.json (strings/icon),
         extract/rea/research.json (unlocks), extract/rea/localization.json (labels/descriptions).
 Rules (nothing invented): size = ceil(max(BlockBounds, hull/16)) cells (non-integer / sub-cell footprints are rounded up, flagged in `note`);
-levels = ceil(BlockBounds z / 4) (EA: 1 level = 4 floor units); label/description = in-game text when extractable else the asset id;
+levels = min(2, ceil(BlockBounds z / 4)) (user 2026-11-16: every building is at most 2 levels) (EA: 1 level = 4 floor units); label/description = in-game text when extractable else the asset id;
 research = RSC_* whose `unlocks` lists the block, else [] + researchNote. Only Station_03, Adapter_01 and Corridor_02 get a buildable floor
 (user ground truth 2026-11-12 / decoded walls); every other new block is nofloor (its footprint is a no-build tile, interior unknown).
 EXCLUDED (not station blocks): see EXCLUDE below; printed at the end.
@@ -108,9 +108,15 @@ for k, v in rsc.items():
         unl.setdefault(u, []).append(k)
 
 
+ONE_LEVEL = {'BPO_StationCorner_01', 'BPO_Station_01', 'BPO_Station_2x1', 'BPO_StationCorridor_01', 'BPO_ElevatorBlock_03', 'BPO_ShipyardCore', 'BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2', 'BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01', 'BPO_Station_02A', 'BPO_ShipyardCore_02', 'BPO_ShipyardSide'}   # user 2026-11-16: 1 level high although BlockBounds z says 2 (Command Module is 1 by its bounds)
+
+
 def levels(n):
+    if n in ONE_LEVEL:
+        return 1
     bb = fl[n].get('block_bounds_decoded')
-    return max(1, math.ceil(bb[1][2] / 4 - 0.05)) if bb and bb[1][2] > 0.5 else 1
+    # user 2026-11-16: every building is at most 2 levels high (BlockBounds z overstates it)
+    return min(2, max(1, math.ceil(bb[1][2] / 4 - 0.05))) if bb and bb[1][2] > 0.5 else 1
 
 
 def size(n):

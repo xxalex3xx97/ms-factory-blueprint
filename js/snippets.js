@@ -49,7 +49,7 @@ addEventListener("keydown",e=>{
   else if(ctl&&k==="x"){e.preventDefault();cut()}
   else if(ctl&&k==="c"){copy()}
   else if(ctl&&k==="v"){e.preventDefault();paste()}
-  else if(ctl&&k==="a"){e.preventDefault();sel=new Set(S.blocks.filter(b=>b.h===layer&&inView(b)).map(b=>b.id));all()}
+  else if(ctl&&k==="a"){e.preventDefault();sel=new Set(S.blocks.filter(b=>onLv(b)&&inView(b)).map(b=>b.id));all()}
   else if(!ctl&&k==="r"){rotate()}
   else if(!ctl&&!e.altKey&&k==="x"){setMode(mode==="del"?null:"del")}
   else if(!ctl&&k==="v"&&pasting){pasting.fl=!pasting.fl;all()}

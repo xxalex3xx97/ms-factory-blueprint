@@ -22,9 +22,9 @@ try {
     res.v1conn = S.conn.length;
     return res;
   });
-  chk('connectors hidden, kept aside (incl. Connector_07B)', r.n === 1 && r.conn === 3, JSON.stringify(r));
-  chk('export writes them back', r.out.length === 4 && r.out.filter(c => /Connector/.test(c)).length === 3, JSON.stringify(r));
-  chk('round trip stable', r.n2 === 1 && r.c2 === 3, JSON.stringify(r));
+  chk('connectors hidden, kept aside (incl. Connector_07B)', r.n === 1 && r.conn === 4, JSON.stringify(r));
+  chk('export writes the generated doorway pieces (Station 1x1 alone: 4 open doors), not the imported ones', r.out.length === 5 && r.out.filter(c => /^BPO_LargeConnector_C$/.test(c)).length === 4, JSON.stringify(r));   // js/conn.js: connGen
+  chk('round trip stable', r.n2 === 1 && r.c2 === 4, JSON.stringify(r));   // the 4 generated pieces come back as the kept-aside connectors
   chk('v1 JSON untouched (no split)', r.v1conn === 0, JSON.stringify(r));
 } finally { await br.close(); }
 process.exit(bad ? 1 : 0);

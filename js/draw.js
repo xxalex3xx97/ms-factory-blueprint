@@ -213,16 +213,30 @@ const beltKey=d=>d&&d.directional&&(d.category==="Conveyors"||d.category==="Unde
 const tileKey=b=>beltKey(def(b.cls))||catOf(b)||"";
 const kFill=(k,a)=>k[0]==="~"?`hsla(0,0%,${BELT_L[k[5]]}%,${a})`:k?fill(k,a):`rgba(120,125,135,${a})`;
 const kStroke=(k,a)=>k[0]==="~"?`hsla(0,0%,${BELT_L[k[5]]+16}%,${a})`:k?`hsla(${hue(k)},70%,70%,${a})`:`rgba(190,195,205,${a})`;
+// Layout: tint only what the walls enclose (interior + the walls themselves), so nothing spills past a dock shaft or a corner diagonal. false = no usable interior (open blocks): the caller fills the whole tile
+function shapeFill(b,t,q,s,x,y,w,h){
+  const sh=t.sh,k=s/FC,P=(u,v)=>{const p=t.f(u,v);return[V.ox+(p[0]+q)*k,V.oy+(p[1]+q)*k]};
+  cx.beginPath();
+  if(sh.hatch==="ring"){const[a,c]=P(sh.ring.c[0],sh.ring.c[1]);cx.arc(a,c,sh.ring.ro*k,0,2*Math.PI)}
+  else{if(!sh.walls.length)return false;   // props only (solar, armour): no enclosure
+    const dock=SHIPEND(b),I=interiorRects(sh,dock);let ar=0;I.forEach(r=>ar+=(r[2]-r[0])*(r[3]-r[1]));
+    if(ar<.35*(sh.fw||16)*(sh.fh||16))return false;
+    I.concat(wallPlan(sh,dock,sh.chain?chainOpenEdges(b).map(e=>sh.chain.closing[e]):[]).w).forEach(r=>{const p0=P(r[0],r[1]),p1=P(r[2],r[3]);cx.rect(Math.min(p0[0],p1[0]),Math.min(p0[1],p1[1]),Math.abs(p1[0]-p0[0]),Math.abs(p1[1]-p0[1]))})}
+  cx.fill();return true;
+}
 function drawBlock(b,alpha,isSel){
   const s=sc(),d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s,cat=tileKey(b),df=def(b.cls),m=isM(b);
-  cx.fillStyle=kFill(cat,alpha*.8);
-  cx.fillRect(x,y,w,h);
-  drawIcon(df,x,y,w,h,Math.min(1,alpha));
+  const shp=!m&&view!=="F"&&s>=4&&shapeTf(b);   // Layout: blocks with a real plan (walls, props, ring) show it instead of a plain rectangle
+  cx.fillStyle=kFill(cat,alpha*(shp?.45:.8));
+  const q=shp?(floorRect(b)?1:shp.f!==shp.f0?NFQ:0):0;
+  if(!shp||!shapeFill(b,shp,q,s,x,y,w,h))cx.fillRect(x,y,w,h);
+  if(shp){const nb=BAYHIT.length;cx.save();cx.globalAlpha=Math.min(1,alpha);cx.translate(q*s/FC,q*s/FC);drawShapeFloor({floors:[{b}]},s/FC);cx.restore();BAYHIT.length=nb}   // the Factory floor frame puts the hull 1 cell outside the tile origin; Layout aligns the hull with the tile   // 1 block = FC floor cells; no bay hit areas in Layout
+  if(!shp)drawIcon(df,x,y,w,h,Math.min(1,alpha));
   if(df&&df.directional&&s>=ARROW_MIN_S&&!(LK&&cat[0]==="~"&&alpha>.5))arrow(x,y,w,h,b.rot,Math.min(1,alpha));   // link mode: the link lines show the direction
   cx.lineWidth=1;cx.strokeStyle=kStroke(cat,alpha);
-  cx.strokeRect(x+.5,y+.5,w-1,h-1);
+  if(!shp)cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
-  entMark(b,x,y,alpha,s,w,h);
+  if(!shp||ENTL)entMark(b,x,y,alpha,s,w,h);   // shaped blocks show their real doors in the plan
   if(isSel){cx.lineWidth=2.5;cx.strokeStyle="#fff";cx.strokeRect(x+1,y+1,w-2,h-2)}
   if(s>=(m?10:18)&&alpha>.5&&(!m||Math.max(w,h)>=2*s)&&!(df&&df.directional)){
     const t0=b.nm&&nmOk(b.cls)?b.nm:df?lab(df):shortCls(b.cls),fs=Math.min(12,Math.max(9,s/3));
@@ -249,6 +263,7 @@ function hatch(x,y,w,h,c){
   for(let k=-h;k<w;k+=9){cx.moveTo(x+k,y+h);cx.lineTo(x+k+h,y)}
   cx.stroke();cx.restore();
 }
+let ENTL=false;   // Layout: door/port marks on shaped blocks (off: the drawn plan shows the doors; tests turn it on)
 let NBH=true;   // no-build hatch layer on/off (tests)
 // grey no-build hatch (same pattern as the red elevator-shaft hatch): faint fill + diagonal lines (+ dashed border when bd)
 function nbHatch(x,y,w,h,bd){
@@ -460,7 +475,10 @@ function drawUG(s){
     const [dx]=DIR[q.u.rot],o=(k%3-1)*s*.14,f=p=>dx?[p[0],p[1]+o]:[p[0]+o,p[1]];   // pairs whose spans overlap on one line get distinct colours + a small sideways offset
     ugLine(f(a),f(b),s,q.n>q.max,false,"hsl("+(k*95+20)%360+",90%,62%)")});
 }
-let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(b=>b.h===layer);LYB={k,all,v:all.filter(inView),nm:all.filter(b=>!inView(b)),nf:all.filter(b=>!isM(b)&&nfRect(b))}}return LYB}
+// Layout view: a block spanning several levels (catalog `levels`) shows on every level it covers
+const lvDist=b=>layer<b.h?b.h-layer:Math.max(0,layer-(b.h+lvl(b)-1));   // levels between the viewed level and the nearest level the block covers (ghost layers count a tall block from its nearest storey)
+const onLv=b=>b.h===layer||(view!=="F"&&b.h<layer&&layer<b.h+lvl(b));
+let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(onLv);LYB={k,all,v:all.filter(inView),nm:all.filter(b=>!inView(b)),nf:all.filter(b=>!isM(b)&&nfRect(b))}}return LYB}
 // F view of a big factory: only the blocks near the viewport (bucket grid of 64 cells built once per block set); m = margin in px
 function vpBlocks(m){
   const L=lyBlocks(),v=L.v;if(view!=="F"||v.length<3000)return v;
@@ -468,7 +486,7 @@ function vpBlocks(m){
   const s=sc(),mg=Math.ceil(m/s)+1,f=n=>Math.floor(n/64),ix=[];
   for(let i=f(-V.ox/s-mg-L.mw);i<=f((W-V.ox)/s+mg);i++)for(let j=f(-V.oy/s-mg-L.mh);j<=f((H-V.oy)/s+mg);j++){const a=L.g.get(i+","+j);if(a)for(const n of a)ix.push(n)}
   const r=ix.sort((a,b)=>a-b).map(n=>v[n]);r.tot=v.length;return r}
-let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k!==k)GHB={k,v:S.blocks.filter(b=>b.h!==layer&&inView(b))};return GHB.v}
+let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k!==k)GHB={k,v:S.blocks.filter(b=>!onLv(b)&&inView(b))};return GHB.v}
 let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(lyBlocks().all.map(b=>[b.id,b]));return LBM.get(id)};
 const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
 // static layer cache: only smFrame paints (USEB) read it; any other paint (edits, resize, export) repaints fresh and marks DIRTY
@@ -531,7 +549,7 @@ function paint0(){
   BAYHIT.length=0;
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8,F?GRIDOFF:0);
-  if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*Math.abs(b.h-layer));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
+  if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||lvDist(b)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*lvDist(b));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
   const cur=vpBlocks(CULLM+20*s);CUR=cur;   // +20 cells: an underground pair (max 13 cells) is found whole at the screen edge
   drawBlocks(cur,.92,true);   // viewport cull inside drawBlocks
   cx.fillStyle="rgba(255,60,60,.5)";
@@ -587,13 +605,15 @@ function paint0(){
     if(noBuild(g.filter(isM).map(mItem))){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;g.forEach(b=>{const d=dim(b);cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)})}
   }else if(active&&!drag&&hoverIn){
     const d=def(active),dd=dimOf(d,placeRot),bw=dd.w,bh=dd.h,px=V.ox+hover.x*s,py=V.oy+hover.y*s;
-    cx.fillStyle=kFill(beltKey(d)||d.category,.5);cx.fillRect(px,py,bw*s,bh*s);
+    const gb={id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot,pid:0},gsh=d.kind!=="m"&&view!=="F"&&s>=4&&shapeTf(gb);   // Layout: a shaped block previews with its real plan
+    if(gsh)drawBlock(gb,.6,false);
+    else{cx.fillStyle=kFill(beltKey(d)||d.category,.5);cx.fillRect(px,py,bw*s,bh*s);
     drawIcon(d,px,py,bw*s,bh*s,.8);
-    if(d.directional)arrow(px,py,bw*s,bh*s,placeRot,.9);
+    if(d.directional)arrow(px,py,bw*s,bh*s,placeRot,.9)}
     if(F&&d.kind==="m")drawPorts(s,[{id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot}]);   // ports show the rotation (splitter)
-    if(d.kind!=="m")entMark({id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot},px,py,.9,s,bw*s,bh*s,true);   // doors/ports show which way the block is rotated
+    if(d.kind!=="m"&&!gsh)entMark({id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot},px,py,.9,s,bw*s,bh*s,true);   // doors/ports show which way the block is rotated
     cx.strokeStyle=d.kind==="m"&&noBuild([{id:-1,x:hover.x,y:hover.y,w:bw,h:bh,l:layer,belt:isBelt({cls:active})}])?"hsl(0,85%,60%)":d.kind==="m"&&RCT&&!onArea(hover.x,hover.y,bw,bh,RCT)?"hsl(45,95%,62%)":"#fff";
-    cx.setLineDash([5,4]);cx.lineWidth=1.5;cx.strokeRect(px+.5,py+.5,bw*s-1,bh*s-1);cx.setLineDash([]);
+    if(!gsh){cx.setLineDash([5,4]);cx.lineWidth=1.5;cx.strokeRect(px+.5,py+.5,bw*s-1,bh*s-1);cx.setLineDash([])}
   }
   if(USEB&&BASEFILL){DIRTY=false;BASEFILL=false}
 }
