@@ -757,9 +757,11 @@ function* placerTileGen(L,ok){
 // box rotation shifted machines out of the rotated floor: root cause of "Cannot build here" on rotated plans). Same transform for ghost and placement.
 function plT(P,n,fl){let b=P.blocks,m=P.ms;
   const fr=q=>{const r=floorRect({...q,id:-1});if(r)return r;const o=fcell(q);return{x:o.cx*FC,y:o.cy*FC,w:o.cw*FC,h:o.ch*FC}};
-  const step=(tb,tm)=>{const ow=new Map();b.forEach((q,i)=>{const o=fcell(q);for(let a=0;a<o.cw;a++)for(let c=0;c<o.ch;c++)ow.set((o.cx+a)+","+(o.cy+c),i)});
+  const step=(tb,tm)=>{const ow=new Map(),fl=b.map(q=>floorRect({...q,id:-1}));b.forEach((q,i)=>{const o=fcell(q);for(let a=0;a<o.cw;a++)for(let c=0;c<o.ch;c++)ow.set((o.cx+a)+","+(o.cy+c),i)});
     const Hc=Math.max(1,plcMmax(b,q=>q.y+dim(q).h),plcMmax(m,q=>Math.ceil((q.y+dim(q).h)/FC))),nb=b.map(q=>tb(q,Hc));
-    m=m.map(q=>{const i=ow.get(Math.floor(q.x/FC)+","+Math.floor(q.y/FC));return tm(q,i==null?null:fr(b[i]),i==null?null:fr(nb[i]),Hc)});b=nb};
+    m=m.map(q=>{let i=ow.get(Math.floor(q.x/FC)+","+Math.floor(q.y/FC));
+      if(i!=null&&!fl[i]){const j=fl.findIndex(r=>r&&(q.x>=r.x-1&&q.x<r.x+r.w+1&&q.y>=r.y&&q.y<r.y+r.h||q.y>=r.y-1&&q.y<r.y+r.h+1&&q.x>=r.x&&q.x<r.x+r.w));if(j>=0)i=j}   // a no-floor block (dock): its door column next to a floor belongs to that floor (else it lands 2 units off the wall after a 180/270 turn)
+      return tm(q,i==null?null:fr(b[i]),i==null?null:fr(nb[i]),Hc)});b=nb};
   if(fl){const W=plcMmax(b,q=>q.x+dim(q).w),rs=q=>(def(q.cls)||{}).portsLayout?null:{rot:q.rot===0?2:q.rot===2?0:q.rot};
     step(q=>({...q,x:W-q.x-dim(q).w,...(rs(q)||{})}),(q,F,G)=>{const d=dim(q);return{...q,...(mirM(q)||rs(q)||{}),x:F?G.x+F.w-(q.x-F.x)-d.w:W*FC-q.x-d.w}})}
   for(let k=0;k<(n&3);k++)step((q,Hc)=>({...q,x:Hc-q.y-dim(q).h,y:q.x,rot:((q.rot||0)+1)&3}),

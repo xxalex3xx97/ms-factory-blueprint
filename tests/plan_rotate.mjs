@@ -138,6 +138,40 @@ check(strict0 === true && errs3.length === 0, 'K STRICT on, no pageerror' + (err
     'L refused plan placement logged: ' + JSON.stringify(f0) + ' | toast: ' + r.toast + ' | warns ' + warns.length);
   check(r.ndir.length === 1 && r.ndir[0].why === 'off the floor', 'L noBuildWhy off the floor: ' + JSON.stringify(r.ndir.map(x => x.why)));
 }
+// user repro (real log: DAT_ConveyorBelt2 off the floor, 27 blocks): 2x2 B/A plans must place at R0..3 and V under STRICT (the chain engine put a Station Adapter next to a 2x2 B/A block: connector mismatch, belts on the wall line were off the floor even unrotated)
+for (const bk of ['BPO_Station_02', 'BPO_Station_02A']) {
+  const pg4 = await (await br.newContext({viewport: {width: 1400, height: 900}})).newPage();
+  const errs4 = [];
+  pg4.on('pageerror', e => errs4.push(e.message));
+  await pg4.goto(pathToFileURL(ROOT + '/index.html').href);
+  await pg4.waitForFunction(() => window.__fb && typeof placerGo === 'function');
+  await pg4.click('#imp'); await pg4.setInputFiles('#impFile', path.join(ROOT, 'tests', 'fixtures', 'Starter_Station.json'));
+  await pg4.waitForFunction(() => $('impTa').value.length > 100); await pg4.click('#impGo');
+  await pg4.evaluate(() => { $('plnItem').value = 'ITEM_BasicCircuit'; $('plnItem').dispatchEvent(new Event('change')); if ($('plnB').getAttribute('aria-pressed') !== 'true') $('plnB').click(); });
+  await pg4.fill('#plnRate', '30'); await pg4.click('#plnBuild');
+  await pg4.selectOption('#pvMk', '1'); await pg4.selectOption('#plnBk', bk); await pg4.check('#plnDkI'); await pg4.selectOption('#plnDk', 'ind');
+  await pg4.waitForFunction(() => !$('plnPlace').disabled, null, {timeout: 120000});
+  await pg4.click('#plnPlace'); await pg4.waitForTimeout(500);
+  if ((await pg4.textContent('#plnPlace')) === 'Build it') await pg4.click('#plnPlace');
+  await pg4.waitForFunction(() => pasting, null, {timeout: 60000});
+  const noAdapter = await pg4.evaluate(() => { window.__pl = pasting.pl; window.__snap = S.blocks.slice(); STRICT = true; return !pasting.pl.blocks.some(b => /Adapter/.test(b.cls)); });
+  check(noAdapter, `M ${bk}: plan has no Station Adapter (only 2x2 C needs one)`);
+  const stat4 = () => pg4.evaluate(() => { const ms = S.blocks.filter(isM), bs = S.blocks.filter(b => !isM(b)), cov = floorOn(bs); return {b: bs.length, m: ms.length, cov: ms.filter(m => cov.has(m)).length, pasting: !!pasting, toast: ($('toast') || {}).textContent}; });
+  const base4 = await stat4(); let n0 = null;
+  for (const [rot, fl] of [[0, 0], [1, 0], [2, 0], [3, 0], [0, 1], [1, 1]]) {
+    await pg4.evaluate(() => { S.blocks = window.__snap.slice(); pasting = {rot: 0, fl: false, pl: window.__pl}; sel = new Set(); all();
+      const bs = S.blocks.filter(b => !isM(b)); V.ox = 250 - Math.max(...bs.map(b => b.x + dim(b).w)) * sc(); all(); });
+    const pos = await pg4.evaluate(() => { const bs = S.blocks.filter(b => !isM(b)), x = Math.max(...bs.map(b => b.x + dim(b).w)) + 8, y = Math.min(...bs.map(b => b.y)), s = sc(), r = cv.getBoundingClientRect(); return {x: r.left + V.ox + (x + .5) * s, y: r.top + V.oy + (y + .5) * s}; });
+    await pg4.mouse.move(pos.x - 5, pos.y - 5); await pg4.mouse.move(pos.x, pos.y);
+    for (let i = 0; i < rot; i++) await pg4.keyboard.press('r');
+    if (fl) await pg4.keyboard.press('v');
+    await pg4.mouse.move(pos.x + 1, pos.y + 1); await pg4.mouse.move(pos.x, pos.y);
+    await pg4.mouse.click(pos.x, pos.y);
+    const s = await stat4(); if (!rot && !fl) n0 = [s.b - base4.b, s.m - base4.m];
+    check(!s.pasting && n0 && s.b - base4.b === n0[0] && s.m - base4.m === n0[1] && s.cov - base4.cov === s.m - base4.m, `M ${bk} R${rot}${fl ? '+V' : ''}: placed ${s.b - base4.b} blocks ${s.m - base4.m} buildables (R0: ${n0}), all inside block floors (${s.toast})`);
+  }
+  check(errs4.length === 0, `M ${bk}: no pageerror`);
+}
 // big plan: plT must not overflow the stack (2391 blocks / 128k machines)
 await build('ITEM_AdvancedPlates');
 await pg2.mouse.move(300, 330); await pg2.mouse.move(310, 340);
