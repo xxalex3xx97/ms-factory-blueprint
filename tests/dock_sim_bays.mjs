@@ -56,4 +56,7 @@ const FL=await p.evaluate(()=>{const f=(item,flt)=>{const o=flowLoad(new Map([[1
   return{other:f('m','c'),same:f('c','c'),none:f('m','')}});
 ok("T-g) theo: producer belt into a dock filtered for another item shows 0",FL.other[0]===0&&FL.other[1]===0);
 ok("T-g) theo: matching item / no filter keep the full rate",FL.same[0]===60&&FL.same[1]===60&&FL.none[0]===60);
+// T-h: changing a bay filter (b.df) must invalidate the cached estimate
+const CH=await p.evaluate(()=>{const d=S.blocks.find(b=>dkN(b.cls));if(!d)return{err:1};const k0=blkKey(),h0=[...lvHash()].join();d.df=Array.from({length:dkN(d.cls)},()=>({item:"",bLoading:0}));d.df[0].item="water";const k1=blkKey(),h1=[...lvHash()].join();d.df[0].item="iron";return{k:k0!==k1&&k1!==blkKey(),h:h0!==h1&&h1!==[...lvHash()].join()}});
+ok("T-h) filter change changes blkKey and the estimate cache hash",CH.k===true&&CH.h===true);
 await b.close();console.log(bad||errs.length?bad+" FAIL":"ALL PASS");process.exit(bad||errs.length?1:0);
