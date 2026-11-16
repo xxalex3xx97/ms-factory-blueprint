@@ -95,7 +95,7 @@
         "source": "decoded BPO_Station_02A: gaps x/y -11..-5 and 5..11 on all sides"
       },
       "note": null,
-      "levels": 2
+      "levels": 1
     },
     "BPO_Station_02": {
       "w": 2,
@@ -438,7 +438,7 @@
       },
       "hatch": "interior",
       "clip": true,
-      "levels": 2
+      "levels": 1
     },
     "BPO_ShipyardCore": {
       "w": 1,
@@ -582,7 +582,7 @@
       },
       "hatch": "interior",
       "clip": true,
-      "levels": 2,
+      "levels": 1,
       "label": "Shipyard Core Mk. 2"
     },
     "BPO_BlueprintUnit": {
