@@ -14,13 +14,17 @@ try {
   const r = await pg.evaluate(() => {
     const cl = n => CATALOG.blocks.find(b => b.name === n).class;
     const B = (c, x, y, i) => ({Class: c, GridLocation: {X: x, Y: y}, Height: 0, GridRotation: 0, BlockID: i, PaletteID: 0});
-    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(cl('BPO_Station_01'), 2, 2, 1), B('/Game/Blueprints/BuildingBlocks/BPO_LargeConnector.BPO_LargeConnector_C', 0, 2, 2), B('/Game/Blueprints/BuildingBlocks/BPO_XLargeConnector.BPO_XLargeConnector_C', 4, 2, 3)], DefaultMachines: []}));
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(cl('BPO_Station_01'), 2, 2, 1), B('/Game/Blueprints/BuildingBlocks/BPO_LargeConnector.BPO_LargeConnector_C', 0, 2, 2), B('/Game/Blueprints/BuildingBlocks/BPO_XLargeConnector.BPO_XLargeConnector_C', 4, 2, 3), B('/Game/Blueprints/BuildingBlocks/BPO_Connector_07B.BPO_Connector_07B_C', 6, 2, 4)], DefaultMachines: []}));
     const out = build(), n = S.blocks.length;
     __fb.importJson(JSON.stringify(out));
-    return {n, conn: S.conn.length, out: out.Blocks.map(b => b.Class.split('.').pop()), n2: S.blocks.length, c2: S.conn.length};
+    const res = {n, conn: S.conn.length, out: out.Blocks.map(b => b.Class.split('.').pop()), n2: S.blocks.length, c2: S.conn.length};
+    __fb.importJson(JSON.stringify({Version: 1, DisplayName: 't', Blocks: [{Class: '/Game/Blueprints/BuildingBlocks/BPO_LargeConnector.BPO_LargeConnector_C', GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
+    res.v1conn = S.conn.length;
+    return res;
   });
-  chk('connectors hidden, kept aside', r.n === 1 && r.conn === 2, JSON.stringify(r));
-  chk('export writes them back', r.out.length === 3 && r.out.filter(c => /Connector/.test(c)).length === 2, JSON.stringify(r));
-  chk('round trip stable', r.n2 === 1 && r.c2 === 2, JSON.stringify(r));
+  chk('connectors hidden, kept aside (incl. Connector_07B)', r.n === 1 && r.conn === 3, JSON.stringify(r));
+  chk('export writes them back', r.out.length === 4 && r.out.filter(c => /Connector/.test(c)).length === 3, JSON.stringify(r));
+  chk('round trip stable', r.n2 === 1 && r.c2 === 3, JSON.stringify(r));
+  chk('v1 JSON untouched (no split)', r.v1conn === 0, JSON.stringify(r));
 } finally { await br.close(); }
 process.exit(bad ? 1 : 0);

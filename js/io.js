@@ -189,8 +189,8 @@ function importJson0(txt,quiet){
   const n=v=>Math.round(Number(v))||0,hf=v=>{v=Number(v)||0;if(v%CU)odd++;return Math.round(v/CU)};
   const cell=(v,u,c)=>{const k=((Number(v)||0)-c)/u;if(k%1)odd++;return Math.round(k)};   // origin from centre; non-integer rounded + counted
   const rot=v=>((n(v)%4)+4)%4;
-  const isConn=b=>/Connector$/.test(String(b&&b.Class||"").split(".").pop().replace(/_C$/,""));
-  S.conn=o.Blocks.filter(isConn);o.Blocks=o.Blocks.filter(b=>!isConn(b));   // connector pieces: kept aside, never drawn
+  const isConn=b=>v2&&/Connector(_\d+[A-Z]?)?$/.test(String(b&&b.Class||"").split(".").pop().replace(/_C$/,""));   // v2 only: build() writes v2 coordinates back
+  S.conn=o.Blocks.filter(isConn);o.Blocks=o.Blocks.filter(b=>!isConn(b));   // connector pieces (incl. Connector_07B/08T, LargeSideConnector): kept aside, never drawn
   S.blocks=o.Blocks.map(b=>{const r=rot(b.GridRotation),gx=b.GridLocation&&b.GridLocation.X,gy=b.GridLocation&&b.GridLocation.Y,cls=String(b.Class||"");
     if(!v2)return{id:uid++,cls,x:hf(gx),y:hf(gy),h:n(b.Height),rot:r,pid:n(b.PaletteID)};
     const f=dim({cls,rot:r}),o=SHIPEND({cls})?dockOrg(r):null,ox=o?o.X:2*(f.w-1),oy=o?o.Y:2*(f.h-1);   // shipEnd: footprint 3x2, anchor = dockOrg (floor on station side)
