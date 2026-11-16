@@ -752,7 +752,7 @@ function* placerTileGen(L,ok){
   let why="";fails.forEach(w=>{if(w!==undefined)why=w});   // last failure in search order, as before
   return {ok:false,why:"Does not fit: "+why};
 }
-function plT(P,n){let b=P.blocks,m=P.ms;for(let k=0;k<(n&3);k++){const Hc=Math.max(1,...b.map(q=>q.y+dim(q).h),...m.map(q=>Math.ceil((q.y+dim(q).h)/FC)));
+function plT(P,n){let b=P.blocks,m=P.ms;for(let k=0;k<(n&3);k++){const Hc=Math.max(1,plcMmax(b,q=>q.y+dim(q).h),plcMmax(m,q=>Math.ceil((q.y+dim(q).h)/FC)));
   b=b.map(q=>({...q,x:Hc-q.y-dim(q).h,y:q.x,rot:((q.rot||0)+1)&3}));m=m.map(q=>({...q,x:Hc*FC-q.y-dim(q).h,y:q.x,rot:((q.rot||0)+1)&3}))}
   return{blocks:b,ms:m}}   // plan rotated n x 90deg clockwise; blocks in cells, machines in FC units, same origin
 function placerPaste(){

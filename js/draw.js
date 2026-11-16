@@ -596,7 +596,7 @@ function paint0(){
     const pT=plT(pasting.pl,pasting.rot),bs=pT.blocks.map(q=>({id:-1,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:q.rot||0}));
     bs.forEach(b=>{const d=dim(b);drawBlock(b,.45,false);entMark(b,V.ox+b.x*s,V.oy+b.y*s,.9,s,d.w*s,d.h*s,true)});
     cx.save();cx.fillStyle="hsla(45,95%,62%,.8)";
-    pasting.pl.ms.forEach(m=>{const e=dim(m);cx.fillRect(V.ox+(hover.x+m.x/FC)*s,V.oy+(hover.y+m.y/FC)*s,e.w/FC*s,e.h/FC*s)});cx.restore();
+    pT.ms.forEach(m=>{const e=dim(m);cx.fillRect(V.ox+(hover.x+m.x/FC)*s,V.oy+(hover.y+m.y/FC)*s,e.w/FC*s,e.h/FC*s)});cx.restore();
     bs.forEach(b=>{const d=dim(b);if(nonM().some(o=>{if(!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)}});
   }else if(pasting&&!drag&&hoverIn){
     const kk=clip.some(q=>!isM(q))?FC:1,g=clipT(pasting.rot,pasting.fl).map(b=>({...b,x:b.x+(isM(b)?kk:1)*hover.x,y:b.y+(isM(b)?kk:1)*hover.y,h:layer})).filter(b=>view==="F"||!isM(b));

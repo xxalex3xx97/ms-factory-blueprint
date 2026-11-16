@@ -69,6 +69,51 @@ try{
     return o});
   chk('large paste on free space adds everything',L.far===L.n0,JSON.stringify(L));
   chk('large paste overlapping another factory is refused',L.over===0,JSON.stringify(L));
+  // ---- real input flow: Build plan -> click place -> box-select in Layout -> Ctrl+C -> R x k -> click (also Ctrl+X, Duplicate button)
+  const SH=path.join(path.dirname(fileURLToPath(import.meta.url)),'shots')+'/';
+  const cnt=()=>pg.evaluate(()=>({b:S.blocks.filter(b=>!isM(b)).length,m:S.blocks.filter(isM).length,mx:S.blocks.reduce((a,b)=>Math.max(a,b.id),0)}));
+  const px=(x,y)=>pg.evaluate(([x,y])=>{const r=$('cv').getBoundingClientRect(),s=sc();return[r.left+V.ox+x*s,r.top+V.oy+y*s]},[x,y]);
+  const ext=()=>pg.evaluate(()=>{const bs=S.blocks.filter(b=>!isM(b));return{x0:Math.min(...bs.map(b=>b.x)),y0:Math.min(...bs.map(b=>b.y)),x1:Math.max(...bs.map(b=>b.x+dim(b).w)),y1:Math.max(...bs.map(b=>b.y+dim(b).h))}});
+  const reset=()=>pg.evaluate(()=>{S.blocks=[];S.closed=[];S.conn=[];sel=new Set();clip=[];pasting=null;STRICT=false;if(view!=="L")setView("L");all()});
+  const place=async()=>{await reset();
+    await pg.evaluate(()=>{$('plnItem').value='ITEM_BasicCircuit';$('plnItem').dispatchEvent(new Event('change'));placerGo()});
+    await pg.waitForFunction(()=>!$('plnPlace').disabled,null,{timeout:60000});await pg.click('#plnPlace');
+    await pg.mouse.move(300,330);await pg.mouse.move(310,340);await pg.mouse.click(310,340);
+    return pg.evaluate(()=>!!pasting)};
+  const boxSel=async()=>{const e=await ext(),[a,b]=await px(e.x0-.5,e.y0-.5),[c,d]=await px(e.x1+.5,e.y1+.5);
+    await pg.mouse.move(a,b);await pg.mouse.down();await pg.mouse.move((a+c)/2,(b+d)/2,{steps:4});await pg.mouse.move(c,d,{steps:4});await pg.mouse.up()};
+  const verify=mx=>pg.evaluate(mx=>{   // new floor items vs the floor of the new blocks
+    const nbs=S.blocks.filter(b=>!isM(b)&&b.id>mx),nms=S.blocks.filter(b=>isM(b)&&b.id>mx),cov=floorOn(nbs);
+    return{nb:nbs.length,nm:nms.length,cov:nms.filter(m=>cov.has(m)).length}},mx);
+  chk('real flow: plan placed by click',!(await place()));
+  const base=await cnt();chk('real flow: plan has blocks and floor items',base.b>10&&base.m>100,JSON.stringify(base));
+  await pg.screenshot({path:SH+'rot-plan-placed.png'});
+  await boxSel();const nsel=await pg.evaluate(()=>({b:S.blocks.filter(b=>sel.has(b.id)&&!isM(b)).length}));
+  chk('real flow: box select takes every block',nsel.b===base.b,JSON.stringify(nsel));
+  await pg.screenshot({path:SH+'layout-copy-before.png'});
+  await pg.keyboard.press('Control+c');
+  const cl=await pg.evaluate(()=>({b:clip.filter(b=>!isM(b)).length,m:clip.filter(isM).length,pasting:!!pasting}));
+  chk('real flow: Ctrl+C clip = all blocks + all floor items, ghost started',cl.b===base.b&&cl.m===base.m&&cl.pasting,JSON.stringify(cl));
+  for(const k of [0,1,2,3]){
+    for(let i=0;i<k;i++)await pg.keyboard.press('r');
+    const e=await ext(),[x,y]=await px(e.x0,e.y1+3);   // free band below the source plan
+    await pg.mouse.move(x,y+2);await pg.mouse.move(x+3,y+4);
+    if(k===1)await pg.screenshot({path:SH+'layout-copy-rot.png'});
+    const rr=await pg.evaluate(()=>pasting&&pasting.rot);chk('real flow: R x'+k+' -> pasting.rot '+k,rr===k,String(rr));
+    const b4=await cnt();await pg.mouse.click(x+3,y+4);const af=await cnt(),v=await verify(b4.mx);
+    chk('real flow rot '+k+': paste doubles blocks and floor items',af.b===2*base.b&&af.m===2*base.m&&v.nb===base.b&&v.nm===base.m,JSON.stringify([base,af,v]));
+    chk('real flow rot '+k+': every pasted floor item inside a pasted block floor',v.cov===v.nm,JSON.stringify(v));
+    if(k===3)await pg.screenshot({path:SH+'layout-copy-after.png'});
+    await pg.evaluate(m=>{S.blocks=S.blocks.filter(b=>b.id<=m);pasting=null;sel=new Set();all()},b4.mx);   // drop the copy, re-copy for the next rotation
+    await boxSel();await pg.keyboard.press('Control+c');
+  }
+  // Ctrl+X: floor items leave the old place and come back at the click
+  await pg.keyboard.press('Escape');await place();const cx0=await cnt();await boxSel();await pg.keyboard.press('Control+x');
+  const cxa=await cnt();chk('real flow: Ctrl+X removes blocks and floor items',cxa.b===0&&cxa.m===0,JSON.stringify([cx0,cxa]));
+  await pg.mouse.move(300,330);await pg.mouse.move(310,340);await pg.mouse.click(310,340);
+  const cxb=await cnt();chk('real flow: Ctrl+X then click re-pastes all',cxb.b===cx0.b&&cxb.m===cx0.m,JSON.stringify([cx0,cxb]));
+  await pg.keyboard.press('Escape');await boxSel();await pg.click('#bDup');
+  const du=await cnt();chk('real flow: Duplicate button doubles blocks and floor items',du.b===2*cx0.b&&du.m===2*cx0.m,JSON.stringify([cx0,du]));
   chk('no page errors',!errs.length,errs.join('|'));
 }finally{await br.close()}
 process.exit(bad?1:0);

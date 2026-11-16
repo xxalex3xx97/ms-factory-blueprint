@@ -49,6 +49,54 @@ const placed = await pg.evaluate(() => {
 check(placed.rots.length === 2 && placed.rots.every(x => x === 1), 'D placerPaste places 2 blocks, all rot 1 (' + JSON.stringify(placed) + ')');
 check(placed.ms === 1, 'D placed 1 machine');
 check(errs.length === 0, 'E no pageerror' + (errs.length ? ': ' + errs.join(' | ') : ''));
+// ---- real keyboard/mouse on the default engine: Build plan -> ghost -> R x1/x2/x3 -> click place
+const SH = path.join(ROOT, 'tests', 'shots') + '/';
+const pg2 = await (await br.newContext({viewport: {width: 1400, height: 900}})).newPage();
+const errs2 = [];
+pg2.on('pageerror', e => errs2.push(e.message));
+await pg2.goto(pathToFileURL(ROOT + '/index.html').href);
+await pg2.waitForFunction(() => window.__fb && typeof placerGo === 'function');
+const build = async item => {
+  await pg2.evaluate(() => { S.blocks = []; S.closed = []; S.conn = []; sel = new Set(); clip = []; pasting = null; STRICT = false; if (view !== 'L') setView('L'); all(); });
+  await pg2.evaluate(i => { $('plnItem').value = i; $('plnItem').dispatchEvent(new Event('change')); placerGo(); }, item);
+  await pg2.waitForFunction(() => !$('plnPlace').disabled, null, {timeout: 90000});
+  await pg2.click('#plnPlace');
+};
+// yellow floor rects drawn by the ghost, collected from one paint
+const ghost = () => pg2.evaluate(() => {
+  const rects = [], yel = (c => { c.fillStyle = 'hsla(45,95%,62%,.8)'; return c.fillStyle; })(document.createElement('canvas').getContext('2d')), fr = CanvasRenderingContext2D.prototype.fillRect;
+  CanvasRenderingContext2D.prototype.fillRect = function (x, y, w, h) { if (this.fillStyle === yel) rects.push([x, y, w, h]); return fr.call(this, x, y, w, h); };
+  try { paint0(); } finally { CanvasRenderingContext2D.prototype.fillRect = fr; }
+  const s = sc(), pT = plT(pasting.pl, pasting.rot), box = pT.blocks.map(q => { const f = fcell({...q, h: 0, id: -1}), a = V.ox + (hover.x + f.cx) * s, b = V.oy + (hover.y + f.cy) * s; return [a, b, f.cw * s, f.ch * s]; });
+  const inside = r => box.some(f => r[0] >= f[0] - 1 && r[1] >= f[1] - 1 && r[0] + r[2] <= f[0] + f[2] + 1 && r[1] + r[3] <= f[1] + f[3] + 1);
+  const dataIn = pT.ms.every(m => pT.blocks.some(q => { const f = fcell({...q, h: 0, id: -1}); return m.x >= f.cx * FC && m.x < (f.cx + f.cw) * FC && m.y >= f.cy * FC && m.y < (f.cy + f.ch) * FC; }));
+  return {n: rects.length, out: rects.filter(r => !inside(r)).length, dataIn, ms: pT.ms.length, rot: pasting.rot};
+});
+await build('ITEM_BasicCircuit');
+await pg2.mouse.move(300, 330); await pg2.mouse.move(310, 340);
+const ms0 = await pg2.evaluate(() => pasting.pl.ms.length);
+for (let k = 1; k <= 3; k++) {
+  await pg2.keyboard.press('r'); await pg2.mouse.move(310 + k, 340 + k);
+  const g = await ghost();
+  check(g.rot === k && g.n > 0 && g.out === 0 && g.dataIn && g.ms === ms0, `F ghost R x${k}: ${g.n} yellow rects all inside a ghost block floor, data inside, ${g.ms}/${ms0} machines (${JSON.stringify(g)})`);
+  await pg2.screenshot({path: SH + `rot-plan-ghost-r${k}.png`});
+}
+const links = async n => { await build('ITEM_BasicCircuit'); await pg2.mouse.move(300, 330); await pg2.mouse.move(310, 340); for (let i = 0; i < n; i++) await pg2.keyboard.press('r'); await pg2.mouse.click(310, 340);
+  return pg2.evaluate(() => { const ms = S.blocks.filter(isM), bs = S.blocks.filter(b => !isM(b)), cov = floorOn(bs); return {pasting: !!pasting, b: bs.length, m: ms.length, cov: ms.filter(m => cov.has(m)).length, lk: Object.values(links(0)).reduce((a, v) => a + ((v && (v.length || v.size)) || 0), 0), rots: [...new Set(bs.map(b => b.rot))].join()}; }); };
+const L0 = await links(0);
+for (let k = 1; k <= 3; k++) {
+  const Lk = await links(k);
+  if (k === 1) await pg2.screenshot({path: SH + 'rot-plan-placed.png'});
+  check(!Lk.pasting && Lk.b === L0.b && Lk.m === L0.m && Lk.cov === Lk.m, `G placed rot ${k}: ${Lk.b} blocks ${Lk.m} floor items all inside block floors (rot0: ${L0.b}/${L0.m})`);
+  check(Lk.lk === L0.lk, `G placed rot ${k}: ${Lk.lk} links, same as unrotated ${L0.lk}`);
+}
+// big plan: plT must not overflow the stack (2391 blocks / 128k machines)
+await build('ITEM_AdvancedPlates');
+await pg2.mouse.move(300, 330); await pg2.mouse.move(310, 340);
+for (let k = 0; k < 3; k++) { await pg2.keyboard.press('r'); await pg2.mouse.move(311 + k, 341); }
+const big = await pg2.evaluate(() => ({rot: pasting && pasting.rot, b: pasting && pasting.pl.blocks.length}));
+check(big.rot === 3 && big.b > 1000, 'H big plan R x3 works (' + JSON.stringify(big) + ')');
+check(errs2.length === 0, 'I no pageerror on the default engine' + (errs2.length ? ': ' + errs2.join(' | ') : ''));
 console.log(fails ? fails + ' FAILED' : 'ALL PASS');
 await br.close();
 process.exit(fails ? 1 : 0);

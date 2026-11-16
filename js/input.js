@@ -191,13 +191,13 @@ function mirM(b){
 function clipT(n,fl){   // clip mirrored (fl) then rotated n x 90deg clockwise, origin at 0,0
   let l=clip.map(b=>({...b,raw:null}));   // clones never carry the imported raw coords
   const K=b=>isM(b)&&l.some(q=>!isM(q))?FC:1,ref=()=>l.some(q=>!isM(q))?l.filter(q=>!isM(q)):l;   // Layout clip with floor items: machine coords are FC per block cell
-  if(fl){const r=ref(),mx=Math.min(...r.map(b=>b.x)),W=Math.max(...r.map(b=>b.x-mx+dim(b).w));
+  if(fl){const r=ref(),mx=plcMmin(r,b=>b.x),W=plcMmax(r,b=>b.x-mx+dim(b).w);
     l=l.map(b=>{const m=mirM(b);return{...b,x:K(b)*(2*mx+W)-b.x-dim(b).w,...(m||((def(b.cls)||{}).portsLayout?{}:{rot:b.rot===0?2:b.rot===2?0:b.rot}))}})}
   for(let k=0;k<n;k++){
-    const r=ref(),mx=Math.min(...r.map(b=>b.x)),my=Math.min(...r.map(b=>b.y)),H=Math.max(...r.map(b=>b.y-my+dim(b).h));
+    const r=ref(),mx=plcMmin(r,b=>b.x),my=plcMmin(r,b=>b.y),H=plcMmax(r,b=>b.y-my+dim(b).h);
     l=l.map(b=>{const d=dim(b),c=K(b);return{...b,x:c*H-(b.y-c*my)-d.h,y:b.x-c*mx,rot:((b.rot||0)+1)&3}});
   }
-  const r=ref(),mx=Math.min(...r.map(b=>b.x)),my=Math.min(...r.map(b=>b.y)),mh=Math.min(...r.map(b=>b.h));
+  const r=ref(),mx=plcMmin(r,b=>b.x),my=plcMmin(r,b=>b.y),mh=plcMmin(r,b=>b.h);
   return l.map(b=>{const c=K(b);return{...b,x:b.x-c*mx,y:b.y-c*my,h:b.h-mh}});
 }
 function paste(){
