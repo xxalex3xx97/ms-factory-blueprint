@@ -127,6 +127,17 @@ for (const [rot, fl] of [[0, 0], [1, 0], [2, 0], [3, 0], [0, 1], [1, 1]]) {
   if (rot === 1 && !fl) { await pg3.evaluate(() => { const bs = S.blocks.filter(b => !isM(b)); V.ox = 120 - Math.max(...bs.map(b => b.x)) * sc() + 600; all(); }); await pg3.screenshot({path: SH + 'rot-starter-placed-r1.png'}); }
 }
 check(strict0 === true && errs3.length === 0, 'K STRICT on, no pageerror' + (errs3.length ? ': ' + errs3.join(' | ') : ''));
+// refused placement logging: paste the plan right on top of an existing block (STRICT on) -> [PLACE-REFUSED] warn, __placeLog entry, toast with class + reason
+{
+  const warns = []; pg3.on('console', m => { if (m.text().startsWith('[PLACE-REFUSED]')) warns.push(m.text()); });
+  await pg3.evaluate(() => { S.blocks = window.__snap.slice(); window.__placeLog = []; STRICT = true; pasting = {rot: 1, fl: true, pl: window.__pl}; sel = new Set(); const b = S.blocks.find(q => !isM(q)); hover = {x: b.x, y: b.y}; });
+  await pg3.evaluate(() => { placerPaste(); });
+  const r = await pg3.evaluate(() => ({log: window.__placeLog, toast: ($('toast') || {}).textContent, ndir: noBuildWhy([{id: 1, x: -9000, y: -9000, w: 2, h: 2, l: 0, cls: 'X'}])}));
+  const e = (r.log || [])[0] || {}, f0 = (e.first10 || [])[0] || {};
+  check(r.log.length === 1 && !!f0.why && e.rot === 1 && e.flip === true && e.strict === true && e.src === 'Build plan' && warns.length >= 1 && r.toast.includes(f0.cls) && r.toast.includes(f0.why),
+    'L refused plan placement logged: ' + JSON.stringify(f0) + ' | toast: ' + r.toast + ' | warns ' + warns.length);
+  check(r.ndir.length === 1 && r.ndir[0].why === 'off the floor', 'L noBuildWhy off the floor: ' + JSON.stringify(r.ndir.map(x => x.why)));
+}
 // big plan: plT must not overflow the stack (2391 blocks / 128k machines)
 await build('ITEM_AdvancedPlates');
 await pg2.mouse.move(300, 330); await pg2.mouse.move(310, 340);

@@ -155,14 +155,26 @@ function noBuild(it){const c={},ids=new Set(it.map(i=>i.id).filter(x=>x!=null));
   // a big paste into a big factory: machine cells and floor rects are looked up in a 64-cell bucket index (it was every item against every block: minutes for 4k items vs 130k blocks)
   let mIdx=null;const big=it.length*S.blocks.length>2e6;
   if(big){mIdx=new Map();S.blocks.forEach(o=>{if(!isM(o))return;const e=mItem(o);for(let bx=e.x>>6;bx<=(e.x+e.w-1)>>6;bx++)for(let by=e.y>>6;by<=(e.y+e.h-1)>>6;by++){const k=e.l+"|"+bx+"|"+by;let l=mIdx.get(k);if(!l)mIdx.set(k,l=[]);l.push(e)}})}
-  const hitM=i=>{if(!mIdx)return S.blocks.some(o=>o.h===i.l&&isM(o)&&!ids.has(o.id)&&!(i.belt&&isBelt(o))&&hitR(i,mItem(o)));
-    const seen=new Set();for(let bx=i.x>>6;bx<=(i.x+i.w-1)>>6;bx++)for(let by=i.y>>6;by<=(i.y+i.h-1)>>6;by++){const l=mIdx.get(i.l+"|"+bx+"|"+by);if(l)for(const e of l){if(seen.has(e))continue;seen.add(e);if(!ids.has(e.id)&&!(i.belt&&e.belt)&&hitR(i,e))return true}}return false};
-  return it.some(i=>{const a=c[i.l]=c[i.l]||areas(i.l);
-    if(a.blocked.some(e=>hitR(i,e))||a.nob.some(e=>hitR(i,e)))return true;
-    if(i.id==null)return false;   // preview-only probes without id: shaft check only
-    if(STRICT&&!onArea(i.x,i.y,i.w,i.h,a.rects))return true;
-    return hitM(i)})}
-const mItem=b=>{const d=dim(b);return{id:b.id,x:b.x,y:b.y,w:d.w,h:d.h,l:b.h,belt:isBelt(b)}};
+  const hitM=i=>{if(!mIdx)return S.blocks.find(o=>o.h===i.l&&isM(o)&&!ids.has(o.id)&&!(i.belt&&isBelt(o))&&hitR(i,mItem(o)));
+    const seen=new Set();for(let bx=i.x>>6;bx<=(i.x+i.w-1)>>6;bx++)for(let by=i.y>>6;by<=(i.y+i.h-1)>>6;by++){const l=mIdx.get(i.l+"|"+bx+"|"+by);if(l)for(const e of l){if(seen.has(e))continue;seen.add(e);if(!ids.has(e.id)&&!(i.belt&&e.belt)&&hitR(i,e))return e}}return null};
+  const why=i=>{const a=c[i.l]=c[i.l]||areas(i.l);
+    if(a.blocked.some(e=>hitR(i,e))||a.nob.some(e=>hitR(i,e)))return"elevator shaft";
+    if(i.id==null)return"";   // preview-only probes without id: shaft check only
+    if(STRICT&&!onArea(i.x,i.y,i.w,i.h,a.rects))return a.rects.some(e=>hitR(i,e))?"across a wall":"off the floor";
+    const o=hitM(i);return o?"overlap with "+o.cls+"@"+o.x+","+o.y:""};
+  return noBuild.mode?it.map(i=>({i,why:why(i)})).filter(r=>r.why):it.some(i=>!!why(i))}
+function noBuildWhy(it){noBuild.mode=1;try{return noBuild(it)}finally{noBuild.mode=0}}   // failing items [{i,why}], same rule code as noBuild
+const mItem=b=>{const d=dim(b);return{cls:b.cls,rot:b.rot||0,id:b.id,x:b.x,y:b.y,w:d.w,h:d.h,l:b.h,belt:isBelt(b)}};
+// refused paste/place: structured log (console, window.__placeLog, clipboard) + toast naming the first refused item. bad = noBuildWhy result
+function placeRefused(bad,src,rot,flip,n,items,anchor){
+  const log={t:Date.now(),when:new Date().toISOString(),src,rot,flip,blocks:n,items,first10:bad.slice(0,10).map(r=>({cls:r.i.cls,x:r.i.x,y:r.i.y,h:r.i.l,w:r.i.w,hh:r.i.h,rot:r.i.rot,why:r.why})),anchor,strict:STRICT,sBlocks:S.blocks.length};
+  console.warn("[PLACE-REFUSED] "+JSON.stringify(log));
+  (window.__placeLog=window.__placeLog||[]).push(log);if(window.__placeLog.length>20)window.__placeLog.shift();
+  const f=log.first10[0],m="Cannot build here: "+f.cls+" @"+f.x+","+f.y+" "+f.why+" (rot "+rot+")";
+  toast(m);
+  try{navigator.clipboard.writeText(JSON.stringify(log,null,1)).then(()=>toast(m+" - log copied"),()=>{})}catch(e){}
+}
+const placeOk=(src,rot,flip,n,items)=>console.log("[PLACE-OK] "+JSON.stringify({src,rot,flip,blocks:n,items}));
 const NOBUILD="Cannot build here: overlap, elevator shaft, or off the floor / across a wall";
 const RIDX=new WeakMap();
 function onArea(x,y,w,h,R){

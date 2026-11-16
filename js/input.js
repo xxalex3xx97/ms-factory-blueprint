@@ -208,11 +208,11 @@ function pasteAt(){
   if(pasting&&pasting.pl)return placerPaste();
   const K=b=>isM(b)&&clip.some(q=>!isM(q))?FC:1,nb=ugRelink(clipT(pasting.rot,pasting.fl).map(b=>({...b,oid:b.id,id:uid++,mid:0,x:b.x+K(b)*hover.x,y:b.y+K(b)*hover.y,h:b.h+layer})));
   const nn=nb.filter(b=>!isM(b)),nbs=new Set(nn.map(b=>b.id));S.blocks.push(...nn);   // floors of the new blocks must exist for the noBuild check
-  let bad;try{bad=noBuild(nb.filter(isM).map(mItem))}finally{S.blocks=S.blocks.filter(b=>!nbs.has(b.id))}
-  if(bad){toast(NOBUILD);return}
+  let bad;const mi=nb.filter(isM).map(mItem);try{bad=noBuildWhy(mi)}finally{S.blocks=S.blocks.filter(b=>!nbs.has(b.id))}
+  if(bad.length){placeRefused(bad,"Layout clip",pasting.rot,pasting.fl,nb.length,mi.length,{x:hover.x,y:hover.y});return}
   const ug=ms=>new Map(ugPairs(ms).flatMap(({u,t})=>[[u.id,t.id],[t.id,u.id]])),old=S.blocks.filter(isM),was=ug(old),now=ug(old.concat(nb.filter(isM)));   // pasted undergrounds must not re-pair existing ones
   if([...was].some(([a,b])=>now.get(a)!==b)){toast("Underground would change an existing pair: move it so it does not sit inside or next to another underground on that line");return}
-  push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set();all();   // stamp: stays in paste mode (rot/flip kept) until Esc / right click
+  placeOk("Layout clip",pasting.rot,pasting.fl,nb.length,mi.length);push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set();all();   // stamp: stays in paste mode (rot/flip kept) until Esc / right click
 }
 // ---- modes: del = click or box deletes (X toggles); copy = box then paste like Ctrl+C; cfgcopy = click one machine; cfgpaste = box applies cfgClip to same-class machines
 function setMode(m){mode=m||null;if(mode){active=null;pasting=null}all()}
