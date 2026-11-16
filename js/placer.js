@@ -785,6 +785,7 @@ function plcApply(L){
   const dl=$("plnPrev");plcBusyF=false;$("plnPrevMap").style.opacity="";plcProgHide();
   $("plnEngBadge").textContent=L.ok?(L.eng==="cmp"?"Template: "+plcEngName(L):"Template: Zones"):"";
   if(L.ok&&L.rbWhy){const b=$("plnEngBadge"),w=String(L.rbWhy);b.textContent+=" - Strips fallback: "+(w.length>140?w.slice(0,139)+"…":w);b.title=w}else $("plnEngBadge").title="";
+  {const dn=L.ok&&(L.note||[]).find(n=>/^Industrial dock not built/.test(n));if(dn){const b=$("plnEngBadge");b.textContent+=" - NO DOCKS: "+(dn.length>140?dn.slice(0,139)+"…":dn);b.title=(b.title?b.title+" | ":"")+dn}}
   if(!L.ok){plcL=null;plcT=null;placerClear();$("pvLine").textContent="";$("plnPrevErr").textContent=/^(Pick an item|internal error)/.test(L.why)?L.why:"Not supported yet: "+String(L.why).replace(/^BL: /,"").replace(/ \(NL used\)$/,"").replace(/^Engine zones built a layout but /,"");$("plnPlace").disabled=true;if(!dl.open)dl.showModal();return}
   plcL=L;placerPreview(L);
 }

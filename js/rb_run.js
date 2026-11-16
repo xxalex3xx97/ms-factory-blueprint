@@ -10,7 +10,7 @@ function rbRun(P,item,mk,spMk,BX,bk,block,dk){
   const cls=plcCls(bk),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h;
   fbProgress('Sizing modules','',-1);
   const sz=rbSize(pl,mk,spMk,block,W,H);if(!sz.ok)return sz;
-  let A,F0,att=0;for(const bias of[0,1,-1,2,-2]){globalThis.__fbAtt=' - attempt '+(++att)+' of 5';if(dk)globalThis.CMP_DKFAIL=[];A=(globalThis.CITY_ON&&typeof cityBuild==='function'?cityBuild:rbBuild)({pl,G:sz.G,NB:sz.NB,tz:sz.tz,mk,bx:BX,bk,block,W,H,bias,dk,place:globalThis.CITY_PLACE});/* CITY_ON: table-driven city builder (city_build.js: row-local lanes, optional fixed positions CITY_PLACE[key]={c,r}) */if(bias===0)F0=globalThis.CMP_DKFAIL;if(A.ok)break}
+  let A,F0,att=0;const bfs=globalThis.CITY_ON&&typeof cityBuild==='function'?[cityBuild]:(dk&&typeof cityBuild==='function'?[rbBuild,cityBuild]:[rbBuild]);for(const bf of bfs){for(const bias of[0,1,-1,2,-2]){globalThis.__fbAtt=' - attempt '+(++att)+' of 5';if(dk)globalThis.CMP_DKFAIL=[];A=bf({pl,G:sz.G,NB:sz.NB,tz:sz.tz,mk,bx:BX,bk,block,W,H,bias,dk,place:globalThis.CITY_PLACE});/* CITY_ON: table-driven city builder (city_build.js: row-local lanes, optional fixed positions CITY_PLACE[key]={c,r}) */if(bias===0&&!F0)F0=globalThis.CMP_DKFAIL;if(A.ok)break}if(A.ok)break}
   if(!A.ok&&dk&&F0)globalThis.CMP_DKFAIL=F0;   // DOCKCLEAR keys of the first (bias 0) layout: the compose.js retry rebuilds that same layout   // retry: shift the wanted block row when a spot search fails
   if(!A.ok)return A;
   A.fz=true;
