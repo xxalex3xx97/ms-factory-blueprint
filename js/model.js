@@ -275,7 +275,8 @@ function flowLoad(next,src,cap,sp,ctx){
   const o=new Map();
   const add=(i,item,rate)=>{let e=o.get(i);if(!e){e={items:new Map(),tot:0,cap:cap.get(i)||null,util:null,mixed:false};o.set(i,e)}
     e.items.set(item,(e.items.get(item)||0)+rate);e.tot+=rate};
-  const walk=(id,item,rate,seen)=>{
+  const unadd=(i,item,rate)=>{const e=o.get(i);if(!e)return;const v=(e.items.get(item)||0)-rate;if(v>1e-9)e.items.set(item,v);else e.items.delete(item);e.tot-=rate};
+  const walk=(id,item,rate,seen,path=[])=>{
     for(let i=id;i!=null&&!seen.has(i);i=next.get(i)){seen.add(i);
       const outs=sp&&sp.get(i);
       if(outs&&outs.length){
@@ -283,7 +284,8 @@ function flowLoad(next,src,cap,sp,ctx){
         const got=sh.reduce((a,b)=>a+b,0);if(!(got>1e-9))return;
         add(i,item,got);   // input belt carries only what the outputs take
         outs.forEach((b,j)=>{if(sh[j]>1e-9)walk(b,item,sh[j],new Set(seen))});return}
-      add(i,item,rate)}};
+      if(next.get(i)==null&&ctx&&ctx.dk&&ctx.dk.has(i)){const f=ctx.dk.get(i);if(f&&f!==item){for(const j of path)unadd(j,item,rate);return}}   // dock void with another filter item: nothing flows
+      add(i,item,rate);path.push(i)}};
   src.forEach(({id,item,rate})=>walk(id,item,rate,new Set()));
   o.forEach(e=>{e.mixed=e.items.size>1;e.util=e.cap?e.tot/e.cap:null});
   return o;
@@ -390,7 +392,7 @@ function links1(L,inj){
     else if(sinkM.has(id)){const m=sinkM.get(id),r=recOf(m),x=r&&r.i.find(q=>q[0]===k);v=x?pm(x[1],r.t)||0:0}
     v=Math.min(v,c==null?Infinity:c);accM.set(key,v);return v};
   const prM=new Map();spR.forEach(r=>r.ins.forEach(i=>{if(r.pr!=null)prM.set(i,r.pr)}));
-  const ctx={acc,pr:prM};o.acc=acc;
+  const ctx={acc,pr:prM,dk:dkV};o.acc=acc;
   o.load=flowLoad(nx,src,cp,sp,ctx);
   // unstocked container relays its inflow: each pull belt carries min(belt speed, inflow / pull belts), split by item share; repeat until the relayed flow stops changing (long container->container chains)
   const fed=o.ports.filter(e=>{const p=e.port,d=DIR[e.b.rot];return isStore(e.m)&&!ctFirst(e.m)&&!(d[0]===-p.nx&&d[1]===-p.ny)&&live(e)});   // dead-end output belts take no share (same rule as machine outputs)

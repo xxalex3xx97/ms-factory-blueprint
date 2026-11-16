@@ -51,4 +51,9 @@ for(const bi of [0,7]){
   ok("bay"+bi+" T-f) theo: no filter, belt away: no pull",x.th.npull===0&&x.th.load===0);
 }
 ok("no page errors",errs.length===0);
+// T-g: producer belt (motors) ending in a dock void filtered to circuits carries 0; matching item or no filter carries full rate
+const FL=await p.evaluate(()=>{const f=(item,flt)=>{const o=flowLoad(new Map([[1,2]]),[{id:1,item,rate:60}],new Map(),null,{acc:()=>1,pr:new Map(),dk:new Map([[2,flt]])});return [1,2].map(i=>(o.get(i)||{tot:0}).tot)};
+  return{other:f('m','c'),same:f('c','c'),none:f('m','')}});
+ok("T-g) theo: producer belt into a dock filtered for another item shows 0",FL.other[0]===0&&FL.other[1]===0);
+ok("T-g) theo: matching item / no filter keep the full rate",FL.same[0]===60&&FL.same[1]===60&&FL.none[0]===60);
 await b.close();console.log(bad||errs.length?bad+" FAIL":"ALL PASS");process.exit(bad||errs.length?1:0);
