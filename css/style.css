@@ -206,3 +206,6 @@ header .mnl .hbt{flex-direction:row;min-height:34px;gap:6px;width:100%;justify-c
 #bayL li{display:flex;gap:8px;align-items:center;padding:4px 8px;cursor:pointer}
 #bayL li.on,#bayL li:hover{background:color-mix(in oklch,var(--accent) 30%,transparent)}
 #bayL .ic{width:24px;height:24px;flex:none}
+.ipop{margin-top:4px}.ipop input{width:100%;box-sizing:border-box}
+.ipop ul{list-style:none;margin:4px 0 0;padding:0;max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.ipop li{display:flex;gap:8px;align-items:center;padding:4px 8px;cursor:pointer}.ipop li.on,.ipop li:hover{background:color-mix(in oklch,var(--accent) 30%,transparent)}.ipop .ic{width:24px;height:24px;flex:none}

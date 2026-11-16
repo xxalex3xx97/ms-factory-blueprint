@@ -28,10 +28,10 @@ function chk(name, cond, detail = '') {
   if (cond) { pass++; console.log(`PASS ${name}`); }
   else { fails.push({name, detail}); console.log(`FAIL ${name}${detail ? '\n     ' + detail : ''}`); }
 }
-// container Contents "Add item" = icon picker: open it, click the row of item id (null = first item); an item already listed is not offered, the picker is just closed
+// container Contents "Add item" = inline icon + search dropdown (#ipop): open it, click the row of item id (null = first item); an item already listed is not offered, the dropdown is just closed
 async function addCt(pg, id) {
   await pg.click('#bCtAdd');
-  await pg.evaluate(id => { const n = id && ITEMS[id].n, li = [...document.querySelectorAll('#bayL li')].slice(1).find(e => !id || e.textContent.trim() === n); if (li) li.click(); else document.getElementById('bayX').click(); }, id);
+  await pg.evaluate(id => { const n = id && ITEMS[id].n, li = [...document.querySelectorAll('#ipop li')].find(e => !id || e.textContent.trim() === n); if (li) li.click(); else document.getElementById('ipop').remove(); }, id);
 }
 function wire(pg, tag) {
   pg.on('pageerror', e => errs.push(`[${tag}] pageerror: ${e.message}`));

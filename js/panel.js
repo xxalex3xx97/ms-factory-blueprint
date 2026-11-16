@@ -143,7 +143,7 @@ $("insp").addEventListener("click",e=>{
   const id=e.target.id;
   const rb=e.target.closest&&e.target.closest("button[data-rs]");
   if(rb&&S.blocks.filter(q=>sel.has(q.id)).length===1){
-    rsPick(S.blocks.find(q=>sel.has(q.id)));
+    rsPick(S.blocks.find(q=>sel.has(q.id)),rb);
     return;
   }
   const fb=e.target.closest&&e.target.closest("button[data-fl],button[data-df]");
@@ -155,10 +155,11 @@ $("insp").addEventListener("click",e=>{
     return;
   }
   const cd=e.target.closest&&e.target.closest("[data-ctdel]");
-  if((cd||id==="bCtAdd")&&S.blocks.filter(q=>sel.has(q.id)).length===1){
+  const cb=e.target.closest&&e.target.closest("#bCtAdd");
+  if((cd||cb)&&S.blocks.filter(q=>sel.has(q.id)).length===1){
     const m=S.blocks.find(q=>sel.has(q.id)),ct=m.ct||[];
     if(cd){push();const i=+cd.dataset.ctdel;m.ct=ct.filter((x,j)=>j!==i);all()}
-    else pickItem((def(m.cls).label||"Container")+": add item","",key=>{const it=FITEMS.find(q=>fkey(q)===key);if(it&&!(m.ct||[]).some(x=>x.item===it)){push();m.ct=(m.ct||[]).concat([{item:it,n:0,inf:false}]);all()}},FITEMS.filter(q=>!ct.some(x=>x.item===q)),"(cancel)");
+    else inlinePick(cb,FITEMS.filter(q=>!ct.some(x=>x.item===q)),it=>{if(!(m.ct||[]).some(x=>x.item===it)){push();m.ct=(m.ct||[]).concat([{item:it,n:0,inf:false}]);all()}});
     return}
   const rr=e.target.closest&&e.target.closest("[data-rk]"),bs1=S.blocks.filter(q=>sel.has(q.id));
   if((rr||id==="bRecClr")&&bs1.length===1&&isM(bs1[0])){push();const m=bs1[0];if(id==="bRecClr"||m.rec===rr.dataset.rk)delete m.rec;else m.rec=rr.dataset.rk;all();return}
@@ -197,9 +198,24 @@ function pickItem(title,cur,onPick,ids,none){
 }
 // canvas dock square: picker for that bay's slot
 // drone bay ore picker (inspector button + canvas square): the 6 ores, one ore for both ports
-function rsPick(m){
-  const cur=m.rs||"",ids=[...new Set(RSL.concat(cur||[]))].map(k=>FITEMS.find(q=>fkey(q)===k)).filter(Boolean);
-  pickItem((def(m.cls).label||"Drone bay")+" mines",cur,key=>{if(key!==(m.rs||"")){push();if(key)m.rs=key;else delete m.rs}sel=new Set([m.id]);all()},ids,"(not set)");
+function rsPick(m,btn){
+  const cur=m.rs||"",ids=[...new Set(RSL.concat(cur||[]))].map(k=>FITEMS.find(q=>fkey(q)===k)).filter(Boolean),set=key=>{if(key!==(m.rs||"")){push();if(key)m.rs=key;else delete m.rs}sel=new Set([m.id]);all()};
+  if(btn)inlinePick(btn,ids,id=>set(id?fkey(id):""),"(not set)");   // inspector button: inline dropdown; canvas square (no anchor): dialog like the dock bays
+  else pickItem((def(m.cls).label||"Drone bay")+" mines",cur,key=>set(key),ids,"(not set)");
+}
+// inline select2 under a button (no dialog): search box + icon list; click the button again, Esc or a click outside closes it
+function inlinePick(btn,ids,onPick,none){
+  const old=$("ipop");if(old){old.remove();return}
+  const d=document.createElement("div");d.id="ipop";d.className="ipop";d.innerHTML='<input type="text" placeholder="Search item..." aria-label="Search item" autocomplete="off" role="combobox"><ul role="listbox"></ul>';
+  btn.parentNode.appendChild(d);
+  const inp=d.firstChild,L=d.lastChild,rows=(none?[{id:"",n:none}]:[]).concat(ids.map(id=>({id,n:ITEMS[id].n||id})));let shown=rows,on=0;
+  const close=()=>{d.remove();document.removeEventListener("pointerdown",out,true)},out=e=>{if(!d.contains(e.target)&&!btn.contains(e.target))close()};
+  const render=()=>{L.innerHTML=shown.map((r,k)=>'<li role="option" data-k="'+k+'"'+(k===on?' class="on" aria-selected="true"':'')+'>'+(iurl(r.id)?'<img class="ic" alt="" src="'+iurl(r.id)+'">':'<span class="ic"></span>')+esc(r.n)+'</li>').join("");const e=L.querySelector(".on");if(e)e.scrollIntoView({block:"nearest"})};
+  const pick=r=>{close();onPick(r.id)};
+  inp.oninput=()=>{const q=inp.value.trim().toLowerCase();shown=rows.filter(r=>!q||r.n.toLowerCase().includes(q));on=0;render()};
+  inp.onkeydown=e=>{if(e.key==="ArrowDown"||e.key==="ArrowUp"){e.preventDefault();on=Math.max(0,Math.min(shown.length-1,on+(e.key==="ArrowDown"?1:-1)));render()}else if(e.key==="Enter"){e.preventDefault();if(shown[on])pick(shown[on])}else if(e.key==="Escape"){e.stopPropagation();close();btn.focus()}};
+  L.onclick=e=>{const li=e.target.closest("li");if(li)pick(shown[+li.dataset.k])};
+  document.addEventListener("pointerdown",out,true);render();inp.focus();
 }
 function bayFilter(b,i){
   if(i<0)return rsPick(b);
