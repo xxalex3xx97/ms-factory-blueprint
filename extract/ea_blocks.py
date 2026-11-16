@@ -4,7 +4,7 @@ usage: python -I extract/ea_blocks.py            (idempotent; then python -I ext
 Inputs: extract/floors.json (EA colliders/BlockBounds/cost, see ea_floors.py), extract/rea/blocks_raw.json (strings/icon),
         extract/rea/research.json (unlocks), extract/rea/localization.json (labels/descriptions).
 Rules (nothing invented): size = ceil(max(BlockBounds, hull/16)) cells (non-integer / sub-cell footprints are rounded up, flagged in `note`);
-levels = ceil(BlockBounds z / 4) (EA: 1 level = 4 floor units); label/description = in-game text when extractable else the asset id;
+levels = min(2, ceil(BlockBounds z / 4)) (user 2026-11-16: every building is at most 2 levels) (EA: 1 level = 4 floor units); label/description = in-game text when extractable else the asset id;
 research = RSC_* whose `unlocks` lists the block, else [] + researchNote. Only Station_03, Adapter_01 and Corridor_02 get a buildable floor
 (user ground truth 2026-11-12 / decoded walls); every other new block is nofloor (its footprint is a no-build tile, interior unknown).
 EXCLUDED (not station blocks): see EXCLUDE below; printed at the end.

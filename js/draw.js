@@ -218,7 +218,7 @@ function drawBlock(b,alpha,isSel){
   const shp=!m&&view!=="F"&&s>=4&&shapeTf(b);   // Layout: blocks with a real plan (walls, props, ring) show it instead of a plain rectangle
   cx.fillStyle=kFill(cat,alpha*(shp?.3:.8));
   cx.fillRect(x,y,w,h);
-  if(shp){const nb=BAYHIT.length,q=floorRect(b)?1:shp.f!==shp.f0?NFQ:0;cx.save();cx.translate(q*s/FC,q*s/FC);drawShapeFloor({floors:[{b}]},s/FC);cx.restore();BAYHIT.length=nb}   // the Factory floor frame puts the hull 1 cell outside the tile origin; Layout aligns the hull with the tile   // 1 block = FC floor cells; no bay hit areas in Layout
+  if(shp){const nb=BAYHIT.length,q=floorRect(b)?1:shp.f!==shp.f0?NFQ:0;cx.save();cx.globalAlpha=Math.min(1,alpha);cx.translate(q*s/FC,q*s/FC);drawShapeFloor({floors:[{b}]},s/FC);cx.restore();BAYHIT.length=nb}   // the Factory floor frame puts the hull 1 cell outside the tile origin; Layout aligns the hull with the tile   // 1 block = FC floor cells; no bay hit areas in Layout
   if(!shp)drawIcon(df,x,y,w,h,Math.min(1,alpha));
   if(df&&df.directional&&s>=ARROW_MIN_S&&!(LK&&cat[0]==="~"&&alpha>.5))arrow(x,y,w,h,b.rot,Math.min(1,alpha));   // link mode: the link lines show the direction
   cx.lineWidth=1;cx.strokeStyle=kStroke(cat,alpha);

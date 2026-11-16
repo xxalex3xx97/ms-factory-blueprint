@@ -3004,7 +3004,7 @@ async function s28(br) {
     const n = names[i], c = cat[i], sh = shapes[i], src = srcBlocks[n];
     chk(`28 ${n}: SHAPES entry exists`, !!sh, String(sh));
     if (src.mirrorOf) {   // mirror pair: same shape as its base block, no catalog entry (palette shows the base only)
-      const same = await pg.evaluate(([a, b]) => (o => JSON.stringify(o(SHAPES[a])) === JSON.stringify(o(SHAPES[b])))(x => JSON.parse(JSON.stringify(x, (k, v) => k[0] === '_' ? undefined : v))), [n, src.mirrorOf]);
+      const same = await pg.evaluate(([a, b]) => (o => JSON.stringify(o(SHAPES[a])) === JSON.stringify(o(SHAPES[b])))(x => JSON.parse(JSON.stringify(x, (k, v) => k === '_wps' || k === '_in' ? undefined : v))), [n, src.mirrorOf]);
       chk(`28 ${n}: mirror of ${src.mirrorOf}: SHAPES identical, no catalog entry`, same && !c, JSON.stringify(c));
       continue;
     }

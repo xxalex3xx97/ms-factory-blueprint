@@ -96,7 +96,7 @@ cv.addEventListener("pointermove",e=>{
       drag.px=p.x;drag.py=p.y;
       const r=boxRect(),a=toCell(r.x,r.y),z=toCell(r.x+r.w,r.y+r.h);
       sel=new Set(drag.add?drag.base:[]);
-      S.blocks.forEach(b=>{if(b.h!==layer||!inView(b))return;const d=dim(b);if(b.x<=z.x&&b.x+d.w-1>=a.x&&b.y<=z.y&&b.y+d.h-1>=a.y)sel.add(b.id)});
+      S.blocks.forEach(b=>{if(!onLv(b)||!inView(b))return;const d=dim(b);if(b.x<=z.x&&b.x+d.w-1>=a.x&&b.y<=z.y&&b.y+d.h-1>=a.y)sel.add(b.id)});
     }
   }
   if(drag||active||pasting||ugPend)draw(!!(drag&&drag.k==="pan"&&!active&&!pasting&&!ugPend&&typeof BIGF==="function"&&BIGF()));   // big factory: a pan is drawn with less detail (full detail 160 ms after the last move); a plain hover changes no painted pixel (tooltip only): no full repaint per mouse move
