@@ -52,17 +52,9 @@ function simInit(o={}){
   Z.M.forEach(M=>{if(M.pb.length)Z.prod.push(M)});
   Z.E.forEach(r=>[r.h+1,r.h-1].forEach(h=>{const o=elvO.get([r.x,r.y,h,r.pk].join());if(o)r.outs.push(o)}));   // destinations: adjacent levels up/down (round-robin via simRoute)
   if(fl!=null)Z.E.forEach(r=>r.outs.push({sink:1}));   // floor-only mode: elevator = sink
-  // docks: per-bay filters. Belt whose front cell is in a bay = void sink (filter f, "" = any item); belt beside a bay (not entering) with a filter = infinite source of that item; other belts entering a BPO_Dock footprint keep the old any-item sink (BPO_Dock has no ports, links() never sees it)
-  const dkC=plcCls('BPO_Dock'),dkCells=new Set(),bayAt=new Map();
-  S.blocks.filter(b=>dkN(b.cls)&&(fl==null||b.h===fl)).forEach(b=>{
-    if(b.cls===dkC){const e=dim({cls:b.cls,rot:b.rot||0});for(let i=0;i<e.w*FC;i++)for(let j=0;j<e.h*FC;j++)dkCells.add((b.x*FC+i)+','+(b.y*FC+j))}
-    bayRects(b).forEach(q=>{const k=((b.df||[])[q.i]||{}).item,f=k?FITEMS.find(id=>fkey(id)===k)||"?":"",bay={b,f,cn:f&&f!=="?"?{b,st:new Map([[f,{n:0,inf:true}]]),cap:null}:null};
-      for(let x=Math.round(q.x);x<Math.round(q.x+q.w);x++)for(let y=Math.round(q.y);y<Math.round(q.y+q.h);y++)bayAt.set(x+','+y,bay)})});
-  Z.dS=new Map();K.belts.forEach(b=>{const d=DIR[b.rot];if(!d)return;const c=K.chain(b.id),fr=bayAt.get((b.x+d[0])+','+(b.y+d[1]));
-    if(fr){add(Z.dS,c,{belt:b,f:fr.f});return}
-    if([1,2].some(n=>dkCells.has((b.x+d[0]*n)+','+(b.y+d[1]*n)))){add(Z.dS,c,{belt:b,f:""});return}
-    if(bayAt.has(b.x+','+b.y))return;
-    for(const[a,e]of DIR){const nb=bayAt.get((b.x+a)+','+(b.y+e));if(nb&&nb.cn){Z.pull.push({cn:nb.cn,belt:b,c});break}}});
+  // docks: per-bay filters (see dockBelts in model.js)
+  Z.dS=new Map();const dkB=dockBelts(S.blocks,K.belts,fl);
+  K.belts.forEach(b=>{const r=dkB.get(b.id);if(!r)return;const c=K.chain(b.id);if(r.v)add(Z.dS,c,{belt:b,f:r.f});else Z.pull.push({cn:r.cn,belt:b,c})});
   Z.dkN=0;
   Z.stat=simCalc();Z.sm=Object.assign(simCalc(SIM_SMW),{t:0,steady:false,stId:new Set()});return true;
 }

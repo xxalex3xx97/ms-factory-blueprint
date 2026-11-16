@@ -28,6 +28,9 @@ const R=await p.evaluate(()=>{
     const r={pull:Z.pull.length,inf:Z.pull.length?[...Z.pull[0].cn.st.values()].some(x=>x.inf===true):null,hasWater:Z.pull.length?Z.pull[0].cn.st.has(water):null,dS:Z.dS.size};
     const c=[...Z.dS.keys()][0];
     if(c!==undefined){Z.cr.set(c,1);r.rw=!!simRoute(c,water,2,null,new Set());r.ro=!!simRoute(c,other,2,null,new Set())}
+    const K=links1(0),bl=S.blocks[1],cap=beltMax(bl);
+    r.th={npull:K.pull.length,pitem:K.pull.length?K.pull[0].item===water:null,prate:K.pull.length?K.pull[0].rate===cap:null,load:(K.load.get(2)||{items:new Map()}).items.get(water)||0,cap,
+      cm:K.chainMachines(bl).length,aw:K.acc(2,water),ao:K.acc(2,other)};
     return r};
   [0,7].forEach(bi=>{out["in"+bi]=run(bi,true,wk);out["inNone"+bi]=run(bi,true,"");out["away"+bi]=run(bi,false,wk);out["awayNone"+bi]=run(bi,false,"")});
   return out});
@@ -40,6 +43,12 @@ for(const bi of [0,7]){
   ok("bay"+bi+" c) no filter accepts any item",n.rw===true&&n.ro===true);
   ok("bay"+bi+" d) belt away+filter: 1 infinite source with item",w.pull===1&&w.inf===true&&w.hasWater===true);
   ok("bay"+bi+" d) belt away, no filter: pull empty",x.pull===0);
+  ok("bay"+bi+" T-a) theo: void belt not a dead end (dock in chain)",a.th.cm===1&&n.th.cm===1&&w.th.cm===0);
+  ok("bay"+bi+" T-b) theo: void accepts filter item at belt rate",a.th.aw===a.th.cap);
+  ok("bay"+bi+" T-c) theo: void refuses other item",a.th.ao===0);
+  ok("bay"+bi+" T-d) theo: no filter accepts any item",n.th.aw===n.th.cap&&n.th.ao===n.th.cap);
+  ok("bay"+bi+" T-e) theo: source belt pulls filter item at belt rate",w.th.npull===1&&w.th.pitem===true&&w.th.prate===true&&w.th.load===w.th.cap);
+  ok("bay"+bi+" T-f) theo: no filter, belt away: no pull",x.th.npull===0&&x.th.load===0);
 }
 ok("no page errors",errs.length===0);
 await b.close();console.log(bad||errs.length?bad+" FAIL":"ALL PASS");process.exit(bad||errs.length?1:0);
