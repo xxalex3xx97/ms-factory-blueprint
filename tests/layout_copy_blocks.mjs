@@ -55,6 +55,20 @@ try{
   chk('paste after cut restores',r.cutBack.b===1&&r.cutBack.m===3,JSON.stringify(r.cutBack));
   chk('duplicate adds block + 2 machines',r.d.b===2&&r.d.m===5,JSON.stringify(r.d));
   chk('duplicate offsets +1 cell / +FC',r.dbxy[0]===51&&r.dbxy[1]===51&&JSON.stringify(r.dm)===JSON.stringify([[c0+3+F,c1+3+F],[c0+6+F,c1+3+F]]),JSON.stringify([r.dbxy,r.dm]));
+  const L=await pg.evaluate(()=>{
+    const o={};STRICT=true;setView("L");S.blocks=[];S.closed=[];S.conn=[];sel=new Set();clip=[];pasting=null;uid=9000;
+    const mc=CATALOG.buildables.find(b=>b.id==='DAT_Container').id,bc=PLC_BELT[0],st=plcCls('BPO_Station_02');
+    const cells=[];for(let i=0;i<8;i++)cells.push([2*i,0],[2*i,10]);for(let j=1;j<5;j++)cells.push([0,2*j],[14,2*j]);
+    cells.forEach(([x,y])=>{const b={id:uid++,cls:st,x:50+x,y:50+y,h:0,rot:0,pid:0,off:[]};S.blocks.push(b);const f=fcell(b);
+      S.blocks.push({id:uid++,cls:mc,x:f.cx*FC+3,y:f.cy*FC+3,h:0,rot:0,pid:0,off:[]});
+      for(let k=0;k<6;k++)S.blocks.push({id:uid++,cls:bc,x:f.cx*FC+8+k*3,y:f.cy*FC+7,h:0,rot:0,pid:0,off:[]})});
+    const n0=S.blocks.length;o.n0=n0;
+    sel=new Set(S.blocks.filter(b=>!isM(b)&&floorRect(b)).map(b=>b.id));copy();o.clip=clip.length;
+    hover={x:150,y:150};pasteAt();o.far=S.blocks.length-n0;
+    hover={x:52,y:52};const n1=S.blocks.length;pasteAt();o.over=S.blocks.length-n1;
+    return o});
+  chk('large paste on free space adds everything',L.far===L.n0,JSON.stringify(L));
+  chk('large paste overlapping another factory is refused',L.over===0,JSON.stringify(L));
   chk('no page errors',!errs.length,errs.join('|'));
 }finally{await br.close()}
 process.exit(bad?1:0);
