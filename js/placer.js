@@ -752,11 +752,21 @@ function* placerTileGen(L,ok){
   let why="";fails.forEach(w=>{if(w!==undefined)why=w});   // last failure in search order, as before
   return {ok:false,why:"Does not fit: "+why};
 }
-function plT(P,n){let b=P.blocks,m=P.ms;for(let k=0;k<(n&3);k++){const Hc=Math.max(1,plcMmax(b,q=>q.y+dim(q).h),plcMmax(m,q=>Math.ceil((q.y+dim(q).h)/FC)));
-  b=b.map(q=>({...q,x:Hc-q.y-dim(q).h,y:q.x,rot:((q.rot||0)+1)&3}));m=m.map(q=>({...q,x:Hc*FC-q.y-dim(q).h,y:q.x,rot:((q.rot||0)+1)&3}))}
-  return{blocks:b,ms:m}}   // plan rotated n x 90deg clockwise; blocks in cells, machines in FC units, same origin
+// plan mirrored (fl, left-right) then rotated n x 90deg clockwise; blocks in cells, machines in FC units, same origin.
+// A machine moves with the block whose cell box holds it, relative to that block's FLOOR rect (the floor sits at the top-left of its cell box, so a plain
+// box rotation shifted machines out of the rotated floor: root cause of "Cannot build here" on rotated plans). Same transform for ghost and placement.
+function plT(P,n,fl){let b=P.blocks,m=P.ms;
+  const fr=q=>{const r=floorRect({...q,id:-1});if(r)return r;const o=fcell(q);return{x:o.cx*FC,y:o.cy*FC,w:o.cw*FC,h:o.ch*FC}};
+  const step=(tb,tm)=>{const ow=new Map();b.forEach((q,i)=>{const o=fcell(q);for(let a=0;a<o.cw;a++)for(let c=0;c<o.ch;c++)ow.set((o.cx+a)+","+(o.cy+c),i)});
+    const Hc=Math.max(1,plcMmax(b,q=>q.y+dim(q).h),plcMmax(m,q=>Math.ceil((q.y+dim(q).h)/FC))),nb=b.map(q=>tb(q,Hc));
+    m=m.map(q=>{const i=ow.get(Math.floor(q.x/FC)+","+Math.floor(q.y/FC));return tm(q,i==null?null:fr(b[i]),i==null?null:fr(nb[i]),Hc)});b=nb};
+  if(fl){const W=plcMmax(b,q=>q.x+dim(q).w),rs=q=>(def(q.cls)||{}).portsLayout?null:{rot:q.rot===0?2:q.rot===2?0:q.rot};
+    step(q=>({...q,x:W-q.x-dim(q).w,...(rs(q)||{})}),(q,F,G)=>{const d=dim(q);return{...q,...(mirM(q)||rs(q)||{}),x:F?G.x+F.w-(q.x-F.x)-d.w:W*FC-q.x-d.w}})}
+  for(let k=0;k<(n&3);k++)step((q,Hc)=>({...q,x:Hc-q.y-dim(q).h,y:q.x,rot:((q.rot||0)+1)&3}),
+    (q,F,G,Hc)=>{const d=dim(q),r={rot:((q.rot||0)+1)&3};return F?{...q,...r,x:G.x+F.h-(q.y-F.y)-d.h,y:G.y+q.x-F.x}:{...q,...r,x:Hc*FC-q.y-d.h,y:q.x}});
+  return{blocks:b,ms:m}}
 function placerPaste(){
-  const P0=pasting.pl,P={...P0,...plT(P0,pasting.rot)},bs=P.blocks.map(q=>({id:uid++,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:q.rot||0,pid:0,...(q.nm?{nm:q.nm}:{})}));   // nm: dock names of the build engine
+  const P0=pasting.pl,P={...P0,...plT(P0,pasting.rot,pasting.fl)},bs=P.blocks.map(q=>({id:uid++,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:q.rot||0,pid:0,...(q.nm?{nm:q.nm}:{})}));   // nm: dock names of the build engine
   const hit=bs.some(b=>{const d=dim(b);return nonM().some(o=>{if(!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})});
   if(hit){toast("Block overlaps another block");return}
   const ms=P.ms.map(m=>({...m,id:uid++,mid:0,pid:0,x:hover.x*FC+m.x,y:hover.y*FC+m.y,h:layer}));

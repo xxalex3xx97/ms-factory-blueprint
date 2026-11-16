@@ -67,7 +67,7 @@ const ghost = () => pg2.evaluate(() => {
   const rects = [], yel = (c => { c.fillStyle = 'hsla(45,95%,62%,.8)'; return c.fillStyle; })(document.createElement('canvas').getContext('2d')), fr = CanvasRenderingContext2D.prototype.fillRect;
   CanvasRenderingContext2D.prototype.fillRect = function (x, y, w, h) { if (this.fillStyle === yel) rects.push([x, y, w, h]); return fr.call(this, x, y, w, h); };
   try { paint0(); } finally { CanvasRenderingContext2D.prototype.fillRect = fr; }
-  const s = sc(), pT = plT(pasting.pl, pasting.rot), box = pT.blocks.map(q => { const f = fcell({...q, h: 0, id: -1}), a = V.ox + (hover.x + f.cx) * s, b = V.oy + (hover.y + f.cy) * s; return [a, b, f.cw * s, f.ch * s]; });
+  const s = sc(), pT = plT(pasting.pl, pasting.rot, pasting.fl), box = pT.blocks.map(q => { const f = fcell({...q, h: 0, id: -1}), a = V.ox + (hover.x + f.cx) * s, b = V.oy + (hover.y + f.cy) * s; return [a, b, f.cw * s, f.ch * s]; });
   const inside = r => box.some(f => r[0] >= f[0] - 1 && r[1] >= f[1] - 1 && r[0] + r[2] <= f[0] + f[2] + 1 && r[1] + r[3] <= f[1] + f[3] + 1);
   const dataIn = pT.ms.every(m => pT.blocks.some(q => { const f = fcell({...q, h: 0, id: -1}); return m.x >= f.cx * FC && m.x < (f.cx + f.cw) * FC && m.y >= f.cy * FC && m.y < (f.cy + f.ch) * FC; }));
   return {n: rects.length, out: rects.filter(r => !inside(r)).length, dataIn, ms: pT.ms.length, rot: pasting.rot};
@@ -90,6 +90,43 @@ for (let k = 1; k <= 3; k++) {
   check(!Lk.pasting && Lk.b === L0.b && Lk.m === L0.m && Lk.cov === Lk.m, `G placed rot ${k}: ${Lk.b} blocks ${Lk.m} floor items all inside block floors (rot0: ${L0.b}/${L0.m})`);
   check(Lk.lk === L0.lk, `G placed rot ${k}: ${Lk.lk} links, same as unrotated ${L0.lk}`);
 }
+// ---- user repro: imported Starter_Station.json (STRICT on, default), Build factory BasicCircuit 150/min, Mk2, 2x1 blocks, raw inputs from industrial docks, Place -> R x0..3 and V -> click east of the station
+const pg3 = await (await br.newContext({viewport: {width: 1400, height: 900}})).newPage();
+const errs3 = [];
+pg3.on('pageerror', e => errs3.push(e.message));
+await pg3.goto(pathToFileURL(ROOT + '/index.html').href);
+await pg3.waitForFunction(() => window.__fb && typeof placerGo === 'function');
+await pg3.click('#imp'); await pg3.setInputFiles('#impFile', path.join(ROOT, 'tests', 'fixtures', 'Starter_Station.json'));
+await pg3.waitForFunction(() => $('impTa').value.length > 100); await pg3.click('#impGo');
+await pg3.evaluate(() => { $('plnItem').value = 'ITEM_BasicCircuit'; $('plnItem').dispatchEvent(new Event('change')); if ($('plnB').getAttribute('aria-pressed') !== 'true') $('plnB').click(); });
+await pg3.fill('#plnRate', '150'); await pg3.click('#plnBuild');
+await pg3.selectOption('#pvMk', '1'); await pg3.selectOption('#plnBk', 'BPO_Station_2x1'); await pg3.check('#plnDkI'); await pg3.selectOption('#plnDk', 'ind');
+await pg3.waitForFunction(() => !$('plnPlace').disabled, null, {timeout: 120000});
+await pg3.click('#plnPlace'); await pg3.waitForTimeout(500);
+if ((await pg3.textContent('#plnPlace')) === 'Build it') await pg3.click('#plnPlace');
+await pg3.waitForFunction(() => pasting, null, {timeout: 60000});
+const strict0 = await pg3.evaluate(() => { window.__pl = pasting.pl; window.__snap = S.blocks.slice(); STRICT = true; return STRICT; });
+const stat = () => pg3.evaluate(() => { const ms = S.blocks.filter(isM), bs = S.blocks.filter(b => !isM(b)), cov = floorOn(bs); return {b: bs.length, m: ms.length, cov: ms.filter(m => cov.has(m)).length, pasting: !!pasting, lk: Object.values(links(0)).reduce((a, v) => a + ((v && (v.length || v.size)) || 0), 0), toast: ($('toast') || {}).textContent}; });
+const base = await stat();
+const sres = {};
+for (const [rot, fl] of [[0, 0], [1, 0], [2, 0], [3, 0], [0, 1], [1, 1]]) {
+  await pg3.evaluate(() => { S.blocks = window.__snap.slice(); pasting = {rot: 0, fl: false, pl: window.__pl}; sel = new Set(); all();
+    const bs = S.blocks.filter(b => !isM(b)); V.ox = 250 - Math.max(...bs.map(b => b.x + dim(b).w)) * sc(); all(); });
+  const pos = await pg3.evaluate(() => { const bs = S.blocks.filter(b => !isM(b)), x = Math.max(...bs.map(b => b.x + dim(b).w)) + 8, y = Math.min(...bs.map(b => b.y)), s = sc(), r = cv.getBoundingClientRect(); return {x: r.left + V.ox + (x + .5) * s, y: r.top + V.oy + (y + .5) * s}; });
+  await pg3.mouse.move(pos.x - 5, pos.y - 5); await pg3.mouse.move(pos.x, pos.y);
+  for (let i = 0; i < rot; i++) await pg3.keyboard.press('r');
+  if (fl) await pg3.keyboard.press('v');
+  await pg3.mouse.move(pos.x + 1, pos.y + 1); await pg3.mouse.move(pos.x, pos.y);
+  const g = await pg3.evaluate(() => ({rot: pasting.rot, fl: pasting.fl}));
+  await pg3.mouse.click(pos.x, pos.y);
+  const s = await stat(); sres[rot + '/' + fl] = s;
+  if (rot === 0 && !fl) { sres.nb = s.b - base.b; sres.nm = s.m - base.m; sres.lk = s.lk - base.lk; }
+  check(g.rot === rot && g.fl === !!fl && !s.pasting && s.b - base.b === sres.nb && s.m - base.m === sres.nm && s.cov - base.cov === s.m - base.m,
+    `J Starter_Station BasicCircuit R${rot}${fl ? '+V' : ''}: placed ${s.b - base.b} blocks ${s.m - base.m} buildables (R0: ${sres.nb}/${sres.nm}), all inside block floors, no refusal (${s.toast})`);
+  check(s.lk - base.lk === sres.lk, `J R${rot}${fl ? '+V' : ''}: ${s.lk - base.lk} links, same as unrotated ${sres.lk}`);
+  if (rot === 1 && !fl) { await pg3.evaluate(() => { const bs = S.blocks.filter(b => !isM(b)); V.ox = 120 - Math.max(...bs.map(b => b.x)) * sc() + 600; all(); }); await pg3.screenshot({path: SH + 'rot-starter-placed-r1.png'}); }
+}
+check(strict0 === true && errs3.length === 0, 'K STRICT on, no pageerror' + (errs3.length ? ': ' + errs3.join(' | ') : ''));
 // big plan: plT must not overflow the stack (2391 blocks / 128k machines)
 await build('ITEM_AdvancedPlates');
 await pg2.mouse.move(300, 330); await pg2.mouse.move(310, 340);
