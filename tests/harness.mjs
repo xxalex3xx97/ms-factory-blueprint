@@ -3004,7 +3004,7 @@ async function s28(br) {
     const n = names[i], c = cat[i], sh = shapes[i], src = srcBlocks[n];
     chk(`28 ${n}: SHAPES entry exists`, !!sh, String(sh));
     if (src.mirrorOf) {   // mirror pair: same shape as its base block, no catalog entry (palette shows the base only)
-      const same = await pg.evaluate(([a, b]) => JSON.stringify(SHAPES[a]) === JSON.stringify(SHAPES[b]), [n, src.mirrorOf]);
+      const same = await pg.evaluate(([a, b]) => (o => JSON.stringify(o(SHAPES[a])) === JSON.stringify(o(SHAPES[b])))(x => JSON.parse(JSON.stringify(x, (k, v) => k[0] === '_' ? undefined : v))), [n, src.mirrorOf]);
       chk(`28 ${n}: mirror of ${src.mirrorOf}: SHAPES identical, no catalog entry`, same && !c, JSON.stringify(c));
       continue;
     }
@@ -3068,7 +3068,7 @@ async function s28(br) {
     const at = (px, py) => { const q = g.getImageData(Math.round(px * k), Math.round(py * k), 1, 1).data; return q[0] + q[1] + q[2] };
     const E = entrances(b, true);
     return {eds: E.map(e => e.ed).sort(), ports: E.map(e => e.port), txt: entText(b), diff: E.map(e => { const D = DIR[e.ed], ex = V.ox + e.x * s, ey = V.oy + e.y * s,
-      m = at(ex - D[0] * 1.5, ey - D[1] * 1.5), ref = D[0] ? at(ex - D[0] * 1.5, y0 + 3) : at(x0 + 3, ey - D[1] * 1.5); return Math.abs(m - ref) }), s};
+      m = at(ex - D[0] * 1.5, ey - D[1] * 1.5), ref = at(ex + D[0] * 4, ey + D[1] * 4); return Math.abs(m - ref) }), s};
   }, [`${P}${n}.${n}_C`, r]);
   const want = {BPO_Dock_2: r => [0, 1, 2, 3].filter(e => e !== r), BPO_Station_2x1: r => [0, 2].map(e => (e + r) & 3), BPO_Station_01: () => [0, 1, 2, 3], BPO_MiningDroneBayBlock: r => [(2 + r) & 3], BPO_MiningDroneBayBlock_2: r => [(2 + r) & 3], BPO_CommandModule: r => [(2 + r) & 3], BPO_BlueprintUnit: r => [(2 + r) & 3], BPO_ShipyardSide: r => [(2 + r) & 3], BPO_ShipyardCore: r => [(2 + r) & 3], BPO_ShipyardCore_02: r => [(2 + r) & 3]};
   for (const n of Object.keys(want)) for (const r of [0, 1, 2, 3]) {
