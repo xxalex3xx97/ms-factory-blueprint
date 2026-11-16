@@ -28,6 +28,11 @@ function chk(name, cond, detail = '') {
   if (cond) { pass++; console.log(`PASS ${name}`); }
   else { fails.push({name, detail}); console.log(`FAIL ${name}${detail ? '\n     ' + detail : ''}`); }
 }
+// container Contents "Add item" = icon picker: open it, click the row of item id (null = first item); an item already listed is not offered, the picker is just closed
+async function addCt(pg, id) {
+  await pg.click('#bCtAdd');
+  await pg.evaluate(id => { const n = id && ITEMS[id].n, li = [...document.querySelectorAll('#bayL li')].slice(1).find(e => !id || e.textContent.trim() === n); if (li) li.click(); else document.getElementById('bayX').click(); }, id);
+}
 function wire(pg, tag) {
   pg.on('pageerror', e => errs.push(`[${tag}] pageerror: ${e.message}`));
   pg.on('console', m => { if (m.type() === 'error') errs.push(`[${tag}] console.error: ${m.text()}`); });
@@ -953,10 +958,10 @@ async function s14(br) {
 
   // ---- container UI editing: add, qty, infinite, remove, undo
   await selectCls('DAT_Container_2');
-  await pg.selectOption('#ctAdd', TP); await pg.click('#bCtAdd');
+  await addCt(pg, TP);
   let ct = JSON.parse(await ctNow());
   chk('S14 add item via UI appends it (n 0, finite)', ct.length === 2 && ct[1].item === TP && ct[1].n === 0 && !ct[1].inf, JSON.stringify(ct));
-  await pg.selectOption('#ctAdd', TP); await pg.click('#bCtAdd');
+  await addCt(pg, TP);
   chk('S14 adding an already-listed item is ignored', JSON.parse(await ctNow()).length === 2);
   await pg.fill('#insp input[data-ct="n"][data-i="1"]', '250'); await pg.press('#insp input[data-ct="n"][data-i="1"]', 'Tab');
   ct = JSON.parse(await ctNow());
@@ -1290,11 +1295,11 @@ async function s15(br) {
   await k.pg.evaluate(() => { __fb.setView('F'); __fb.fit(); }); await k.pg.waitForTimeout(150);
   await k.pg.evaluate(() => { const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
   await k.pg.waitForTimeout(150);
-  await k.pg.selectOption('#ctAdd', {index: 0}); await k.pg.click('#bCtAdd');
+  await addCt(k.pg, null);
   await k.pg.waitForTimeout(150);
-  const ig = await k.pg.evaluate(() => { const r = e => e.getBoundingClientRect(), row = document.querySelector('.ctrow'), s = document.getElementById('ctAdd'); return {rows: [...row.children].map(e => Math.round(r(e).top)), rh: r(row).height, sw: r(s).width}; });
+  const ig = await k.pg.evaluate(() => { const r = e => e.getBoundingClientRect(), row = document.querySelector('.ctrow'), s = document.getElementById('bCtAdd'); return {rows: [...row.children].map(e => Math.round(r(e).top)), rh: r(row).height, sw: r(s).width}; });
   chk('15 inspector: remove button stays on the row (single line)', ig.rh < 44, JSON.stringify(ig));
-  chk('15 inspector: add-item select is wide enough (>=150px)', ig.sw >= 150, JSON.stringify(ig));
+  chk('15 inspector: add-item button is wide enough (>=150px)', ig.sw >= 150, JSON.stringify(ig));
   await k.pg.screenshot({path: path.join(SHOTS, 's15-inspector.png'), clip: {x: 1110, y: 0, width: 290, height: 500}});
   await k.ctx.close();
 }

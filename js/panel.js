@@ -158,7 +158,7 @@ $("insp").addEventListener("click",e=>{
   if((cd||id==="bCtAdd")&&S.blocks.filter(q=>sel.has(q.id)).length===1){
     const m=S.blocks.find(q=>sel.has(q.id)),ct=m.ct||[];
     if(cd){push();const i=+cd.dataset.ctdel;m.ct=ct.filter((x,j)=>j!==i);all()}
-    else{const it=$("ctAdd").value;if(it&&!ct.some(x=>x.item===it)){push();m.ct=ct.concat([{item:it,n:0,inf:false}]);all()}}
+    else pickItem((def(m.cls).label||"Container")+": add item","",key=>{const it=FITEMS.find(q=>fkey(q)===key);if(it&&!(m.ct||[]).some(x=>x.item===it)){push();m.ct=(m.ct||[]).concat([{item:it,n:0,inf:false}]);all()}},FITEMS.filter(q=>!ct.some(x=>x.item===q)),"(cancel)");
     return}
   const rr=e.target.closest&&e.target.closest("[data-rk]"),bs1=S.blocks.filter(q=>sel.has(q.id));
   if((rr||id==="bRecClr")&&bs1.length===1&&isM(bs1[0])){push();const m=bs1[0];if(id==="bRecClr"||m.rec===rr.dataset.rk)delete m.rec;else m.rec=rr.dataset.rk;all();return}
