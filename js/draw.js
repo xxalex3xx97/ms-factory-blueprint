@@ -215,12 +215,14 @@ const kFill=(k,a)=>k[0]==="~"?`hsla(0,0%,${BELT_L[k[5]]}%,${a})`:k?fill(k,a):`rg
 const kStroke=(k,a)=>k[0]==="~"?`hsla(0,0%,${BELT_L[k[5]]+16}%,${a})`:k?`hsla(${hue(k)},70%,70%,${a})`:`rgba(190,195,205,${a})`;
 function drawBlock(b,alpha,isSel){
   const s=sc(),d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s,cat=tileKey(b),df=def(b.cls),m=isM(b);
-  cx.fillStyle=kFill(cat,alpha*.8);
+  const shp=!m&&view!=="F"&&s>=4&&shapeTf(b);   // Layout: blocks with a real plan (walls, props, ring) show it instead of a plain rectangle
+  cx.fillStyle=kFill(cat,alpha*(shp?.3:.8));
   cx.fillRect(x,y,w,h);
-  drawIcon(df,x,y,w,h,Math.min(1,alpha));
+  if(shp){const nb=BAYHIT.length;drawShapeFloor({floors:[{b}]},s/FC);BAYHIT.length=nb}   // 1 block = FC floor cells; no bay hit areas in Layout
+  if(!shp)drawIcon(df,x,y,w,h,Math.min(1,alpha));
   if(df&&df.directional&&s>=ARROW_MIN_S&&!(LK&&cat[0]==="~"&&alpha>.5))arrow(x,y,w,h,b.rot,Math.min(1,alpha));   // link mode: the link lines show the direction
   cx.lineWidth=1;cx.strokeStyle=kStroke(cat,alpha);
-  cx.strokeRect(x+.5,y+.5,w-1,h-1);
+  if(!shp)cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
   entMark(b,x,y,alpha,s,w,h);
   if(isSel){cx.lineWidth=2.5;cx.strokeStyle="#fff";cx.strokeRect(x+1,y+1,w-2,h-2)}
