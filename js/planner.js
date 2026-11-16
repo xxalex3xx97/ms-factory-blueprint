@@ -168,7 +168,7 @@ const sgn=v=>(v>0?"+":"")+v,
 function storeHtml(b){
   const ct=b.ct||[],si=links(layer).sto.get(b.id);
   let h=(ct.length?ct.map((x,i)=>`<div class="ctrow">${itemHtml(x.item)}<input type="number" min="0" step="1" aria-label="Quantity" data-ct="n" data-i="${i}" value="${x.n}"><label class="chk"><input type="checkbox" data-ct="inf" data-i="${i}" ${x.inf?"checked":""}> infinite</label><button data-ctdel="${i}" aria-label="Remove">&times;</button></div>`).join(""):`<div class="sub">Empty.</div>`)
-    +`<div style="margin-top:6px"><button type="button" id="bCtAdd" class="pri fbtn" style="width:100%">Add item&hellip;<span class="caret">&#9662;</span></button></div>`;
+    +`<div style="margin-top:6px"><button type="button" id="bCtAdd" class="pri" style="width:100%">+ Add item</button></div>`;
   if(!si)return sec("store","Contents",h);
   h+=`<div class="row"><label>Slots</label><span>${si.used==null?"? / "+(si.slots==null?"?":si.slots)+" (stack size unknown)":si.used+" / "+si.slots}</span></div>`
     +`<div class="row"><label>Stack size</label><span>${si.stack==null?"unknown":si.stack+" (raw, unverified)"}</span></div>`
