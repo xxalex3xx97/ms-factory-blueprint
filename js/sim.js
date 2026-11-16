@@ -52,6 +52,10 @@ function simInit(o={}){
   Z.M.forEach(M=>{if(M.pb.length)Z.prod.push(M)});
   Z.E.forEach(r=>[r.h+1,r.h-1].forEach(h=>{const o=elvO.get([r.x,r.y,h,r.pk].join());if(o)r.outs.push(o)}));   // destinations: adjacent levels up/down (round-robin via simRoute)
   if(fl!=null)Z.E.forEach(r=>r.outs.push({sink:1}));   // floor-only mode: elevator = sink
+  // output dock = unlimited sink: a belt whose front cell is a BPO_Dock footprint cell takes any item (BPO_Dock has no ports, so links() never sees it)
+  const dkC=plcCls('BPO_Dock'),dkCells=new Set();S.blocks.filter(b=>b.cls===dkC&&(fl==null||b.h===fl)).forEach(b=>{const e=dim({cls:b.cls,rot:b.rot||0});for(let i=0;i<e.w*FC;i++)for(let j=0;j<e.h*FC;j++)dkCells.add((b.x*FC+i)+','+(b.y*FC+j))});
+  Z.dS=new Map();K.belts.forEach(b=>{const d=DIR[b.rot];if(d&&[1,2].some(n=>dkCells.has((b.x+d[0]*n)+','+(b.y+d[1]*n))))add(Z.dS,K.chain(b.id),{belt:b})});
+  Z.dkN=0;
   Z.stat=simCalc();Z.sm=Object.assign(simCalc(SIM_SMW),{t:0,steady:false,stId:new Set()});return true;
 }
 const simReset=()=>SIM?simInit(SIM.opts):false;
@@ -61,6 +65,7 @@ function simRoute(c,item,eb,src,vis){
   const dn=simDn(eb);
   for(const k of Z.mS.get(c)||[])if(dn.has(k.belt.id)&&simCanM(k.M,item))return[{c,eb,xb:k.belt.id,mk:k.M}];
   for(const k of Z.cS.get(c)||[]){const cn=Z.C.get(k.m.id);if(k.m!==src&&dn.has(k.belt.id)&&simCanC(cn,item))return[{c,eb,xb:k.belt.id,ck:cn}]}
+  for(const k of Z.dS.get(c)||[])if(dn.has(k.belt.id))return[{c,eb,xb:k.belt.id,dk:1}];
   for(const r of Z.rI.get(c)||[]){
     const ib=r.ins.find(q=>q.c===c&&dn.has(q.belt.id));
     if(!ib||!r.outs.length||vis.has(r.id)||!simOk(r.id))continue;
@@ -77,6 +82,7 @@ function simEmit(c,item,eb,src){
     simPath(h.eb,h.xb).forEach(id=>simInc(Z.ev.l,id,item));
     if(h.rt){Z.cr.set(h.rt.id,Z.cr.get(h.rt.id)-1);h.rt.rr=(h.j+1)%h.rt.outs.length;if(h.ob)simInc(Z.ev.ro,h.rt.id,h.ob)}
     if(h.mk)h.mk.inb[item]=(h.mk.inb[item]||0)+1;
+    if(h.dk)Z.dkN++;
     if(h.ck){const r=h.ck.st.get(item);if(!r)h.ck.st.set(item,{n:1,inf:false});else if(!r.inf)r.n++;simInc(Z.ev.ci,h.ck.b.id,item)}});
   return true;
 }

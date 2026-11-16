@@ -1,5 +1,5 @@
 // RB S3: merge modules (?engine=rb): Capacitor 100, Basic Circuits 100 at 2x2 / 1x2. Run: node tests/rb_tree.mjs   Exit 1 on FAIL or page error.
-// checkCompose strict (planner N exact, ov 0, span 0, flood clean) + no item outside blocks + no holes + flow sim (cmp_groups_sim style): every planner node >= 0.95 x rate.
+// checkCompose strict (planner N exact, ov 0, span 0, flood clean) + no item outside blocks + no holes + flow sim: every planner node >= 0.95 x rate.
 import {createRequire} from 'module';
 import path from 'path';
 import {fileURLToPath, pathToFileURL} from 'url';

@@ -289,7 +289,7 @@ function cmpCompose1(P,item,mk,spMk,o={}){
     A=cmpAssembleTree({mk,spMk,bx:BX,bk,pl,sz:tz.by,dk});if(!A.ok)return indFb(A);
     stages=pl.nodes.filter(o=>!o.raw).map(o=>({item:o.item,cls:o.cls,tpl:tz.by[o.id].tpl,block,S:tz.by[o.id].S,N:o.N,perStrip:[o.N],B:1}));
     cmpI={K:pl.K||1,tree:true,stages,nodes:A.nodes,routed:A.routed};note=pl.notes.slice();per=[P.nodes[item].machines];
-    if((pl.K||1)>2&&globalThis.CMP_GROUPS===undefined&&globalThis.CMP_GROUPS_AUTO===true){   // off by default: sim (tests/cmp_groups_sim.mjs) shows static lane split starves consumers (ac:30 25/30)   // GAUTO: K>2 whole-tree strips -> also try the groups engine (no docks), keep it only if no more blocks and no more belts (COMPACT3 guard style) and not identical
+    if((pl.K||1)>2&&globalThis.CMP_GROUPS===undefined&&globalThis.CMP_GROUPS_AUTO===true){   // off by default: sim (retired test) showed static lane split starves consumers (ac:30 25/30)   // GAUTO: K>2 whole-tree strips -> also try the groups engine (no docks), keep it only if no more blocks and no more belts (COMPACT3 guard style) and not identical
       if(dkw)note.push('Groups layout not available with docks yet');
       else if(!globalThis.CMP_CAP4){let g;try{g=cmpGroupsRun(P,item,mk,spMk,BX,bk,block)}catch(e){g=null}   // groups refuses/errors -> keep the strips build
         if(g&&g.ok){const nb=t=>t.ms.filter(b=>PLC_BELT.includes(b.cls)||PLC_UG.includes(b.cls)||PLC_SPL.includes(b.cls)).length;

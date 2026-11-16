@@ -23,7 +23,7 @@ try {
   page.on('pageerror', e => pageErrs.push(e.message));
   await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=cmp'+(arg==='auto'?'':'&groups=1'));
   await page.waitForFunction(() => window.__fb && typeof cmpGroupsRun === 'function' && typeof placerLayout === 'function');
-  if (arg === 'auto') await page.evaluate(() => { window.CMP_GROUPS_AUTO = true });   // auto-switch is opt-in until the static lane split is fixed (tests/cmp_groups_sim.mjs)
+  if (arg === 'auto') await page.evaluate(() => { window.CMP_GROUPS_AUTO = true });   // auto-switch is opt-in until the static lane split is fixed (stale sim test retired)
   for (const c of cases) {
     const [n, rate] = c.split(':');
     const key = await page.evaluate(re => [].concat(...Object.values(RECS)).map(rk).find(k => new RegExp(re).test(k)), KEY[n]);
