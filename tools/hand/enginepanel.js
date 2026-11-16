@@ -1,9 +1,11 @@
 // The Planner's "Build factory" modal runs the chain engine (tools/hand): placerRun builds + checks + previews, placerPlace places it. Scripts load on the first build.
 (function(){
   const l=s=>new Promise(r=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=r;document.head.appendChild(e)}),nx=()=>new Promise(r=>setTimeout(r,30));
-  let ENG=null,tok=0;
+  let ENG=null,tok=0;const ORUN=window.placerRun,OPLACE=window.placerPlace,SMALL=["BPO_Station_01","BPO_Station_2x1"];   // originals from js/placer.js: 1x1 and 2x1 are built by the template/composer engine (chain engine is 30x30 floor only)
   window.engineReady=async()=>{if(typeof chainBuild!=="function")for(const f of ["tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f)};
-  window.placerRun=async function(open){
+  window.placerRun=async function(open,defer){
+    if(SMALL.includes($("plnBk").value)){++tok;ENG=null;$("plnPlace").onclick=OPLACE;return ORUN.call(this,open,defer)}   // 1x1 / 2x1: composer + templates; shows "Not supported yet: reason" itself
+    $("plnPlace").onclick=placerPlace;$("plnEngBadge").textContent="";
     const dl=$("plnPrev");if(!open&&!dl.open)return;
     const item=$("plnItem").value,rate=+$("pvRate").value||+$("plnRate").value,mk=+$("pvMk").value,me=++tok;
     placerClear();ENG=null;plcL=null;plcT=null;
@@ -20,7 +22,7 @@
     $("plnPrevMap").style.opacity="";
     $("pvLine").textContent=T.machines+" machines · "+T.blocks.length+" blocks · "+(T.machines?(T.belts/T.machines).toFixed(1):"0")+" belts/machine";
     $("pvMach").textContent=T.machines;$("pvBelt").textContent=T.belts;$("pvBox").textContent=boxes;$("pvBlk").textContent=T.blocks.length+" ("+docks+" docks)";
-    $("pvIO").textContent=($("plnDkI").checked?"raw items from "+($("plnDk").value==="nrm"?"normal":"industrial")+" docks (one ore each)":"raw items from source containers you fill")+($("plnDkO").checked?", finished product out through an industrial dock":", output into containers");
+    $("pvIO").textContent=($("plnDkI").checked?"raw items from "+($("plnDk").value==="nrm"?"normal":"industrial")+" docks (one ore each)":"raw items from source containers you fill")+($("plnDkO").checked?", finished product out through "+(($("plnDkOT").value||$("plnDk").value)==="nrm"?"a normal":"an industrial")+" dock":", output into containers");
     $("plnPrevNote").textContent=T.report.skipped&&T.report.skipped.length?"Not built (no block for this machine yet): "+T.report.skipped.join(", "):"";
     $("plnPrevErr").textContent=bad?bad+" problems, not placeable: "+T.fails.slice(0,2).join("; "):"";
     $("plnPlace").disabled=!!bad;placerFitView();
@@ -34,8 +36,6 @@
   };
   $("plnPlace").onclick=placerPlace;
   // settings the chain engine does not have yet are fixed and greyed out
-  const fix=force=>{if(force){if(["BPO_Station_01","BPO_Station_2x1"].includes($("plnBk").value))$("plnBk").value="BPO_Station_02";}   // values are only forced when building: what the user saved is left alone
-    
-    ["pvSp","plnBuf","plnLbl"].forEach(i=>{$(i).disabled=true;$(i).title="Not available yet"});["BPO_Station_01","BPO_Station_2x1"].forEach(v=>{const o=$("plnBk").querySelector('option[value="'+v+'"]');if(o){o.disabled=true;o.title="1x1 and 2x1 blocks are not available yet"}})};
+  const fix=()=>{["pvSp","plnBuf","plnLbl"].forEach(i=>{$(i).disabled=true;$(i).title="Not available yet"})};
   fix(false);$("plnPrev").addEventListener("toggle",()=>fix(true));const run0=placerRun;window.placerRun=function(open){if(open||$("plnPrev").open)fix(true);return run0.apply(this,arguments)};
 })();

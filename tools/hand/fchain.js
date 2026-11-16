@@ -5,7 +5,8 @@
 // PLANNED ROUTES: a belt may only use the street tracks (pairs of adjacent cell lines of every street row and street column), the output blocks and the entry stubs, so the search is a thin graph, not open floor.
 //   Entry of a block without dock: stub row from the street column to (0,lane row). Entry of a dock block: stub column from the north street down to its approach column inside the block.
 window.chainBuild=function(opts){
-  opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.noDock=opts.docks===false;HAND.allRaw=!!opts.single;   // single: one recipe only (template gallery), every input is a sourceHAND.nrm=opts.dockType==='nrm';HAND.adapt=opts.adapter!=null?opts.adapter:(opts.tile||'BPO_Station_03')==='BPO_Station_03';   // 2x2 B: docks join the block directly; the open-sided 2x2 C needs a Station Adapter
+  opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.noDock=opts.docks===false;HAND.allRaw=!!opts.single;   // single: one recipe only (template gallery), every input is a source
+  HAND.nrm=opts.dockType==='nrm';   // input dock kind only; output dock kind is nrmO below
   // pass 1 measures the lanes every street column and the trunk bands really need (wide streets), pass 2 builds with exactly that much street: a much smaller factory, far fewer pieces
   if(!opts.noAdapt&&!opts.capsDone){let caps={...(opts.caps||{})};   // normal docks: each block holds fewer machines; find the real capacity per product with dry builds, then plan the block count with it
     for(let i=0;i<4;i++){const r=chainBuild({...opts,caps,sw:opts.sw0||16,tbs:opts.tbs||8,noAdapt:true,dry:true,noRoute:true});let bad=false;(r.specs||[]).forEach(sp=>{const inf=r.info.find(x=>x.name===sp.name);if(inf&&sp.n>inf.cap){caps[sp.item]=Math.min(caps[sp.item]||99,inf.cap);bad=true}});if(!bad)break}
