@@ -476,6 +476,7 @@ function drawUG(s){
     ugLine(f(a),f(b),s,q.n>q.max,false,"hsl("+(k*95+20)%360+",90%,62%)")});
 }
 // Layout view: a block spanning several levels (catalog `levels`) shows on every level it covers
+const lvDist=b=>layer<b.h?b.h-layer:Math.max(0,layer-(b.h+lvl(b)-1));   // levels between the viewed level and the nearest level the block covers (ghost layers count a tall block from its nearest storey)
 const onLv=b=>b.h===layer||(view!=="F"&&b.h<layer&&layer<b.h+lvl(b));
 let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(onLv);LYB={k,all,v:all.filter(inView),nm:all.filter(b=>!inView(b)),nf:all.filter(b=>!isM(b)&&nfRect(b))}}return LYB}
 // F view of a big factory: only the blocks near the viewport (bucket grid of 64 cells built once per block set); m = margin in px
@@ -548,7 +549,7 @@ function paint0(){
   BAYHIT.length=0;
   if(F)RCT=paintFloorBase(s).rects;
   grid(F?16:8,F?GRIDOFF:0);
-  if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||Math.abs(b.h-layer)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*Math.abs(b.h-layer));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
+  if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||lvDist(b)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*lvDist(b));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
   const cur=vpBlocks(CULLM+20*s);CUR=cur;   // +20 cells: an underground pair (max 13 cells) is found whole at the screen edge
   drawBlocks(cur,.92,true);   // viewport cull inside drawBlocks
   cx.fillStyle="rgba(255,60,60,.5)";
