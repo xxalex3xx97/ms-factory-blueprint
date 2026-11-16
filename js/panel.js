@@ -143,8 +143,7 @@ $("insp").addEventListener("click",e=>{
   const id=e.target.id;
   const rb=e.target.closest&&e.target.closest("button[data-rs]");
   if(rb&&S.blocks.filter(q=>sel.has(q.id)).length===1){
-    const m=S.blocks.find(q=>sel.has(q.id)),cur=m.rs||"",ids=[...new Set(RSL.concat(cur||[]))].map(k=>FITEMS.find(q=>fkey(q)===k)).filter(Boolean);
-    pickItem((def(m.cls).label||"Drone bay")+" mines",cur,key=>{if(key===(m.rs||""))return;push();if(key)m.rs=key;else delete m.rs;all()},ids,"(not set)");
+    rsPick(S.blocks.find(q=>sel.has(q.id)));
     return;
   }
   const fb=e.target.closest&&e.target.closest("button[data-fl],button[data-df]");
@@ -197,6 +196,12 @@ function pickItem(title,cur,onPick,ids,none){
   find();d.showModal();inp.focus();
 }
 // canvas dock square: picker for that bay's slot
+// drone bay ore picker (inspector button + canvas square): the 6 ores, one ore for both ports
+function rsPick(m){
+  const cur=m.rs||"",ids=[...new Set(RSL.concat(cur||[]))].map(k=>FITEMS.find(q=>fkey(q)===k)).filter(Boolean);
+  pickItem((def(m.cls).label||"Drone bay")+" mines",cur,key=>{if(key!==(m.rs||"")){push();if(key)m.rs=key;else delete m.rs}sel=new Set([m.id]);all()},ids,"(not set)");
+}
 function bayFilter(b,i){
+  if(i<0)return rsPick(b);
   pickItem((def(b.cls).label||"Dock")+" bay "+(i+1)+" filter",((b.df||[])[i]||{}).item||"",key=>{setSlot(b,i,key);sel=new Set([b.id]);all()});
 }

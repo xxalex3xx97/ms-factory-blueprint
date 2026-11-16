@@ -238,7 +238,7 @@ function drawBlock(b,alpha,isSel){
 }
 const fid=k=>FITEMS.find(id=>fkey(id)===String(k||"").toLowerCase());
 function bayBox(b,i,x,y,w,h,bg){
-  const f=((b.df||[])[i]||{}).item;
+  const f=i<0?b.rs:((b.df||[])[i]||{}).item;
   if(bg){cx.fillStyle=f?"rgba(40,110,70,.9)":"rgba(0,0,0,.55)";cx.fillRect(x,y,w,h)}
   cx.lineWidth=f?2:1;cx.strokeStyle=f?"hsl(140,70%,48%)":"rgba(255,255,255,.8)";cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(f){const id=fid(f),im=id&&img(id),z=Math.min(w,h)*.72;if(im&&im.complete&&im.naturalWidth&&z>=10)cx.drawImage(im,x+(w-z)/2,y+(h-z)/2,z,z)}
