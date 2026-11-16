@@ -49,7 +49,7 @@ function panel(){
     }else h+='<h2>Selection ('+bs.length+')</h2>';
     h+='<div class="pad"><div class="btns"><button id="bRot">Rotate</button><button id="bDup">Duplicate</button><button id="bDel" class="danger">Delete</button></div><div class="btns">'+(one&&isM(one)?'<button id="bCfgCopy">Copy config</button>':'')+'<button id="bCfgPaste"'+(typeof cfgClip!=="undefined"&&cfgClip?'':' disabled')+'>Paste config</button></div>';
     if(one){
-      if(rsOk(one.cls)){const rs=one.rs||"",ol=RSL.includes(rs)||!rs?RSL:RSL.concat(rs);h+='<div class="row"><label for="frs">Mines</label><select id="frs" data-rs="1"><option value="">(not set)</option>'+ol.map(v=>'<option value="'+esc(v)+'"'+(v===rs?" selected":"")+'>'+esc((CATALOG.items["ITEM_"+(Object.keys(CATALOG.items).map(k=>k.slice(5)).find(k=>k.toLowerCase()===v)||v)]||{}).n||v)+'</option>').join("")+'</select></div>'}
+      if(rsOk(one.cls)){const rs=one.rs||"",id=FITEMS.find(q=>fkey(q)===rs),ic=id&&iurl(id);h+='<div class="row"><label for="frs">Mines</label><button type="button" id="frs" class="fbtn" data-rs="1">'+(rs?(ic?'<img class="ic" alt="" src="'+ic+'">':"")+esc(id?ITEMS[id].n||id:rs):"(not set)")+'<span class="caret">&#9662;</span></button></div>'}
       if(nmOk(one.cls))h+='<div class="row"><label for="fnm">Name</label><input id="fnm" type="text" data-nm="1" value="'+esc(one.nm||"")+'"></div>';
       h+=filtHtml(one);
       const et=entText(one);if(et)h+='<div class="sub" title="'+esc(ENT_HINT)+'" id="entInfo"><b>'+et.kind+':</b> '+et.sides.join(", ")+'<br>'+esc(ENT_HINT)+'.</div>';
@@ -116,7 +116,6 @@ $("insp").addEventListener("change",e=>{
   const t=e.target,bs=S.blocks.filter(b=>sel.has(b.id));
   if(t.dataset.prio&&bs.length===1){push();togglePrio(bs[0],t.dataset.prio);all();return}
   if(t.dataset.port&&bs.length===1){push();togglePort(bs[0],t.dataset.port);all();return}
-  if(t.dataset.rs&&bs.length===1){const v=t.value;if(v===(bs[0].rs||""))return;push();if(v)bs[0].rs=v;else delete bs[0].rs;all();return}
   if(t.dataset.nm&&bs.length===1){const v=t.value.trim();if(v===(bs[0].nm||""))return;push();if(v)bs[0].nm=v;else delete bs[0].nm;delete bs[0].cfgKeep;all();return}
   if(t.dataset.ct&&bs.length===1){
     const m=bs[0],i=+t.dataset.i;push();
@@ -142,6 +141,12 @@ $("insp").addEventListener("change",e=>{
 });
 $("insp").addEventListener("click",e=>{
   const id=e.target.id;
+  const rb=e.target.closest&&e.target.closest("button[data-rs]");
+  if(rb&&S.blocks.filter(q=>sel.has(q.id)).length===1){
+    const m=S.blocks.find(q=>sel.has(q.id)),cur=m.rs||"",ids=[...new Set(RSL.concat(cur||[]))].map(k=>FITEMS.find(q=>fkey(q)===k)).filter(Boolean);
+    pickItem((def(m.cls).label||"Drone bay")+" mines",cur,key=>{if(key===(m.rs||""))return;push();if(key)m.rs=key;else delete m.rs;all()},ids,"(not set)");
+    return;
+  }
   const fb=e.target.closest&&e.target.closest("button[data-fl],button[data-df]");
   if(fb&&S.blocks.filter(q=>sel.has(q.id)).length===1){
     const m=S.blocks.find(q=>sel.has(q.id)),i=+(fb.dataset.fl??fb.dataset.df),dn=dkN(m.cls);
@@ -178,9 +183,9 @@ function setSlot(b,i,key){
   delete b.cfgKeep;
 }
 // click a dock bay square (canvas) or a filter button (inspector): select2-style item picker, onPick(key) with key "" = no filter
-function pickItem(title,cur,onPick){
+function pickItem(title,cur,onPick,ids,none){
   cur=String(cur||"").toLowerCase();const d=$("dBay"),L=$("bayL"),inp=$("bayIn");$("bayT").textContent=title;
-  const rows=[{id:"",n:"(no filter)"},...FITEMS.map(id=>({id,n:ITEMS[id].n||id}))];
+  const rows=[{id:"",n:none||"(no filter)"},...(ids||FITEMS).map(id=>({id,n:ITEMS[id].n||id}))];
   let shown=rows,on=0;
   const render=()=>{L.innerHTML=shown.map((r,k)=>'<li role="option" data-k="'+k+'"'+(k===on?' class="on" aria-selected="true"':'')+'>'+(iurl(r.id)?'<img class="ic" alt="" src="'+iurl(r.id)+'">':'<span class="ic"></span>')+esc(r.n)+'</li>').join("");const e=L.querySelector(".on");if(e)e.scrollIntoView({block:"nearest"})};
   const find=()=>{const q=inp.value.trim().toLowerCase();shown=[rows[0],...rows.slice(1).filter(r=>!q||r.n.toLowerCase().includes(q))];on=q?Math.min(1,shown.length-1):Math.max(0,shown.findIndex(r=>r.id&&fkey(r.id)===cur));render()};
