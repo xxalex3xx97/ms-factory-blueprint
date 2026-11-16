@@ -108,7 +108,12 @@ for k, v in rsc.items():
         unl.setdefault(u, []).append(k)
 
 
+ONE_LEVEL = {'BPO_StationCorner_01'}   # user 2026-11-16: 1 level high although BlockBounds z says 2 (Command Module is 1 by its bounds)
+
+
 def levels(n):
+    if n in ONE_LEVEL:
+        return 1
     bb = fl[n].get('block_bounds_decoded')
     # user 2026-11-16: every building is at most 2 levels high (BlockBounds z overstates it)
     return min(2, max(1, math.ceil(bb[1][2] / 4 - 0.05))) if bb and bb[1][2] > 0.5 else 1
