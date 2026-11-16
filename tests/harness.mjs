@@ -3052,6 +3052,7 @@ async function s28(br) {
   chk('28 Mk.2 save: exports back unchanged (Class, GridLocation {40,40}, GridRotation 1)', JSON.stringify(rt.out) === JSON.stringify([{Class: MK2, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 1}]), JSON.stringify(rt.out));
   chk('28 machines BPO_MiningDroneBay_2 and BPO_MiningDroneBay both kept in "other machines" (no buildable maps them, like Mk.1)', rt.dm === 2, `dm ${rt.dm}`);
   // entrance key: shapes_src.json entrance {kind, evidence} on dock (doors) + drone bays (ports), carried to SHAPES; Layout arrows from entrances()
+  await pg.evaluate(() => { ENTL = true; });   // Layout hides marks on shaped blocks by default; these checks cover the mark drawing itself
   const ents = names.filter(n => srcBlocks[n].entrance);
   chk('28 entrance: dock + Command Module + Blueprint Unit + 3 shipyards + Corner + Corridor + Adapter + Corridor 2x2 + 2x2 C (doors), Mk.1 + Mk.2 drone bays (ports); no other block', JSON.stringify(ents.sort()) === '["BPO_BlueprintUnit","BPO_CommandModule","BPO_Dock_2","BPO_ElevatorBlock_02A","BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ShipyardSide","BPO_StationAdapter_01","BPO_StationCorner_01","BPO_StationCorridor_01","BPO_StationCorridor_02","BPO_Station_03"]', JSON.stringify(ents));
   for (const n of names) {

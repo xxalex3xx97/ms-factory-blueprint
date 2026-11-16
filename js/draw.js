@@ -224,7 +224,7 @@ function drawBlock(b,alpha,isSel){
   cx.lineWidth=1;cx.strokeStyle=kStroke(cat,alpha);
   if(!shp)cx.strokeRect(x+.5,y+.5,w-1,h-1);
   if(m&&RCT&&b.h===layer&&outside(b,RCT)){cx.save();cx.setLineDash([5,3]);cx.lineWidth=2;cx.strokeStyle=`hsla(45,95%,62%,${Math.min(1,alpha+.1)})`;cx.strokeRect(x+1,y+1,w-2,h-2);cx.restore()}
-  entMark(b,x,y,alpha,s,w,h);
+  if(!shp||ENTL)entMark(b,x,y,alpha,s,w,h);   // shaped blocks show their real doors in the plan
   if(isSel){cx.lineWidth=2.5;cx.strokeStyle="#fff";cx.strokeRect(x+1,y+1,w-2,h-2)}
   if(s>=(m?10:18)&&alpha>.5&&(!m||Math.max(w,h)>=2*s)&&!(df&&df.directional)){
     const t0=b.nm&&nmOk(b.cls)?b.nm:df?lab(df):shortCls(b.cls),fs=Math.min(12,Math.max(9,s/3));
@@ -251,6 +251,7 @@ function hatch(x,y,w,h,c){
   for(let k=-h;k<w;k+=9){cx.moveTo(x+k,y+h);cx.lineTo(x+k+h,y)}
   cx.stroke();cx.restore();
 }
+let ENTL=false;   // Layout: door/port marks on shaped blocks (off: the drawn plan shows the doors; tests turn it on)
 let NBH=true;   // no-build hatch layer on/off (tests)
 // grey no-build hatch (same pattern as the red elevator-shaft hatch): faint fill + diagonal lines (+ dashed border when bd)
 function nbHatch(x,y,w,h,bd){
