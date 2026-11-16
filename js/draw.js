@@ -213,12 +213,24 @@ const beltKey=d=>d&&d.directional&&(d.category==="Conveyors"||d.category==="Unde
 const tileKey=b=>beltKey(def(b.cls))||catOf(b)||"";
 const kFill=(k,a)=>k[0]==="~"?`hsla(0,0%,${BELT_L[k[5]]}%,${a})`:k?fill(k,a):`rgba(120,125,135,${a})`;
 const kStroke=(k,a)=>k[0]==="~"?`hsla(0,0%,${BELT_L[k[5]]+16}%,${a})`:k?`hsla(${hue(k)},70%,70%,${a})`:`rgba(190,195,205,${a})`;
+// Layout: tint only what the walls enclose (interior + the walls themselves), so nothing spills past a dock shaft or a corner diagonal. false = no usable interior (open blocks): the caller fills the whole tile
+function shapeFill(b,t,q,s,x,y,w,h){
+  const sh=t.sh,k=s/FC,P=(u,v)=>{const p=t.f(u,v);return[V.ox+(p[0]+q)*k,V.oy+(p[1]+q)*k]};
+  cx.beginPath();
+  if(sh.hatch==="ring"){const[a,c]=P(sh.ring.c[0],sh.ring.c[1]);cx.arc(a,c,sh.ring.ro*k,0,2*Math.PI)}
+  else{if(!sh.walls.length)return false;   // props only (solar, armour): no enclosure
+    const dock=SHIPEND(b),I=interiorRects(sh,dock);let ar=0;I.forEach(r=>ar+=(r[2]-r[0])*(r[3]-r[1]));
+    if(ar<.35*(sh.fw||16)*(sh.fh||16))return false;
+    I.concat(wallPlan(sh,dock,sh.chain?chainOpenEdges(b).map(e=>sh.chain.closing[e]):[]).w).forEach(r=>{const p0=P(r[0],r[1]),p1=P(r[2],r[3]);cx.rect(Math.min(p0[0],p1[0]),Math.min(p0[1],p1[1]),Math.abs(p1[0]-p0[0]),Math.abs(p1[1]-p0[1]))})}
+  cx.fill();return true;
+}
 function drawBlock(b,alpha,isSel){
   const s=sc(),d=dim(b),x=V.ox+b.x*s,y=V.oy+b.y*s,w=d.w*s,h=d.h*s,cat=tileKey(b),df=def(b.cls),m=isM(b);
   const shp=!m&&view!=="F"&&s>=4&&shapeTf(b);   // Layout: blocks with a real plan (walls, props, ring) show it instead of a plain rectangle
-  cx.fillStyle=kFill(cat,alpha*(shp?.3:.8));
-  cx.fillRect(x,y,w,h);
-  if(shp){const nb=BAYHIT.length,q=floorRect(b)?1:shp.f!==shp.f0?NFQ:0;cx.save();cx.globalAlpha=Math.min(1,alpha);cx.translate(q*s/FC,q*s/FC);drawShapeFloor({floors:[{b}]},s/FC);cx.restore();BAYHIT.length=nb}   // the Factory floor frame puts the hull 1 cell outside the tile origin; Layout aligns the hull with the tile   // 1 block = FC floor cells; no bay hit areas in Layout
+  cx.fillStyle=kFill(cat,alpha*(shp?.45:.8));
+  const q=shp?(floorRect(b)?1:shp.f!==shp.f0?NFQ:0):0;
+  if(!shp||!shapeFill(b,shp,q,s,x,y,w,h))cx.fillRect(x,y,w,h);
+  if(shp){const nb=BAYHIT.length;cx.save();cx.globalAlpha=Math.min(1,alpha);cx.translate(q*s/FC,q*s/FC);drawShapeFloor({floors:[{b}]},s/FC);cx.restore();BAYHIT.length=nb}   // the Factory floor frame puts the hull 1 cell outside the tile origin; Layout aligns the hull with the tile   // 1 block = FC floor cells; no bay hit areas in Layout
   if(!shp)drawIcon(df,x,y,w,h,Math.min(1,alpha));
   if(df&&df.directional&&s>=ARROW_MIN_S&&!(LK&&cat[0]==="~"&&alpha>.5))arrow(x,y,w,h,b.rot,Math.min(1,alpha));   // link mode: the link lines show the direction
   cx.lineWidth=1;cx.strokeStyle=kStroke(cat,alpha);
@@ -592,13 +604,15 @@ function paint0(){
     if(noBuild(g.filter(isM).map(mItem))){cx.strokeStyle="hsl(0,85%,60%)";cx.lineWidth=2;g.forEach(b=>{const d=dim(b);cx.strokeRect(V.ox+b.x*s,V.oy+b.y*s,d.w*s,d.h*s)})}
   }else if(active&&!drag&&hoverIn){
     const d=def(active),dd=dimOf(d,placeRot),bw=dd.w,bh=dd.h,px=V.ox+hover.x*s,py=V.oy+hover.y*s;
-    cx.fillStyle=kFill(beltKey(d)||d.category,.5);cx.fillRect(px,py,bw*s,bh*s);
+    const gb={id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot,pid:0},gsh=d.kind!=="m"&&view!=="F"&&s>=4&&shapeTf(gb);   // Layout: a shaped block previews with its real plan
+    if(gsh)drawBlock(gb,.6,false);
+    else{cx.fillStyle=kFill(beltKey(d)||d.category,.5);cx.fillRect(px,py,bw*s,bh*s);
     drawIcon(d,px,py,bw*s,bh*s,.8);
-    if(d.directional)arrow(px,py,bw*s,bh*s,placeRot,.9);
+    if(d.directional)arrow(px,py,bw*s,bh*s,placeRot,.9)}
     if(F&&d.kind==="m")drawPorts(s,[{id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot}]);   // ports show the rotation (splitter)
-    if(d.kind!=="m")entMark({id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot},px,py,.9,s,bw*s,bh*s,true);   // doors/ports show which way the block is rotated
+    if(d.kind!=="m"&&!gsh)entMark({id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot},px,py,.9,s,bw*s,bh*s,true);   // doors/ports show which way the block is rotated
     cx.strokeStyle=d.kind==="m"&&noBuild([{id:-1,x:hover.x,y:hover.y,w:bw,h:bh,l:layer,belt:isBelt({cls:active})}])?"hsl(0,85%,60%)":d.kind==="m"&&RCT&&!onArea(hover.x,hover.y,bw,bh,RCT)?"hsl(45,95%,62%)":"#fff";
-    cx.setLineDash([5,4]);cx.lineWidth=1.5;cx.strokeRect(px+.5,py+.5,bw*s-1,bh*s-1);cx.setLineDash([]);
+    if(!gsh){cx.setLineDash([5,4]);cx.lineWidth=1.5;cx.strokeRect(px+.5,py+.5,bw*s-1,bh*s-1);cx.setLineDash([])}
   }
   if(USEB&&BASEFILL){DIRTY=false;BASEFILL=false}
 }
