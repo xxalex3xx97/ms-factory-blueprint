@@ -48,7 +48,7 @@ function build(){
   const RB=b=>{if(b.raw&&b.raw.x===b.x&&b.raw.y===b.y&&b.raw.r===b.rot)return{X:b.raw.X,Y:b.raw.Y};   // game coords that the site footprint cannot express: written back untouched until moved/rotated
     const f=dim(b),o=SHIPEND(b)?dockOrg(b.rot):null;return o?{X:4*b.x+o.X,Y:4*b.y+o.Y}:{X:4*b.x+2*(f.w-1),Y:4*b.y+2*(f.h-1)}},RM=b=>{const f=dim(b);return{X:2*b.x+f.w-14,Y:2*b.y+f.h-14}};
   return{Version:2,DisplayName:S.name,
-    Blocks:bl.map((b,i)=>expNm(b,expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h*2,GridRotation:b.rot,BlockID:i+1,PaletteID:b.pid||0}))),
+    Blocks:bl.map((b,i)=>expNm(b,expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h*2,GridRotation:b.rot,BlockID:i+1,PaletteID:b.pid||0}))).concat((S.conn||[]).map((c,i)=>({...c,BlockID:bl.length+i+1}))),
     DefaultMachines:ms.map(b=>{const d=def(b.cls),e={Class:d.machineClass||d.id,Transform:{GridLocation:RM(b),Height:b.h*16,GridRotation:b.rot},MachineID:b.mid||++base,PaletteID:b.pid||0,DefaultName:d.id};
       if(b.rec)e.Recipe=b.rec;expCfg(b,d,e,UGN);expPorts(b,e);expCt(b,e);return e}).concat(S.dm).map((e,i)=>({e,i,k:Number(e&&e.MachineID)})).sort((a,b)=>(isFinite(a.k)&&isFinite(b.k)?a.k-b.k:isFinite(a.k)?-1:isFinite(b.k)?1:0)||a.i-b.i).map(x=>x.e),   // keep original MachineID order
     FactoryLayout:{FloorCellsPerBlock:FC,DoorwayCells:DW,ClosedDoorways:S.closed.map(k=>{const a=k.split("|");return{Height:+a[0],X:+a[1],Y:+a[2],Edge:a[3],Seg:+a[4]}})},
@@ -189,6 +189,8 @@ function importJson0(txt,quiet){
   const n=v=>Math.round(Number(v))||0,hf=v=>{v=Number(v)||0;if(v%CU)odd++;return Math.round(v/CU)};
   const cell=(v,u,c)=>{const k=((Number(v)||0)-c)/u;if(k%1)odd++;return Math.round(k)};   // origin from centre; non-integer rounded + counted
   const rot=v=>((n(v)%4)+4)%4;
+  const isConn=b=>/Connector$/.test(String(b&&b.Class||"").split(".").pop().replace(/_C$/,""));
+  S.conn=o.Blocks.filter(isConn);o.Blocks=o.Blocks.filter(b=>!isConn(b));   // connector pieces: kept aside, never drawn
   S.blocks=o.Blocks.map(b=>{const r=rot(b.GridRotation),gx=b.GridLocation&&b.GridLocation.X,gy=b.GridLocation&&b.GridLocation.Y,cls=String(b.Class||"");
     if(!v2)return{id:uid++,cls,x:hf(gx),y:hf(gy),h:n(b.Height),rot:r,pid:n(b.PaletteID)};
     const f=dim({cls,rot:r}),o=SHIPEND({cls})?dockOrg(r):null,ox=o?o.X:2*(f.w-1),oy=o?o.Y:2*(f.h-1);   // shipEnd: footprint 3x2, anchor = dockOrg (floor on station side)

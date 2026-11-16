@@ -48,7 +48,7 @@ async function asRestore(){   // resolves after the saved state is read; boot ap
 $("nw").onclick=()=>{
   if(!confirm("Clear the autosaved design and start with an empty one?"))return;
   FH=null;clearTimeout(AST);try{localStorage.removeItem(ASK)}catch(e){}idbDel("state").catch(()=>{});idbDel("sav").catch(()=>{});SIK=null;stHide();
-  push();S.blocks=[];S.dm=[];S.closed=[];S.name="Untitled station";sel=new Set();$("name").value=S.name;ASH=true;all();
+  push();S.blocks=[];S.dm=[];S.closed=[];S.conn=[];S.name="Untitled station";sel=new Set();$("name").value=S.name;ASH=true;all();
 };
 
 const HINTS={

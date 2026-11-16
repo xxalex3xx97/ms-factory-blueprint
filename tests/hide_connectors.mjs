@@ -1,0 +1,26 @@
+// Design saves list BPO_LargeConnector pieces as blocks: they must not appear in the layout but must survive export. Run: node tests/hide_connectors.mjs
+import {createRequire} from 'module';
+import path from 'path';
+import {fileURLToPath, pathToFileURL} from 'url';
+const require = createRequire(import.meta.url);
+const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const br = await chromium.launch({executablePath: process.env.CHROME || 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
+let bad = 0; const chk = (n, c, d = '') => { console.log((c ? 'PASS ' : 'FAIL ') + n + (c ? '' : ' ' + d)); if (!c) bad++; };
+try {
+  const pg = await (await br.newContext()).newPage();
+  await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href);
+  await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
+  const r = await pg.evaluate(() => {
+    const cl = n => CATALOG.blocks.find(b => b.name === n).class;
+    const B = (c, x, y, i) => ({Class: c, GridLocation: {X: x, Y: y}, Height: 0, GridRotation: 0, BlockID: i, PaletteID: 0});
+    __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(cl('BPO_Station_01'), 2, 2, 1), B('/Game/Blueprints/BuildingBlocks/BPO_LargeConnector.BPO_LargeConnector_C', 0, 2, 2), B('/Game/Blueprints/BuildingBlocks/BPO_XLargeConnector.BPO_XLargeConnector_C', 4, 2, 3)], DefaultMachines: []}));
+    const out = build(), n = S.blocks.length;
+    __fb.importJson(JSON.stringify(out));
+    return {n, conn: S.conn.length, out: out.Blocks.map(b => b.Class.split('.').pop()), n2: S.blocks.length, c2: S.conn.length};
+  });
+  chk('connectors hidden, kept aside', r.n === 1 && r.conn === 2, JSON.stringify(r));
+  chk('export writes them back', r.out.length === 3 && r.out.filter(c => /Connector/.test(c)).length === 2, JSON.stringify(r));
+  chk('round trip stable', r.n2 === 1 && r.c2 === 2, JSON.stringify(r));
+} finally { await br.close(); }
+process.exit(bad ? 1 : 0);
