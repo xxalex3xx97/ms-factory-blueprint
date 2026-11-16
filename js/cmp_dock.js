@@ -71,10 +71,12 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
     return true};
   for(const q of ms.filter(q=>q.dk==='in'||q.dk==='out'))if(!dock(q,q.dk==='out'?'E':'W')&&!q.dd){miss.push((q.dk==='out'?'out ':'in ')+q.dkx.name+'|'+q.why);delete q.dk;delete q.dkx}
   // industrial (hz, d.h=2): one BPO_Dock_2 per hub row, nl_dock.js hz assembly (nlIndAsm transposed) shifted to the row; lanes tagged ie (input, west of block 0) / oe (output, east of the last column)
+  const itm=q=>(q.dx&&q.dx.name)||q.di||'',mixBad=E=>{const f=itm(E.slice().sort((a,b)=>a.y-b.y)[0]);return E.filter(q=>itm(q)!==f)};
   const TRO=[1,0,3,2],asm=nlIndAsm(),d2=plcCls('BPO_Dock_2'),indGo=(tag,out)=>{
     const rows=new Map(),S=d.h===1?2:1;   // d.h=1: one Dock_2 serves two adjacent strips (group A even strip, group B odd strip)
     for(const q of ms.filter(q=>q.dk===tag)){const g=Math.floor(q.y/(S*TR)),ly=q.y-g*S*TR;if(d.h>2||!((ly>=4&&ly<=7)||(ly>=22&&ly<=25))||(out&&(q.hx!=null?q.hx:Math.floor(q.x/TW)*TW)<1))return'dock slot misaligned';const kk=g+':'+(q.hx!=null?q.hx:Math.floor(q.x/TW)*TW);if(!rows.has(kk))rows.set(kk,[]);rows.get(kk).push(q)}   // SHAPE2: input hubs at any block column (dock on their west face)
     for(const [kk,E] of rows){
+      {const mb=mixBad(E);if(mb.length)return DKF(tag,[...new Set(mb.map(q=>Math.floor(q.y/TR)))],'industrial dock overlaps (one item per Industrial Dock: '+itm(E[0])+' vs '+itm(mb[0])+')')}
       const g=+kk.split(':')[0],oy=g*S*TR,e0=E[0],_n=e0.hu===1&&nar.add(e0.hc),x0=+kk.split(':')[1],hw=e0.hw||W,hu=e0.hu||d.w,u0=x0/FC,col=e0.hc!=null?e0.hc:Math.floor(e0.x/TW),ox=out?x0+hu*16+A:x0-16-A,dx=out?u0+hu:u0-1,db={cls:d2,x:out?dx+ad:u0-3-ad,y:g*S*P,rot:out?0:2},ab=ad&&{cls:adc,x:dx,y:g*S*P,rot:out?0:2};
       if(cells(db).some(z=>occ.has(z))||ABAD(ab)||edgeBad(db))return DKF(tag,S>1?[g*S,g*S+1]:[g],'industrial dock overlaps another block or has no ship clearance (rot '+db.rot+' at unit '+db.x+','+db.y+' occ '+cells(db).find(z=>occ.has(z))+' edge '+edgeBad(db)+' ab '+(ab&&cells(ab).find(z=>occ.has(z)))+')');
       cells(db).forEach(z=>occ.add(z));edgeAdd(db);blocks.push(db);if(ab){cells(ab).forEach(z=>occ.add(z));addB(ab);blocks.push(ab)}
@@ -91,6 +93,7 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
   const indV=(tag,sv)=>{const rows=new Map();
     for(const q of ms.filter(q=>q.dk===tag)){const x0=q.hx!=null?q.hx:Math.floor(q.x/TW)*TW,lx=q.x-x0;if(!((lx>=4&&lx<=7)||(lx>=22&&lx<=25)))return'dock slot misaligned';const kk=Math.floor(q.y/TR)+':'+x0;if(!rows.has(kk))rows.set(kk,[]);rows.get(kk).push(q)}
     for(const [kk,E] of rows){
+      {const mb=mixBad(E);if(mb.length)return DKF(tag,[+kk.split(':')[0]],'industrial dock overlaps (one item per Industrial Dock: '+itm(E[0])+' vs '+itm(mb[0])+')')}
       const gy=+kk.split(':')[0],x0=+kk.split(':')[1],u0=x0/FC,oy=sv?gy*TR+TH+A:gy*TR-16-A,grp=lx=>(sv?lx<16:lx>=16)?1:0,gq=q=>grp(q.x-x0),
         db={cls:d2,x:u0,y:sv?gy*P+d.h+ad:gy*P-3-ad,rot:sv?1:3},ab=ad&&{cls:adc,x:u0,y:sv?gy*P+d.h:gy*P-1,rot:sv?1:3};
       if(cells(db).some(z=>occ.has(z))||ABAD(ab)||edgeBad(db))return DKF(tag,[gy],'industrial dock overlaps another block or has no ship clearance (rot '+db.rot+' at unit '+db.x+','+db.y+' occ '+cells(db).find(z=>occ.has(z))+' edge '+edgeBad(db)+' ab '+(ab&&cells(ab).find(z=>occ.has(z)))+')');
@@ -129,19 +132,28 @@ function cmpFeedInd(S,dk,dh,D,sides=[]){   // INDONLY: lane groups (<=4 lanes, O
   const ind=[...Array(nR).keys()].filter(r=>!seed(r));
   if(H<10)return{ok:false,why:'block too short'};
   const G=[];ind.forEach(r=>{const L=rows(r),n=Math.ceil(L.length/4);for(let g=0;g<n;g++)G.push({r,ys:L.slice(Math.floor(g*L.length/n),Math.floor((g+1)*L.length/n))})});
-  const sl=[];const noW=globalThis.CMP_NODK&&CMP_NODK.has('W:'+S.j);if(noW);else if(dh===2&&H>=26)sl.push({f:'W',a:4},{f:'W',a:22});else if(dh===1)sl.push({f:'W',a:(S.j|0)%2?6:4});
-  for(const f of['N','S'])if(sides.includes(f)&&W>=14&&(f==='N'?!S.j:S.K==null||S.j===S.K-1))sl.push({f,a:4},...W>=26?[{f,a:22}]:[]);
-  if(G.length>sl.length)return{ok:false,why:G.length+' lane groups, '+sl.length+' free industrial slots'};
+  const sl=[];const noW=globalThis.CMP_NODK&&CMP_NODK.has('W:'+S.j);if(noW);else if(dh===2&&H>=26)sl.push({f:'W',a:4,d:'W'},{f:'W',a:22,d:'W'});else if(dh===1)sl.push({f:'W',a:(S.j|0)%2?6:4,d:'W'});
+  for(const f of['N','S'])if(sides.includes(f)&&W>=14&&(f==='N'?!S.j:S.K==null||S.j===S.K-1))sl.push({f,a:4,d:f},...W>=26?[{f,a:22,d:f}]:[]);
+  const ow={},asg=[],nod=new Set();for(const g of G){const s=sl.find(s=>!s.u&&(ow[s.d]==null||ow[s.d]===g.r));if(!s){g.nd=1;nod.add(g.r);asg.push(null);continue}s.u=1;ow[s.d]=g.r;asg.push(s)}   // partial docking: groups with no free dock get a plain infinite container (below), noted per raw
+  if(asg.some(s=>s&&s.f!=='W')&&asg.some(s=>!s))return{ok:false,why:'partial docking needs W-only slots'};
+  if(!asg.some(Boolean))return{ok:false,why:G.length?'one raw item per industrial dock: no free dock for '+S.names[G[0].r]:'no raw groups'};
   const items=[],src=[],snk=[],blk=new Set(),nt=[],tags=new Map(),cnt=new Map(),dG=new Map();
-  G.forEach(g=>dG.set(g.r,(dG.get(g.r)||0)+1));
-  G.forEach((g,gi)=>{const s=sl[gi],r=g.r,dx={r:Math.min(D[r],4*cap*dG.get(r))/dG.get(r),n:1,name:S.names[r],ind:1};
+  G.forEach(g=>{if(!g.nd)dG.set(g.r,(dG.get(g.r)||0)+1)});
+  G.forEach((g,gi)=>{const s=asg[gi];if(!s)return;const r=g.r,dx={r:Math.min(D[r],4*cap*dG.get(r))/dG.get(r),n:1,name:S.names[r],ind:1};
     g.ys.forEach((y,i)=>{const o=s.f==='W'?{x:0,y:s.a+i}:{x:s.a+i,y:s.f==='N'?0:H-1,sd:s.f==='N'?1:3};src.push({...o,item:rawItems[r]});tags.set(o.x+','+o.y,{r,dx,t:s.f==='W'?'ie':s.f==='N'?'iv':'is'})});
-    if(!cnt.has(r)){cnt.set(r,1);const got=Math.min(D[r],4*cap*dG.get(r));if(got<D[r]-1e-6)nt.push('Dock-limited: '+S.names[r]+' '+cmpR1(got)+'/min of '+cmpR1(D[r])+'/min (needs '+Math.ceil(D[r]/(4*cap)-1e-9)+' industrial dock groups)')}});
+    if(!cnt.has(r)){cnt.set(r,1);const got=Math.min(D[r],4*cap*dG.get(r));if(got<D[r]-1e-6&&!nod.has(r))nt.push('Dock-limited: '+S.names[r]+' '+cmpR1(got)+'/min of '+cmpR1(D[r])+'/min (needs '+Math.ceil(D[r]/(4*cap)-1e-9)+' industrial dock groups)')}});
   ind.forEach(r=>rows(r).forEach(y=>snk.push({x:W-1,y,item:rawItems[r]})));
   for(let r=0;r<nR;r++)if(seed(r)){const y=10,tr=rows(r),n=tr.length,s0=Math.floor((4-n)/2);
     items.push({cls:bx,x:0,y,rot:0,h:0,pid:0,ct:[{item:rawItems[r],n:0,inf:false}]});
     for(let xx=0;xx<4;xx++)for(let i=0;i<4;i++)blk.add(xx+','+(y+i));
     tr.forEach((t,i)=>{src.push({x:4,y:y+s0+i,item:rawItems[r]});snk.push({x:W-1,y:t,item:rawItems[r]})})}
+  {const oc=new Set();asg.forEach(s=>{if(s&&s.f==='W')for(let i=-1;i<5;i++)oc.add(s.a+i)});for(const b of blk)oc.add(+b.split(',')[1]);   // fallback containers (infinite, x=0..3) for groups without a dock
+    for(const g of G){if(!g.nd)continue;let y=1;const fits=y=>{for(let i=-1;i<5;i++)if(oc.has(y+i))return 0;return 1};while(y<=H-4&&!fits(y))y++;
+      if(y>H-4)return{ok:false,why:'no room for the plain container of '+S.names[g.r]};
+      const n=g.ys.length,s0=Math.floor((4-n)/2);items.push({cls:bx,x:0,y,rot:0,h:0,pid:0,ct:[{item:rawItems[g.r],n:0,inf:true}]});
+      for(let i=0;i<4;i++){oc.add(y+i);for(let xx=0;xx<4;xx++)blk.add(xx+','+(y+i))}
+      g.ys.forEach((_,i)=>src.push({x:4,y:y+s0+i,item:rawItems[g.r]}));
+      if(!nt.some(z=>z.endsWith(S.names[g.r])))nt.push('one raw item per industrial dock: no free dock for '+S.names[g.r])}}
   const rt=cmpRoute({W,H,rowsN:1,mk,sources:src,sinks:snk,blocked:blk,ugMax:def(PLC_UG[mk]).maxApart,eastStart:true});
   if(!rt.ok)return{ok:false,why:'lane routing failed'};
   rt.items.forEach(b=>{const q=tags.get(b.x+','+b.y);items.push(q&&(q.t==='ie'?b.rot===0:b.rot===(q.t==='iv'?1:3))?{...b,dk:q.t,di:rawItems[q.r],yb:0,dx:q.dx}:b)});
