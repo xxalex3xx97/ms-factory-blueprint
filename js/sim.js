@@ -164,9 +164,9 @@ function theoLevel(L,inj){
   let load;
   for(let pass=0;pass<10;pass++){
     const dem=base.map(s=>({id:s.id,item:s.item,rate:s.rate*(s.m==null?1:f.get(s.m))}));
-    const dl=flowLoad(K.nx,dem,K.cp,sp);
+    const dl=flowLoad(K.nx,dem,K.cp,sp,null,K.dk);
     th=new Map();dem.forEach(s=>{if(!th.has(s.id))th.set(s.id,1/Math.max(1,util(dl,s.id)))});
-    load=flowLoad(K.nx,dem.map(s=>({...s,rate:s.rate*tf(s.id)})),K.cp,sp);
+    load=flowLoad(K.nx,dem.map(s=>({...s,rate:s.rate*tf(s.id)})),K.cp,sp,null,K.dk);
     // machine supply from its input belts (each belt scaled down to its capacity), f = min over inputs of supply/need
     const sup=new Map();ins.forEach(e=>{const l=load.get(e.b.id);if(!l)return;let s=sup.get(e.m.id);if(!s){s=new Map();sup.set(e.m.id,s)}
       const k=Math.max(1,l.util||1);l.items.forEach((v,it)=>s.set(it,(s.get(it)||0)+v/k))});

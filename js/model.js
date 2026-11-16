@@ -66,14 +66,14 @@ function bayRects(b){const t=shapeTf(b);if(!t)return[];const sh=t.sh,tr=trOf(t);
 function dockBelts(blocks,belts,fl){
   const dkC=plcCls('BPO_Dock'),cells=new Map(),bayAt=new Map(),o=new Map();
   blocks.filter(b=>dkN(b.cls)&&(fl==null||b.h===fl)).forEach(b=>{
-    if(b.cls===dkC){const e=dim({cls:b.cls,rot:b.rot||0});for(let i=0;i<e.w*FC;i++)for(let j=0;j<e.h*FC;j++)cells.set((b.x*FC+i)+','+(b.y*FC+j),b)}
+    if(b.cls===dkC){const e=dim({cls:b.cls,rot:b.rot||0});for(let i=0;i<e.w*FC;i++)for(let j=0;j<e.h*FC;j++)cells.set(b.h+','+(b.x*FC+i)+','+(b.y*FC+j),b)}
     bayRects(b).forEach(q=>{const k=((b.df||[])[q.i]||{}).item,f=k?Object.keys(ITEMS).find(id=>id.slice(5).toLowerCase()===k)||"?":"",bay={b,f,cn:f&&f!=="?"?{b,st:new Map([[f,{n:0,inf:true}]]),cap:null}:null};
-      for(let x=Math.round(q.x);x<Math.round(q.x+q.w);x++)for(let y=Math.round(q.y);y<Math.round(q.y+q.h);y++)bayAt.set(x+','+y,bay)})});
-  belts.forEach(b=>{const d=DIR[b.rot];if(!d)return;const fr=bayAt.get((b.x+d[0])+','+(b.y+d[1]));
+      for(let x=Math.round(q.x);x<Math.round(q.x+q.w);x++)for(let y=Math.round(q.y);y<Math.round(q.y+q.h);y++)bayAt.set(b.h+','+x+','+y,bay)})});
+  belts.forEach(b=>{const d=DIR[b.rot];if(!d)return;const fr=bayAt.get(b.h+','+(b.x+d[0])+','+(b.y+d[1]));
     if(fr){o.set(b.id,{v:1,f:fr.f,b:fr.b});return}
-    for(const n of [1,2]){const c=cells.get((b.x+d[0]*n)+','+(b.y+d[1]*n));if(c){o.set(b.id,{v:1,f:"",b:c});return}}
-    if(bayAt.has(b.x+','+b.y))return;
-    for(const[a,e]of DIR){const nb=bayAt.get((b.x+a)+','+(b.y+e));if(nb&&nb.cn){o.set(b.id,{s:1,f:nb.f,cn:nb.cn,b:nb.b});break}}});
+    for(const n of [1,2]){const c=cells.get(b.h+','+(b.x+d[0]*n)+','+(b.y+d[1]*n));if(c){o.set(b.id,{v:1,f:"",b:c});return}}
+    if(bayAt.has(b.h+','+b.x+','+b.y))return;
+    for(const[a,e]of DIR){const nb=bayAt.get(b.h+','+(b.x+a)+','+(b.y+e));if(nb&&nb.cn){o.set(b.id,{s:1,f:nb.f,cn:nb.cn,b:nb.b});break}}});
   return o}
 // entrances (Layout marks + inspector): real door slots (same geometry as areas(): per cell along each open side of the floor cell box, none on the dock's ship side)
 // or, for a no-floor shaped block whose SHAPES entry says entrance.kind==="ports", the side of its output ports. Points in cell units on the footprint edge; ed = world edge 0..3 (E,S,W,N)
@@ -271,7 +271,7 @@ function splitShare(F,L,pj){
   return res;
 }
 // ctx (links1 only): {acc(beltId,item) = downstream acceptance limit, pr = Map(splitter input belt -> priority output belt)}. Without ctx (sim.js) the old even split stays.
-function flowLoad(next,src,cap,sp,ctx){
+function flowLoad(next,src,cap,sp,ctx,dk0){
   const o=new Map();
   const add=(i,item,rate)=>{let e=o.get(i);if(!e){e={items:new Map(),tot:0,cap:cap.get(i)||null,util:null,mixed:false};o.set(i,e)}
     e.items.set(item,(e.items.get(item)||0)+rate);e.tot+=rate};
@@ -284,7 +284,8 @@ function flowLoad(next,src,cap,sp,ctx){
         const got=sh.reduce((a,b)=>a+b,0);if(!(got>1e-9))return;
         add(i,item,got);   // input belt carries only what the outputs take
         outs.forEach((b,j)=>{if(sh[j]>1e-9)walk(b,item,sh[j],new Set(seen))});return}
-      if(next.get(i)==null&&ctx&&ctx.dk&&ctx.dk.has(i)){const f=ctx.dk.get(i);if(f&&f!==item){for(const j of path)unadd(j,item,rate);return}}   // dock void with another filter item: nothing flows
+      const dk=ctx&&ctx.dk||dk0;
+      if(next.get(i)==null&&dk&&dk.has(i)){const f=dk.get(i);if(f&&f!==item){for(const j of path)unadd(j,item,rate);return}}   // dock void with another filter item: nothing flows
       add(i,item,rate);path.push(i)}};
   src.forEach(({id,item,rate})=>walk(id,item,rate,new Set()));
   o.forEach(e=>{e.mixed=e.items.size>1;e.util=e.cap?e.tot/e.cap:null});
@@ -392,7 +393,7 @@ function links1(L,inj){
     else if(sinkM.has(id)){const m=sinkM.get(id),r=recOf(m),x=r&&r.i.find(q=>q[0]===k);v=x?pm(x[1],r.t)||0:0}
     v=Math.min(v,c==null?Infinity:c);accM.set(key,v);return v};
   const prM=new Map();spR.forEach(r=>r.ins.forEach(i=>{if(r.pr!=null)prM.set(i,r.pr)}));
-  const ctx={acc,pr:prM,dk:dkV};o.acc=acc;
+  const ctx={acc,pr:prM,dk:dkV};o.acc=acc;o.dk=dkV;
   o.load=flowLoad(nx,src,cp,sp,ctx);
   // unstocked container relays its inflow: each pull belt carries min(belt speed, inflow / pull belts), split by item share; repeat until the relayed flow stops changing (long container->container chains)
   const fed=o.ports.filter(e=>{const p=e.port,d=DIR[e.b.rot];return isStore(e.m)&&!ctFirst(e.m)&&!(d[0]===-p.nx&&d[1]===-p.ny)&&live(e)});   // dead-end output belts take no share (same rule as machine outputs)

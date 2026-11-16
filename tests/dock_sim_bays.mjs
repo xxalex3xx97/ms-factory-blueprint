@@ -59,4 +59,8 @@ ok("T-g) theo: matching item / no filter keep the full rate",FL.same[0]===60&&FL
 // T-h: changing a bay filter (b.df) must invalidate the cached estimate
 const CH=await p.evaluate(()=>{const d=S.blocks.find(b=>dkN(b.cls));if(!d)return{err:1};const k0=blkKey(),h0=[...lvHash()].join();d.df=Array.from({length:dkN(d.cls)},()=>({item:"",bLoading:0}));d.df[0].item="water";const k1=blkKey(),h1=[...lvHash()].join();d.df[0].item="iron";return{k:k0!==k1&&k1!==blkKey(),h:h0!==h1&&h1!==[...lvHash()].join()}});
 ok("T-h) filter change changes blkKey and the estimate cache hash",CH.k===true&&CH.h===true);
+// T-i: a belt on another level at the same x,y next to a bay is not a source/void
+const XL=await p.evaluate(()=>{const d=S.blocks.find(b=>dkN(b.cls));if(!d)return{err:1};d.df=Array.from({length:dkN(d.cls)},()=>({item:"water",bLoading:0}));
+  const q=bayRects(d)[0],bt=S.blocks.find(x=>x.cls==='DAT_ConveyorBelt3');if(!bt)return{err:2};const rs=dockBelts([d],[{id:9,x:bt.x,y:bt.y,h:1,rot:bt.rot}],null);return{n:rs.size}});
+ok("T-i) belt on another level ignored by dockBelts",XL.n===0);
 await b.close();console.log(bad||errs.length?bad+" FAIL":"ALL PASS");process.exit(bad||errs.length?1:0);
