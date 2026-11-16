@@ -163,7 +163,7 @@ $("insp").addEventListener("click",e=>{
   else if(id==="bCfgCopy"&&typeof cfgCopy==="function")cfgCopy();else if(id==="bCfgPaste"&&typeof cfgPasteMode==="function")cfgPasteMode();
   else if(id==="bDup"){const nb=ugRelink(S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null,oid:b.id,id:uid++,mid:0,x:b.x+1,y:b.y+1})));if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}push();S.blocks.push(...nb);sel=new Set(nb.map(b=>b.id));all()}
   else if(id==="bStop"){active=null;all()}
-  else if(id==="bClear"){if(S.blocks.length&&confirm("Remove all blocks and buildables?")){push();S.blocks=[];S.closed=[];sel=new Set();all()}}
+  else if(id==="bClear"){if(S.blocks.length&&confirm("Remove all blocks and buildables?")){push();S.blocks=[];S.closed=[];S.conn=[];sel=new Set();all()}}
   else if(id==="bResetCat"){if(confirm("Discard all catalog edits (size, floor, category, verified)?")){push();OV={};saveOV();all()}}
 });
 
