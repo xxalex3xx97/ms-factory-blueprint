@@ -73,7 +73,7 @@
         "source": "decoded BPO_Station_2x1: short-end gaps y -3..3 only; long sides solid"
       },
       "note": null,
-      "levels": 2
+      "levels": 1
     },
     "BPO_Station_02A": {
       "w": 2,
@@ -143,7 +143,7 @@
         "source": "decoded BPO_ElevatorBlock_03: gaps x -3..3 (N,S) and y -3..3 (W,E)"
       },
       "note": null,
-      "levels": 2
+      "levels": 1
     },
     "BPO_SolarPanelBlock": {
       "w": 1,
@@ -158,7 +158,7 @@
       ],
       "floor": null,
       "note": null,
-      "levels": 2,
+      "levels": 1,
       "label": "Solar Panels Mk. 1"
     },
     "BPO_SolarPanelBlock_02": {
@@ -189,7 +189,7 @@
       ],
       "floor": null,
       "note": null,
-      "levels": 2
+      "levels": 1
     },
     "BPO_MiningDroneBayBlock": {
       "w": 1,
@@ -213,7 +213,7 @@
         2
       ],
       "hatch": "interior",
-      "levels": 2,
+      "levels": 1,
       "label": "Mining Drone Bay Mk. 1"
     },
     "BPO_MiningDroneBayBlock_2": {
@@ -507,7 +507,7 @@
       },
       "hatch": "interior",
       "clip": true,
-      "levels": 2
+      "levels": 1
     },
     "BPO_ShipyardCore_02": {
       "w": 1,
@@ -854,7 +854,7 @@
         "evidence": "decoded BPO_StationCorridor_01: open strip ends E and W (door = full 6-wide strip)"
       },
       "note": null,
-      "levels": 2
+      "levels": 1
     },
     "BPO_Station_03": {
       "add": true,

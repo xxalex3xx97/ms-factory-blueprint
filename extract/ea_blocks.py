@@ -108,7 +108,7 @@ for k, v in rsc.items():
         unl.setdefault(u, []).append(k)
 
 
-ONE_LEVEL = {'BPO_StationCorner_01', 'BPO_Station_01'}   # user 2026-11-16: 1 level high although BlockBounds z says 2 (Command Module is 1 by its bounds)
+ONE_LEVEL = {'BPO_StationCorner_01', 'BPO_Station_01', 'BPO_Station_2x1', 'BPO_StationCorridor_01', 'BPO_ElevatorBlock_03', 'BPO_ShipyardCore', 'BPO_MiningDroneBayBlock', 'BPO_MiningDroneBayBlock_2', 'BPO_SolarPanelBlock', 'BPO_StationTurretBlock_01'}   # user 2026-11-16: 1 level high although BlockBounds z says 2 (Command Module is 1 by its bounds)
 
 
 def levels(n):
