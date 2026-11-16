@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href;
+const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href + '?engine=old';
 const SHOTS = path.join(HERE, 'shots');
 const VIEWS = [[2576, 982], [1400, 800], [1024, 700], [390, 844]];
 const ALL = ['plnBk11', 'plnBk21', 'plnBk22'];
@@ -30,7 +30,7 @@ async function setup(pg, label, rate, mk, buf, ticks = ALL) {
     $('plnItem').value = opt.value;
     $('plnMk').value = String(mk); $('plnMk').dispatchEvent(new Event('change'));
     $('plnSp').value = ''; $('plnRate').value = String(rate); $('plnBuf').value = buf; $('plnMod').checked = false;
-    ['plnBk11', 'plnBk21', 'plnBk22'].forEach(i => $(i).checked = ticks.includes(i));
+    $('plnBk').value = {plnBk11: 'BPO_Station_01', plnBk21: 'BPO_Station_2x1', plnBk22: 'BPO_Station_02'}[ticks[ticks.length - 1]];
     return true;
   }, [label, rate, mk, buf, ticks]);
 }

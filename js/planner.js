@@ -1,11 +1,13 @@
 // Planner (Stage 2): plan() is pure (no DOM). byOut rebuilt per call so injected recipes count (tests).
 const plnR2=v=>Math.round(v*100)/100,plnNm=id=>(ITEMS[id]||{}).n||String(id).replace(/^ITEM_/,"");
+// fp (2nd arg) drops recipes of crafters with no footprint (Deep Space Observatory): their outputs become raw inputs unless opts.obs (planner tab keeps them).
 // proto off drops the Protomatter chain: RelicSynthesizer recipes and any recipe that consumes Protomatter (Enrichment ores).
 const PLN_PROTO_CR="CRAFT_RelicSynthesizer",PLN_PROTO_IT="ITEM_Protomatter";
-const plnBy=proto=>{const m=new Map();Object.keys(RECS).forEach(c=>RECS[c].forEach(r=>{if(!proto&&(c===PLN_PROTO_CR||r.i.some(([x])=>x===PLN_PROTO_IT)))return;const k=r.o[0],l=m.get(k)||[],key=rk(r);if(!l.some(x=>rk(x.r)===key)){l.push({c,r});m.set(k,l)}}));return m};
+const plnBy=(proto,fp)=>{const m=new Map();Object.keys(RECS).forEach(c=>{if(fp&&!plnCb(c))return;RECS[c].forEach(r=>{if(!proto&&(c===PLN_PROTO_CR||r.i.some(([x])=>x===PLN_PROTO_IT)))return;const k=r.o[0],l=m.get(k)||[],key=rk(r);if(!l.some(x=>rk(x.r)===key)){l.push({c,r});m.set(k,l)}})});return m};
 const plnCb=c=>CATALOG.buildables.find(b=>b.w!=null&&(b.crafters||[]).includes(c));   // footprint unknown (Deep Space Observatory machine) = cannot be planned
 const plnCname=c=>{const b=plnCb(c);return b?lab(def(b.id)):c};
 const plnCico=c=>{const b=plnCb(c),d=b&&def(b.id),u=d&&iurl(d.icon);return u?`<img class="ic plnCic" alt="" title="${esc(lab(d))}" src="${u}">`:""};
+// opts.obs (default false): true keeps Observatory-type recipes plannable (planner tab); false makes their outputs raw (No Limits).
 // mk: 0..2 index into MKS (belt). ovr={sp,bal}: splitter/balancer Mk index or null (follow belt). pick={item:recipeKey}.
 // opts.proto (default false): false ignores the Protomatter chain (see plnBy). opts.enr (default false): false picks plain-ore recipes by default, true picks the recipe that consumes enriched ores when there is one; an explicit pick always wins.
 const PLN_ENR=/^ITEM_Enriched\w*Ore$/;
@@ -13,8 +15,8 @@ const PLN_ENR=/^ITEM_Enriched\w*Ore$/;
 function plan(item,rate,mk,ovr,pick,opts){const P=planOnce(item,rate,mk,ovr,pick,opts,false);if(!P.cycle)return P;const Q=planOnce(item,rate,mk,ovr,pick,opts,true);return Q.cycle?P:Q}
 function planOnce(item,rate,mk,ovr,pick,opts,avoid){
   ovr=ovr||{};pick=pick||{};opts=opts||{};
-  const by=plnBy(!!opts.proto),nodes={},edges=[],st={cycle:false},cap=i=>MKS[i][1];
-  const find=it=>{const l=by.get(it)||[];return l.find(x=>rk(x.r)===pick[it])||l.find(x=>x.r.i.some(([y])=>PLN_ENR.test(y))===!!opts.enr)||l[0]||null};
+  const by=plnBy(!!opts.proto,!opts.obs),nodes={},edges=[],st={cycle:false},cap=i=>MKS[i][1];
+  const find=it=>{const l=by.get(it)||[];return l.find(x=>rk(x.r)===pick[it])||l.find(x=>rkb(x.r)===pick[it])||l.find(x=>x.r.i.some(([y])=>PLN_ENR.test(y))===!!opts.enr)||l[0]||null};
   const ex=(it,rt,stack)=>{
     if(stack.has(it)){st.cycle=true;if(!st.loop){const a=[...stack];st.loop=a.slice(a.indexOf(it)).concat([it])}return}
     const n=nodes[it]||(nodes[it]={item:it,rate:0,rec:null,crafter:null,alts:(by.get(it)||[]).length,pmach:null,machines:0,util:null,in:[]});
@@ -22,8 +24,8 @@ function planOnce(item,rate,mk,ovr,pick,opts,avoid){
     const pref=[find(it),...(by.get(it)||[])].filter(Boolean),c=(avoid&&stack.size?pref.find(x=>!x.r.i.some(([y])=>stack.has(y))):null)||find(it);if(!c)return;
     n.rec=c.r;n.crafter=c.c;stack.add(it);
     // growth recipe (the item is one of its own inputs and the output is bigger): net output per cycle = out - in; the growth input is fed back from the output (no edge); other inputs scale with the cycles
-    const gr=c.r.i.find(([x])=>x===it),net=gr?c.r.o[1]-gr[1]:0,G=net>0;
-    c.r.i.forEach(([x,q])=>{if(G&&x===it)return;const f=G?q*rt/net:q*rt/c.r.o[1];edges.push({from:x,to:it,flow:f});ex(x,f,stack)});
+    const gr=c.r.i.find(([x])=>x===it),net=gr?c.r.o[1]-gr[1]:0,G=net>0&&!opts.seedDock,SD=!!opts.seedDock&&!!gr;   // opts.seedDock (build engine): the growth input comes from a dock, not from the output: full output per cycle, no feedback, the seed is no node
+    c.r.i.forEach(([x,q])=>{if((G||SD)&&x===it)return;const f=G?q*rt/net:q*rt/c.r.o[1];edges.push({from:x,to:it,flow:f});ex(x,f,stack)});
     stack.delete(it);
     n.pmach=(G?net:c.r.o[1])*1800/c.r.t;   // items/min per machine (raw, rounded only in display)
     n.machines=n.rate>0?Math.ceil(n.rate/n.pmach-1e-9):0;
@@ -43,13 +45,13 @@ function planOnce(item,rate,mk,ovr,pick,opts,avoid){
     return {from:e.from,to:e.to,flow:e.flow,m,belts,fits,split,warn,note,label:plnR2(e.flow)+" items/min, "+belts+" belts ("+MKS[mk][0]+")"};
   });
   E.forEach(e=>{if(e.to!=null)nodes[e.to].in.push(e)});
-  return {nodes,edges:E,raw:Object.values(nodes).filter(n=>!n.rec),cycle:st.cycle,loop:st.loop};
+  return {nodes,edges:E,raw:Object.values(nodes).filter(n=>!n.rec),cycle:st.cycle,loop:st.loop,nofp:opts.obs?[]:Object.values(nodes).filter(n=>!n.rec&&(plnBy(!!opts.proto).get(n.item)||[]).length).map(n=>n.item)};
 }
 function plnDraw(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0;
   if(!it||!(rate>0)){$("plnOut").innerHTML='<div class="sub">Pick a craftable item and a rate above 0.</div>';return}
   const pr=plnProto(),BY=plnBy(pr),sp=$("plnSp").value,bal=$("plnBal").value,mk=+$("plnMk").value;
-  const P=plan(it,rate,mk,{sp:sp===""?null:+sp,bal:bal===""?null:+bal},PLN_PICK,{proto:pr,enr:$("plnEnr").checked});
+  const P=plan(it,rate,mk,{sp:sp===""?null:+sp,bal:bal===""?null:+bal},PLN_PICK,{proto:pr,enr:$("plnEnr").checked,obs:true});
   const inn={};P.edges.forEach(e=>{if(e.to!=null)(inn[e.to]=inn[e.to]||[]).push(e.from)});
   const stk=new Set(),seen=new Set(),back=new Set(),dfs=n=>{seen.add(n);stk.add(n);(inn[n]||[]).forEach(f=>{if(stk.has(f))back.add(f+"|"+n);else if(!seen.has(f))dfs(f)});stk.delete(n)};dfs(it);   // back-edges (recipe loops) ignored for depth
   const col={[it]:0};   // depth from target (target = rightmost column)
@@ -152,9 +154,9 @@ const plnFillItems=()=>{const cur=$("plnItem").value;$("plnItem").innerHTML='<op
 plnFillItems();
 $("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribute("aria-pressed",!d.hidden);if(!d.hidden&&PLNO===null)plnOptFold(d.clientWidth<720);plnDraw();if(!d.hidden)plnFit()};
 $("plnX").onclick=()=>{$("pln").hidden=true;$("plnB").setAttribute("aria-pressed",false);$("plnB").focus()};
-$("plnC").onclick=()=>{const c=$("pln").classList.toggle("col");$("plnC").setAttribute("aria-expanded",!c);$("plnC").title=c?"Expand":"Collapse to title bar"};
+$("plnC").onclick=()=>{const c=$("pln").classList.toggle("col");$("plnC").setAttribute("aria-expanded",!c);$("plnC").title=c?"Expand":"Collapse to title bar";if(!c)plnDraw()};   // arrows are measured from the boxes: a redraw while collapsed (hidden, zero size) leaves them broken, so redraw on expand
 // rate default = what one machine of the crafter makes at 100% (plan pmach), rounded down to 2 decimals, min 1
-const plnDefRate=()=>{const it=$("plnItem").value;if(!it)return;const P=plan(it,1,+$("plnMk").value,{},{},{proto:plnProto(),enr:$("plnEnr").checked}),m=P.nodes[it]&&P.nodes[it].pmach;if(m)$("plnRate").value=Math.max(1,Math.floor(m*100+1e-9)/100)};
+const plnDefRate=()=>{const it=$("plnItem").value;if(!it)return;const P=plan(it,1,+$("plnMk").value,{},{},{proto:plnProto(),enr:$("plnEnr").checked,obs:true}),m=P.nodes[it]&&P.nodes[it].pmach;if(m)$("plnRate").value=Math.max(1,Math.floor(m*100+1e-9)/100)};
 $("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDefRate();plnDraw();plnFit()};
 $("plnEnr").onchange=plnDraw;
 $("plnProto").onchange=()=>{plnFillItems();plnDraw()};   // PLN_OFF kept: drag offsets survive

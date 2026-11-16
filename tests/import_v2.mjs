@@ -11,7 +11,7 @@ const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href;
+const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href + '?engine=old';
 const SHOTS = path.join(HERE, 'shots');
 fs.mkdirSync(SHOTS, {recursive: true});
 const MB = process.env.MAINBASE || 'C:/Users/SFidelis/.claude/jobs/53e7ab72/tmp/MainBase.json';

@@ -18,6 +18,8 @@ async function svRestore(){const si=SIK;if(si==null)return;try{const r=await idb
 window.addEventListener("pagehide",asvNow);
 document.addEventListener("visibilitychange",()=>{if(document.hidden)asvNow()});
 async function asRestore(){   // resolves after the saved state is read; boot applies the window defaults only when nothing was saved
+  // watchdog: the flag stays set when a load never finished (frozen tab); the next load then skips the restore and holds the autosave, so a bad saved design cannot lock the page
+  try{if(localStorage.getItem("msfb.boot")){localStorage.removeItem("msfb.boot");ASH=true;setTimeout(()=>toast("The last load did not finish, so the autosaved design was not opened. It is kept until you change something."),500);return}localStorage.setItem("msfb.boot","1")}catch(e){}
   let js=null;try{js=localStorage.getItem(ASK)}catch(e){}
   if(js==null)try{js=await idbGet("state")}catch(e){}   // localStorage copy is removed whenever it cannot hold the latest state, so it is never older than IndexedDB
   let o;try{o=JSON.parse(js)}catch(e){return}

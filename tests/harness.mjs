@@ -163,7 +163,7 @@ async function s2(pg, C) {
   for (const id of ['DAT_CompSciLab', 'DAT_MatSciLab', 'DAT_ElectroSciLab', 'DAT_RelicAnalyzer', 'DAT_AstroSciLab', 'DAT_XenoSciLab']) {
     chk(`lab ${id}: 1 port (brief: labs 1 port)`, P(id).length === 1, `page has ${P(id).length} ports: ${P(id).map(p => p.f + p.pos).join(' ')}`);
   }
-  chk('lab DAT_QuantumSciLab: 2 ports E2 + S8 (REA)', JSON.stringify(P('DAT_QuantumSciLab').map(p => p.f + p.pos).sort()) === '["E2","S8"]', P('DAT_QuantumSciLab').map(p => p.f + p.pos).join(' '));
+  chk('lab DAT_QuantumSciLab: 2 ports E8 + S8 (user game 2026-11-14: lower east, right south)', JSON.stringify(P('DAT_QuantumSciLab').map(p => p.f + p.pos).sort()) === '["E8","S8"]', P('DAT_QuantumSciLab').map(p => p.f + p.pos).join(' '));
   chk('Container (DAT_Container) 2x2: 8 ports E1 E2 N1 N2 S1 S2 W1 W2, toggleable (EA)', JSON.stringify(P('DAT_Container').map(p => p.f + p.pos).sort()) === '["E1","E2","N1","N2","S1","S2","W1","W2"]' && P('DAT_Container').every(p => p.tg), P('DAT_Container').map(p => p.f + p.pos).join(' '));
   chk('Armoury: 0 ports', P('DAT_Armoury').length === 0);
   chk('Workbench (WorkbenchMachine): 0 ports', P('DAT_WorkbenchMachine').length === 0);
@@ -2662,7 +2662,9 @@ async function s27(br) {
   const palHtml = label => pg.evaluate(l => { const b = [...document.querySelectorAll('#palList button.item')].find(x => x.querySelector('.n') && x.querySelector('.n').textContent === l); return b ? b.outerHTML : null }, label);
   const selectAt = async (cls, X, Y) => {
     await pg.evaluate(t => __fb.importJson(t), JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(cls, X, Y, 0, 0)], DefaultMachines: []}));
-    await pg.evaluate(() => { __fb.setView('L'); const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
+    await pg.evaluate(() => __fb.setView('L'));
+    await pg.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));   // hit-test index is rebuilt by the paint: click after it
+    await pg.evaluate(() => { const b = __fb.S.blocks[0]; __fb.click(b.x, b.y); });
     return pg.evaluate(() => { const b = __fb.S.blocks.find(q => __fb.sel.has(q.id)); return b ? b.cls : null });
   };
   const dockSel = await selectAt('BPO_Dock_2', 18, 2);

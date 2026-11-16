@@ -22,7 +22,7 @@ const lvl=b=>(def(b.cls)||{}).levels||1;
 // blocks b (at level L) and o share a level when their level spans intersect
 const lvHit=(o,b,L)=>o.h<L+lvl(b)&&L<o.h+lvl(o);
 // floor block covering cell (x,y) on level L (cell units), or undefined
-function floorAt(L,x,y){return S.blocks.find(o=>{if(o.h!==L||isM(o)||!floorRect(o))return false;const c=fcell(o);return x>=c.cx&&x<c.cx+c.cw&&y>=c.cy&&y<c.cy+c.ch})}
+function floorAt(L,x,y){return nonM().find(o=>{if(o.h!==L||!floorRect(o))return false;const c=fcell(o);return x>=c.cx&&x<c.cx+c.cw&&y>=c.cy&&y<c.cy+c.ch})}
 // floor cell box of a block (cell units): shipEnd = the end opposite the ship direction (rot); else the whole footprint
 function fcell(b){const o=dim(b);if(!SHIPEND(b))return{cx:b.x,cy:b.y,cw:o.w,ch:o.h};const D=DIR[b.rot&3];return{cx:b.x+(D[0]<0?o.w-1:0),cy:b.y+(D[1]<0?o.h-1:0),cw:D[0]?1:o.w,ch:D[1]?1:o.h}}
 function floorRect(b){
@@ -120,16 +120,26 @@ function areas(L){
 }
 // elevator shaft (blocked 4x4 centre): machines may not overlap it
 let STRICT=true;   // Settings: keep buildables on the floor (no outside / across walls); overlaps are always refused
+let NMBC=null;const nonM=()=>{const k=SV+":"+S.blocks.length;if(!NMBC||NMBC.k!==k)NMBC={k,l:S.blocks.filter(b=>!isM(b))};return NMBC.l};   // the non-machine blocks (tiles), cached: a ghost over a 130k-piece factory scanned every piece on every mouse move
 const hitR=(i,e)=>i.x<e.x+e.w&&i.x+i.w>e.x&&i.y<e.y+e.h&&i.y+i.h>e.y;
 function noBuild(it){const c={},ids=new Set(it.map(i=>i.id).filter(x=>x!=null));
+  // a big paste into a big factory: machine cells and floor rects are looked up in a 64-cell bucket index (it was every item against every block: minutes for 4k items vs 130k blocks)
+  let mIdx=null;const big=it.length*S.blocks.length>2e6;
+  if(big){mIdx=new Map();S.blocks.forEach(o=>{if(!isM(o))return;const e=mItem(o);for(let bx=e.x>>6;bx<=(e.x+e.w-1)>>6;bx++)for(let by=e.y>>6;by<=(e.y+e.h-1)>>6;by++){const k=e.l+"|"+bx+"|"+by;let l=mIdx.get(k);if(!l)mIdx.set(k,l=[]);l.push(e)}})}
+  const hitM=i=>{if(!mIdx)return S.blocks.some(o=>o.h===i.l&&isM(o)&&!ids.has(o.id)&&!(i.belt&&isBelt(o))&&hitR(i,mItem(o)));
+    const seen=new Set();for(let bx=i.x>>6;bx<=(i.x+i.w-1)>>6;bx++)for(let by=i.y>>6;by<=(i.y+i.h-1)>>6;by++){const l=mIdx.get(i.l+"|"+bx+"|"+by);if(l)for(const e of l){if(seen.has(e))continue;seen.add(e);if(!ids.has(e.id)&&!(i.belt&&e.belt)&&hitR(i,e))return true}}return false};
   return it.some(i=>{const a=c[i.l]=c[i.l]||areas(i.l);
     if(a.blocked.some(e=>hitR(i,e))||a.nob.some(e=>hitR(i,e)))return true;
     if(i.id==null)return false;   // preview-only probes without id: shaft check only
     if(STRICT&&!onArea(i.x,i.y,i.w,i.h,a.rects))return true;
-    return S.blocks.some(o=>o.h===i.l&&isM(o)&&!ids.has(o.id)&&!(i.belt&&isBelt(o))&&hitR(i,mItem(o)))})}
+    return hitM(i)})}
 const mItem=b=>{const d=dim(b);return{id:b.id,x:b.x,y:b.y,w:d.w,h:d.h,l:b.h,belt:isBelt(b)}};
 const NOBUILD="Cannot build here: overlap, elevator shaft, or off the floor / across a wall";
+const RIDX=new WeakMap();
 function onArea(x,y,w,h,R){
+  if(R.length>300){let g=RIDX.get(R);if(!g){g=new Map();R.forEach(r=>{for(let bx=r.x>>6;bx<=(r.x+r.w-1)>>6;bx++)for(let by=r.y>>6;by<=(r.y+r.h-1)>>6;by++){const k=bx+","+by;let l=g.get(k);if(!l)g.set(k,l=[]);l.push(r)}});RIDX.set(R,g)}
+    for(let i=x;i<x+w;i++)for(let j=y;j<y+h;j++){const l=g.get((i>>6)+","+(j>>6));if(!l||!l.some(r=>i>=r.x&&i<r.x+r.w&&j>=r.y&&j<r.y+r.h))return false}
+    return true}
   for(let i=x;i<x+w;i++)for(let j=y;j<y+h;j++)
     if(!R.some(r=>i>=r.x&&i<r.x+r.w&&j>=r.y&&j<r.y+r.h))return false;
   return true;
@@ -182,7 +192,7 @@ function portsOf(b){
     let ix=0,iy=0;const is=q.pos==='start'?-1:1;if(fi&1)iy=is;else ix=is;   // elevator io: unit step of a belt entering the port along the wall (N/S: start -1,0 end 1,0; E/W: start 0,-1 end 0,1)
     for(let r=0;r<(b.rot&3);r++){[x,y]=[h-1-y,x];[w,h]=[h,w];[nx,ny]=[-ny,nx];[ix,iy]=[-iy,ix]}
     // splitter input (back) face is not a game port: never toggleable, always enabled
-    const key=f+i,tg=!!L.toggleable&&!(q.dir==="in"&&isSplitterCls(b.cls));o.push({key,f,i,pos:q.pos,dir:q.dir||null,tg,en:!tg||!off.includes(key),wf:(fi+(b.rot&3))%4,x:ox+x,y:oy+y,nx,ny,line:!!L.line,io:d&&d.elevator?[ix,iy]:null});
+    const key=f+i,tg=!!L.toggleable&&!(q.dir==="in"&&isSplitterCls(b.cls));o.push({key,f,i,pos:q.pos,dir:q.dir||null,tg,en:!tg||!off.includes(key),pr:tg&&hasPrio(b.cls)&&q.dir==="out"&&!!b.pr&&b.pr[0]===prIdx(b,{f,pos:q.pos}),wf:(fi+(b.rot&3))%4,x:ox+x,y:oy+y,nx,ny,line:!!L.line,io:d&&d.elevator?[ix,iy]:null});
   });
   return o;
 }
@@ -215,7 +225,10 @@ function linksAll(L,hk){
 }
 // ports drawn as bars: splitter input (back) face is not a port, so no bar (draw.js draws a neutral chevron there)
 const barPorts=b=>portsOf(b).filter(p=>!(p.dir==="in"&&isSplitterCls(b.cls)));
-const togglePort=(b,k)=>{if(!portsOf(b).some(p=>p.key===k&&p.tg))return;const o=b.off||[];b.off=o.includes(k)?o.filter(q=>q!==k):o.concat(k)};
+const togglePort=(b,k)=>{if(!portsOf(b).some(p=>p.key===k&&p.tg))return;const o=b.off||[];b.off=o.includes(k)?o.filter(q=>q!==k):o.concat(k);clrPrio(b)};
+// splitter/balancer output priority (exclusive, stored face-based as b.pr=[index in SPL_FACES,-1]); a disabled port cannot keep it. prioB is kept as imported.
+const clrPrio=b=>{if(hasPrio(b.cls)&&b.pr&&portsOf(b).some(p=>p.pr&&!p.en))delete b.pr};
+const togglePrio=(b,k)=>{const p=hasPrio(b.cls)&&portsOf(b).find(p=>p.key===k&&p.tg&&p.en&&p.dir==="out");if(!p)return;if(p.pr)delete b.pr;else b.pr=[prIdx(b,p),b.pr?b.pr[1]:-1]};
 function portAt(p){
   const s=sc();if(s<14)return null;
   const fx=(p.x-V.ox)/s,fy=(p.y-V.oy)/s;let best=null,bd=9;
@@ -225,13 +238,31 @@ function portAt(p){
   })});
   return best;
 }
-function flowLoad(next,src,cap,sp){
+// splitter/balancer output split, demand-limited water-filling: F = flow in, L[j] = what output j can still take downstream, pj = priority output index or -1. Priority first (min(F,L)); the rest get an equal share, outputs below their share take their L, the surplus is re-shared.
+function splitShare(F,L,pj){
+  const res=L.map(()=>0);let rem=F,free=L.map((_,j)=>j);
+  if(pj>=0){res[pj]=Math.min(rem,L[pj]);rem-=res[pj];free=free.filter(j=>j!==pj)}
+  while(free.length&&rem>1e-9){
+    const sh=rem/free.length,low=free.filter(j=>L[j]<sh);
+    if(!low.length){free.forEach(j=>res[j]+=sh);break}
+    low.forEach(j=>{res[j]+=L[j];rem-=L[j]});free=free.filter(j=>L[j]>=sh);
+  }
+  return res;
+}
+// ctx (links1 only): {acc(beltId,item) = downstream acceptance limit, pr = Map(splitter input belt -> priority output belt)}. Without ctx (sim.js) the old even split stays.
+function flowLoad(next,src,cap,sp,ctx){
   const o=new Map();
+  const add=(i,item,rate)=>{let e=o.get(i);if(!e){e={items:new Map(),tot:0,cap:cap.get(i)||null,util:null,mixed:false};o.set(i,e)}
+    e.items.set(item,(e.items.get(item)||0)+rate);e.tot+=rate};
   const walk=(id,item,rate,seen)=>{
     for(let i=id;i!=null&&!seen.has(i);i=next.get(i)){seen.add(i);
-      let e=o.get(i);if(!e){e={items:new Map(),tot:0,cap:cap.get(i)||null,util:null,mixed:false};o.set(i,e)}
-      e.items.set(item,(e.items.get(item)||0)+rate);e.tot+=rate;
-      const outs=sp&&sp.get(i);if(outs&&outs.length){outs.forEach(b=>walk(b,item,rate/outs.length,new Set(seen)));return}}};   // splitter/balancer: even split over enabled outputs
+      const outs=sp&&sp.get(i);
+      if(outs&&outs.length){
+        const sh=ctx?splitShare(rate,outs.map(b=>ctx.acc(b,item)),outs.indexOf(ctx.pr.get(i))):outs.map(()=>rate/outs.length);
+        const got=sh.reduce((a,b)=>a+b,0);if(!(got>1e-9))return;
+        add(i,item,got);   // input belt carries only what the outputs take
+        outs.forEach((b,j)=>{if(sh[j]>1e-9)walk(b,item,sh[j],new Set(seen))});return}
+      add(i,item,rate)}};
   src.forEach(({id,item,rate})=>walk(id,item,rate,new Set()));
   o.forEach(e=>{e.mixed=e.items.size>1;e.util=e.cap?e.tot/e.cap:null});
   return o;
@@ -317,9 +348,25 @@ function links1(L,inj){
   const spR=new Map(),sp=new Map();
   o.ports.forEach(e=>{const c=(def(e.m.cls)||{}).category;if(c!=="Splitters"&&c!=="Balancers")return;const d=DIR[e.b.rot],p=e.port;
     let r=spR.get(e.m.id);if(!r){r={ins:[],outs:[]};spR.set(e.m.id,r)}
-    if(d[0]===-p.nx&&d[1]===-p.ny&&p.dir!=="out")r.ins.push(e.b.id);else if(!(d[0]===-p.nx&&d[1]===-p.ny)&&p.dir!=="in")r.outs.push(e.b.id)});
+    if(d[0]===-p.nx&&d[1]===-p.ny&&p.dir!=="out")r.ins.push(e.b.id);else if(!(d[0]===-p.nx&&d[1]===-p.ny)&&p.dir!=="in"){r.outs.push(e.b.id);if(p.pr)r.pr=e.b.id}});
   spR.forEach(r=>r.ins.forEach(i=>sp.set(i,r.outs)));
-  o.load=flowLoad(nx,src,cp,sp);
+  // pass 1 of the splitter split: what each belt can still take downstream, per item. Machine input port = its recipe need for the item, store/elevator input = unlimited, dead end = 0, belt/splitter = min(belt cap, sum of downstream). Memo + cycle guard.
+  const sinkM=new Map(),infS=new Set();
+  o.ports.forEach(e=>{const d=DIR[e.b.rot],p=e.port;if(!(d[0]===-p.nx&&d[1]===-p.ny))return;   // belt points INTO this block
+    const df=def(e.m.cls)||{},c=df.category;
+    if(isStore(e.m)||df.elevator){infS.add(e.b.id);return}
+    if(c==="Splitters"||c==="Balancers")return;
+    sinkM.set(e.b.id,e.m)});
+  const accM=new Map(),acc=(id,k)=>{const key=id+"|"+k;if(accM.has(key))return accM.get(key);accM.set(key,0);
+    const outs=sp.get(id),nxt=nx.get(id),c=cp.get(id);let v=0;
+    if(outs&&outs.length)v=outs.reduce((a,b)=>a+acc(b,k),0);
+    else if(nxt!=null)v=acc(nxt,k);
+    else if(infS.has(id))v=Infinity;
+    else if(sinkM.has(id)){const m=sinkM.get(id),r=recOf(m),x=r&&r.i.find(q=>q[0]===k);v=x?pm(x[1],r.t)||0:0}
+    v=Math.min(v,c==null?Infinity:c);accM.set(key,v);return v};
+  const prM=new Map();spR.forEach(r=>r.ins.forEach(i=>{if(r.pr!=null)prM.set(i,r.pr)}));
+  const ctx={acc,pr:prM};
+  o.load=flowLoad(nx,src,cp,sp,ctx);
   // unstocked container relays its inflow: each pull belt carries min(belt speed, inflow / pull belts), split by item share; repeat until the relayed flow stops changing (long container->container chains)
   const fed=o.ports.filter(e=>{const p=e.port,d=DIR[e.b.rot];return isStore(e.m)&&!ctFirst(e.m)&&!(d[0]===-p.nx&&d[1]===-p.ny)&&live(e)});   // dead-end output belts take no share (same rule as machine outputs)
   let ps="";
@@ -331,7 +378,7 @@ function links1(L,inj){
       inM.forEach((v,k)=>rel.push({id:e.b.id,item:k,rate:v*f,m:e.m,belt:e.b}))});
     const sg=rel.map(r=>r.id+r.item+r2(r.rate)).join();if(sg===ps)break;ps=sg;
     o.pull=o.pull.filter(x=>!x.rel).concat(rel.map(r=>({m:r.m,belt:r.belt,item:r.item,rate:r.rate,rel:true})));
-    o.load=flowLoad(nx,src.concat(rel),cp,sp);
+    o.load=flowLoad(nx,src.concat(rel),cp,sp,ctx);
   }
   o.sto=new Map();ms.filter(isStore).forEach(m=>o.sto.set(m.id,storeInfo(m,o)));
   o.sup=new Map();o.ports.forEach(e=>{if(isStore(e.m))return;const d=DIR[e.b.rot],p=e.port;if(d[0]!==-p.nx||d[1]!==-p.ny)return;

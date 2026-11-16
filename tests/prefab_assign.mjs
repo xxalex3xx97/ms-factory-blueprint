@@ -11,7 +11,7 @@ const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrom
 const pg = await (await br.newContext()).newPage();
 const errs = [];
 pg.on('pageerror', e => errs.push(e.message));
-await pg.goto(pathToFileURL(ROOT + '/index.html').href);
+await pg.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=old');
 await pg.waitForFunction(() => window.__fb && typeof pfAssign === 'function' && typeof portsOf === 'function');
 let fails = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fails++ };
@@ -22,8 +22,8 @@ const cases = [
   // [machine, k, expected {W rows, E rows, N rows, S rows, out row, pitch}]
   ['AdvancedAssembler', 4, {W: [2, 4], E: [2, 4], N: [], S: [], out: 6, pitch: 9}],
   ['Assembler', 3, {W: [1, 3], E: [1], N: [], S: [], out: 3, pitch: 5}],
-  ['GrowthChamber', 3, {W: [2, 4], E: [2], N: [], S: [], out: 4, pitch: 5}],
-  ['GrowthChamber', 4, {W: [2, 4], E: [2], N: [2], S: [], out: 4, pitch: 7}],
+  ['GrowthChamber', 3, {W: [2, 4], E: [2], N: [], S: [], out: 4, pitch: 7}],
+  ['GrowthChamber', 4, {W: [2, 4], E: [2], N: [2], S: [], out: 4, pitch: 9}],
   ['Refinery', 1, {W: [1], E: [], N: [], S: [], out: 1, pitch: 3}],
   ['Refinery', 2, {W: [1], E: [], N: [1], S: [], out: 1, pitch: 5}],
 ];

@@ -9,7 +9,7 @@ const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href;
+const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href + '?engine=old';
 const SHOTS = path.join(HERE, 'shots');
 const ITEM = 'ITEM_CobaltPlates';
 const VPS = [[2576, 982], [1400, 800], [1024, 700], [390, 844]];
@@ -40,7 +40,7 @@ async function run(br, W, H) {
     S = {name: 't', blocks: [{id: uid++, cls: Object.keys(BASE).find(k => BASE[k].kind === 'b' && BASE[k].name === 'BPO_Station_02'), x: 5, y: 5, h: 0, rot: 0, pid: 0}], dm: [], closed: []};
     undoS = []; redoS = []; pasting = null; clip = []; STRICT = true; setView('L');
     $('plnItem').value = item; $('plnRate').value = '120'; $('plnMk').value = '0'; $('plnSp').value = '';
-    ['plnBk11', 'plnBk21', 'plnBk22'].forEach(i => document.getElementById(i).checked = true);
+    document.getElementById('plnBk').value = 'BPO_Station_02';
     if (document.getElementById('pln').hidden) document.getElementById('plnB').click();
     plnDraw();
   }, [ITEM]);
@@ -140,7 +140,7 @@ async function run(br, W, H) {
   // does-not-fit: only 1x1 ticked at 120/min; undergrounds mocked to reach 3 cells (too short to cross a wall, so it cannot be spread)
   await pg.evaluate(() => {
     window.__mxa = def(PLC_UG[0]).maxApart; def(PLC_UG[0]).maxApart = 3;
-    document.getElementById('plnBk11').checked = true; document.getElementById('plnBk21').checked = false; document.getElementById('plnBk22').checked = false;
+    document.getElementById('plnBk').value = 'BPO_Station_01';
     plnDraw(); document.getElementById('plnBuild').click();
   });
   await pg.waitForFunction(() => document.getElementById('plnPrev').open, null, {timeout: 5000}).catch(() => {});
@@ -148,7 +148,7 @@ async function run(br, W, H) {
   const nf = await pg.evaluate(() => ({open: $('plnPrev').open, err: $('plnPrevErr').textContent, pl: !!(pasting && pasting.pl)}));
   chk(`(5 ${W}) does not fit (1x1 only, undergrounds too short): dialog stays open, #plnPrevErr has text, no ghost`, nf.open === true && /\S/.test(nf.err) && !nf.pl, JSON.stringify(nf));
   R.notFitErr = nf.err;
-  await pg.evaluate(() => { def(PLC_UG[0]).maxApart = window.__mxa; document.getElementById('plnCancel').click(); document.getElementById('plnBk11').checked = true; document.getElementById('plnBk21').checked = true; document.getElementById('plnBk22').checked = true; plnDraw(); pasting = null; });
+  await pg.evaluate(() => { def(PLC_UG[0]).maxApart = window.__mxa; document.getElementById('plnCancel').click(); document.getElementById('plnBk').value = 'BPO_Station_02'; plnDraw(); pasting = null; });
 
   // ---- (6) Exosuit: modal opens with the error inside, Place disabled, nothing placed; Cancel closes
   const ex0 = await pg.evaluate(() => { $('plnItem').value = 'ITEM_Exosuit'; $('plnRate').value = '1'; $('plnMk').value = '0'; plnDraw(); return JSON.stringify(S.blocks); });

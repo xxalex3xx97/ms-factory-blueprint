@@ -12,7 +12,7 @@ try {
   const pg = await (await br.newContext({viewport: {width: 1600, height: 900}})).newPage();
   const errs = []; pg.on('pageerror', e => errs.push(e.message));
   let accept = true, msgs = []; pg.on('dialog', d => { msgs.push(d.message()); accept ? d.accept() : d.dismiss(); });
-  await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href);
+  await pg.goto(pathToFileURL(path.join(ROOT, 'index.html')).href + '?engine=old');
   await pg.waitForFunction(() => window.__fb && typeof CATALOG !== 'undefined');
   chk('selector hidden before any save', await pg.isHidden('#stG'));
   await pg.evaluate(() => document.getElementById('impSav').click()); await pg.setInputFiles('#savFile', SAV); await pg.waitForSelector('#dSav[open]', {timeout: 60000});

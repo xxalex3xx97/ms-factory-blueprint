@@ -24,6 +24,8 @@ cv.addEventListener("pointerdown",e=>{
   cv.focus();const p=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
   if(e.button===1||e.button===2||(e.button===0&&space)){const uc=e.button===2&&ugCancel();drag={k:"pan",px:p.x,py:p.y,d:0,rc:e.button===2&&!uc};cv.style.cursor="grabbing";return}
   if(e.button!==0)return;
+  const bh=!pasting&&!mode&&BAYHIT.find(q=>p.x>=q.x&&p.x<=q.x+q.w&&p.y>=q.y&&p.y<=q.y+q.h),bmod=e.shiftKey||e.ctrlKey||e.metaKey;
+  if(bh&&!bmod&&!sel.has(bh.b.id)){bayFilter(bh.b,bh.i);return}   // unselected block: picker at once; selected block: picker on click without drag (end())
   const c=toCell(p.x,p.y);
   if(pasting){hover=c;pasteAt();return}
   if(mode){
@@ -44,12 +46,12 @@ cv.addEventListener("pointerdown",e=>{
       if(noBuild([mItem(b)])){toast(NOBUILD);return}
       push();cutBelts([b]);S.blocks.push(b);sel=new Set();ugPend={id:b.id,cls:active,c0:c,cur:c};all();return}
     const b={id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:placeRot,pid:0};if(isM(b)&&noBuild([mItem(b)])){toast(NOBUILD);return}push();if(isBelt(b))cutBelts([b]);S.blocks.push(b);sel=new Set();all();return}
-  if(view==="F"){const q=portAt(p);if(q){push();togglePort(q.b,q.p.key);all();return}}
-  const b=hit(c);
+  if(view==="F"){const q=portAt(p);if(q){push();(e.shiftKey&&hasPrio(q.b.cls)?togglePrio:togglePort)(q.b,q.p.key);all();return}}
+  const b=hit(c)||(bh&&!bmod?bh.b:null);   // bay square of a selected block may lie outside its cells
   if(b){
     if(e.shiftKey){sel.has(b.id)?sel.delete(b.id):sel.add(b.id)}
     else if(!sel.has(b.id))sel=new Set([b.id]);
-    drag={k:"move",dx:0,dy:0,c0:c,orig:new Map(S.blocks.filter(q=>sel.has(q.id)).map(q=>[q.id,{x:q.x,y:q.y}])),moved:false,cr:view==="L"?carryOf(S.blocks.filter(q=>sel.has(q.id)&&!isM(q))):null};
+    drag={k:"move",dx:0,dy:0,c0:c,orig:new Map(S.blocks.filter(q=>sel.has(q.id)).map(q=>[q.id,{x:q.x,y:q.y}])),moved:false,cr:view==="L"?carryOf(S.blocks.filter(q=>sel.has(q.id)&&!isM(q))):null,bay:bh&&!bmod?{b:bh.b,i:bh.i,x:p.x,y:p.y}:null};
     panel();draw();
   }else{
     drag={k:"box",sx:p.x,sy:p.y,px:p.x,py:p.y,add:e.shiftKey,base:new Set(sel)};
@@ -80,7 +82,7 @@ cv.addEventListener("pointermove",e=>{
     cv.title=w?WARN:"";
     {const b=view==="F"&&!active?hit(c):null,belt=b&&isBelt(b),pl=b&&LK&&(HLK(layer).nb.get(b.id)||[]).some(e=>e.k==="port");
       if(belt)btip(b,pl,e,w);else{btip(null);if(pl&&!w)cv.title=PORTLINK}}
-    if(view==="F"&&!active){const q=portAt(p);if(q){btip(null);cv.title=`Port ${q.p.key} (faces ${FN[q.p.wf]}): ${q.p.en?"enabled":"disabled"}. Click to toggle.`}}
+    if(view==="F"&&!active){const q=portAt(p);if(q){btip(null);cv.title=`Port ${q.p.key} (faces ${FN[q.p.wf]}): ${q.p.en?"enabled":"disabled"}${q.p.pr?", priority output (overflow goes to the others)":""}. Click to toggle.${hasPrio(q.b.cls)?" Shift+click: set/clear priority.":""}`}}
   }
   if(drag){
     if(drag.k==="pan"){drag.d+=Math.abs(p.x-drag.px)+Math.abs(p.y-drag.py);V.ox+=p.x-drag.px;V.oy+=p.y-drag.py;drag.px=p.x;drag.py=p.y}
@@ -97,11 +99,11 @@ cv.addEventListener("pointermove",e=>{
       S.blocks.forEach(b=>{if(b.h!==layer||!inView(b))return;const d=dim(b);if(b.x<=z.x&&b.x+d.w-1>=a.x&&b.y<=z.y&&b.y+d.h-1>=a.y)sel.add(b.id)});
     }
   }
-  if(drag||active||pasting||ugPend)draw();   // a plain hover changes no painted pixel (tooltip only): no full repaint per mouse move
+  if(drag||active||pasting||ugPend)draw(!!(drag&&drag.k==="pan"&&!active&&!pasting&&!ugPend&&typeof BIGF==="function"&&BIGF()));   // big factory: a pan is drawn with less detail (full detail 160 ms after the last move); a plain hover changes no painted pixel (tooltip only): no full repaint per mouse move
 });
 cv.addEventListener("pointerleave",()=>{hoverIn=false;btip(null);draw()});
 const end=e=>{
-  if(!drag)return;const k=drag.k,rc=k==="pan"&&drag.rc&&drag.d<4&&e.type==="pointerup"?pt(e):null;
+  if(!drag)return;const k=drag.k,bay=drag.bay&&!drag.moved?drag.bay:null,rc=k==="pan"&&drag.rc&&drag.d<4&&e.type==="pointerup"?pt(e):null;
   if(k==="belt"){
     const cells=beltCells(drag);
     const nb=cells.map(c=>({id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:c.rot,pid:0}));
@@ -110,6 +112,7 @@ const end=e=>{
   }
   if(k==="box"&&mode){const m=mode;drag=null;cv.style.cursor=space?"grab":"";if(e.type==="pointercancel"){sel=new Set();all();return}boxMode(m);return}   // a cancelled gesture never applies the mode
   drag=null;cv.style.cursor=space?"grab":"";
+  if(bay&&e.type==="pointerup"){const q=pt(e);if(Math.abs(q.x-bay.x)<=4&&Math.abs(q.y-bay.y)<=4){bayFilter(bay.b,bay.i);return}}   // click (no drag, <=4px) on a selected block's bay square
   if(rc){if(pasting){pasting=null;all();return}const b=hit(toCell(rc.x,rc.y));if(b){sel=new Set([b.id]);del();return}if(active){active=null;all();return}ctxOpen(e.clientX,e.clientY);return}
   if(k!=="pan")all();else draw();
 };
@@ -179,7 +182,7 @@ function mirM(b){
   for(const r2 of [b.rot&3,(b.rot+2)&3]){
     const P=portsOf(T(r2)),map=new Map();
     for(const p of P0){const j=P.find(q=>q.x===dm.w-1-p.x&&q.y===p.y&&q.nx===-p.nx&&q.ny===p.ny&&q.dir===p.dir);if(!j)break;map.set(p.key,j.key)}
-    if(map.size===P0.length)return{rot:r2,off:(b.off||[]).map(k=>map.get(k)||k)};
+    if(map.size===P0.length){const pp=P0.find(p=>p.pr),pj=pp&&P.find(q=>q.key===map.get(pp.key));return{rot:r2,off:(b.off||[]).map(k=>map.get(k)||k),...(pj?{pr:[prIdx({cls:b.cls},pj),b.pr[1]]}:{})}}
   }
   return null;
 }

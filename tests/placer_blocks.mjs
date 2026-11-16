@@ -10,7 +10,7 @@ const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PW || 'C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
-const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href;
+const PAGE = pathToFileURL(path.join(ROOT, 'index.html')).href + '?engine=old';
 const ITEM = 'ITEM_CobaltPlates';
 const W = 1400, H = 800;
 const ALL = ['plnBk11', 'plnBk21', 'plnBk22'];
@@ -59,15 +59,15 @@ try {
   if (rate === null) throw new Error('no rate');
   await pg.fill('#plnRate', String(rate));
 
-  const sets = [['plnBk11'], ['plnBk21'], ['plnBk22'], ['plnBk11', 'plnBk21'], ['plnBk11', 'plnBk22'], ['plnBk21', 'plnBk22'], ALL];
+  const sets = [['plnBk11'], ['plnBk21'], ['plnBk22']];
   for (const set of sets) {
     const tag = set.map(s => CLS_OF[s]).join('+');
     await closeIfOpen(); await reset(); await openPlanner();
     await pg.click('#plnBuild');
     await pg.waitForFunction(() => $('plnPrev').open, null, {timeout: 8000}).catch(() => {});
-    for (const id of ALL) await pg.setChecked('#' + id, set.includes(id));
+    await pg.selectOption('#plnBk', CLS_OF[set[0]]);
     await pg.waitForTimeout(250);
-    const ui = await pg.evaluate(ids => ids.map(i => $(i).checked), ALL);
+    const ui = await pg.evaluate(() => PLC_BKV.map(c => $('plnBk').value === c));
     chk(`[${tag}] modal checkboxes reflect the set`, ui.every((v, i) => v === set.includes(ALL[i])), JSON.stringify(ui));
     const err = await pg.evaluate(() => $('plnPrevErr').textContent);
     chk(`[${tag}] no preview error`, !/\S/.test(err), err);
@@ -89,17 +89,6 @@ try {
   }
   await closeIfOpen(); await reset();
 
-  // none ticked: factory only into an existing floor; with no block on the layout nothing may be placed
-  await openPlanner();
-  await pg.click('#plnBuild');
-  await pg.waitForFunction(() => $('plnPrev').open, null, {timeout: 8000}).catch(() => {});
-  for (const id of ALL) await pg.setChecked('#' + id, false);
-  await pg.waitForTimeout(250);
-  await pg.click('#plnPlace');
-  await pg.waitForTimeout(200);
-  const none = await pg.evaluate(() => ({blocks: S.blocks.length, err: $('plnPrevErr').textContent, ghost: !!(pasting && pasting.pl), open: $('plnPrev').open}));
-  chk('[none] no block ticked + empty layout: nothing placed, no ghost', none.blocks === 0 && !none.ghost, JSON.stringify(none));
-  await closeIfOpen(); await reset();
 
   // Exosuit refusal: the error is shown inside the modal (not covered by anything)
   await openPlanner();
