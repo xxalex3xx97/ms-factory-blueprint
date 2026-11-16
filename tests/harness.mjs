@@ -3287,7 +3287,7 @@ async function s28(br) {
   const sync = await pg.evaluate(() => {
     __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [], DefaultMachines: []}));
     __fb.setView('L'); const VL = __fb.V; VL.ox = 123.4; VL.oy = -77.7; VL.z = .83; const w = innerWidth, o = {};
-    const ctr = () => { const s = sc(), k = view === 'F' ? FC : 1; return [(W / 2 - V.ox) / s / k, (H / 2 - V.oy) / s / k, s * k] };   // centre in block cells, px per block cell
+    const ctr = () => { const s = sc(), k = view === 'F' ? FC : 1, g = view === 'F' ? 1 / FC : 0; return [(W / 2 - V.ox) / s / k + g, (H / 2 - V.oy) / s / k + g, s * k] };   // Factory floor origin = tile origin + 1 floor cell (hull outside it, GRIDOFF), so the walls land where Layout draws them   // centre in block cells, px per block cell
     const a = ctr(); __fb.setView('F'); const f = ctr(); __fb.setView('L'); const b = ctr();
     const vl = JSON.stringify([__fb.V.ox, __fb.V.oy, __fb.V.z]);
     __fb.setView('F'); const F = __fb.V; F.z = 2.5; F.ox = -310; F.oy = 95; const c = ctr(); __fb.setView('L'); const d = ctr(); __fb.setView('F');

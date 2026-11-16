@@ -140,8 +140,8 @@ function setView(v){
   if(v===view)return;
   smStop();pasting=null;mode=null;
   // sync: the world point under the viewport centre stays under it, and a block cell keeps its on-screen size (Layout cell = CELLS.L*z px, Factory floor block cell = FC floor cells = FC*CELLS.F*z px)
-  const o=V,n=v==="F"?VF:VL,pl=CELLS.L,pf=CELLS.F*FC,po=view==="F"?pf:pl,pn=v==="F"?pf:pl,cxc=(W/2-o.ox)/(po*o.z),cyc=(H/2-o.oy)/(po*o.z);
-  n.z=o.z*po/pn;n.ox=W/2-cxc*pn*n.z;n.oy=H/2-cyc*pn*n.z;if(v==="F")VF.init=true;
+  const o=V,n=v==="F"?VF:VL,pl=CELLS.L,pf=CELLS.F*FC,po=view==="F"?pf:pl,pn=v==="F"?pf:pl,fo=(v==="F"?1:view==="F"?-1:0)*pn/FC,cxc=(W/2-o.ox)/(po*o.z),cyc=(H/2-o.oy)/(po*o.z);   // Factory floor draws the 1-thick hull 1 floor cell outside the tile origin (GRIDOFF): its origin sits 1 cell right/down of the Layout tile edge, so the walls land where Layout draws them
+  n.z=o.z*po/pn;n.ox=W/2-cxc*pn*n.z+fo*n.z;n.oy=H/2-cyc*pn*n.z+fo*n.z;if(v==="F")VF.init=true;
   view=v;V=n;tab=v==="F"?"m":"b";active=null;sel=new Set();drag=null;
   all();
 }
