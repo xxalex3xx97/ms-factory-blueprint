@@ -166,9 +166,9 @@ $("plnOut").onchange=ev=>{const t=ev.target;if(t.classList.contains("plnAlt")){P
 const sgn=v=>(v>0?"+":"")+v,
   tm=v=>v==null?"n/a":v+" min";
 function storeHtml(b){
-  const ct=b.ct||[],si=links(layer).sto.get(b.id),items=Object.keys(ITEMS).sort((a,c)=>((ITEMS[a].n||a)).localeCompare(ITEMS[c].n||c));
+  const ct=b.ct||[],si=links(layer).sto.get(b.id);
   let h=(ct.length?ct.map((x,i)=>`<div class="ctrow">${itemHtml(x.item)}<input type="number" min="0" step="1" aria-label="Quantity" data-ct="n" data-i="${i}" value="${x.n}"><label class="chk"><input type="checkbox" data-ct="inf" data-i="${i}" ${x.inf?"checked":""}> infinite</label><button data-ctdel="${i}" aria-label="Remove">&times;</button></div>`).join(""):`<div class="sub">Empty.</div>`)
-    +`<div class="row" style="margin-top:6px;grid-template-columns:1fr auto"><select id="ctAdd">${items.map(k=>`<option value="${esc(k)}">${esc((ITEMS[k]||{}).n||k)}</option>`).join("")}</select><button id="bCtAdd">Add item</button></div>`;
+    +`<div style="margin-top:6px"><button type="button" id="bCtAdd" class="pri" style="width:100%">+ Add item</button></div>`;
   if(!si)return sec("store","Contents",h);
   h+=`<div class="row"><label>Slots</label><span>${si.used==null?"? / "+(si.slots==null?"?":si.slots)+" (stack size unknown)":si.used+" / "+si.slots}</span></div>`
     +`<div class="row"><label>Stack size</label><span>${si.stack==null?"unknown":si.stack+" (raw, unverified)"}</span></div>`

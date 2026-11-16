@@ -59,7 +59,12 @@ const podsOf=(sh,tr)=>sh.ports.map(([bay,x,y])=>{const rs=sh.arms.filter(a=>(a[1
   return{bay,x,y,q:tr(Math.min(...rs.map(a=>a[0])),y-.46,Math.max(...rs.map(a=>a[2])),y+.46)}}).filter(Boolean);
 const trOf=t=>(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
 // filter slots of a dock (BPO_Dock 2, BPO_Dock_2 8): [{i,x,y,w,h}] floor units; i = index into b.df
+// drone bay: the cell just inside each output port (floor units); both ports share one ore (b.rs)
+function droneCells(b){const t=shapeTf(b);if(!t)return[];const d=DIR[(2+(b.rot|0))&3];
+  return t.sh.ports.map(pt=>{const[px,py]=t.f(pt[1],pt[2]);return[Math.floor(px-d[0]*.5),Math.floor(py-d[1]*.5)]})}
 function bayRects(b){const t=shapeTf(b);if(!t)return[];const sh=t.sh,tr=trOf(t);
+  if(rsOk(b.cls)){const c=droneCells(b);if(!c.length)return[];const x=Math.min(...c.map(q=>q[0])),y=Math.min(...c.map(q=>q[1]));   // one square over both ports, i -1 = the bay's ore (b.rs)
+    return[{i:-1,x,y,w:Math.max(...c.map(q=>q[0]))-x+1,h:Math.max(...c.map(q=>q[1]))-y+1}]}
   if(SHIPEND(b)){const pb=podsOf(sh,tr).filter(p=>p.bay!=null);if(!pb.length)return[];const bm=Math.max(...pb.map(p=>p.bay));return pb.map(p=>({i:bm-p.bay,...p.q}))}
   const pr=sh.props[0];if(dkN(b.cls)!==2||!pr)return[];return sh.ports.slice().sort((a,c)=>a[2]-c[2]).map((pt,i)=>({i,...tr(pr[0],pt[2]-.5,pr[2],pt[2]+.5)}))}
 // dock belt roles, shared by sim.js simInit and links1 (no canvas). belts need id,x,y,rot. Map belt.id -> {v:1,f,b} void sink (f "" = any item, "?" = unknown item, matches nothing) | {s:1,f,cn,b} infinite source of item f (cn = sim container stub). b = dock block.
@@ -70,8 +75,8 @@ function dockBelts(blocks,belts,fl){
     bayRects(b).forEach(q=>{const k=((b.df||[])[q.i]||{}).item,f=k?Object.keys(ITEMS).find(id=>id.slice(5).toLowerCase()===k)||"?":"",bay={b,f,cn:f&&f!=="?"?{b,st:new Map([[f,{n:0,inf:true}]]),cap:null}:null};
       for(let x=Math.round(q.x);x<Math.round(q.x+q.w);x++)for(let y=Math.round(q.y);y<Math.round(q.y+q.h);y++)bayAt.set(b.h+','+x+','+y,bay)})});
   blocks.filter(b=>b.rs&&rsOk(b.cls)&&(fl==null||b.h===fl)).forEach(b=>{const t=shapeTf(b);if(!t)return;   // drone bay with a selected ore: constant source of it at each output port (the cell inside the port edge is the "bay"; no void sink)
-    const f=Object.keys(ITEMS).find(id=>id.slice(5).toLowerCase()===b.rs)||"?",bay={b,f,s:1,cn:f!=="?"?{b,st:new Map([[f,{n:0,inf:true}]]),cap:null}:null},d=DIR[(2+(b.rot|0))&3];
-    t.sh.ports.forEach(pt=>{const[px,py]=t.f(pt[1],pt[2]);bayAt.set(b.h+','+Math.floor(px-d[0]*.5)+','+Math.floor(py-d[1]*.5),bay)})});
+    const f=Object.keys(ITEMS).find(id=>id.slice(5).toLowerCase()===b.rs)||"?",bay={b,f,s:1,cn:f!=="?"?{b,st:new Map([[f,{n:0,inf:true}]]),cap:null}:null};
+    droneCells(b).forEach(c=>bayAt.set(b.h+','+c[0]+','+c[1],bay))});
   belts.forEach(b=>{const d=DIR[b.rot];if(!d)return;const fr=bayAt.get(b.h+','+(b.x+d[0])+','+(b.y+d[1]));
     if(fr){if(!fr.s)o.set(b.id,{v:1,f:fr.f,b:fr.b});return}   // drone bay port: a belt pointing into it carries nothing, no sink
     for(const n of [1,2]){const c=cells.get(b.h+','+(b.x+d[0]*n)+','+(b.y+d[1]*n));if(c){o.set(b.id,{v:1,f:"",b:c});return}}

@@ -28,11 +28,20 @@ for(const rot of [0,1])for(const pi of [0,1]){
 }
 // picker: button, lists only the 6 ores + (not set), icons, pick sets b.rs
 const P=await p.evaluate(()=>{const bay={id:1,cls:CATALOG.blocks.find(q=>q.name==="BPO_MiningDroneBayBlock").class,x:4,y:4,h:0,rot:0};S.blocks=[bay];sel=new Set([1]);all();
-  const btn=document.getElementById("frs");btn.click();const li=[...document.querySelectorAll("#bayL li")];
+  const btn=document.getElementById("frs");btn.click();const li=[...document.querySelectorAll("#ipop li")];
   const r={tag:btn.tagName,n:li.length,txt:li.map(x=>x.textContent),ics:li.slice(1).every(x=>x.querySelector("img.ic"))};
   li.find(x=>/silica/i.test(x.textContent)).click();r.rs=S.blocks[0].rs;r.btn=document.getElementById("frs").textContent;return r});
 console.log(JSON.stringify(P));
-ok("picker: button, 7 rows (not set + 6 ores), ore icons",P.tag==="BUTTON"&&P.n===7&&P.ics);
+ok("picker: button, 11 rows (not set + 10 mineables), ore icons",P.tag==="BUTTON"&&P.n===11&&P.ics);
 ok("picker: pick sets b.rs and the button shows the ore",P.rs==="silica"&&/silica/i.test(P.btn));
+// factory floor: one square over both ports, click opens the same picker, pick sets b.rs for both ports
+const F=await p.evaluate(async()=>{const bay={id:1,cls:CATALOG.blocks.find(q=>q.name==="BPO_MiningDroneBayBlock").class,x:4,y:4,h:0,rot:0};S.blocks=[bay];sel=new Set();view="F";all();
+  const rr=bayRects(bay),r={n:rr.length,i:rr[0]&&rr[0].i,w:rr[0]&&rr[0].w,h:rr[0]&&rr[0].h};
+  await new Promise(q=>requestAnimationFrame(()=>requestAnimationFrame(q)));r.hit=BAYHIT.filter(q=>q.b===bay).length;
+  bayFilter(bay,-1);const li=[...document.querySelectorAll("#bayL li")];r.rows=li.length;li.find(x=>/nickel/i.test(x.textContent)).click();r.rs=bay.rs;
+  const none=S.blocks[0].rs;bayFilter(bay,-1);[...document.querySelectorAll("#bayL li")][0].click();r.cleared=bay.rs===undefined;return r});
+console.log(JSON.stringify(F));
+ok("floor: one bay square over both ports (i -1) drawn and hittable",F.n===1&&F.i===-1&&F.hit===1);
+ok("floor: picker lists (not set) + 10 mineables, pick sets rs, (not set) clears",F.rows===11&&F.rs==="nickelore"&&F.cleared);
 ok("no page errors",errs.length===0);
 await b.close();console.log(bad||errs.length?bad+" FAIL":"ALL PASS");process.exit(bad||errs.length?1:0);

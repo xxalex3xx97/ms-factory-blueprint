@@ -3,7 +3,7 @@ const CU=CATALOG.cell_units||2;
 // block Name (dock, industrial dock, shipyard core only; not Shipyard Side): optional string, written only when set
 const NMC=["BPO_Dock","BPO_Dock_2","BPO_ShipyardCore","BPO_ShipyardCore_02","BPO_ElevatorBlock_03"],nmOk=c=>{const d=def(c);return!!d&&(NMC.includes(d.name)||d.id==="DAT_Teleporter")},
   DBC=["BPO_MiningDroneBayBlock","BPO_MiningDroneBayBlock_2"],rsOk=c=>{const d=def(c);return!!d&&DBC.includes(d.name)},   // drone bay block: b.rs = resource its drones mine (lowercase item name, e.g. "silica"), JSON Blocks[].Resource
-  RSL=["cobaltore","iridiumore","nickelore","titaniumore","silica","waterice"],
+  RSL=["iridiumore","nickelore","cobaltore","titaniumore","waterice","silica","graphite","lonsdaleite","strangemattercrystal","nitrogengas"],   // what a drone bay can mine, in the game's Select Item order (user screenshot 2026-11-16)
   expNm=(b,e)=>{if(b.nm&&nmOk(b.cls))e.Name=b.nm;if(b.df&&dkN(b.cls))e.Filters=b.df;if(b.rs&&rsOk(b.cls))e.Resource=b.rs;return e};
 const expPorts=(b,e)=>{const ps=portsOf(b),xp=b.xp||[];if(ps.some(p=>!p.en)||xp.length)e.Ports=ps.map(p=>({Face:p.f,Index:p.i,Enabled:p.en})).concat(xp);return e};   // extra non-game field, only when non-default
 // game splitter config bytes = [front, right, left] at rot 0, as local faces (port identity is fixed in the machine, so rotation needs no mapping). The back/input face (W at rot 0) is never a game byte.
