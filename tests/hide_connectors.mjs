@@ -15,16 +15,17 @@ try {
     const cl = n => CATALOG.blocks.find(b => b.name === n).class;
     const B = (c, x, y, i) => ({Class: c, GridLocation: {X: x, Y: y}, Height: 0, GridRotation: 0, BlockID: i, PaletteID: 0});
     __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [B(cl('BPO_Station_01'), 2, 2, 1), B('/Game/Blueprints/BuildingBlocks/BPO_LargeConnector.BPO_LargeConnector_C', 0, 2, 2), B('/Game/Blueprints/BuildingBlocks/BPO_XLargeConnector.BPO_XLargeConnector_C', 4, 2, 3), B('/Game/Blueprints/BuildingBlocks/BPO_Connector_07B.BPO_Connector_07B_C', 6, 2, 4)], DefaultMachines: []}));
-    const out = build(), n = S.blocks.length;
+    const out = build(true), full = build(), n = S.blocks.length, conn = S.conn.length;
     __fb.importJson(JSON.stringify(out));
-    const res = {n, conn: S.conn.length, out: out.Blocks.map(b => b.Class.split('.').pop()), n2: S.blocks.length, c2: S.conn.length};
+    const res = {n, conn, out: out.Blocks.map(b => b.Class.split('.').pop()), full: full.Blocks.map(b => b.Class.split('.').pop()), n2: S.blocks.length, c2: S.conn.length};
     __fb.importJson(JSON.stringify({Version: 1, DisplayName: 't', Blocks: [{Class: '/Game/Blueprints/BuildingBlocks/BPO_LargeConnector.BPO_LargeConnector_C', GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
     res.v1conn = S.conn.length;
     return res;
   });
-  chk('connectors hidden, kept aside (incl. Connector_07B)', r.n === 1 && r.conn === 4, JSON.stringify(r));
-  chk('export writes the generated doorway pieces (Station 1x1 alone: 4 open doors), not the imported ones', r.out.length === 5 && r.out.filter(c => /^BPO_LargeConnector_C$/.test(c)).length === 4, JSON.stringify(r));   // js/conn.js: connGen
-  chk('round trip stable', r.n2 === 1 && r.c2 === 4, JSON.stringify(r));   // the 4 generated pieces come back as the kept-aside connectors
+  chk('connectors hidden, kept aside (incl. Connector_07B)', r.n === 1 && r.conn === 3, JSON.stringify(r));
+  chk('JSON export (build(true)) has zero connector blocks', r.out.length === 1 && r.out.every(c => !/Connector/.test(c)), JSON.stringify(r));
+  chk('.sav path build() still writes the generated doorway pieces (Station 1x1 alone: 4 open doors)', r.full.length === 5 && r.full.filter(c => /^BPO_LargeConnector_C$/.test(c)).length === 4, JSON.stringify(r));   // js/conn.js: connGen
+  chk('round trip of JSON export stable, no connectors come back', r.n2 === 1 && r.c2 === 0, JSON.stringify(r));
   chk('v1 JSON untouched (no split)', r.v1conn === 0, JSON.stringify(r));
 } finally { await br.close(); }
 process.exit(bad ? 1 : 0);
