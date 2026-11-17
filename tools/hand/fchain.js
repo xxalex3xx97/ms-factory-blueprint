@@ -111,15 +111,18 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
       for(const [s,p] of order.flatMap(s=>s.ports.map(p=>[s,p]))){const sx=p.x+p.nx,sy=p.y+p.ny;
         const bx1=s.x+2,dock=!!e.north,bx2=dock?e.gx+2:westOf0[e.gx],tgtY=dock?(e.gy-1)*TW:e.y;
         const pr=pre.get(e),top=(pr&&typeof pr==='object')?pr.top:(sy+tgtY)<=(2*Hpx-sy-tgtY),tk=top?'tT':'tB',tBase=top?0:(H-TBS)*TW;
-        const k1=take('v'+bx1,Math.min(sy,top?0:Hpx),Math.max(sy,top?0:Hpx),halfOf(bx1));if(k1<0){why='no source lane';continue}const X1=laneX(bx1,k1);
-        let X2,Yt=null;
-        if(bx1===bx2&&!pr){X2=X1}else{let k2;if(pr&&typeof pr==='object')k2=pr.k;else k2=take('v'+bx2,0,Hpx,nlOf(bx2),halfOf(bx2));if(k2==null||k2<0){why='no consumer lane';continue}X2=laneX(bx2,k2);const kt=take(tk,Math.min(X1,X2),Math.max(X1,X2),NT);if(kt<0){why='no trunk lane';continue}Yt=tBase+Math.floor(kt/14)*TW+2+2*(kt%14)}
+        const dir=bx1===bx2&&!dock&&pr&&typeof pr==='object';   // same street: straight to the reserved consumer lane, no trunk loop (lay only uses free cells, tunnelling the rest; the trunk route stays the fallback)
+        for(const direct of dir?[1,0]:[0]){
+        let X1,X2,Yt=null;
+        if(direct)X1=X2=laneX(bx2,pr.k);
+        else{const k1=take('v'+bx1,Math.min(sy,top?0:Hpx),Math.max(sy,top?0:Hpx),halfOf(bx1));if(k1<0){why='no source lane';continue}X1=laneX(bx1,k1);
+        if(bx1===bx2&&!pr){X2=X1}else{let k2;if(pr&&typeof pr==='object')k2=pr.k;else k2=take('v'+bx2,0,Hpx,nlOf(bx2),halfOf(bx2));if(k2==null||k2<0){why='no consumer lane';continue}X2=laneX(bx2,k2);const kt=take(tk,Math.min(X1,X2),Math.max(X1,X2),NT);if(kt<0){why='no trunk lane';continue}Yt=tBase+Math.floor(kt/14)*TW+2+2*(kt%14)}}
         let wps;
         if(dock){const kh=take('h'+(e.gy-1),Math.min(X2,e.x),Math.max(X2,e.x),14);if(kh<0){why='no street row lane';continue}const Yh=(e.gy-1)*TW+2+2*kh;
           wps=[[sx,sy],[X1,sy],...(Yt!=null?[[X1,Yt],[X2,Yt]]:[]),[X2,Yh],[e.x,Yh],[e.x,e.y]]}
         else wps=[[sx,sy],[X1,sy],...(Yt!=null?[[X1,Yt],[X2,Yt]]:[]),[X2,e.y],[e.x,e.y]];
         const clean=wps.filter((w,i)=>i===0||w[0]!==wps[i-1][0]||w[1]!==wps[i-1][1]);
-        if(lay(clean,e.gx+','+e.gy)){s.obj.used.add(p.key);s.obj.routed=(s.obj.routed||0)+1;s.ports.splice(s.ports.indexOf(p),1);s.room-=e.dem;ok=1;break}else why='blocked '+JSON.stringify((()=>{const c=LB.cell,q=c&&HAND.S.pcs.find(p=>p.x===c[0]&&p.y===c[1]);return q?{g:q.g,cls:q.cls.slice(-4),rot:q.rot}:{floor:c&&HAND.inFloor(c[0],c[1]),occ:c&&HAND.S.occ.get(c[0]+','+c[1])}})())+' '+JSON.stringify(LB.cell)+' '+JSON.stringify(LB.run)+' dock='+dock+' wps='+JSON.stringify(clean)}
+        if(lay(clean,e.gx+','+e.gy)){s.obj.used.add(p.key);s.obj.routed=(s.obj.routed||0)+1;s.ports.splice(s.ports.indexOf(p),1);s.room-=e.dem;ok=1;break}else why='blocked '+JSON.stringify((()=>{const c=LB.cell,q=c&&HAND.S.pcs.find(p=>p.x===c[0]&&p.y===c[1]);return q?{g:q.g,cls:q.cls.slice(-4),rot:q.rot}:{floor:c&&HAND.inFloor(c[0],c[1]),occ:c&&HAND.S.occ.get(c[0]+','+c[1])}})())+' '+JSON.stringify(LB.cell)+' '+JSON.stringify(LB.run)+' dock='+dock+' wps='+JSON.stringify(clean)}if(ok)break}
       if(ok)report.routed++;else{report.failed++;HAND.S.fails.push(e.item.replace('ITEM_','')+' > '+e.blk+' no route ('+why+')')}}
     // measure the lanes used per street column and trunk band (the second pass sizes the streets from this)
     report.idle=[];anch.forEach(a=>a.exits.forEach(e=>{if(!e.obj.routed)report.idle.push(a.name+' ('+e.item.replace('ITEM_','')+')')}));   // product boxes no belt leaves: their machines would produce into a dead end
