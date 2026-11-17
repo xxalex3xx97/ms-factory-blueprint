@@ -14,13 +14,14 @@ const check = (ok, msg) => { if (!ok) { console.log('FAIL ' + msg); fails++ } el
 const CELLS = [
   {n: 'BC 100 Mk1 2x1', rate: 100, mk: 0, bk: 'BPO_Station_2x1', dock: true, req: true},
   {n: 'BC 150 Mk2 2x1', rate: 150, mk: 1, bk: 'BPO_Station_2x1', dock: true, req: true},
-  {n: 'BC 100 Mk1 1x1 (info: root merge routing fails, rb cannot split the root)', rate: 100, mk: 0, bk: 'BPO_Station_01', dock: true, req: false},
+  {n: 'BC 100 Mk1 1x1', rate: 100, mk: 0, bk: 'BPO_Station_01', dock: true, req: true},
   {n: 'BC 100 Mk1 2x2B (info)', rate: 100, mk: 0, bk: 'BPO_Station_02', dock: true, req: false},
   {n: 'BC 100 Mk1 2x1 docks OFF (info)', rate: 100, mk: 0, bk: 'BPO_Station_2x1', dock: false, req: false}
 ];
 try {
   const page = await (await br.newContext()).newPage();
   page.on('pageerror', e => pageErrs.push(e.message));
+  page.on('console', m => { if (/RBDIAG/.test(m.text())) console.log(m.text()) });
   await page.goto(pathToFileURL(ROOT + '/index.html').href + '?engine=rb');
   await page.waitForFunction(() => window.__fb && typeof placerGo === 'function' && typeof plan === 'function' && typeof placerLayout === 'function');
   for (const c of CELLS) {
@@ -32,7 +33,8 @@ try {
       set('plnDkI', c.dock); set('plnDk', 'ind'); set('plnDkO', false);
       placerGo();
     }, c);
-    await page.waitForFunction(() => (typeof plcL !== 'undefined' && plcL) || document.getElementById('plnPrevErr').textContent, null, {timeout: 120000});
+    try { await page.waitForFunction(() => !plcBusyF && ((typeof plcL !== 'undefined' && plcL) || document.getElementById('plnPrevErr').textContent), null, {timeout: 300000}) }
+    catch (e) { console.log(c.n + ' TIMEOUT badge=' + await page.evaluate(() => $('plnEngBadge').textContent) + ' err=' + await page.evaluate(() => $('plnPrevErr').textContent)); if (c.req) { fails++; console.log('FAIL timeout ' + c.n) } continue }
     const a = await page.evaluate(c => {
       const L = plcL, badge = $('plnEngBadge').textContent, err = $('plnPrevErr').textContent;
       if (!L || !L.ok) return {ok: false, badge, err, why: L && (L.why || L.err || L.msg), keys: L && Object.keys(L).join()};

@@ -21,9 +21,10 @@ function rbRun(P,item,mk,spMk,BX,bk,block,dk){
       ok0={pl,sz,A,nt:dk.notes.slice(n0)};dk.notes.length=n0;split[cn.key]=cu+1;continue;
     }
     if(ok0){({pl,sz,A}=ok0);dk.notes.push(...ok0.nt);break}   // a split that broke a working build: keep the dock-limited one
-    const bad=A.bad&&pl0.nodes.find(o=>o.key===A.bad&&!o.raw&&o.parents&&o.parents.length),cur=split[A.bad]||1;
-    if(!bad||cur>=Math.min(16,bad.N)||Date.now()-T0>40000){if(dk&&F0)globalThis.CMP_DKFAIL=F0;return{...A,why:A.why+(cur>1?' (after splitting '+bad.item+' into '+cur+' copies)':'')}}
-    split[A.bad]=cur+1;
+    const lim=o=>(split[o.key]||1)<Math.min(16,o.N),kidsOfRoot=()=>{const r=pl0.nodes.find(o=>!o.raw&&!(o.parents&&o.parents.length));return r?pl0.nodes.filter(c=>!c.raw&&c.parents&&c.parents.includes(r.id)&&lim(c)).sort((a,b)=>b.N-a.N):[]};
+    let bad=A.bad&&pl0.nodes.find(o=>o.key===A.bad&&!o.raw&&o.parents&&o.parents.length);if(!bad||!lim(bad))bad=kidsOfRoot()[0];const cur=bad?split[bad.key]||1:0;
+    if(!bad||cur>=Math.min(16,bad.N)||Date.now()-T0>40000){if(dk&&F0)globalThis.CMP_DKFAIL=F0;return{...A,why:A.why+(cur>1?' (after splitting '+(bad&&bad.item)+' into '+cur+' copies)':'')}}
+    split[bad.key]=cur+1;
   }
   if(!A.ok)return A;
   A.fz=true;
