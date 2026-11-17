@@ -137,7 +137,7 @@ function parseSav(buf){
     for(let q=0;q+36<=L;q++){if(I(q)!==ci)continue;
       try{const st=q+36;if(I(st+8)!==0||I(st+12)!==6)continue;
         const mid=I(q+4),fx=I(q+8),fy=I(q+12);if((fx>>15)!==I(st+20)||(fy>>15)!==I(st+24))continue;
-        let h=-1;for(let k=st+36;k<st+400&&k+20<=L;k+=4)if(I(k)===27&&I(k-4)===1&&I(k+8)===1&&I(k+12)>=1&&I(k+12)<=512){h=k;break}
+        let h=-1;for(let k=st+36;k<st+400&&k+20<=L;k+=4)if(I(k)>=27&&I(k)<=40&&I(k-4)===1&&I(k+8)===1&&I(k+12)>=1&&I(k+12)<=512){h=k;break}
         if(h<0)continue;
         let p=h+16;const sl=I(h+12),m=new Map();
         for(let k=0;k<sl;k++){const n=I(p);if(n<0||n>200)throw 0;let nm="";
