@@ -43,21 +43,21 @@ function cfgModel(b,d,e,ugn){
 }
 // the game turns the Station Corner a quarter turn (cw) further than the site plan drawn at rotation 0: game rotation = site rotation + 1 (checked on the game's own designs: the site drew them as a pinwheel)
 const rotOff=c=>/StationCorner_01/.test(String(c))?1:0;
-function build(){
+function build(noConn){
   const bl=S.blocks.filter(b=>!isM(b)),ms=S.blocks.filter(isM),UGN=new Map(ugPairs(ms).map(q=>[q.u.id,q.n]));
   let base=0;S.dm.forEach(m=>{base=Math.max(base,Number(m&&m.MachineID)||0)});ms.forEach(b=>{if((b.mid||0)>base)base=b.mid});   // no spread: 100k+ machines overflow the call stack
   // Version 2 out: inverse of importJson v2 (block 4 units/cell, footprint centre; machine 2 units/floor cell, +W-14, Height 16 per level)
   const RB=b=>{if(b.raw&&b.raw.x===b.x&&b.raw.y===b.y&&b.raw.r===b.rot)return{X:b.raw.X,Y:b.raw.Y};   // game coords that the site footprint cannot express: written back untouched until moved/rotated
     const f=dim(b),o=SHIPEND(b)?dockOrg(b.rot):null;return o?{X:4*b.x+o.X,Y:4*b.y+o.Y}:{X:4*b.x+2*(f.w-1),Y:4*b.y+2*(f.h-1)}},RM=b=>{const f=dim(b);return{X:2*b.x+f.w-14,Y:2*b.y+f.h-14}};
   return{Version:2,DisplayName:S.name,
-    Blocks:(B=>B.concat(connGen(B).map((c,i)=>({...c,BlockID:B.length+i+1}))))(bl.map((b,i)=>expNm(b,expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h*2,GridRotation:(b.rot+rotOff(b.cls))&3,BlockID:i+1,PaletteID:b.pid||0})))),   // doorway pieces: generated (js/conn.js), what the game's Designer would keep
+    Blocks:(B=>noConn?B:B.concat(connGen(B).map((c,i)=>({...c,BlockID:B.length+i+1}))))(bl.map((b,i)=>expNm(b,expPorts(b,{Class:b.cls,GridLocation:RB(b),Height:b.h*2,GridRotation:(b.rot+rotOff(b.cls))&3,BlockID:i+1,PaletteID:b.pid||0})))),   // doorway pieces: generated (js/conn.js), what the game's Designer would keep
     DefaultMachines:ms.map(b=>{const d=def(b.cls),e={Class:d.machineClass||d.id,Transform:{GridLocation:RM(b),Height:b.h*16,GridRotation:b.rot},MachineID:b.mid||++base,PaletteID:b.pid||0,DefaultName:d.id};
       if(b.rec)e.Recipe=b.rec;expCfg(b,d,e,UGN);expPorts(b,e);expCt(b,e);return e}).concat(S.dm).map((e,i)=>({e,i,k:Number(e&&e.MachineID)})).sort((a,b)=>(isFinite(a.k)&&isFinite(b.k)?a.k-b.k:isFinite(a.k)?-1:isFinite(b.k)?1:0)||a.i-b.i).map(x=>x.e),   // keep original MachineID order
     FactoryLayout:{FloorCellsPerBlock:FC,DoorwayCells:DW,ClosedDoorways:S.closed.map(k=>{const a=k.split("|");return{Height:+a[0],X:+a[1],Y:+a[2],Edge:a[3],Seg:+a[4]}})},
     Catalog:OV};
 }
 function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("show"),2400)}
-$("exp").onclick=()=>{$("expTa").value=JSON.stringify(build(),null,2);$("dExp").showModal()};
+$("exp").onclick=()=>{$("expTa").value=JSON.stringify(build(true),null,2);$("dExp").showModal()};
 $("expX").onclick=()=>$("dExp").close();
 $("expCp").onclick=async()=>{const ta=$("expTa");try{await navigator.clipboard.writeText(ta.value)}catch(e){ta.select();document.execCommand("copy")}toast("Copied")};
 $("expDl").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([$("expTa").value],{type:"application/json"}));a.download=(S.name.replace(/[^\w.-]+/g,"_")||"blueprint")+".json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
@@ -242,12 +242,12 @@ function importJson0(txt,quiet){
 }
 // ---- save to file (File System Access API; Chromium only, others download)
 let FH=null;const JT={types:[{description:"JSON",accept:{"application/json":[".json"]}}]};
-const dl=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(build(),null,2)],{type:"application/json"}));a.download=(S.name.replace(/[^\w.-]+/g,"_")||"blueprint")+".json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e3)};
+const dl=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(build(true),null,2)],{type:"application/json"}));a.download=(S.name.replace(/[^\w.-]+/g,"_")||"blueprint")+".json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1e3)};
 async function fSave(as){
   if(!window.showSaveFilePicker){dl();toast("Downloaded (this browser cannot save in place)");return}
   try{
     if(as||!FH)FH=await showSaveFilePicker({...JT,suggestedName:(S.name.replace(/[^\w.-]+/g,"_")||"blueprint")+".json"});
-    const w=await FH.createWritable();await w.write(JSON.stringify(build(),null,2));await w.close();toast("Saved "+FH.name);
+    const w=await FH.createWritable();await w.write(JSON.stringify(build(true),null,2));await w.close();toast("Saved "+FH.name);
   }catch(e){if(e.name!=="AbortError")toast("Save failed: "+e.message)}
 }
 async function fOpen(){
