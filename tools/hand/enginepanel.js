@@ -26,6 +26,7 @@
     $("plnPrevNote").textContent=T.report.skipped&&T.report.skipped.length?"Not built (no block for this machine yet): "+T.report.skipped.join(", "):"";
     $("plnPrevErr").textContent=bad?bad+" problems, not placeable: "+T.fails.slice(0,2).join("; "):"";
     $("plnPlace").disabled=!!bad;placerFitView();
+    plcCostRender(plcL);
   };
   window.placerPlace=function(){   // the factory follows the cursor as a ghost: click to put it down next to what you already have (Esc cancels)
     if(!ENG)return;const T=ENG.T,P=plcT;ENG=null;$("plnPrev").close();
