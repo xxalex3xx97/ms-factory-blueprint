@@ -8,7 +8,7 @@ function cityBuild(x){
   // their lanes cross empty corridor blocks (cmp_asm.js bank pass-through); the root POOL (OZ) is the last piece of its block, container flush east (q.x+4===W-1). cmpDockApply (cmp_dock.js) needs per hub item: dk tags + hx/hw/hu/hc (put), nodes[] gx/gy/inCol/pool/fb/ct.
   const spread=(B,span,r0)=>{const o=[];let prev=r0-1;for(let b=0;b<B;b++){const t=B>=span?r0+b:r0+Math.round((b+0.5)*span/B-0.5);const v=Math.max(prev+1,t);o.push(v);prev=v}return o};   // B blocks over span rows from r0, strictly increasing
   const parB=mm=>mm.o.cs?mm.B:mm.o.parents&&mm.o.parents.length?Math.max(...mm.o.parents.map(pid=>G[pid].B)):mm.B,rowsM=(mm,r)=>spread(mm.B,Math.max(mm.B,parB(mm)),r),ro=(p,pb)=>p.rr?p.rr[pb]:p.r+pb;   // rowsM: rows of module mm whose reference top is r (spread over its widest parent); ro: block row of member pb
-  const DK=x.dk&&(x.dk.in||x.dk.out)?x.dk:null,hubOwn=!!(DK&&DK.in),n0=DK?DK.notes.length:0,no=why=>{if(DK)DK.notes.length=n0;return{ok:false,why}};
+  const DK=x.dk&&(x.dk.in||x.dk.out)?x.dk:null,hubOwn=!!(DK&&DK.in),n0=DK?DK.notes.length:0,no=(why,bad)=>{if(DK)DK.notes.length=n0;return{ok:false,why,bad}};
   const rawD=(o,q)=>o.rec.i.map(([it])=>{const c=o.children.map(i=>byId[i]).find(c=>c.key===it);return c?c.rate*q.rate/o.rate:0});   // planner raw rate per raw input of member q (share of node o)
   const sidesOf=row=>{let up=1,dn=1;for(const k of[...g.occ.keys(),...g.cor.keys()]){const[gx,gy]=k.split(',').map(Number);if(gx===0){if(gy<row)up=0;if(gy>row)dn=0}}return[up&&'N',dn&&'S'].filter(Boolean)};   // FEED hub: N / S dock only when no block lies above / below it in block column 0 (outer edge)
   const mkHub=(m,jr)=>m.mem.map((q,b)=>rbNodeIn(q,tz.by[q.id],NB[q.id],{block,bx,H,mk,dkx:{dk:DK,D:rawD(m.o,q),dh:d.h,dw:d.w,row:jr(b),sides:()=>sidesOf(ro(m,b))}}));
@@ -51,7 +51,7 @@ function cityBuild(x){
       const usedB=m.mem.map(()=>new Set()),nearB=(b,y0)=>{for(let q=0;q<H;q++)for(const y of[y0-q,y0+q])if(y>=0&&y<=H-1&&!usedB[b].has(y)){usedB[b].add(y);return y}};
       m.laneSet={};pts.forEach(p=>{const l={ci:p.ci,y:p.y,ya:nearB(p.b,p.y),par:p.par,b:p.b,id:o.id+'#'+m.lanes.length,w:p.w};m.lanes.push(l);m.lanesB[p.b].push(l);(m.laneSet[p.par]=m.laneSet[p.par]||new Set()).add(p.ci+','+p.y)});
       const mxl=Math.max(...m.lanesB.map(a=>a.length));
-      if(mxl>H-2)return no('city: producer '+o.item+' member needs '+mxl+' lanes (> '+(H-2)+')');
+      if(mxl>H-2)return no('city: producer '+o.item+' member needs '+mxl+' lanes (> '+(H-2)+')',o.key);
       m.outRowsB=m.lanesB.map(a=>a.map(l=>l.ya).sort(asc));m.wtB=m.lanesB.map(a=>a.slice().sort((p,q)=>p.ya-q.ya).map(l=>l.w));
       const bmax=m.lanesB.reduce((bi,a,i,arr)=>a.length>arr[bi].length?i:bi,0);m.outRows=m.outRowsB[bmax];m.wt=m.wtB[bmax];
       /* old all-to-all model (unused):: one per consumer port (of EVERY consumer), leaving at the port's own row when free, else the nearest free row (near rule of cmp_groups.js 70)
@@ -80,7 +80,7 @@ function cityBuild(x){
     m.pk=pk;
     if(!m.kids.length&&o.parents&&o.parents.length===1){m.defer=true;continue}
     const th=th0,own=[];kp.forEach(p=>p.mem.forEach((pm,pb)=>p.lanes.filter(l=>l.par===m.id&&l.b===pb).forEach(l=>own.push({p,pb,l}))));
-    const ownIds=new Set(own.map(a=>a.l.id)),okIds=new Set([...ownIds,...th.map(t=>t.l.id)]),c0=Math.max(hb?1:0,...kp.map(p=>p.c+p.pk.nPhys),...own.map(a=>fr(a.p,a.l)+1),...dk.map(p=>p.pk.nPhys+(hubOwn&&!p.o.raw?1:0)));let hit=false;   // docks: gx=0 holds raw hubs only
+    const ownIds=new Set(own.map(a=>a.l.id)),okIds=new Set([...ownIds,...th.map(t=>t.l.id)]),c0=Math.max(hb?1:0,...kp.map(p=>p.c+p.pk.nPhys),...own.map(a=>fr(a.p,a.l)+1),...dk.map(p=>p.pk.nPhys+(hubOwn&&!p.o.raw?1:0)));let hit=false,lastWhy='';   // docks: gx=0 holds raw hubs only
     for(const cd of (x.place&&x.place[o.key]?[{c:x.place[o.key].c,r:x.place[o.key].r}]:rbCandidates(c0,rowWant,24))){
       if(Date.now()-t0>15000)return no('rb: time');
       const {c,r}=cd,RMc=rowsM(m,r),LSP=RMc[RMc.length-1]-RMc[0]+1;
@@ -99,7 +99,7 @@ function cityBuild(x){
       }
       if(!okL)continue;
       const rg=m.kids.length?reg(m,pk.colW[0],r):null;
-      if(rg&&!rg.rt.ok)continue;
+      if(rg&&!rg.rt.ok){lastWhy=rg.rt.why||'';continue}
       const cells=[];
       for(let pc=0;pc<pk.nPhys;pc++){const rs=new Set();RMc.forEach(y=>rs.add(y));if(rg&&pc===pk.colP[0])for(let y=rg.r0;y<=rg.r1;y++)rs.add(y);rs.forEach(y=>cells.push({gx:c+pc,gy:y,dx:pc,dy:y-r}))}
       if(hb)for(let b=0;b<m.B;b++)cells.push({gx:0,gy:RMc[b],dx:-1,dy:b});   // own raw hub blocks (gx=0)
@@ -112,7 +112,7 @@ function cityBuild(x){
       m.lanes.forEach(l=>{if(!M[l.par]||M[l.par].c==null)for(let pb=0;pb<m.B;pb++)g.reserve(m.c+m.pk.nPhys-1,ro(m,pb),l.id)});   // east lane reservation: later modules keep off this row
       hit=true;break;
     }
-    if(!hit){globalThis.__rbDbg={occ:[...g.occ].map(([k,v])=>k+' '+v.mod.o.item),cor:[...g.cor.keys()],kids:m.kids.map(p=>p.o.item+' c'+p.c+' r'+p.r+' B'+p.B+' n'+p.pk.nPhys),c0,rowWant};return no('rb: no spot for '+o.item)}
+    if(!hit){globalThis.__rbDbg={occ:[...g.occ].map(([k,v])=>k+' '+v.mod.o.item),cor:[...g.cor.keys()],kids:m.kids.map(p=>p.o.item+' c'+p.c+' r'+p.r+' B'+p.B+' n'+p.pk.nPhys),c0,rowWant};return no('city: no spot for '+o.item+(lastWhy?' ('+lastWhy+')':''),o.key)}
   }
   // ---- finalize
   fbProgress(DK?'Docks':'Finalizing',(DK?'Docks and ':'')+'finalizing layout'+(globalThis.__fbAtt||''),1);

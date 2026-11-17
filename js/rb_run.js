@@ -5,13 +5,21 @@ function rbDockOk(o,bk){return !!(o&&o.dock)}   // S6b: industrial docks build h
 function rbRun(P,item,mk,spMk,BX,bk,block,dk){
   if(globalThis.RB_FORCE_REFUSE)return{ok:false,why:'forced'};   // tests only (tests/worker_build.mjs)
   fbProgress('Planning modules','',-1);
-  let pl=cmpPlan(P,item,mk,{share:true});if(!pl.ok)return pl;if(globalThis.CITY_ON&&globalThis.CITY_SPLIT&&typeof citySplitPlan==='function')pl=citySplitPlan(pl,globalThis.CITY_SPLIT);
-  const by=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),cr=pl.nodes.filter(o=>!o.raw);
+  const pl0=cmpPlan(P,item,mk,{share:true});if(!pl0.ok)return pl0;
   const cls=plcCls(bk),f=floorRect({cls,x:0,y:0,h:0,rot:0}),W=f.w,H=f.h;
-  fbProgress('Sizing modules','',-1);
-  const sz=rbSize(pl,mk,spMk,block,W,H);if(!sz.ok)return sz;
-  let A,F0,att=0;const bfs=globalThis.CITY_ON&&typeof cityBuild==='function'?[cityBuild]:(dk&&typeof cityBuild==='function'?[rbBuild,cityBuild]:[rbBuild]);for(const bf of bfs){for(const bias of[0,1,-1,2,-2]){globalThis.__fbAtt=' - attempt '+(++att)+' of 5';if(dk)globalThis.CMP_DKFAIL=[];A=bf({pl,G:sz.G,NB:sz.NB,tz:sz.tz,mk,bx:BX,bk,block,W,H,bias,dk,place:globalThis.CITY_PLACE});/* CITY_ON: table-driven city builder (city_build.js: row-local lanes, optional fixed positions CITY_PLACE[key]={c,r}) */if(bias===0&&!F0)F0=globalThis.CMP_DKFAIL;if(A.ok)break}if(A.ok)break}
-  if(!A.ok&&dk&&F0)globalThis.CMP_DKFAIL=F0;   // DOCKCLEAR keys of the first (bias 0) layout: the compose.js retry rebuilds that same layout   // retry: shift the wanted block row when a spot search fails
+  const split={...(globalThis.CITY_SPLIT||{})},T0=Date.now();let pl,sz,A,F0,att=0;
+  for(;;){   // auto split: a node whose single copy cannot feed all consumer ports (lanes / router limits) is copied 2..8 times with its exclusive subtree (citySplitPlan), then rebuilt
+    const sp=Object.keys(split).length>0;
+    pl=sp&&typeof citySplitPlan==='function'?citySplitPlan(pl0,split):pl0;
+    fbProgress('Sizing modules','',-1);
+    sz=rbSize(pl,mk,spMk,block,W,H);if(!sz.ok)return sz;
+    const bfs=(sp||globalThis.CITY_ON)&&typeof cityBuild==='function'?[cityBuild]:(dk&&typeof cityBuild==='function'?[rbBuild,cityBuild]:[rbBuild]);
+    for(const bf of bfs){for(const bias of[0,1,-1,2,-2]){globalThis.__fbAtt=' - attempt '+(++att)+' of 5';if(dk)globalThis.CMP_DKFAIL=[];A=bf({pl,G:sz.G,NB:sz.NB,tz:sz.tz,mk,bx:BX,bk,block,W,H,bias,dk,place:globalThis.CITY_PLACE});/* CITY_ON: table-driven city builder (city_build.js: row-local lanes, optional fixed positions CITY_PLACE[key]={c,r}) */if(bias===0&&!F0)F0=globalThis.CMP_DKFAIL;if(A.ok)break}if(A.ok)break}
+    if(A.ok)break;
+    const bad=A.bad&&pl0.nodes.find(o=>o.key===A.bad&&!o.raw&&o.parents&&o.parents.length),cur=split[A.bad]||1;
+    if(!bad||cur>=Math.min(8,bad.N)||Date.now()-T0>40000){if(dk&&F0)globalThis.CMP_DKFAIL=F0;return{...A,why:A.why+(cur>1?' (after splitting '+bad.item+' into '+cur+' copies)':'')}}
+    split[A.bad]=cur+1;
+  }
   if(!A.ok)return A;
   A.fz=true;
   const stages=pl.nodes.filter(o=>!o.raw).map(o=>({item:o.item,cls:o.cls,tpl:sz.tz.by[sz.G[o.id].mem[0].id].tpl,block,S:sz.tz.by[sz.G[o.id].mem[0].id].S,N:o.N,perStrip:[o.N],B:sz.G[o.id].B}));
