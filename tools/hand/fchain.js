@@ -112,9 +112,14 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
         const bx1=s.x+2,dock=!!e.north,bx2=dock?e.gx+2:westOf0[e.gx],tgtY=dock?(e.gy-1)*TW:e.y;
         const pr=pre.get(e),top=(pr&&typeof pr==='object')?pr.top:(sy+tgtY)<=(2*Hpx-sy-tgtY),tk=top?'tT':'tB',tBase=top?0:(H-TBS)*TW;
         const dir=bx1===bx2&&!dock&&pr&&typeof pr==='object';   // same street: straight to the reserved consumer lane, no trunk loop (lay only uses free cells, tunnelling the rest; the trunk route stays the fallback)
-        for(const direct of dir?[1,0]:[0]){
+        const srows=[];for(let g=TBS;g<=TBS+2*maxRows;g+=2){const yc=g*TW+16;srows.push([g,Math.abs(sy-yc)+Math.abs(tgtY-yc)])}srows.sort((a,b)=>a[1]-b[1]);   // street rows between the factory rows: short trunk, two nearest tried
+        for(const direct of [...(dir?[1]:[]),...srows.slice(0,2).map(r=>r[0]),0]){   // 1 = straight lane, g>=3 = street row g as trunk, 0 = far top/bottom trunk band
         let X1,X2,Yt=null;
-        if(direct)X1=X2=laneX(bx2,pr.k);
+        if(direct===1)X1=X2=laneX(bx2,pr.k);
+        else if(direct>1){if(bx1===bx2&&!pr)continue;const yc=direct*TW+16;
+          const k1=take('v'+bx1,Math.min(sy,yc),Math.max(sy,yc),halfOf(bx1));if(k1<0){why='no source lane';continue}X1=laneX(bx1,k1);
+          let k2;if(pr&&typeof pr==='object')k2=pr.k;else k2=take('v'+bx2,Math.min(yc,tgtY),Math.max(yc,tgtY),nlOf(bx2),halfOf(bx2));if(k2==null||k2<0){why='no consumer lane';continue}X2=laneX(bx2,k2);
+          const kt=take('h'+direct,Math.min(X1,X2),Math.max(X1,X2),14);if(kt<0){why='no street row lane';continue}Yt=direct*TW+2+2*kt}
         else{const k1=take('v'+bx1,Math.min(sy,top?0:Hpx),Math.max(sy,top?0:Hpx),halfOf(bx1));if(k1<0){why='no source lane';continue}X1=laneX(bx1,k1);
         if(bx1===bx2&&!pr){X2=X1}else{let k2;if(pr&&typeof pr==='object')k2=pr.k;else k2=take('v'+bx2,0,Hpx,nlOf(bx2),halfOf(bx2));if(k2==null||k2<0){why='no consumer lane';continue}X2=laneX(bx2,k2);const kt=take(tk,Math.min(X1,X2),Math.max(X1,X2),NT);if(kt<0){why='no trunk lane';continue}Yt=tBase+Math.floor(kt/14)*TW+2+2*(kt%14)}}
         let wps;
