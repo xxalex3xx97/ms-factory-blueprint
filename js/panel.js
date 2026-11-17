@@ -49,7 +49,7 @@ function panel(){
     }else h+='<h2>Selection ('+bs.length+')</h2>';
     h+='<div class="pad"><div class="btns"><button id="bRot">Rotate</button><button id="bDup">Duplicate</button><button id="bDel" class="danger">Delete</button></div><div class="btns">'+(one&&isM(one)?'<button id="bCfgCopy">Copy config</button>':'')+'<button id="bCfgPaste"'+(typeof cfgClip!=="undefined"&&cfgClip?'':' disabled')+'>Paste config</button></div>';
     if(one){
-      if(rsOk(one.cls)){const rs=one.rs||"",id=FITEMS.find(q=>fkey(q)===rs),ic=id&&iurl(id);h+='<div class="row"><label for="frs">Mines</label><button type="button" id="frs" class="fbtn" data-rs="1">'+(rs?(ic?'<img class="ic" alt="" src="'+ic+'">':"")+esc(id?ITEMS[id].n||id:rs):"(not set)")+'<span class="caret">&#9662;</span></button></div>'}
+      if(F&&rsOk(one.cls)){const rs=one.rs||"",id=FITEMS.find(q=>fkey(q)===rs),ic=id&&iurl(id);h+='<div class="row"><label for="frs">Mines</label><button type="button" id="frs" class="fbtn" data-rs="1">'+(rs?(ic?'<img class="ic" alt="" src="'+ic+'">':"")+esc(id?ITEMS[id].n||id:rs):"(not set)")+'<span class="caret">&#9662;</span></button></div>'}
       if(nmOk(one.cls))h+='<div class="row"><label for="fnm">Name</label><input id="fnm" type="text" data-nm="1" value="'+esc(one.nm||"")+'"></div>';
       h+=filtHtml(one);
       const et=entText(one);if(et)h+='<div class="sub" title="'+esc(ENT_HINT)+'" id="entInfo"><b>'+et.kind+':</b> '+et.sides.join(", ")+'<br>'+esc(ENT_HINT)+'.</div>';

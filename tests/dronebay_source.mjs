@@ -27,7 +27,7 @@ for(const rot of [0,1])for(const pi of [0,1]){
   ok(t+"belt into port: no source, no sink",i.pull===0&&i.dS===0&&i.th===0);
 }
 // picker: button, lists only the 6 ores + (not set), icons, pick sets b.rs
-const P=await p.evaluate(()=>{const bay={id:1,cls:CATALOG.blocks.find(q=>q.name==="BPO_MiningDroneBayBlock").class,x:4,y:4,h:0,rot:0};S.blocks=[bay];sel=new Set([1]);all();
+const P=await p.evaluate(()=>{const bay={id:1,cls:CATALOG.blocks.find(q=>q.name==="BPO_MiningDroneBayBlock").class,x:4,y:4,h:0,rot:0};S.blocks=[bay];sel=new Set([1]);view="F";all();
   const btn=document.getElementById("frs");btn.click();const li=[...document.querySelectorAll("#ipop li")];
   const r={tag:btn.tagName,n:li.length,txt:li.map(x=>x.textContent),ics:li.slice(1).every(x=>x.querySelector("img.ic"))};
   li.find(x=>/silica/i.test(x.textContent)).click();r.rs=S.blocks[0].rs;r.btn=document.getElementById("frs").textContent;return r});
