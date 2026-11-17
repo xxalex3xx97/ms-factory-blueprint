@@ -6,7 +6,7 @@ function rbBuild(x){
   const {pl,G,NB,tz,mk,bx,bk,block,W,H}=x,cls=plcCls(bk),d=dim({cls,rot:0}),TW=d.w*FC,TH=d.h*FC,ugc=PLC_UG[mk],t0=Date.now(),g=rbGrid(),byId=Object.fromEntries(pl.nodes.map(o=>[o.id,o])),asc=(a,b)=>a-b;
   // DOCKS (normal S6a, industrial S6b: dk.indIn/indOut, cmpDockHub/cmpFeedDock/cmpDockApply do the ind tags ie/oe/iv/is): x.dk={mk,in,out,notes} as compose.js. Raw hubs (SRC/FEED) are NEVER fused: own block at gx=0 (west face),
   // their lanes cross empty corridor blocks (cmp_asm.js bank pass-through); the root POOL (OZ) is the last piece of its block, container flush east (q.x+4===W-1). cmpDockApply (cmp_dock.js) needs per hub item: dk tags + hx/hw/hu/hc (put), nodes[] gx/gy/inCol/pool/fb/ct.
-  const DK=x.dk&&(x.dk.in||x.dk.out)?x.dk:null,hubOwn=!!(DK&&DK.in),n0=DK?DK.notes.length:0,no=why=>{if(DK)DK.notes.length=n0;return{ok:false,why}};
+  const DK=x.dk&&(x.dk.in||x.dk.out)?x.dk:null,hubOwn=!!(DK&&DK.in),n0=DK?DK.notes.length:0,no=(why,bad)=>{if(DK)DK.notes.length=n0;return{ok:false,why,bad}};
   const rawD=(o,q)=>o.rec.i.map(([it])=>{const c=o.children.map(i=>byId[i]).find(c=>c.key===it);return c?c.rate*q.rate/o.rate:0});   // planner raw rate per raw input of member q (share of node o)
   const sidesOf=row=>{let up=1,dn=1;for(const k of[...g.occ.keys(),...g.cor.keys()]){const[gx,gy]=k.split(',').map(Number);if(gx===0){if(gy<row)up=0;if(gy>row)dn=0}}return[up&&'N',dn&&'S'].filter(Boolean)};   // FEED hub: N / S dock only when no block lies above / below it in block column 0 (outer edge)
   const mkHub=(m,jr)=>m.mem.map((q,b)=>rbNodeIn(q,tz.by[q.id],NB[q.id],{block,bx,H,mk,dkx:{dk:DK,D:rawD(m.o,q),dh:d.h,dw:d.w,row:jr(b),sides:()=>sidesOf(m.r+b)}}));
@@ -35,7 +35,7 @@ function rbBuild(x){
       m.pj={};   // lanes out of the pool: one per consumer port (of EVERY consumer), leaving at the port's own row when free, else the nearest free row (near rule of cmp_groups.js 70)
       const used=new Set(),near=y0=>{for(let q=0;q<H;q++)for(const y of[y0-q,y0+q])if(y>=0&&y<=H-1&&!used.has(y)){used.add(y);return y}};
       o.parents.forEach(pid=>{const pj=m.pj[pid]=G[pid].o.rec.i.findIndex(([it])=>it===o.key);G[pid].mem.forEach((cm,ci)=>NB[cm.id].inR[pj].slice().sort(asc).forEach(y=>m.lanes.push({ci,y,ya:near(y),par:pid,id:o.id+'#'+m.lanes.length})))});
-      if(m.lanes.length>H-2)return no('rb: shared producer '+o.item+' feeds '+m.lanes.length+' consumer ports (one belt each) in '+o.parents.reduce((a,p)=>a+G[p].mem.length,0)+' consumer blocks; more than '+(H-2)+' lanes per producer block: needs row-local partitioning of producer blocks to consumer ports (not built)');
+      if(m.lanes.length>H-2)return no('rb: shared producer '+o.item+' feeds '+m.lanes.length+' consumer ports (one belt each) in '+o.parents.reduce((a,p)=>a+G[p].mem.length,0)+' consumer blocks; more than '+(H-2)+' lanes per producer block: needs row-local partitioning of producer blocks to consumer ports (not built)',o.key);
       const mu=new Map(),pk0=l=>l.ci+','+l.y+','+l.par;m.lanes.forEach(l=>mu.set(pk0(l),(mu.get(pk0(l))||0)+1));   // lane demand weight as cmp_groups.js 71: machines on its port / lanes sharing the port
       const ix=m.lanes.map((l,i)=>i).sort((a,b)=>m.lanes[a].ya-m.lanes[b].ya);
       m.outRows=ix.map(i=>m.lanes[i].ya);
@@ -54,11 +54,11 @@ function rbBuild(x){
     tent(rP);
     if(m.kids.length)pk=rbPack({W,H,mk,dw:d.w,fb:{b:NB0.b,bi:NB0.bi},inF:w=>{const r=reg(m,w,rP);return r.rt.ok?{ok:true,items:r.rt.items}:{ok:false,why:r.rt.why||'merge routing failed'}},poolF:(w,rows)=>poolOf(o0,w,rows,m.wt,m.dO&&m.dO[0]),outRows:m.outRows,flush:!!m.dO});
     else pk=rbPackNode(o0,z0,NB0,{block,bx,W,H,mk,outRows:m.outRows,dw:d.w,noIn:hb,flush:!!m.dO,dO:m.dO&&m.dO[0]});
-    if(!pk.ok)return no('rb: '+o.item+': '+pk.why);
+    if(!pk.ok)return no('rb: '+o.item+': '+pk.why,o.parents&&o.parents.length?o.key:undefined);
     m.pk=pk;
     if(!m.kids.length&&o.parents&&o.parents.length===1){m.defer=true;continue}
     const th=th0,own=[];kp.forEach(p=>p.mem.forEach((pm,pb)=>p.lanes.filter(l=>l.par===m.id).forEach(l=>own.push({p,pb,l}))));
-    const ownIds=new Set(own.map(a=>a.l.id)),okIds=new Set([...ownIds,...th.map(t=>t.l.id)]),c0=Math.max(hb?1:0,...kp.map(p=>p.c+p.pk.nPhys),...own.map(a=>fr(a.p,a.l)+1),...dk.map(p=>p.pk.nPhys+(hubOwn&&!p.o.raw?1:0)));let hit=false;   // docks: gx=0 holds raw hubs only
+    const ownIds=new Set(own.map(a=>a.l.id)),okIds=new Set([...ownIds,...th.map(t=>t.l.id)]),c0=Math.max(hb?1:0,...kp.map(p=>p.c+p.pk.nPhys),...own.map(a=>fr(a.p,a.l)+1),...dk.map(p=>p.pk.nPhys+(hubOwn&&!p.o.raw?1:0)));let hit=false,lastWhy='';   // docks: gx=0 holds raw hubs only
     for(const cd of rbCandidates(c0,rowWant,24)){
       if(Date.now()-t0>15000)return no('rb: time');
       const {c,r}=cd;
@@ -77,7 +77,7 @@ function rbBuild(x){
       }
       if(!okL)continue;
       const rg=m.kids.length?reg(m,pk.colW[0],r):null;
-      if(rg&&!rg.rt.ok)continue;
+      if(rg&&!rg.rt.ok){lastWhy=rg.rt.why||'';continue}
       const cells=[];
       for(let pc=0;pc<pk.nPhys;pc++){const rs=new Set();for(let b=0;b<m.B;b++)rs.add(r+b);if(rg&&pc===pk.colP[0])for(let y=rg.r0;y<=rg.r1;y++)rs.add(y);rs.forEach(y=>cells.push({gx:c+pc,gy:y,dx:pc,dy:y-r}))}
       if(hb)for(let b=0;b<m.B;b++)cells.push({gx:0,gy:r+b,dx:-1,dy:b});   // own raw hub blocks (gx=0)
@@ -90,7 +90,7 @@ function rbBuild(x){
       m.lanes.forEach(l=>{if(!M[l.par]||M[l.par].c==null)for(let pb=0;pb<m.B;pb++)g.reserve(m.c+m.pk.nPhys-1,m.r+pb,l.id)});   // east lane reservation: later modules keep off this row
       hit=true;break;
     }
-    if(!hit){globalThis.__rbDbg={occ:[...g.occ].map(([k,v])=>k+' '+v.mod.o.item),cor:[...g.cor.keys()],kids:m.kids.map(p=>p.o.item+' c'+p.c+' r'+p.r+' B'+p.B+' n'+p.pk.nPhys),c0,rowWant};return no('rb: no spot for '+o.item)}
+    if(!hit){globalThis.__rbDbg={occ:[...g.occ].map(([k,v])=>k+' '+v.mod.o.item),cor:[...g.cor.keys()],kids:m.kids.map(p=>p.o.item+' c'+p.c+' r'+p.r+' B'+p.B+' n'+p.pk.nPhys),c0,rowWant};return no('rb: no spot for '+o.item+(lastWhy?' ('+lastWhy+')':''),o.key)}
   }
   // ---- finalize
   fbProgress(DK?'Docks':'Finalizing',(DK?'Docks and ':'')+'finalizing layout'+(globalThis.__fbAtt||''),1);
