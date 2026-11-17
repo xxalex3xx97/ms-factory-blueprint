@@ -195,7 +195,9 @@ header .mnl .hbt{flex-direction:row;min-height:34px;gap:6px;width:100%;justify-c
 #pvDocks label.chk,#pvOptB label.chk{flex-direction:row;align-items:center;gap:6px;white-space:nowrap;min-height:28px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
 #pvDocks label.chk input,#pvOptB label.chk input{width:auto;flex:none;margin:0}
 .pvGt{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);align-self:center}
-#pvOpt,#pvDet{font-size:12px;color:var(--dim)}#pvOpt summary,#pvDet summary{cursor:pointer;padding:2px 0}
+#pvOpt,#pvDet,#pvCost{font-size:12px;color:var(--dim)}#pvOpt summary,#pvDet summary,#pvCost summary{cursor:pointer;padding:2px 0}
+#pvCostList{font-family:var(--mono);font-size:12px;color:var(--fg,inherit)}#pvCostList>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px}#pvCostList .nodata{color:var(--dim)}#pvCostList .tot{border-top:1px solid var(--dim);margin-top:2px;padding-top:2px}#pvCostList:empty{display:none}#pvCostList .note{margin:4px 0 0;font-family:inherit}
+@media (max-width:420px){#pvCostList{font-size:11px}}
 #pvOptB{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:flex-end;padding:4px 0}
 #pvLine{margin-top:6px;font-size:13px;font-family:var(--mono)}#pvLine:empty{display:none}
 #plnPrevView{min-height:320px}

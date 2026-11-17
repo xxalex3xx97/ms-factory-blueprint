@@ -845,7 +845,7 @@ const plcEngName=L=>L.eng!=="cmp"?"Zones":L.bl&&L.bl.cmp&&L.bl.cmp.rb?"Composer 
    // names only: still read by gallery/old tests
 function placerClear(){
   ["pvMach","pvBelt","pvSpl","pvBox","pvUg","pvBlk","pvCell","pvIO"].forEach(i=>{if($(i))$(i).textContent="-"});
-  $("plnPrevNote").textContent="";$("plnPrevBig").textContent="";
+  $("plnPrevNote").textContent="";$("plnPrevBig").textContent="";$("pvCostList").textContent="";
   const c=$("plnPrevMap"),g=c.getContext("2d");g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,c.width,c.height);
 }
 let plcV={z:1,ox:0,oy:0},plcRaf=0;
@@ -917,6 +917,30 @@ function plcProg(v,show){const e=plcProgEl();
   e.querySelector("progress").value=pct;e.lastChild.textContent="Trying "+sz+", "+v.G+" band(s) ("+v.n+" of "+v.total+") - "+Math.round(pct)+"%";
   if(show)e.style.display="block"}
 function plcProgHide(){clearInterval(plcBI);const e=document.getElementById("plcProg");if(e)e.style.display="none"}
+// material cost of the preview: parts (src) + blocks, each once; withCt adds container items (Restore container items)
+function plcCost(src,blocks,withCt){
+  const rows=new Map(),noData=new Map();let ctExtra=0,total=0;
+  const add=b=>{const d=def(b.cls),c=d&&d.cost;
+    if(Array.isArray(c)&&c.length)c.forEach(([id,n])=>rows.set(id,(rows.get(id)||0)+n));
+    else{const k=(d&&(d.label||d.name))||b.cls;noData.set(k,(noData.get(k)||0)+1)}};
+  src.forEach(add);blocks.forEach(add);
+  if(withCt)src.forEach(b=>(b.ct||[]).forEach(x=>{if(!x.inf&&x.n>0){rows.set(x.item,(rows.get(x.item)||0)+x.n);ctExtra+=x.n}}));
+  rows.forEach(n=>total+=n);
+  return {rows,noData,ctExtra,total};
+}
+function plcCostRender(L){
+  const withCt=$("pvCtChk").checked,src=plcT&&plcT.ok?plcT.ms:L.items,
+    C=plcCost(src,plcT&&plcT.ok?plcT.blocks:[],withCt),
+    row=(a,b,cls)=>`<div${cls?` class="${cls}"`:""}><span>${esc(a)}</span><span>${esc(b)}</span></div>`;
+  let h="";
+  C.rows.forEach((n,id)=>h+=row(plnNm(id),n));
+  C.noData.forEach((n,k)=>h+=row(k+" x"+n,"no cost data","nodata"));
+  if(C.rows.size)h+=row("Total",C.total,"tot");
+  else h+='<p class="note">No cost data for any part</p>';
+  if(withCt&&C.ctExtra===0)h+='<p class="note">Containers hold no items (0 extra)</p>';
+  $("pvCostList").innerHTML=h;
+}
+$("pvCtChk").addEventListener("change",()=>{if(plcL)plcCostRender(plcL)});
 function plcFinish(L){
   plcProgHide();
   const src=plcT&&plcT.ok?plcT.ms:L.items,k={mach:0,belt:0,spl:0,box:0,ug:0},
@@ -932,6 +956,7 @@ function plcFinish(L){
   $("pvIO").textContent=L.mod?(L.bank?"IN west ("+LL.nIn+" belt"+(LL.nIn>1?"s":"")+"), OUT east ("+LL.nOut+" belt"+(LL.nOut>1?"s":"")+"), "+LL.hubs+" hub container(s) between stages; copy width "+L.w:"IN west, OUT east (same row"+(L.lanes>1?" per lane":"")+"); copy width "+L.w):L.bank?"closed: "+LL.nS+" source + "+LL.nS+" in-buffer west, "+LL.nK+" out-buffer + "+LL.nK+" sink east"+(LL.stages>1?" + "+LL.hubs+" hub container(s) between stages":""):"closed: source container in, sink container out";
   $("plnPrevNote").textContent=L.note.concat(plcT&&plcT.ok&&plcT.blocks.length>1?["Chose "+plcT.cols+" x "+plcT.rows+" blocks: fewest blocks, then squarest"+(plcT.L.bank?"; "+plcT.G+" band(s) of "+(plcT.L.stages>1?plcT.L.tbs.join("+")+" trunks per stage":plcT.L.tb+" trunk(s)"):"")+"; "+k.ug/2+" underground pairs cross the walls"]:[]).join(". ");
   if(L.bank)$("pvIO").textContent+="; "+k.box+" containers in all";
+  plcCostRender(L);
   $("plnPrevErr").textContent=plcT&&!plcT.ok?plcT.why:"";const dl=$("plnPrev");if(!dl.open){dl.showModal();requestAnimationFrame(placerFitView)}$("plnPlace").disabled=!!(plcT&&!plcT.ok);placerFitView();
 }
 function placerPlace(){
