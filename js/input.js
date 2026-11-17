@@ -161,7 +161,9 @@ function rotate(){
 }
 $("undo").onclick=undo;$("redo").onclick=redo;
 // deleting a block also deletes the machines/belts on its factory floor (same floor box as carryOf; one undo step restores both)
-function del(){if(!sel.size)return;push();ugPairs(S.blocks.filter(isM)).forEach(({u,t})=>{if(sel.has(u.id)||sel.has(t.id)){sel.add(u.id);sel.add(t.id)}});const fl=new Set();S.blocks.filter(b=>sel.has(b.id)&&!isM(b)).forEach(b=>{const d=fcell(b);S.blocks.forEach(q=>{if(isM(q)&&q.h===b.h&&q.x>=d.cx*FC&&q.x<(d.cx+d.cw)*FC&&q.y>=d.cy*FC&&q.y<(d.cy+d.ch)*FC)fl.add(q)})});S.blocks=S.blocks.filter(b=>!sel.has(b.id)&&!fl.has(b));sel=new Set();all()}
+// machines/belts standing on the floor box of the given blocks (same rule as carryOf)
+function floorOn(bs){const fl=new Set();bs.forEach(b=>{const d=fcell(b);S.blocks.forEach(q=>{if(isM(q)&&q.h===b.h&&q.x>=d.cx*FC&&q.x<(d.cx+d.cw)*FC&&q.y>=d.cy*FC&&q.y<(d.cy+d.ch)*FC)fl.add(q)})});return fl}
+function del(){if(!sel.size)return;push();ugPairs(S.blocks.filter(isM)).forEach(({u,t})=>{if(sel.has(u.id)||sel.has(t.id)){sel.add(u.id);sel.add(t.id)}});const fl=floorOn(S.blocks.filter(b=>sel.has(b.id)&&!isM(b)));S.blocks=S.blocks.filter(b=>!sel.has(b.id)&&!fl.has(b));sel=new Set();all()}
 // Layout move carries the floor machines inside each block's footprint, plus closed doorways of that block. Call BEFORE mutating blocks; returns (dx,dy,dh) applied relative to the originals (idempotent).
 function carryOf(bs){
   const o=bs.map(b=>{const c=fcell(b);return{h:b.h,x:c.cx,y:c.cy}}),cl=S.closed.slice(),s=new Set();   // closed keys use the floor cell anchor (fcell), same as model.js areas()
@@ -174,7 +176,7 @@ function carryOf(bs){
 }
 // cut = copy (stamp ghost) + delete the originals; clip holds the ids (copy completes underground pairs); one undo step
 function cut(){if(!sel.size)return;copy();if(!clip.length)return;sel=new Set(clip.map(b=>b.id));del()}
-function copy(){if(!sel.size)return;ugPairs(S.blocks.filter(isM)).forEach(({u,t})=>{if(sel.has(u.id)||sel.has(t.id)){sel.add(u.id);sel.add(t.id)}});clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null}));if(clip.length){toast(clip.length+" copied");paste()}}
+function copy(){if(!sel.size)return;ugPairs(S.blocks.filter(isM)).forEach(({u,t})=>{if(sel.has(u.id)||sel.has(t.id)){sel.add(u.id);sel.add(t.id)}});clip=S.blocks.filter(b=>sel.has(b.id)).map(b=>({...b,raw:null}));if(view==="L"){const fl=floorOn(clip.filter(b=>!isM(b)));if(fl.size)clip=clip.concat([...fl].filter(q=>!sel.has(q.id)).map(b=>({...b,raw:null})))}if(clip.length){toast(clip.length+" copied");paste()}}
 // horizontal mirror of a machine: pick the rotation whose port layout is the mirror image (same face/pos/direction), remap disabled ports; null = cannot mirror
 function mirM(b){
   const d=def(b.cls);if(!d||!d.portsLayout||d.elevator)return null;
@@ -188,14 +190,15 @@ function mirM(b){
 }
 function clipT(n,fl){   // clip mirrored (fl) then rotated n x 90deg clockwise, origin at 0,0
   let l=clip.map(b=>({...b,raw:null}));   // clones never carry the imported raw coords
-  if(fl){const mx=Math.min(...l.map(b=>b.x)),W=Math.max(...l.map(b=>b.x-mx+dim(b).w));
-    l=l.map(b=>{const m=mirM(b);return{...b,x:mx+W-(b.x-mx)-dim(b).w,...(m||((def(b.cls)||{}).portsLayout?{}:{rot:b.rot===0?2:b.rot===2?0:b.rot}))}})}
+  const K=b=>isM(b)&&l.some(q=>!isM(q))?FC:1,ref=()=>l.some(q=>!isM(q))?l.filter(q=>!isM(q)):l;   // Layout clip with floor items: machine coords are FC per block cell
+  if(fl){const r=ref(),mx=plcMmin(r,b=>b.x),W=plcMmax(r,b=>b.x-mx+dim(b).w);
+    l=l.map(b=>{const m=mirM(b);return{...b,x:K(b)*(2*mx+W)-b.x-dim(b).w,...(m||((def(b.cls)||{}).portsLayout?{}:{rot:b.rot===0?2:b.rot===2?0:b.rot}))}})}
   for(let k=0;k<n;k++){
-    const mx=Math.min(...l.map(b=>b.x)),my=Math.min(...l.map(b=>b.y)),H=Math.max(...l.map(b=>b.y-my+dim(b).h));
-    l=l.map(b=>{const d=dim(b);return{...b,x:H-(b.y-my)-d.h,y:b.x-mx,rot:((b.rot||0)+1)&3}});
+    const r=ref(),mx=plcMmin(r,b=>b.x),my=plcMmin(r,b=>b.y),H=plcMmax(r,b=>b.y-my+dim(b).h);
+    l=l.map(b=>{const d=dim(b),c=K(b);return{...b,x:c*H-(b.y-c*my)-d.h,y:b.x-c*mx,rot:((b.rot||0)+1)&3}});
   }
-  const mx=Math.min(...l.map(b=>b.x)),my=Math.min(...l.map(b=>b.y)),mh=Math.min(...l.map(b=>b.h));
-  return l.map(b=>({...b,x:b.x-mx,y:b.y-my,h:b.h-mh}));
+  const r=ref(),mx=plcMmin(r,b=>b.x),my=plcMmin(r,b=>b.y),mh=plcMmin(r,b=>b.h);
+  return l.map(b=>{const c=K(b);return{...b,x:b.x-c*mx,y:b.y-c*my,h:b.h-mh}});
 }
 function paste(){
   if(!clip.length||isM(clip[0])!==(view==="F"))return;
@@ -203,11 +206,13 @@ function paste(){
 }
 function pasteAt(){
   if(pasting&&pasting.pl)return placerPaste();
-  const nb=ugRelink(clipT(pasting.rot,pasting.fl).map(b=>({...b,oid:b.id,id:uid++,mid:0,x:b.x+hover.x,y:b.y+hover.y,h:b.h+layer})));
-  if(noBuild(nb.filter(isM).map(mItem))){toast(NOBUILD);return}
+  const K=b=>isM(b)&&clip.some(q=>!isM(q))?FC:1,nb=ugRelink(clipT(pasting.rot,pasting.fl).map(b=>({...b,oid:b.id,id:uid++,mid:0,x:b.x+K(b)*hover.x,y:b.y+K(b)*hover.y,h:b.h+layer})));
+  const nn=nb.filter(b=>!isM(b)),nbs=new Set(nn.map(b=>b.id));S.blocks.push(...nn);   // floors of the new blocks must exist for the noBuild check
+  let bad;const mi=nb.filter(isM).map(mItem);try{bad=noBuildWhy(mi)}finally{S.blocks=S.blocks.filter(b=>!nbs.has(b.id))}
+  if(bad.length){placeRefused(bad,"Layout clip",pasting.rot,pasting.fl,nb.length,mi.length,{x:hover.x,y:hover.y});return}
   const ug=ms=>new Map(ugPairs(ms).flatMap(({u,t})=>[[u.id,t.id],[t.id,u.id]])),old=S.blocks.filter(isM),was=ug(old),now=ug(old.concat(nb.filter(isM)));   // pasted undergrounds must not re-pair existing ones
   if([...was].some(([a,b])=>now.get(a)!==b)){toast("Underground would change an existing pair: move it so it does not sit inside or next to another underground on that line");return}
-  push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set();all();   // stamp: stays in paste mode (rot/flip kept) until Esc / right click
+  placeOk("Layout clip",pasting.rot,pasting.fl,nb.length,mi.length);push();cutBelts(nb.filter(isBelt));S.blocks.push(...nb);sel=new Set();all();   // stamp: stays in paste mode (rot/flip kept) until Esc / right click
 }
 // ---- modes: del = click or box deletes (X toggles); copy = box then paste like Ctrl+C; cfgcopy = click one machine; cfgpaste = box applies cfgClip to same-class machines
 function setMode(m){mode=m||null;if(mode){active=null;pasting=null}all()}

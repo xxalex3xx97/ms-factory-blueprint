@@ -4,7 +4,7 @@
 // Page globals used: plcCls, dim, portsOf, def, PLC_BELT, PLC_UG, FC.   Usage: HAND.reset(); HAND.block(gx,gy); const a=HAND.put({...}); HAND.link(a,b); const T=HAND.result();
 window.HAND=(function(){
   let mk=1,BELT,UG,MAXA;function setMk(m){mk=m;BELT=PLC_BELT[m];UG=PLC_UG[m];MAXA=def(UG).maxApart}setMk(1);   // belt tier: Mk1 60/min hop 8, Mk2 120/min hop 10, Mk3 180/min hop 12
-  let CLS=plcCls('BPO_Station_03');const D0=dim({cls:CLS,rot:0}),TW=D0.w*FC,FW=30;
+  let CLS=plcCls('BPO_Station_03'),adapt=true;const D0=dim({cls:CLS,rot:0}),TW=D0.w*FC,FW=30;
   const DX=[1,0,-1,0],DY=[0,1,0,-1];   // rot 0 east, 1 south, 2 west, 3 north
   const S={blocks:new Map(),occ:new Map(),res:new Map(),door:new Map(),M:[],pcs:[],span:new Map(),fails:[]};
   const k=(x,y)=>x+','+y;
@@ -135,5 +135,5 @@ window.HAND=(function(){
     S.fails.push((label||'')+' '+a.name+' -> '+gx+','+gy+' [free ports '+cands(a,0,0,opt&&opt.pa).length+']');return 0}finally{only=null}}
   // piece(p): drop one ready-made piece (belt, underground, splitter) on a free cell; false if the cell is taken or off the floor
   function piece(p,force){const kk=k(p.x,p.y);if((!force&&!inFloor(p.x,p.y))||S.occ.has(kk))return false;S.occ.set(kk,'p');S.pcs.push({h:0,pid:0,...p});return true}
-  return{reset,block,put,link,route,reserve,lane,prune,piece,setMk,D:()=>MAXA-1,result,check,verify,S,TW,FW,get CLS(){return CLS},setTile:n=>{CLS=plcCls(n)},adapt:true,free,inFloor};   // setTile: block type of the factory; adapt: dock stations get a Station Adapter (the open-sided 2x2 C needs one, a 2x2 B block does not)
+  return{reset,block,put,link,route,reserve,lane,prune,piece,setMk,D:()=>MAXA-1,result,check,verify,S,TW,FW,get CLS(){return CLS},setTile:n=>{CLS=plcCls(n);adapt=n==='BPO_Station_03'},get adapt(){return adapt},free,inFloor};   // setTile: block type of the factory; adapt: dock stations get a Station Adapter (the open-sided 2x2 C needs one, a 2x2 B block does not)
 })();

@@ -752,15 +752,31 @@ function* placerTileGen(L,ok){
   let why="";fails.forEach(w=>{if(w!==undefined)why=w});   // last failure in search order, as before
   return {ok:false,why:"Does not fit: "+why};
 }
+// plan mirrored (fl, left-right) then rotated n x 90deg clockwise; blocks in cells, machines in FC units, same origin.
+// A machine moves with the block whose cell box holds it, relative to that block's FLOOR rect (the floor sits at the top-left of its cell box, so a plain
+// box rotation shifted machines out of the rotated floor: root cause of "Cannot build here" on rotated plans). Same transform for ghost and placement.
+function plT(P,n,fl){let b=P.blocks,m=P.ms;
+  const fr=q=>{const r=floorRect({...q,id:-1});if(r)return r;const o=fcell(q);return{x:o.cx*FC,y:o.cy*FC,w:o.cw*FC,h:o.ch*FC}};
+  const step=(tb,tm)=>{const ow=new Map(),fl=b.map(q=>floorRect({...q,id:-1}));b.forEach((q,i)=>{const o=fcell(q);for(let a=0;a<o.cw;a++)for(let c=0;c<o.ch;c++)ow.set((o.cx+a)+","+(o.cy+c),i)});
+    const Hc=Math.max(1,plcMmax(b,q=>q.y+dim(q).h),plcMmax(m,q=>Math.ceil((q.y+dim(q).h)/FC))),nb=b.map(q=>tb(q,Hc));
+    m=m.map(q=>{let i=ow.get(Math.floor(q.x/FC)+","+Math.floor(q.y/FC));
+      if(i!=null&&!fl[i]){const j=fl.findIndex(r=>r&&(q.x>=r.x-1&&q.x<r.x+r.w+1&&q.y>=r.y&&q.y<r.y+r.h||q.y>=r.y-1&&q.y<r.y+r.h+1&&q.x>=r.x&&q.x<r.x+r.w));if(j>=0)i=j}   // a no-floor block (dock): its door column next to a floor belongs to that floor (else it lands 2 units off the wall after a 180/270 turn)
+      return tm(q,i==null?null:fr(b[i]),i==null?null:fr(nb[i]),Hc)});b=nb};
+  if(fl){const W=plcMmax(b,q=>q.x+dim(q).w),rs=q=>(def(q.cls)||{}).portsLayout?null:{rot:q.rot===0?2:q.rot===2?0:q.rot};
+    step(q=>({...q,x:W-q.x-dim(q).w,...(rs(q)||{})}),(q,F,G)=>{const d=dim(q);return{...q,...(mirM(q)||rs(q)||{}),x:F?G.x+F.w-(q.x-F.x)-d.w:W*FC-q.x-d.w}})}
+  for(let k=0;k<(n&3);k++)step((q,Hc)=>({...q,x:Hc-q.y-dim(q).h,y:q.x,rot:((q.rot||0)+1)&3}),
+    (q,F,G,Hc)=>{const d=dim(q),r={rot:((q.rot||0)+1)&3};return F?{...q,...r,x:G.x+F.h-(q.y-F.y)-d.h,y:G.y+q.x-F.x}:{...q,...r,x:Hc*FC-q.y-d.h,y:q.x}});
+  return{blocks:b,ms:m}}
 function placerPaste(){
-  const P=pasting.pl,bs=P.blocks.map(q=>({id:uid++,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:q.rot||0,pid:0,...(q.nm?{nm:q.nm}:{})}));   // nm: dock names of the build engine
+  const P0=pasting.pl,P={...P0,...plT(P0,pasting.rot,pasting.fl)},bs=P.blocks.map(q=>({id:uid++,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:q.rot||0,pid:0,...(q.nm?{nm:q.nm}:{})}));   // nm: dock names of the build engine
   const hit=bs.some(b=>{const d=dim(b);return nonM().some(o=>{if(!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})});
-  if(hit){toast("Block overlaps another block");return}
+  if(hit){const f=bs.find(b=>{const d=dim(b);return nonM().some(o=>{if(!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})}),d=dim(f);
+    placeRefused([{i:{cls:f.cls,x:f.x,y:f.y,l:layer,w:d.w,h:d.h,rot:f.rot},why:"block overlaps another block"}],"Build plan",pasting.rot,pasting.fl,bs.length,P.ms.length,{x:hover.x,y:hover.y});return}
   const ms=P.ms.map(m=>({...m,id:uid++,mid:0,pid:0,x:hover.x*FC+m.x,y:hover.y*FC+m.y,h:layer}));
   const pushAll=(a,l)=>{for(let i=0;i<l.length;i+=20000)a.push(...l.slice(i,i+20000))};   // a spread of 100k+ items overflows the call stack
-  const n0=S.blocks.length;pushAll(S.blocks,bs);const bad=noBuild(ms.map(mItem));S.blocks.length=n0;
-  if(bad){toast(NOBUILD);return}
-  push();pushAll(S.blocks,bs);cutBelts(ms.filter(isBelt));pushAll(S.blocks,ms);plcPlan=P.plan||null;sel=new Set();pasting=null;all();
+  const n0=S.blocks.length;pushAll(S.blocks,bs);const bad=noBuildWhy(ms.map(mItem));S.blocks.length=n0;
+  if(bad.length){placeRefused(bad,"Build plan",pasting.rot,pasting.fl,bs.length,ms.length,{x:hover.x,y:hover.y});return}
+  placeOk("Build plan",pasting.rot,pasting.fl,bs.length,ms.length);push();pushAll(S.blocks,bs);cutBelts(ms.filter(isBelt));pushAll(S.blocks,ms);plcPlan=P.plan||null;sel=new Set();pasting=null;all();
 }
 let plcL=null;
 let plcPlan=null;
