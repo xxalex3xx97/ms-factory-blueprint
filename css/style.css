@@ -195,9 +195,13 @@ header .mnl .hbt{flex-direction:row;min-height:34px;gap:6px;width:100%;justify-c
 #pvDocks label.chk,#pvOptB label.chk{flex-direction:row;align-items:center;gap:6px;white-space:nowrap;min-height:28px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}
 #pvDocks label.chk input,#pvOptB label.chk input{width:auto;flex:none;margin:0}
 .pvGt{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);align-self:center}
-#pvOpt,#pvDet,#pvCost{font-size:12px;color:var(--dim)}#pvOpt summary,#pvDet summary,#pvCost summary{cursor:pointer;padding:2px 0}
-#pvCostList{font-family:var(--mono);font-size:12px;color:var(--fg,inherit)}#pvCostList>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px}#pvCostList .nodata{color:var(--dim)}#pvCostList .tot{border-top:1px solid var(--dim);margin-top:2px;padding-top:2px}#pvCostList:empty{display:none}#pvCostList .note{margin:4px 0 0;font-family:inherit}
-@media (max-width:420px){#pvCostList{font-size:11px}}
+#pvOpt,#pvDet{font-size:12px;color:var(--dim)}#pvOpt summary,#pvDet summary{cursor:pointer;padding:2px 0}
+#pvBody{flex:1 1 auto;display:flex;gap:12px;min-height:0;margin-bottom:10px}#pvMain{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}#pvMain>*{flex:none;min-width:0}#pvMain>#plnPrevView{flex:1 1 auto}
+#pvCost{order:-1;flex:0 0 250px;display:flex;flex-direction:column;min-height:0;padding:10px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;font-size:12px}
+#pvCost h4{margin:0 0 6px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+#pvCostList{flex:1 1 auto;min-height:0;overflow-y:auto;font-size:13px}#pvCostList>div{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line)}#pvCostList .ic{width:22px;height:22px;object-fit:contain;border-radius:4px}#pvCostList .ic.ph{background:var(--line);opacity:.6}#pvCostList .q{font-family:var(--mono);font-variant-numeric:tabular-nums}#pvCostList .nodata{color:var(--dim)}#pvCostList .tot{position:sticky;bottom:0;background:var(--panel2);grid-template-columns:minmax(0,1fr) auto;border:0;border-top:2px solid var(--line);margin-top:4px;padding-top:6px;font-weight:600}#pvCostList .note{margin:6px 0 0;color:var(--dim)}
+#pvCost .chk{margin-top:8px;padding-top:8px;border-top:1px solid var(--line)}
+@media (max-width:700px){#pvBody{flex:none;flex-direction:column;overflow:visible}#pvCost{order:0;flex:none}#pvCostList{max-height:28vh}#pvMain{flex:none}}
 #pvOptB{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:flex-end;padding:4px 0}
 #pvLine{margin-top:6px;font-size:13px;font-family:var(--mono)}#pvLine:empty{display:none}
 #plnPrevView{min-height:320px}

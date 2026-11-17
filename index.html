@@ -293,6 +293,9 @@
 <script defer src="js/boot.js"></script>
 <dialog id="plnPrev" aria-labelledby="plnPrevT">
   <div class="pvHd"><h3 id="plnPrevT">Factory preview</h3><div class="pvTb" role="toolbar" aria-label="Preview zoom"><button id="plnZo" type="button" aria-label="Zoom out" title="Zoom out">&minus;</button><button id="plnZi" type="button" aria-label="Zoom in" title="Zoom in">+</button><button id="plnZf" type="button" aria-label="Fit to view" title="Fit to view">Fit</button></div></div>
+  <div id="pvBody">
+  <aside id="pvCost" aria-label="Shopping list: material cost"><h4>Shopping list</h4><div id="pvCostList"></div><label class="chk"><input type="checkbox" id="pvCtChk"> Restore container items</label></aside>
+  <div id="pvMain">
   <div id="pvSet">
     <label>Rate (items/min) <input id="pvRate" type="number" min="0.001" step="any" aria-label="Target rate in items per minute"></label>
     <label>Belt <select id="pvMk"aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
@@ -315,10 +318,10 @@
   <div id="pvLine"></div>
   <details id="pvDet"><summary>Details</summary><dl id="plnPrevCnt"><dt>Machines</dt><dd id="pvMach"></dd><dt>Belts</dt><dd id="pvBelt"></dd><dt>Splitters</dt><dd id="pvSpl"></dd><dt>Containers</dt><dd id="pvBox"></dd><dt>Undergrounds</dt><dd id="pvUg"></dd><dt>Blocks</dt><dd id="pvBlk"></dd><dt>Cells</dt><dd id="pvCell"></dd><dt>In/Out</dt><dd id="pvIO"></dd></dl>
   <div id="plnPrevNote"></div></details>
-  <details id="pvCost" open><summary>Material cost</summary><label class="chk"><input type="checkbox" id="pvCtChk"> Restore container items</label><div id="pvCostList"></div></details>
   <p id="plnPrevErr" role="alert"></p>
   <p id="plnPrevBig" role="status"></p>
   <div class="btns"><button id="plnPlace" type="button">Place</button><button id="plnCancel" type="button">Cancel</button></div>
+  </div></div>
 </dialog>
 <script>/* ?exo=1: build the hand-designed Exosuit factory (tools/hand) live, block by block */
 if(/[?&]exo=chain/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{await l("tools/hand/chainplay.js");chainPlay({url:"tools/hand/chain_plan.json",stepMs:500})}catch(e){console.error("exo",e)}});   /* ?exo=chain: replay the planned Advanced Plates chain step by step */

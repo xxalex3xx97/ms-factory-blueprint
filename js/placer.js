@@ -931,9 +931,10 @@ function plcCost(src,blocks,withCt){
 function plcCostRender(L){
   const withCt=$("pvCtChk").checked,src=plcT&&plcT.ok?plcT.ms:L.items,
     C=plcCost(src,plcT&&plcT.ok?plcT.blocks:[],withCt),
-    row=(a,b,cls)=>`<div${cls?` class="${cls}"`:""}><span>${esc(a)}</span><span>${esc(b)}</span></div>`;
+    ic=id=>iurl(id)?`<img class="ic" alt="" src="${iurl(id)}">`:'<i class="ic ph"></i>',
+    row=(a,b,cls,id)=>`<div${cls?` class="${cls}"`:""}>${cls==="tot"?"":ic(id)}<span>${esc(a)}</span><span class="q">${esc(b)}</span></div>`;
   let h="";
-  C.rows.forEach((n,id)=>h+=row(plnNm(id),n));
+  C.rows.forEach((n,id)=>h+=row(plnNm(id),n,"",id));
   C.noData.forEach((n,k)=>h+=row(k+" x"+n,"no cost data","nodata"));
   if(C.rows.size)h+=row("Total",C.total,"tot");
   else h+='<p class="note">No cost data for any part</p>';
