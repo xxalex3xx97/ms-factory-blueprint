@@ -112,7 +112,7 @@ function simTick(){
   // 2) containers pull
   // one item per container per round, handed to its next output belt that takes it (pointer per container), so a container's output belts share its stock evenly, like a big splitter
   if(!Z.pg){Z.pg=new Map();Z.pull.forEach(P=>{let l=Z.pg.get(P.cn);if(!l)Z.pg.set(P.cn,l={ps:[],i:0});l.ps.push(P)})}
-  for(let g=0;g<8;g++){let any=false;
+  for(let g=0;g<1e4;g++){let any=false;   // no per-container cap: loop until nothing more moves (1e4 = runaway guard)
     const pg=[...Z.pg];pg.forEach((_,u)=>{const[cn,l]=pg[(u+Z.t)%pg.length];for(let q=0;q<l.ps.length;q++){const i=(l.i+q)%l.ps.length,{belt,c}=l.ps[i];if(!simOk(c))continue;
       const stk=[...cn.st].filter(([k,r])=>r.inf||r.n>0);if(!stk.length)return;
       const dn=simDn(belt.id),pref=stk.find(([k])=>(Z.mS.get(c)||[]).some(s=>dn.has(s.belt.id)&&simCanM(s.M,k))),item=(pref||stk[0])[0];

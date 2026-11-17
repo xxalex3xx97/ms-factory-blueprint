@@ -5,7 +5,7 @@ let PLC_BOX="DAT_Container";   // everything reads it as a constant
 const PL_STD=["BPO_Station_01","BPO_Station_2x1","BPO_Station_02"];   // smallest first; floors 14x14, 30x14, 30x30
 const PL_ALL=[...PL_STD,"BPO_Station_03"];   // + 2x2 C (floor 30x30); not in PL_STD: prefab.js uses its last entry as the biggest block
 const PLC_UG=["DAT_UndergroundBelt","DAT_UndergroundBelt_2","DAT_UndergroundBelt_3"];const plcCls=nm=>Object.keys(BASE).find(k=>BASE[k].kind==="b"&&BASE[k].name===nm);
-const PLC_SRC=480;
+const PLC_SRC=Infinity;   // containers have no throughput cap
 let PLC_BANK=false;   // test hook only (slice 1): bank layout instead of the lane layout
 var CMP_ENGINE=true;   // composer (js/compose.js) is the default; ?engine=old = legacy
 let PLC_G=0;   // test hook: force band count
@@ -295,7 +295,7 @@ function placerBank(P,item,mk,spMk,o){
     if(m3>SS[0].m)nt.push("Mk3 packs "+m3+" machines per trunk (now "+SS[0].m+")");
   }else{
     for(let q=0;q<n;q++)nt.push("Stage "+(q+1)+" "+plnNm(ch[q].item)+": "+Ns[q]+" machines, "+G*tbs[q]+" trunk"+(G*tbs[q]>1?"s":"")+" ("+alls[q].join("+")+"), "+plcMmax(gb,(g=>g[q].R))+" rows");
-    for(let q=1;q<n;q++)nt.push("Hub container between stages: "+plnR2(P.edges.find(e=>e.from===ch[q-1].item&&e.to===ch[q].item).flow/(G*nH[q]))+"/min (max "+PLC_SRC+")"+(G*nH[q]>1?"; "+G*nH[q]+" hub containers stacked":""));
+    for(let q=1;q<n;q++)nt.push("Hub container between stages: "+plnR2(P.edges.find(e=>e.from===ch[q-1].item&&e.to===ch[q].item).flow/(G*nH[q]))+"/min"+(G*nH[q]>1?"; "+G*nH[q]+" hub containers stacked":""));
     if(tr.two&&!tr.three)nt.push("Two inputs into "+plnNm(ch[n-1].item)+": A "+plnNm(ch[n-2].item)+" (main chain) + B "+plnNm(topB)+" ("+Bn.length+" stage"+(Bn.length>1?"s":"")+", own band)");
     if(tr.three)nt.push("Three inputs into "+plnNm(ch[n-1].item)+": A "+plnNm(ch[n-2].item)+" (main chain) + B "+plnNm(topB)+" + C "+plnNm(topC)+" (own bands)");
     if(G>1)nt.push(G+" band(s) (machine counts may differ by 1 between bands), spare belt row between bands");
