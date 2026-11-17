@@ -54,7 +54,7 @@ function rbBuild(x){
     tent(rP);
     if(m.kids.length)pk=rbPack({W,H,mk,dw:d.w,fb:{b:NB0.b,bi:NB0.bi},inF:w=>{const r=reg(m,w,rP);return r.rt.ok?{ok:true,items:r.rt.items}:{ok:false,why:r.rt.why||'merge routing failed'}},poolF:(w,rows)=>poolOf(o0,w,rows,m.wt,m.dO&&m.dO[0]),outRows:m.outRows,flush:!!m.dO});
     else pk=rbPackNode(o0,z0,NB0,{block,bx,W,H,mk,outRows:m.outRows,dw:d.w,noIn:hb,flush:!!m.dO,dO:m.dO&&m.dO[0]});
-    if(!pk.ok)return no('rb: '+o.item+': '+pk.why);
+    if(!pk.ok)return no('rb: '+o.item+': '+pk.why,o.parents&&o.parents.length?o.key:undefined);
     m.pk=pk;
     if(!m.kids.length&&o.parents&&o.parents.length===1){m.defer=true;continue}
     const th=th0,own=[];kp.forEach(p=>p.mem.forEach((pm,pb)=>p.lanes.filter(l=>l.par===m.id).forEach(l=>own.push({p,pb,l}))));

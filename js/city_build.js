@@ -8,7 +8,7 @@ function cityBuild(x){
   // their lanes cross empty corridor blocks (cmp_asm.js bank pass-through); the root POOL (OZ) is the last piece of its block, container flush east (q.x+4===W-1). cmpDockApply (cmp_dock.js) needs per hub item: dk tags + hx/hw/hu/hc (put), nodes[] gx/gy/inCol/pool/fb/ct.
   const spread=(B,span,r0)=>{const o=[];let prev=r0-1;for(let b=0;b<B;b++){const t=B>=span?r0+b:r0+Math.round((b+0.5)*span/B-0.5);const v=Math.max(prev+1,t);o.push(v);prev=v}return o};   // B blocks over span rows from r0, strictly increasing
   const parB=mm=>mm.o.cs?mm.B:mm.o.parents&&mm.o.parents.length?Math.max(...mm.o.parents.map(pid=>G[pid].B)):mm.B,rowsM=(mm,r)=>spread(mm.B,Math.max(mm.B,parB(mm)),r),ro=(p,pb)=>p.rr?p.rr[pb]:p.r+pb;   // rowsM: rows of module mm whose reference top is r (spread over its widest parent); ro: block row of member pb
-  const DK=x.dk&&(x.dk.in||x.dk.out)?x.dk:null,hubOwn=!!(DK&&DK.in),n0=DK?DK.notes.length:0,no=(why,bad)=>{if(DK)DK.notes.length=n0;return{ok:false,why,bad}};
+  const DK=x.dk&&(x.dk.in||x.dk.out)?x.dk:null,hubOwn=!!(DK&&DK.in),n0=DK?DK.notes.length:0,no=(why,bad)=>{if(DK)DK.notes.length=n0;return{ok:false,why,bad}},bd=o=>o.parents&&o.parents.length?o.key:undefined;
   const rawD=(o,q)=>o.rec.i.map(([it])=>{const c=o.children.map(i=>byId[i]).find(c=>c.key===it);return c?c.rate*q.rate/o.rate:0});   // planner raw rate per raw input of member q (share of node o)
   const sidesOf=row=>{let up=1,dn=1;for(const k of[...g.occ.keys(),...g.cor.keys()]){const[gx,gy]=k.split(',').map(Number);if(gx===0){if(gy<row)up=0;if(gy>row)dn=0}}return[up&&'N',dn&&'S'].filter(Boolean)};   // FEED hub: N / S dock only when no block lies above / below it in block column 0 (outer edge)
   const mkHub=(m,jr)=>m.mem.map((q,b)=>rbNodeIn(q,tz.by[q.id],NB[q.id],{block,bx,H,mk,dkx:{dk:DK,D:rawD(m.o,q),dh:d.h,dw:d.w,row:jr(b),sides:()=>sidesOf(ro(m,b))}}));
@@ -57,7 +57,7 @@ function cityBuild(x){
       /* old all-to-all model (unused):: one per consumer port (of EVERY consumer), leaving at the port's own row when free, else the nearest free row (near rule of cmp_groups.js 70)
       const used=new Set(),near=y0=>{for(let q=0;q<H;q++)for(const y of[y0-q,y0+q])if(y>=0&&y<=H-1&&!used.has(y)){used.add(y);return y}};
       o.parents.forEach(pid=>{const pj=m.pj[pid]=G[pid].o.rec.i.findIndex(([it])=>it===o.key);G[pid].mem.forEach((cm,ci)=>NB[cm.id].inR[pj].slice().sort(asc).forEach(y=>m.lanes.push({ci,y,ya:near(y),par:pid,id:o.id+'#'+m.lanes.length})))});
-      if(m.lanes.length>H-2)return no('rb: shared producer '+o.item+' feeds '+m.lanes.length+' consumer ports (one belt each) in '+o.parents.reduce((a,p)=>a+G[p].mem.length,0)+' consumer blocks; more than '+(H-2)+' lanes per producer block: needs row-local partitioning of producer blocks to consumer ports (not built)');
+      if(m.lanes.length>H-2)return no('rb: shared producer '+o.item+' feeds '+m.lanes.length+' consumer ports (one belt each) in '+o.parents.reduce((a,p)=>a+G[p].mem.length,0)+' consumer blocks; more than '+(H-2)+' lanes per producer block: needs row-local partitioning of producer blocks to consumer ports (not built)',bd(o));
       const mu=new Map(),pk0=l=>l.ci+','+l.y+','+l.par;m.lanes.forEach(l=>mu.set(pk0(l),(mu.get(pk0(l))||0)+1));   // lane demand weight as cmp_groups.js 71: machines on its port / lanes sharing the port
       const ix=m.lanes.map((l,i)=>i).sort((a,b)=>m.lanes[a].ya-m.lanes[b].ya);
       m.outRows=ix.map(i=>m.lanes[i].ya);
@@ -76,7 +76,7 @@ function cityBuild(x){
     tent(rP);
     if(m.kids.length)pk=rbPack({W,H,mk,dw:d.w,fb:{b:NB0.b,bi:NB0.bi},inF:w=>{const r=reg(m,w,rP);return r.rt.ok?{ok:true,items:r.rt.items}:{ok:false,why:r.rt.why||'merge routing failed'}},poolF:(w,rows)=>poolOf(o0,w,rows,m.wt,m.dO&&m.dO[0]),outRows:m.outRows,flush:!!m.dO});
     else pk=rbPackNode(o0,z0,NB0,{block,bx,W,H,mk,outRows:m.outRows,dw:d.w,noIn:hb,flush:!!m.dO,dO:m.dO&&m.dO[0]});
-    if(!pk.ok)return no('rb: '+o.item+': '+pk.why);
+    if(!pk.ok)return no('rb: '+o.item+': '+pk.why,bd(o));
     m.pk=pk;
     if(!m.kids.length&&o.parents&&o.parents.length===1){m.defer=true;continue}
     const th=th0,own=[];kp.forEach(p=>p.mem.forEach((pm,pb)=>p.lanes.filter(l=>l.par===m.id&&l.b===pb).forEach(l=>own.push({p,pb,l}))));
@@ -134,11 +134,11 @@ function cityBuild(x){
     if(m.o.raw){put(cmpPool({W,H,mk,bx,item:m.o.key,raw:true,inRows:[],outRows:m.outRows,...(m.dI||{})}).items,pX(0),(m.r-gy0)*TH,null,null,m.dI?m.c*TW:null);continue}
     for(let b=0;b<m.mem.length;b++){
       const q=m.mem[b],Y=(ro(m,b)-gy0)*TH,n=NB[q.id],ct=[],bz=n.b,w=pk.colW[1],fit=w===W||w===bz.w?n.bi:cmpShr(bz,mk,w);
-      if(!fit)return no('rb: shrink failed ('+m.o.item+')');
-      if(m.hub){const h=m.hub[b](W);if(h.ok===false)return no(h.why);put(h.items,0,Y,null,null,0)}   // docks: own raw hub block at gx=0
-      else if(!m.kids.length){const h=rbNodeIn(q,tz.by[q.id],n,{block,bx,H,mk})(pk.colW[0]);if(h.ok===false)return no(h.why);put(h.items,pX(0),Y,ct)}
+      if(!fit)return no('rb: shrink failed ('+m.o.item+')',bd(m.o));
+      if(m.hub){const h=m.hub[b](W);if(h.ok===false)return no(h.why,bd(m.o));put(h.items,0,Y,null,null,0)}   // docks: own raw hub block at gx=0
+      else if(!m.kids.length){const h=rbNodeIn(q,tz.by[q.id],n,{block,bx,H,mk})(pk.colW[0]);if(h.ok===false)return no(h.why,bd(m.o));put(h.items,pX(0),Y,ct)}
       put(fit,pX(1),Y);
-      const h=poolOf(q,pk.colW[2],m.outRowsB?m.outRowsB[b]:m.outRows,m.wtB?m.wtB[b]:m.wt,m.dO&&m.dO[b]);if(h.ok===false)return no(h.why);put(h.items,pX(2),Y,ct,null,m.dO?(m.c+pk.colP[2])*TW:null);
+      const h=poolOf(q,pk.colW[2],m.outRowsB?m.outRowsB[b]:m.outRows,m.wtB?m.wtB[b]:m.wt,m.dO&&m.dO[b]);if(h.ok===false)return no(h.why,bd(m.o));put(h.items,pX(2),Y,ct,null,m.dO?(m.c+pk.colP[2])*TW:null);
       nodes.push({id:q.id,item:q.item,key:q.key,rate:q.rate,lanes:n.lanes,outRows:n.outRows,rec:rk(q.rec),N:q.N,pN:m.o.N,util:q.util,pU:q.util,gx:m.c+pk.colP[1],gy:(ro(m,b)-gy0)*d.h,inCol:m.hub?0:m.c+pk.colP[0],pool:m.c+pk.colP[2],row:ro(m,b)-gy0,fb:{x:pX(1),y:Y,w,h:H},ct,kind:q.inKind});
     }
   }
