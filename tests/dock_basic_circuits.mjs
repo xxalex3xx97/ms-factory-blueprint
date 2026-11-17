@@ -15,7 +15,9 @@ const CELLS = [
   {n: 'BC 100 Mk1 2x1', rate: 100, mk: 0, bk: 'BPO_Station_2x1', dock: true, req: true},
   {n: 'BC 150 Mk2 2x1', rate: 150, mk: 1, bk: 'BPO_Station_2x1', dock: true, req: true},
   {n: 'BC 100 Mk1 1x1', rate: 100, mk: 0, bk: 'BPO_Station_01', dock: true, req: true},
-  {n: 'BC 100 Mk1 2x2B (info)', rate: 100, mk: 0, bk: 'BPO_Station_02', dock: true, req: false},
+  {n: 'BC 100 Mk1 2x2 Station_02', rate: 100, mk: 0, bk: 'BPO_Station_02', dock: true, req: true, c2: true},
+  {n: 'BC 100 Mk1 2x2 Station_02A', rate: 100, mk: 0, bk: 'BPO_Station_02A', dock: true, req: true, c2: true},
+  {n: 'BC 100 Mk1 2x2 Station_03', rate: 100, mk: 0, bk: 'BPO_Station_03', dock: true, req: true, c2: true},
   {n: 'BC 100 Mk1 2x1 docks OFF (info)', rate: 100, mk: 0, bk: 'BPO_Station_2x1', dock: false, req: false}
 ];
 try {
@@ -26,13 +28,29 @@ try {
   await page.waitForFunction(() => window.__fb && typeof placerGo === 'function' && typeof plan === 'function' && typeof placerLayout === 'function');
   for (const c of CELLS) {
     await page.evaluate(c => {
-      window.plcNoWorker = true; try { plcL = null } catch (_) { }$('plnPrevErr').textContent = '';
+      window.plcNoWorker = true; try { plcL = null; plcT = null } catch (_) { }$('plnPrevErr').textContent = '';
       const set = (id, v) => { const e = $(id); if (e.type === 'checkbox') e.checked = v; else e.value = v; e.dispatchEvent(new Event('change')) };
       set('plnItem', [...plnBy(false).keys()].find(i => plnNm(i) === 'Basic Circuits'));
       set('plnRate', c.rate); set('plnMk', c.mk); set('plnBk', c.bk); set('plnBuf', 'DAT_Container_2');
       set('plnDkI', c.dock); set('plnDk', 'ind'); set('plnDkO', false);
       placerGo();
     }, c);
+    if (c.c2) {
+      try { await page.waitForFunction(() => (typeof plcT !== 'undefined' && plcT && plcT.ok) || document.getElementById('plnPrevErr').textContent, null, {timeout: 300000}) }
+      catch (e) { fails++; console.log('FAIL timeout ' + c.n); continue }
+      const b = await page.evaluate(() => {
+        const err = $('plnPrevErr').textContent, ok = !!(typeof plcT !== 'undefined' && plcT && plcT.ok);
+        const it = [...plnBy(false).keys()].find(i => plnNm(i) === 'Basic Circuits');
+        const P = plan(it, +$('plnRate').value, +$('plnMk').value, {sp: null, bal: null}, PLN_PICK, {proto: false, enr: false});
+        const raws = cmpPlan(P, it, +$('plnMk').value, {share: true}).nodes.filter(o => o.raw).length;
+        const d = ok ? plcT.blocks.filter(x => /Dock_2_C$/.test(x.cls)) : [];
+        return {ok, err, raws, n: d.length, multi: d.filter(x => / \+ /.test(x.nm || '')).map(x => x.nm)};
+      });
+      console.log(c.n + ': ' + JSON.stringify(b));
+      check(b.ok, c.n + ' plcT.ok ' + b.err);
+      if (b.ok) { check(b.n >= b.raws, c.n + ' Dock_2 ' + b.n + ' >= raws ' + b.raws); check(b.multi.length === 0, c.n + ' no Dock_2 with >1 item ' + b.multi.join(' | ')) }
+      continue;
+    }
     try { await page.waitForFunction(() => !plcBusyF && ((typeof plcL !== 'undefined' && plcL) || document.getElementById('plnPrevErr').textContent), null, {timeout: 300000}) }
     catch (e) { console.log(c.n + ' TIMEOUT badge=' + await page.evaluate(() => $('plnEngBadge').textContent) + ' err=' + await page.evaluate(() => $('plnPrevErr').textContent)); if (c.req) { fails++; console.log('FAIL timeout ' + c.n) } continue }
     const a = await page.evaluate(c => {
