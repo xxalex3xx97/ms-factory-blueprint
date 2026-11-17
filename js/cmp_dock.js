@@ -4,6 +4,15 @@
 // cmpCellsFor(D,cap,lanes,avail): cells n=max(ceil(D/(2cap)),ceil(lanes/4)); use=docks that fit (<=avail slots, <=lanes). Never refuses.
 const cmpCellsFor=(D,cap,lanes,avail)=>{const n=Math.max(Math.ceil(D/(2*cap)-1e-9),Math.ceil(lanes/4),1);return{n,use:Math.max(1,Math.min(n,avail,lanes))}};
 const cmpR1=v=>Math.round(v*10)/10;
+// DOCKDF: site filter key of a lane item (item id 'ITEM_X' or display name) -> 'x'; '' if unknown
+const cmpDfKey=q=>{const n=q.di||(q.ct&&q.ct[0]&&q.ct[0].item)||(q.dx&&q.dx.name)||(q.dkx&&q.dkx.name)||'',id=Object.keys(ITEMS).find(k=>k===n||(ITEMS[k].n||'')===n);return id?id.slice(5).toLowerCase():''};
+// DOCKDF: set db.df from the lane belts touching its bays. cl=[{d,x,y,q}] belt cells (final coords). Bays without a belt stay empty.
+function cmpDockDf(db,cl){
+  const R=bayRects({...db,id:-1,h:0}),a=Array.from({length:dkN(db.cls)},()=>({item:'',bLoading:0})),ins=(r,x,y)=>x>=Math.round(r.x)&&x<Math.round(r.x+r.w)&&y>=Math.round(r.y)&&y<Math.round(r.y+r.h);
+  for(const c of cl){const k=c.k;if(!k)continue;
+    const own=R.find(r=>ins(r,c.x,c.y));if(own&&own.i>=0&&!a[own.i].item){a[own.i].item=k;continue}
+    for(const[dx,dy]of DIR){const r=R.find(r=>ins(r,c.x+dx,c.y+dy));if(r&&r.i>=0&&!a[r.i].item)a[r.i].item=k}}
+  if(a.some(f=>f.item))db.df=a}
 // plan the containers of one SRC / OZ hub: a={kind:'in'|'out',name,D,rows (lane rows of the hub),H,dh}. dk={mk,notes:[]}. -> extra cmpPool params {ca,dock:true,dkx,pyOut|pyIn} | {ok:false,why}
 const cmpNoDk=(kind,j,name,dk)=>{const N=globalThis.CMP_NODK;if(!N||!N.has('X:'+kind+':'+j))return 0;const m=[...N].find(k=>k.startsWith('M:'+j+'|'));dk.notes.push('Industrial dock not possible for '+name+' (no free ship clearance: '+(m?m.split('|')[1]:'')+'): no dock, plain container');return 1};   // DOCKCLEAR
 function cmpDockHub(dk,a){
@@ -46,13 +55,14 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
   const DKF=(tag,js,m)=>{(globalThis.CMP_DKFAIL=globalThis.CMP_DKFAIL||[]).push({tag,js});return m},occB=new Set(occ),placed=[],clrBad=b=>{const c=cmpDockClr(b);return c.mid.some(z=>occB.has(z))||c.sides.every(w=>w.some(z=>occB.has(z)))},wouldBreak=a=>{const n=cells(a).filter(z=>!occB.has(z));n.forEach(z=>occB.add(z));const r=placed.some(clrBad);n.forEach(z=>occB.delete(z));return r},ABAD=a=>a&&(cells(a).some(z=>occ.has(z))||wouldBreak(a)),addB=a=>{if(a)cells(a).forEach(z=>occB.add(z))};   // DOCKCLEAR: ship clearance rect (cmpDockClr) must be free of every non-dock block/adapter; other docks may sit in it
   const edgeBad=b=>ray(b).some(z=>occ.has(z))||cells(b).some(z=>rays.has(z))||clrBad(b),edgeAdd=b=>{ray(b).forEach(z=>rays.add(z));placed.push(b)};
   const belt=(x,y,rot)=>add.push({cls:bc,x,y,h:0,rot,pid:0,dk:'p'});
+  const dfc=[],dbelt=(d,q,x,y,rot)=>{belt(x,y,rot);dfc.push({d,x,y,q,k:cmpDfKey(q)})};   // DOCKDF
   const slot=ly=>{for(let k=0;k<d.h;k++){const M=16*k+6;if(ly<=M&&ly+3>=M+1)return k}return -1};
   const dockV=(q,side)=>{   // N/S input cells (FEED hubs): nl_dock vertical formulas; door cols 16u+6,7; container y=1 (N) / H-5 (S), belt rows through the wall
     const gx=Math.floor(q.x/TW),gy=Math.floor(q.y/TR),u=Math.floor((q.x-gx*TW)/16),n=side==='N',M=gx*TW+16*u+6,y0=gy*TR,
       b={cls:dc,x:gx*d.w+u,y:n?gy*P-1-ad:gy*P+d.h+ad,rot:n?3:1},ab=ad&&!ads.has(side+gx+'|'+gy)&&{cls:adc,x:gx*d.w,y:n?gy*P-1:gy*P+d.h,rot:n?3:1};
     if(u>=d.w||cells(b).some(z=>occ.has(z))||ABAD(ab)||edgeBad(b)){q.why=u>=d.w?'no dock unit at this column':'no free outer-edge slot (another block or dock is in the way)';extra.push(q);return false}
     cells(b).forEach(z=>occ.add(z));edgeAdd(b);blocks.push(b);if(ab){cells(ab).forEach(z=>occ.add(z));addB(ab);blocks.push(ab);ads.add(side+gx+'|'+gy)}
-    for(const x of[M,M+1])if(n)for(let y=y0-1-A;y<=y0;y++)belt(x,y,1);else for(let y=y0+fl.h-1;y<=y0+fl.h+A;y++)belt(x,y,3);
+    for(const x of[M,M+1])if(n)for(let y=y0-1-A;y<=y0;y++)dbelt(b,q,x,y,1);else for(let y=y0+fl.h-1;y<=y0+fl.h+A;y++)dbelt(b,q,x,y,3);
     q.dd={side,gx:gx*d.w,gy:gy*P,u,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
     return true};
   const dock=(q,side)=>{
@@ -66,7 +76,7 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
     cells(b).forEach(z=>occ.add(z));edgeAdd(b);blocks.push(b);
     if(ab){cells(ab).forEach(z=>occ.add(z));addB(ab);blocks.push(ab);ads.add(side+u0+'|'+gy)}
     const M=gy*TR+16*k+6;
-    for(const y of[M,M+1])if(out){for(let x=x0+hw-1;x<=x0+hw+A;x++)belt(x,y,0)}else for(let x=x0-1-A;x<=q.x-1;x++)belt(x,y,0);
+    for(const y of[M,M+1])if(out){for(let x=x0+hw-1;x<=x0+hw+A;x++)dbelt(b,q,x,y,0)}else for(let x=x0-1-A;x<=q.x-1;x++)dbelt(b,q,x,y,0);
     q.dd={side,gx:u0,gy:gy*P,u:k,r:q.dkx.r,n:q.dkx.n,name:q.dkx.name};
     return true};
   for(const q of ms.filter(q=>q.dk==='in'||q.dk==='out'))if(!dock(q,q.dk==='out'?'E':'W')&&!q.dd){miss.push((q.dk==='out'?'out ':'in ')+q.dkx.name+'|'+q.why);delete q.dk;delete q.dkx}
@@ -85,7 +95,7 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
         const x=out?ox+10-b.y:ox+b.y,y=oy+(out?26-b.x:b.x),g2=(y-oy<16?0:1),main=b.y===9&&(b.x===4||b.x===22),m={cls:NLD.BOX_I,x,y,h:0,rot:0,pid:0,ct:[],dk:out?'out':'in'};
         if(main&&used[g2].length){if(!out)m.ct=[{item:used[g2][0].di,n:0,inf:true}];m.dd={side:out?'E':'W',gx:out?0:u0,gy:g*S*P,u:g2,r:(used[g2][0].dx||dkx).r,n:1,name:(used[g2][0].dx||dkx).name,ind:1};if(out&&fix.nodes)fix.nodes.filter(q=>q.pool===col&&q.row>=g*S&&q.row<(g+1)*S).forEach(q=>q.ct.push(x+','+y))}
         add.push(m)}
-      for(const k of asm.belts)if(used[(out?29-k.x:k.x)<16?0:1].length)belt(out?ox+13-k.y:ox+k.y,out?oy+29-k.x:oy+k.x,TRO[k.rot]);
+      for(const k of asm.belts){const g2=(out?29-k.x:k.x)<16?0:1;if(used[g2].length){const px=out?ox+13-k.y:ox+k.y,py=out?oy+29-k.x:oy+k.x;belt(px,py,TRO[k.rot]);dfc.push({d:db,x:px,y:py,q:used[g2][0],k:cmpDfKey(used[g2][0])})}}
       for(const q of E)for(let x=out?q.x+1:x0-3-A;x<=(out?ox:x0-1);x++)belt(x,q.y,0);
       E.forEach(q=>{delete q.dk;delete q.dx})}
     return null};
@@ -103,7 +113,7 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
         const main=b.y===9&&(b.x===4||b.x===22),m={cls:NLD.BOX_I,x:sv?x0+26-b.x:x0+b.x,y:sv?oy+10-b.y:oy+b.y,h:0,rot:0,pid:0,ct:[],dk:'in'};
         if(main){const e=used[g2][0];m.ct=[{item:e.di,n:0,inf:true}];m.dd={side:sv?'S':'N',gx:u0,gy:gy*P,u:g2,r:e.dx.r,n:1,name:e.dx.name,ind:1}}
         add.push(m)}
-      for(const k of asm.belts)if(used[k.x<16?0:1].length)belt(sv?x0+29-k.x:x0+k.x,sv?oy+13-k.y:oy+k.y,sv?(k.rot+2)%4:k.rot);
+      for(const k of asm.belts){const g2=k.x<16?0:1;if(used[g2].length){const px=sv?x0+29-k.x:x0+k.x,py=sv?oy+13-k.y:oy+k.y;belt(px,py,sv?(k.rot+2)%4:k.rot);dfc.push({d:db,x:px,y:py,q:used[g2][0],k:cmpDfKey(used[g2][0])})}}
       for(const q of E)if(sv)for(let y=gy*TR+fl.h;y<=oy;y++)belt(q.x,y,3);else for(let y=oy+13;y<=gy*TR-1;y++)belt(q.x,y,1);
       E.forEach(q=>{delete q.dk;delete q.dx})}
     return null};
@@ -114,6 +124,8 @@ function cmpDockApply(c,T,fix={}){const P=fix.P||dim({cls:c.cls,rot:0}).h,TR=P*F
   for(const m of all){m.x+=16*shx;m.y+=16*sh}
   for(const b of blocks){b.x+=shx;b.y+=sh}
   for(const m of ms)if(m.dd){m.dd.gx+=shx;m.dd.gy+=sh}
+  for(const c of dfc){c.x+=16*shx;c.y+=16*sh}
+  new Set(dfc.map(c=>c.d)).forEach(d=>cmpDockDf(d,dfc.filter(c=>c.d===d)));   // DOCKDF
   if(fix.nodes)for(const q of fix.nodes){q.gx+=shx;q.gy+=sh;q.fb.x+=16*shx;q.fb.y+=16*sh;q.ct=q.ct.map(s=>{const[a,b]=s.split(',').map(Number);return(a+16*shx)+','+(b+16*sh)})}
   if(fix.routed)for(const q of fix.routed){q.x+=16*shx;q.y+=16*sh}
   const seen=new Set();let ov=0;

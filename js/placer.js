@@ -755,6 +755,10 @@ function* placerTileGen(L,ok){
 // plan mirrored (fl, left-right) then rotated n x 90deg clockwise; blocks in cells, machines in FC units, same origin.
 // A machine moves with the block whose cell box holds it, relative to that block's FLOOR rect (the floor sits at the top-left of its cell box, so a plain
 // box rotation shifted machines out of the rotated floor: root cause of "Cannot build here" on rotated plans). Same transform for ghost and placement.
+// DOCKDF flip: remap b.df by nearest bay centre (rot 0<->2 reorders bays). q before, n after mirror, Wc = plan width in cells
+const plcDfMir=(q,n,Wc)=>{const A=bayRects({...q,id:-1,h:0}),B=bayRects({...n,id:-1,h:0}),a=Array.from({length:dkN(q.cls)},()=>({item:'',bLoading:0}));
+  A.forEach(r=>{if(r.i<0||!(q.df[r.i]||{}).item)return;const cx=Wc-(r.x+r.w/2),cy=r.y+r.h/2;let s=null,m=1e9;B.forEach(t=>{const d=Math.abs(t.x+t.w/2-cx)+Math.abs(t.y+t.h/2-cy);if(d<m){m=d;s=t}});if(s&&s.i>=0)a[s.i]={...q.df[r.i]}});
+  return a.some(f=>f.item)?a:undefined};
 function plT(P,n,fl){let b=P.blocks,m=P.ms;
   const fr=q=>{const r=floorRect({...q,id:-1});if(r)return r;const o=fcell(q);return{x:o.cx*FC,y:o.cy*FC,w:o.cw*FC,h:o.ch*FC}};
   const step=(tb,tm)=>{const ow=new Map(),fl=b.map(q=>floorRect({...q,id:-1}));b.forEach((q,i)=>{const o=fcell(q);for(let a=0;a<o.cw;a++)for(let c=0;c<o.ch;c++)ow.set((o.cx+a)+","+(o.cy+c),i)});
@@ -763,12 +767,12 @@ function plT(P,n,fl){let b=P.blocks,m=P.ms;
       if(i!=null&&!fl[i]){const j=fl.findIndex(r=>r&&(q.x>=r.x-1&&q.x<r.x+r.w+1&&q.y>=r.y&&q.y<r.y+r.h||q.y>=r.y-1&&q.y<r.y+r.h+1&&q.x>=r.x&&q.x<r.x+r.w));if(j>=0)i=j}   // a no-floor block (dock): its door column next to a floor belongs to that floor (else it lands 2 units off the wall after a 180/270 turn)
       return tm(q,i==null?null:fr(b[i]),i==null?null:fr(nb[i]),Hc)});b=nb};
   if(fl){const W=plcMmax(b,q=>q.x+dim(q).w),rs=q=>(def(q.cls)||{}).portsLayout?null:{rot:q.rot===0?2:q.rot===2?0:q.rot};
-    step(q=>({...q,x:W-q.x-dim(q).w,...(rs(q)||{})}),(q,F,G)=>{const d=dim(q);return{...q,...(mirM(q)||rs(q)||{}),x:F?G.x+F.w-(q.x-F.x)-d.w:W*FC-q.x-d.w}})}
+    step(q=>{const n={...q,x:W-q.x-dim(q).w,...(rs(q)||{})};if(q.df){const d=plcDfMir(q,n,W*FC);if(d)n.df=d;else delete n.df}return n},(q,F,G)=>{const d=dim(q);return{...q,...(mirM(q)||rs(q)||{}),x:F?G.x+F.w-(q.x-F.x)-d.w:W*FC-q.x-d.w}})}
   for(let k=0;k<(n&3);k++)step((q,Hc)=>({...q,x:Hc-q.y-dim(q).h,y:q.x,rot:((q.rot||0)+1)&3}),
     (q,F,G,Hc)=>{const d=dim(q),r={rot:((q.rot||0)+1)&3};return F?{...q,...r,x:G.x+F.h-(q.y-F.y)-d.h,y:G.y+q.x-F.x}:{...q,...r,x:Hc*FC-q.y-d.h,y:q.x}});
   return{blocks:b,ms:m}}
 function placerPaste(){
-  const P0=pasting.pl,P={...P0,...plT(P0,pasting.rot,pasting.fl)},bs=P.blocks.map(q=>({id:uid++,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:q.rot||0,pid:0,...(q.nm?{nm:q.nm}:{})}));   // nm: dock names of the build engine
+  const P0=pasting.pl,P={...P0,...plT(P0,pasting.rot,pasting.fl)},bs=P.blocks.map(q=>({id:uid++,cls:q.cls,x:hover.x+q.x,y:hover.y+q.y,h:layer,rot:q.rot||0,pid:0,...(q.nm?{nm:q.nm}:{}),...(q.df?{df:q.df.map(f=>({...f}))}:{})}));   // nm: dock names of the build engine
   const hit=bs.some(b=>{const d=dim(b);return nonM().some(o=>{if(!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})});
   if(hit){const f=bs.find(b=>{const d=dim(b);return nonM().some(o=>{if(!lvHit(o,b,layer))return false;const e=dim(o);return hitR({x:o.x,y:o.y,w:e.w,h:e.h},{x:b.x,y:b.y,w:d.w,h:d.h})})}),d=dim(f);
     placeRefused([{i:{cls:f.cls,x:f.x,y:f.y,l:layer,w:d.w,h:d.h,rot:f.rot},why:"block overlaps another block"}],"Build plan",pasting.rot,pasting.fl,bs.length,P.ms.length,{x:hover.x,y:hover.y});return}
@@ -875,7 +879,7 @@ function placerShot(){
     clearTimeout(plcIdle);plcIdle=setTimeout(()=>{plcCache=null;placerShot()},160);return}
   const sv={S:S.blocks,view,layer,V,W,H,dpr,sel,active,pasting,drag,ugPend,mode,SM,OV,hoverIn,cw:cv.width,ch:cv.height};PLC_PREV=true;
   try{
-    S.blocks=[...T.blocks.map((q,i)=>({id:i+1,cls:q.cls,x:q.x,y:q.y,h:0,rot:q.rot||0,pid:0})),...T.ms.map((it,i)=>({...it,id:T.blocks.length+i+1,h:0}))];
+    S.blocks=[...T.blocks.map((q,i)=>({id:i+1,cls:q.cls,x:q.x,y:q.y,h:0,rot:q.rot||0,pid:0,...(q.df?{df:q.df}:{})})),...T.ms.map((it,i)=>({...it,id:T.blocks.length+i+1,h:0}))];
     view="F";layer=0;V={ox:plcV.ox,oy:plcV.oy,z:plcV.z};W=w;H=h;dpr=1;sel=new Set();active=null;pasting=null;drag=null;ugPend=null;mode=null;SM=false;OV={};hoverIn=false;SV++;
     plcSetSize(cv,w,h);
     paint();
