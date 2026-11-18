@@ -4,7 +4,7 @@ const SIM_NOTES="Approximate, informational. Fixed 1 s steps. Containers start f
   "Belts have no buffer: items move instantly, limited per step by the slowest belt of the connected chain (items/min). Machines keep an input and an output buffer of 2 cycles, run a cycle only when all inputs are present and the output buffer has room, and are blocked when the output cannot be delivered. Recipes without inputs never run. "+
   "Items flow downstream only: producer to machines that need them, then containers, then through splitters/balancers. Splitter = round-robin over ENABLED output ports, skipping an output that is full or saturated so the rest takes more. Balancer = items from all enabled inputs evened across all enabled outputs. "+
   "Merge (T-join) = producers sharing a belt alternate each step. Undergrounds pass items unchanged. Splitter/balancer throughput is capped by its Mk speed (60/120/180 per min). Corners are plain belts. "+
-  "Elevator ports sit on the lateral edges of the door slots. A belt pointing ALONG the wall INTO the port edge is an input; any other belt beside the port (pointing away, or sideways) is an output, as for machines. An input sends items to the SAME-numbered port of the elevator at the same x,y on the level above or below, when an output belt is attached to that port; no such belt = input blocked. A splitter whose output face touches an elevator port edge is an input of that port; a splitter input (back) face touching it takes the elevator output. Items move at belt speed, no elevator speed limit. "+
+  "Elevator ports sit on the lateral edges of the door slots. A belt pointing ALONG the wall INTO the port edge is an input; any other belt beside the port (pointing away, or sideways) is an output, as for machines. An input sends items to the SAME-numbered port of the elevator at the same x,y on the nearest level above and below that has an output belt attached to that port (levels without one are skipped); no such belt = input blocked. A splitter whose output face touches an elevator port edge is an input of that port; a splitter input (back) face touching it takes the elevator output. Items move at belt speed, no elevator speed limit. "+
   "DEFAULT (not specified by the user): with both neighbours valid, items alternate round-robin between them, skipping a full destination. The whole factory runs on all levels in one simulation. With 'Simulate only current floor' on, only the shown floor runs; elevator inputs there discard their items and elevator outputs receive nothing.";
 let SIM=null;
 const simSig=()=>blkKey();
@@ -50,7 +50,8 @@ function simInit(o={}){
     if(into)add(Z.mS,c,{M,belt:e.b});else M.pb.push({belt:e.b,c});
   });
   Z.M.forEach(M=>{if(M.pb.length)Z.prod.push(M)});
-  Z.E.forEach(r=>[r.h+1,r.h-1].forEach(h=>{const o=elvO.get([r.x,r.y,h,r.pk].join());if(o)r.outs.push(o)}));   // destinations: adjacent levels up/down (round-robin via simRoute)
+  const lv=[...new Set(S.blocks.map(b=>b.h))].sort((x,y)=>x-y);
+  Z.E.forEach(r=>[lv.filter(h=>h>r.h),lv.filter(h=>h<r.h).reverse()].forEach(c=>{for(const h of c){const o=elvO.get([r.x,r.y,h,r.pk].join());if(o){r.outs.push(o);break}}}));   // destinations: nearest level up and down with an output belt on the same port (shaft passes through levels without one); round-robin via simRoute
   if(fl!=null)Z.E.forEach(r=>r.outs.push({sink:1}));   // floor-only mode: elevator = sink
   // docks: per-bay filters (see dockBelts in model.js)
   Z.dS=new Map();const dkB=dockBelts(S.blocks,K.belts,fl);
@@ -194,7 +195,7 @@ function theoProd0(allFloors){
     res=new Map(all.map(l=>[l,theoLevel(l,inj.get(l))]));
     const nj=new Map(all.map(l=>[l,[]])),sig=[];
     all.forEach(l=>{const{K,load}=res.get(l);K.elvIn.forEach(({k,id})=>{const ld=load.get(id);if(!ld)return;
-      const dst=[l+1,l-1].filter(h=>res.has(h)&&res.get(h).K.elvOut.has(k));if(!dst.length)return;   // even split over existing outputs, like the sim
+      const dst=[all.filter(h=>h>l).sort((x,y)=>x-y),all.filter(h=>h<l).sort((x,y)=>y-x)].map(c=>c.find(h=>res.get(h).K.elvOut.has(k))).filter(h=>h!=null);if(!dst.length)return;   // even split over existing outputs, like the sim
       ld.items.forEach((v,item)=>dst.forEach(h=>{nj.get(h).push({id:res.get(h).K.elvOut.get(k),item,rate:v/dst.length});sig.push(h+k+item+r2(v/dst.length))}))})});
     const sg=sig.join();if(sg===prev)break;prev=sg;inj=nj;
   }
