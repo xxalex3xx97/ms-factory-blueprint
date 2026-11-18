@@ -16,7 +16,7 @@ CATALOG.buildables.forEach(b=>{b.key=b.id;b.kind="m";BASE[b.key]=b});
 // shape iports (green port bars of the 2x2 elevator) = real elevator ports: platform = bbox of the bars, one port per bar, io = belt pointing into the platform
 CATALOG.blocks.forEach(b=>{const sh=typeof SHAPES!=="undefined"&&SHAPES[b.name],ip=sh&&sh.iports;if(!ip||b.elevator)return;
   const ys=ip.filter(q=>q[0]==='N'||q[0]==='S').map(q=>q[2]),lo=Math.floor(Math.min(...ys)),hi=Math.ceil(Math.max(...ys));   // platform = edge of the bars (6..24)
-  b.elevator={w:hi-lo,h:hi-lo,portsLayout:{toggleable:false,line:true,verified:false,source:"user 2026-11-18: ports = the green bars (shape iports)",ports:ip.map(([f,x,y])=>({face:f,pos:"cell",cx:Math.floor(x),cy:Math.floor(y)}))}}});
+  b.elevator={hid:1,w:hi-lo,h:hi-lo,portsLayout:{toggleable:false,line:true,verified:false,source:"user 2026-11-18: ports = the green bars (shape iports)",ports:ip.map(([f,x,y])=>({face:f,pos:"cell",cx:Math.floor(x),cy:Math.floor(y)}))}}});
 const OVK="msfb.catalog4";
 let OV={};
 try{OV=JSON.parse(localStorage.getItem(OVK)||"{}")||{}}catch(e){OV={}}
