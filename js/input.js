@@ -190,12 +190,12 @@ function mirM(b){
 }
 function clipT(n,fl){   // clip mirrored (fl) then rotated n x 90deg clockwise, origin at 0,0
   let l=clip.map(b=>({...b,raw:null}));   // clones never carry the imported raw coords
-  const K=b=>isM(b)&&l.some(q=>!isM(q))?FC:1,ref=()=>l.some(q=>!isM(q))?l.filter(q=>!isM(q)):l;   // Layout clip with floor items: machine coords are FC per block cell
+  const K=b=>isM(b)&&l.some(q=>!isM(q))?FC:1,WL=b=>K(b)===FC?2:0,ref=()=>l.some(q=>!isM(q))?l.filter(q=>!isM(q)):l;   // Layout clip with floor items: machine coords are FC per block cell; WL: a block's floor sits at the tile origin and is 2 units smaller than its tile, so a mirrored / rotated machine moves 2 units back to stay on the floor
   if(fl){const r=ref(),mx=plcMmin(r,b=>b.x),W=plcMmax(r,b=>b.x-mx+dim(b).w);
-    l=l.map(b=>{const m=mirM(b);return{...b,x:K(b)*(2*mx+W)-b.x-dim(b).w,...(m||((def(b.cls)||{}).portsLayout?{}:{rot:b.rot===0?2:b.rot===2?0:b.rot}))}})}
+    l=l.map(b=>{const m=mirM(b);return{...b,x:K(b)*(2*mx+W)-b.x-dim(b).w-WL(b),...(m||((def(b.cls)||{}).portsLayout?{}:{rot:b.rot===0?2:b.rot===2?0:b.rot}))}})}
   for(let k=0;k<n;k++){
     const r=ref(),mx=plcMmin(r,b=>b.x),my=plcMmin(r,b=>b.y),H=plcMmax(r,b=>b.y-my+dim(b).h);
-    l=l.map(b=>{const d=dim(b),c=K(b);return{...b,x:c*H-(b.y-c*my)-d.h,y:b.x-c*mx,rot:((b.rot||0)+1)&3}});
+    l=l.map(b=>{const d=dim(b),c=K(b);return{...b,x:c*H-(b.y-c*my)-d.h-WL(b),y:b.x-c*mx,rot:((b.rot||0)+1)&3}});
   }
   const r=ref(),mx=plcMmin(r,b=>b.x),my=plcMmin(r,b=>b.y),mh=plcMmin(r,b=>b.h);
   return l.map(b=>{const c=K(b);return{...b,x:b.x-c*mx,y:b.y-c*my,h:b.h-mh}});
