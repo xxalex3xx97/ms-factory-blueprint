@@ -13,7 +13,16 @@ window.chainBuild=function(opts){
     for(let k=0;k<combos.length;k++){const [pack,jog]=combos[k],r=chainBuild({...opts,pack,jog});r.badN=HAND.check().bad.length;res.push(r);if(res.length===1&&r.blocks.length>150)combos=combos.slice(0,2)}   // very big chains: only the two packing variants (the preview builds on the main thread)
     const sc=r=>[(r.report.failed||0)+r.badN,r.blocks.length,r.belts||0];let bi=0;
     res.forEach((r,k)=>{const a=sc(r),b=sc(res[bi]);for(let q=0;q<3;q++){if(a[q]!==b[q]){if(a[q]<b[q])bi=k;break}}});
-    return bi===res.length-1?res[bi]:chainBuild({...opts,pack:combos[bi][0],jog:combos[bi][1]});
+    let best=bi===res.length-1?res[bi]:chainBuild({...opts,pack:combos[bi][0],jog:combos[bi][1]});
+    // unrouted belts: route them first (sequential routing is first come first served), a few rounds
+    const prio=new Set();
+    for(let round=0;round<4&&best.fails&&best.fails.length&&(best.report.failed||0);round++){
+      best.fails.forEach(f=>{const q=String(f).split(' no route')[0];if(q)prio.add(q)});
+      const t=chainBuild({...opts,pack:combos[bi][0],jog:combos[bi][1],prio:[...prio]});t.badN=HAND.check().bad.length;
+      if((t.report.failed||0)+t.badN<(best.report.failed||0)+(best.badN||0)||(((t.report.failed||0)+t.badN===(best.report.failed||0)+(best.badN||0))&&t.blocks.length<best.blocks.length))best=t;
+      else{best=chainBuild({...opts,pack:combos[bi][0],jog:combos[bi][1],prio:best.prioUsed||[]});break}
+      best.prioUsed=[...prio]}
+    return best;
   }
   // pass 1 measures the lanes every street column and the trunk bands really need (wide streets), pass 2 builds with exactly that much street: a much smaller factory, far fewer pieces
   if(!opts.noAdapt&&!opts.capsDone){let caps={...(opts.caps||{})};   // normal docks: each block holds fewer machines; find the real capacity per product with dry builds, then plan the block count with it
@@ -111,7 +120,8 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
       for(let i=0;i<wps.length;i++){if(goalExit&&i===L2-1)continue;const w=wps[i],n=wps[i+1],dir=n?dirOf(sgn(n[0]-w[0]),sgn(n[1]-w[1])):0;if(!HAND.free(w[0],w[1])||mine.has(w[0]+','+w[1])){LB.cell=w;LB.run='waypoint '+i;return false}out.push({cls:BELT,x:w[0],y:w[1],rot:dir});mine.add(w[0]+','+w[1])}
       for(let i=0;i+1<wps.length;i++)if(!planRun(wps[i],wps[i+1],mine,out,goalExit&&i+1===L2-1))return false;
       out.forEach(p=>{const sp=p.span;delete p.span;HAND.piece({...p,g:tag});if(sp){const v=sp[0][0]===sp[1][0],ax=v?'v'+sp[0][0]:'h'+sp[0][1],l=HAND.S.span.get(ax)||[];l.push(v?[Math.min(sp[0][1],sp[1][1]),Math.max(sp[0][1],sp[1][1])]:[Math.min(sp[0][0],sp[1][0]),Math.max(sp[0][0],sp[1][0])]);HAND.S.span.set(ax,l)}});return true};
-    ents.sort((a,b)=>a.gx-b.gx||b.dem-a.dem);   // raw to end: blocks west to east
+    const PR=new Set(opts.prio||[]),ek=e=>e.item.replace('ITEM_','')+' > '+e.blk;
+    ents.sort((a,b)=>(PR.has(ek(b))-PR.has(ek(a)))||a.gx-b.gx||b.dem-a.dem);   // raw to end: blocks west to east; a belt that found no route in the previous try goes first (opts.prio)
     // entries without dock of one block sit on adjacent rows: their consumer lanes are taken together, in the order that keeps every corner free (from the top: lower row = lower lane x; from the bottom: the opposite)
     const pre=new Map();
     {const g={};ents.forEach(e=>{if(!e.north&&!e.out&&westOf[e.gx]!=null)(g[e.gx+','+e.gy]=g[e.gx+','+e.gy]||[]).push(e)});
