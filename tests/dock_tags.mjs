@@ -1,5 +1,5 @@
 // dock_tags: generated dock names carry the mining-mod tag words (cmpDockTag in js/cmp_dock.js).
-// One ore -> "[AUTO-FILTER] [ORE]"; several ores -> ore tags only; non-ore or none -> ''. Name survives the blueprint export.
+// Every ore-only dock -> "[AUTO-FILTER] " + one tag per ore (first appearance, deduplicated); non-ore, mixed or none -> ''. Name survives the blueprint export.
 // Run: node tests/dock_tags.mjs   Exit 1 on FAIL or page error.
 import {createRequire} from 'module';
 import path from 'path';
@@ -17,10 +17,12 @@ try {
   await page.waitForFunction(() => window.__fb && typeof cmpDockTag === 'function');
   const r = await page.evaluate(() => {
     S.blocks = [{id: 1, cls: plcCls('BPO_Dock'), x: 0, y: 0, h: 0, rot: 0, pid: 0, nm: cmpDockTag(['titaniumore', '', ''])}];
-    return {one: cmpDockTag(['titaniumore', '']), two: cmpDockTag(['nickelore', 'waterice']), ice: cmpDockTag(['waterice']), non: cmpDockTag(['basiccircuit']), mix: cmpDockTag(['silica', 'basiccircuit']), none: cmpDockTag([]), name: __fb.build().Blocks[0].Name};
+    return {one: cmpDockTag(['titaniumore', '']), two: cmpDockTag(['nickelore', 'waterice']), three: cmpDockTag(['titaniumore', 'nickelore', 'cobaltore']), dup: cmpDockTag(['nickelore', 'nickelore', 'waterice']), ice: cmpDockTag(['waterice']), non: cmpDockTag(['basiccircuit']), mix: cmpDockTag(['silica', 'basiccircuit']), none: cmpDockTag([]), name: __fb.build().Blocks[0].Name};
   });
   check(r.one === '[AUTO-FILTER] [TITANIUM]', 'one ore: ' + r.one);
-  check(r.two === '[NICKEL] [WATERICE]', 'two ores no auto-filter: ' + r.two);
+  check(r.two === '[AUTO-FILTER] [NICKEL] [WATERICE]', 'two ores: auto-filter plus one tag per ore: ' + r.two);
+  check(r.three === '[AUTO-FILTER] [TITANIUM] [NICKEL] [COBALT]', 'three ores in tag order: ' + r.three);
+  check(r.dup === '[AUTO-FILTER] [NICKEL] [WATERICE]', 'duplicate ore keys deduplicated: ' + r.dup);
   check(r.ice === '[AUTO-FILTER] [WATERICE]', 'ice: ' + r.ice);
   check(r.non === '' && r.mix === '' && r.none === '', 'non-ore, mixed, none give no tag');
   check(r.name === '[AUTO-FILTER] [TITANIUM]', 'tag survives the blueprint export Name: ' + r.name);
