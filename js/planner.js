@@ -164,6 +164,10 @@ const plnDefRate=()=>{const it=$("plnItem").value;if(!it)return;const P=plan(it,
 $("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDefRate();plnDraw();plnFit()};
 $("plnEnr").onchange=plnDraw;
 $("plnProto").onchange=()=>{plnFillItems();plnDraw()};   // PLN_OFF kept: drag offsets survive
+// rate fields take a calculation (30*36, 1200/4, (10+5)*2): evaluated on Enter / leaving the field; no replan while an operator is being typed
+const rateCalc=s=>{s=String(s).replace(/[x×]/gi,"*").replace(/,/g,".").trim();if(!/^[\d\s.+\-*/()]+$/.test(s)||!/[+*/()]|.-/.test(s))return null;try{const v=Function('"use strict";return ('+s+')')();return Number.isFinite(v)&&v>0?Math.round(v*1e6)/1e6:null}catch(e){return null}};
+["input","change"].forEach(t=>document.addEventListener(t,e=>{const el=e.target;if(!el||!el.dataset||el.dataset.calc===undefined)return;
+  if(t==="input"){if(/[+*/()x×]|.-/i.test(el.value))e.stopImmediatePropagation()}else{const v=rateCalc(el.value);if(v!=null)el.value=v}},true));
 $("plnRate").oninput=plnDraw;$("plnRate").onchange=()=>{if(!(+$("plnRate").value>0)){$("plnRate").value=1;plnDraw()}};   // redraw only when clamped: a plain blur must not re-render the diagram under a pointer press
 $("plnMk").onchange=$("plnSp").onchange=$("plnBal").onchange=plnDraw;
 $("plnOut").onchange=ev=>{const t=ev.target;if(t.classList.contains("plnAlt")){PLN_PICK[t.dataset.item]=t.value;plnDraw()}};
