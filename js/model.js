@@ -20,6 +20,7 @@ const matchRule=(b,nb)=>!!((def(b.cls)||{}).doorMatch||(def(nb.cls)||{}).doorMat
 // levels a block spans (catalog `levels`, EA BlockBounds height / 4; default 1): block b at level h occupies h..h+levels-1
 const lvl=b=>(def(b.cls)||{}).levels||1;
 // blocks b (at level L) and o share a level when their level spans intersect
+const cov=(b,L)=>b.h<=L&&L<b.h+lvl(b);   // block b has a storey on level L (a tall block shows its floor on every level it covers, also in floor view)
 const lvHit=(o,b,L)=>o.h<L+lvl(b)&&L<o.h+lvl(o);
 // floor block covering cell (x,y) on level L (cell units), or undefined
 function floorAt(L,x,y){return nonM().find(o=>{if(o.h!==L||!floorRect(o))return false;const c=fcell(o);return x>=c.cx&&x<c.cx+c.cw&&y>=c.cy&&y<c.cy+c.ch})}
@@ -110,8 +111,8 @@ function polyRects(b){const t=shapeTf(b);if(!t||!t.sh.polys||!floorRect(b))retur
 const elvRect=b=>{const d=def(b.cls),r=d&&d.elevator&&!d.elevator.hid&&floorRect(b);return r?{x:r.x+((r.w-d.elevator.w)>>1),y:r.y+((r.h-d.elevator.h)>>1),w:d.elevator.w,h:d.elevator.h,b}:null};
 function areas(L){
   const fb=[],floors=[],doors=[],gaps=[],strips=[],blocked=[],mis=[],own=new Map(),pn=new Set();   // pn: cells of no-floor blocks with ports (dock, drone bay): a station door next to them is 1 deep (station side only)
-  S.blocks.forEach(b=>{if(b.h!==L||!nfRect(b))return;const sh=SHAPES[(def(b.cls)||{}).name];if(!sh||!sh.ports||!sh.ports.length)return;const c=fcell(b);for(let i=0;i<c.cw;i++)for(let j=0;j<c.ch;j++)pn.add((c.cx+i)+","+(c.cy+j))});
-  S.blocks.filter(b=>b.h===L&&!isM(b)).forEach(b=>{
+  S.blocks.forEach(b=>{if(!cov(b,L)||!nfRect(b))return;const sh=SHAPES[(def(b.cls)||{}).name];if(!sh||!sh.ports||!sh.ports.length)return;const c=fcell(b);for(let i=0;i<c.cw;i++)for(let j=0;j<c.ch;j++)pn.add((c.cx+i)+","+(c.cy+j))});
+  S.blocks.filter(b=>cov(b,L)&&!isM(b)).forEach(b=>{
     const r=floorRect(b);if(!r)return;
     const f={b,d:dim(b),r};r.cuts=[[],[],[],[]];r.wcuts=[[],[],[],[]];floors.push(r);fb.push(f);   // cuts: ring floor in door slots; wcuts: band cut only where a door passage joins two blocks
     const fo=fcell(b);for(let i=0;i<fo.cw;i++)for(let j=0;j<fo.ch;j++)own.set((fo.cx+i)+","+(fo.cy+j),f);
