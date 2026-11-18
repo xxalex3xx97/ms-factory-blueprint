@@ -59,8 +59,9 @@ function rbBuild(x){
     if(!m.kids.length&&o.parents&&o.parents.length===1){m.defer=true;continue}
     const th=th0,own=[];kp.forEach(p=>p.mem.forEach((pm,pb)=>p.lanes.filter(l=>l.par===m.id).forEach(l=>own.push({p,pb,l}))));
     const ownIds=new Set(own.map(a=>a.l.id)),okIds=new Set([...ownIds,...th.map(t=>t.l.id)]),c0=Math.max(hb?1:0,...kp.map(p=>p.c+p.pk.nPhys),...own.map(a=>fr(a.p,a.l)+1),...dk.map(p=>p.pk.nPhys+(hubOwn&&!p.o.raw?1:0)));let hit=false,lastWhy='';   // docks: gx=0 holds raw hubs only
+    const tc=Date.now();   // 15 s budget covers this module's candidate loop only, not pack sizing / earlier routing
     for(const cd of rbCandidates(c0,rowWant,24)){
-      if(Date.now()-t0>15000)return no('rb: time');
+      if(Date.now()-tc>15000)return no('rb: time');
       const {c,r}=cd;
       if(th.some(t=>clash(r,t)))continue;   // a lane crossing this module must run through a hull block, not through a member row
       const lcells=[],taken=new Set();let okL=true;
