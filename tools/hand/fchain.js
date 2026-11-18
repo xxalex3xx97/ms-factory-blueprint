@@ -7,6 +7,13 @@
 window.chainBuild=function(opts){
   opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.noDock=opts.docks===false;HAND.allRaw=!!opts.single;   // single: one recipe only (template gallery), every input is a source
   HAND.nrm=opts.dockType==='nrm';   // input dock kind only; output dock kind is nrmO below
+  // docks off: try factory rows packed directly against each other and with a street row between them, keep the build with fewer blocks (packed rows lose the street rows as trunks on big chains)
+  if(opts.pack===undefined&&HAND.noDock&&!opts.dry&&!opts.noAdapt&&!opts.capsDone){
+    const A=chainBuild({...opts,pack:false}),B=chainBuild({...opts,pack:true});
+    const score=r=>[r.report.failed||0,r.blocks.length,r.report.skipped?r.report.skipped.length:0];
+    const better=score(B)[0]<score(A)[0]||(score(B)[0]===score(A)[0]&&score(B)[1]<score(A)[1]);
+    return better?B:chainBuild({...opts,pack:false});
+  }
   // pass 1 measures the lanes every street column and the trunk bands really need (wide streets), pass 2 builds with exactly that much street: a much smaller factory, far fewer pieces
   if(!opts.noAdapt&&!opts.capsDone){let caps={...(opts.caps||{})};   // normal docks: each block holds fewer machines; find the real capacity per product with dry builds, then plan the block count with it
     for(let i=0;i<4;i++){const r=chainBuild({...opts,caps,sw:opts.sw0||16,tbs:opts.tbs||8,noAdapt:true,dry:true,noRoute:true});let bad=false;(r.specs||[]).forEach(sp=>{const inf=r.info.find(x=>x.name===sp.name);if(inf&&sp.n>inf.cap){caps[sp.item]=Math.min(caps[sp.item]||99,inf.cap);bad=true}});if(!bad)break}
@@ -37,7 +44,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
   let x=0;const specs=[],streetBx=new Set(),westOf={},westOf0={},swMap={};let maxRows=1;
   colList.forEach((col,ci)=>{col.hasRaw=col.items.some(i=>rawOf(i.n));x+=col.hasRaw?(HAND.noDock?2:4):0;col.gx=x;col.sw=sws[ci]||SW;col.half=(opts.halfs||[])[ci];col.west=ci?colList[ci-1].gx+1+colList[ci-1].sw:null;col.west0=ci?colList[ci-1].gx+2:null;swMap[col.gx+2]={sw:col.sw,half:col.half};x+=2+col.sw;for(let d=2;d<2+col.sw;d++)streetBx.add(col.gx+d);   // block, output block, street 4 strides wide (64 lanes)
     let cur=0;col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter],nExtra=rawOf(it.n)?Math.max(0,new Set(it.n.rec.i.map(([q])=>q).filter(q=>isRaw(q)||q===it.n.rec.o[0])).size-(HAND.noDock||HAND.nrm?2:1)):0;westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
-      if(nExtra)cur+=2;const gyRow=cur;cur+=nExtra?4:2;maxRows=Math.max(maxRows,cur/2);   // a block with extra docks keeps the rows above and below for them
+      if(nExtra)cur+=2;const gyRow=cur;cur+=HAND.noDock&&opts.pack!==false?(nExtra?3:1):(nExtra?4:2);maxRows=Math.max(maxRows,cur/2);   // a block with extra docks keeps the rows above and below for them
       specs.push({gx:col.gx,gy:TBS+1+gyRow,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),nx:nExtra,col:dep[it.n.item]})})});
   specs.forEach(s=>{const pr=P.edges.filter(e=>e.to===s.item&&e.from!==s.item).map(e=>e.from);s.yUp=specs.some(q=>pr.includes(q.item)&&q.gy<s.gy)});   // a producer block on a higher row: this block's entries must be reachable from the north
   const lastCol=colList[colList.length-1],lastGx=lastCol.gx,gxO=lastGx+2+lastCol.sw,nLn=Math.ceil(RATE/[60,120,180][MK]-1e-9),nrmO=(opts.outDockType||opts.dockType)==='nrm',nOD=opts.outDock?Math.ceil(nLn/(nrmO?4:8)):0;   // output dock: an extra tile column east of everything (nLn lanes of the final item, 8 lanes per industrial dock)

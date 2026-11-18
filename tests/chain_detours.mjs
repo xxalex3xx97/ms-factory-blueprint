@@ -9,9 +9,9 @@ const {chromium} = require('C:/Users/SFidelis/AppData/Roaming/npm/node_modules/o
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PAGE = pathToFileURL(path.join(HERE, '..', 'index.html')).href;
 const CASES = [   // [item, rate, machines (planner N), max blocks, max waste]
-  ['Servomotor', 150, 80, 30, 0], ['Servomotor', 60, 32, 30, 0], ['Servomotor', 300, 160, 53, 0], ['Superalloy', 120, 17, 25, 38],
-  ['BasicCircuit', 200, 74, 26, 120], ['Capacitor', 100, 22, 14, 0], ['MagneticCoils', 300, 25, 8, 0],
-  ['Enzyme', 20, 3, 25, 144], ['AdvancedCircuits', 60, 220, 188, 1012]];
+  ['Servomotor', 150, 80, 26, 0], ['Servomotor', 60, 32, 26, 0], ['Servomotor', 300, 160, 42, 0], ['Superalloy', 120, 17, 22, 0],
+  ['BasicCircuit', 200, 74, 26, 120], ['Capacitor', 100, 22, 13, 0], ['MagneticCoils', 300, 25, 8, 0],
+  ['Enzyme', 20, 3, 24, 144], ['AdvancedCircuits', 60, 220, 188, 1012]];
 const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 const pg = await br.newPage();
 pg.on('pageerror', e => console.log('ERR', e.message));
