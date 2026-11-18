@@ -51,7 +51,7 @@ function simInit(o={}){
   });
   Z.M.forEach(M=>{if(M.pb.length)Z.prod.push(M)});
   const lv=[...new Set(S.blocks.map(b=>b.h))].sort((x,y)=>x-y);
-  Z.E.forEach(r=>[lv.filter(h=>h>r.h),lv.filter(h=>h<r.h).reverse()].forEach(c=>{for(const h of c){const o=elvO.get([r.x,r.y,h,r.pk].join());if(o){r.outs.push(o);break}}}));   // destinations: nearest level up and down with an output belt on the same port (shaft passes through levels without one); round-robin via simRoute
+  Z.E.forEach(r=>lv.forEach(h=>{if(h===r.h)return;const o=elvO.get([r.x,r.y,h,r.pk].join());if(o)r.outs.push(o)}));   // destinations: every other level with an output belt on the same port (shaft passes through levels without one); round-robin via simRoute, a full output belt is skipped
   if(fl!=null)Z.E.forEach(r=>r.outs.push({sink:1}));   // floor-only mode: elevator = sink
   // docks: per-bay filters (see dockBelts in model.js)
   Z.dS=new Map();const dkB=dockBelts(S.blocks,K.belts,fl);
@@ -193,10 +193,7 @@ function theoProd0(allFloors){
   let inj=new Map(all.map(l=>[l,[]])),res,prev="";   // elevator transfers need every level: repeat until the flow stops changing
   for(let pass=0;pass<Math.min(all.length,6)+1;pass++){
     res=new Map(all.map(l=>[l,theoLevel(l,inj.get(l))]));
-    const nj=new Map(all.map(l=>[l,[]])),sig=[];
-    all.forEach(l=>{const{K,load}=res.get(l);K.elvIn.forEach(({k,id})=>{const ld=load.get(id);if(!ld)return;
-      const dst=[all.filter(h=>h>l).sort((x,y)=>x-y),all.filter(h=>h<l).sort((x,y)=>y-x)].map(c=>c.find(h=>res.get(h).K.elvOut.has(k))).filter(h=>h!=null);if(!dst.length)return;   // even split over existing outputs, like the sim
-      ld.items.forEach((v,item)=>dst.forEach(h=>{nj.get(h).push({id:res.get(h).K.elvOut.get(k),item,rate:v/dst.length});sig.push(h+k+item+r2(v/dst.length))}))})});
+    const{inj:nj,sig}=elvInject(all,l=>res.get(l).K,(l,id)=>res.get(l).load.get(id),inj);   // same rule as links (model.js)
     const sg=sig.join();if(sg===prev)break;prev=sg;inj=nj;
   }
   levels.forEach(L=>{const t=res.get(L);['byItem','byType','count'].forEach(k=>Object.entries(t[k]).forEach(([id,v])=>out[k][id]=(out[k][id]||0)+v))});

@@ -1822,6 +1822,20 @@ async function s16e(br) {
     await run(600); const s = await conts(), src = at(s, 1), a = at(s, 0), b = at(s, 2);
     chk('16e full destination below: stays full, all items go to level 2', a.have === 16000 && Math.abs(b.in - src.out) <= 1, JSON.stringify([a.have, b.in, src.out]));
   }
+  // g2) input on level 0, outputs on levels 2 and 3 (level 1 has no elevator belt): non-adjacent outputs both fill, even split, estimate agrees
+  await scene([0, 1, 2, 3], [{h: 0, kind: 'in', contents: INF}, {h: 2, kind: 'out'}, {h: 3, kind: 'out'}]);
+  {
+    await run(600); const s = await conts(), a = at(s, 2), b = at(s, 3);
+    chk('16e non-adjacent outputs (L2, L3) both fill, even split (+-5%)', a.have > 0 && b.have > 0 && Math.abs(a.have - b.have) <= 0.05 * (a.have + b.have) + 2, JSON.stringify([a.have, b.have]));
+    const r = await pg.evaluate(() => [2, 3].map(h => { __fb.setLayer(h); const K = __fb.links(); let t = 0; K.elvOut.forEach(id => { const ld = K.load.get(id); if (ld) ld.items.forEach(v => t += v); }); return t; }));
+    chk('16e estimate: both outputs carry an equal, non-zero share', r[0] > 0 && Math.abs(r[0] - r[1]) < 0.01, JSON.stringify(r));
+  }
+  // g3) two inputs (L0, L1), outputs L2 and L3: one output belt never carries more than its belt speed, the rest goes to the other output
+  await scene([0, 1, 2, 3], [{h: 0, kind: 'in', contents: INF}, {h: 1, kind: 'in', contents: INF}, {h: 2, kind: 'out'}, {h: 3, kind: 'out'}]);
+  {
+    const r = await pg.evaluate(() => { const cap = Math.max(...[...__fb.S.blocks].filter(b => !/Elevator/.test(b.cls) && __fb.def(b.cls) && __fb.def(b.cls).speed).map(b => __fb.def(b.cls).speed.itemsPerMin)); return [2, 3].map(h => { __fb.setLayer(h); const K = __fb.links(); let t = 0; K.elvOut.forEach(id => { const ld = K.load.get(id); if (ld) ld.items.forEach(v => t += v); }); return {h, t, cap}; }); });
+    chk('16e two inputs, two outputs: each output belt <= belt speed and both used', r.every(x => x.t > 0 && x.t <= x.cap + 0.01), JSON.stringify(r));
+  }
   // h) every level runs in one sim; simSig covers every level
   {
     const r = await pg.evaluate(() => { const a = __fb.simSig(), b1 = __fb.S.blocks.find(q => q.h === 1); const same = a === __fb.simSig(); b1.rot = ((b1.rot || 0) + 1) & 3; return {same, changed: a !== __fb.simSig()}; });
