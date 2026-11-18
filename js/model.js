@@ -230,7 +230,8 @@ function portsOf(b){
     const f=q.face,fi=FN.indexOf(f);if(fi<0)return;
     const len=fi&1?H:W,ET=DOFF-((d&&d.floorInset)||0),c=q.pos==='start'?ET:q.pos==='end'?ET+DOORW-1:Math.max(0,Math.min(len-1,(parseInt(q.pos,10)||1)-1));   // door slot ends (elevator)
     let x=fi===1?W-1:fi===3?0:c,y=fi===2?H-1:fi===0?0:c,w=W,h=H,nx=NRM[fi][0],ny=NRM[fi][1];
-    let ix=0,iy=0;const is=q.pos==='start'?-1:1;if(fi&1)iy=is;else ix=is;   // elevator io: unit step of a belt entering the port along the wall (N/S: start -1,0 end 1,0; E/W: start 0,-1 end 0,1)
+    if(q.pos==='cell'){x=q.cx;y=q.cy}   // explicit floor cell (2x2 elevator: platform-edge cell of each bar)
+    let ix=0,iy=0;const is=q.pos==='start'?-1:1;if(q.pos==='cell'){ix=-nx;iy=-ny}else if(fi&1)iy=is;else ix=is;   // elevator io: unit step of a belt entering the port along the wall (N/S: start -1,0 end 1,0; E/W: start 0,-1 end 0,1)
     for(let r=0;r<(b.rot&3);r++){[x,y]=[h-1-y,x];[w,h]=[h,w];[nx,ny]=[-ny,nx];[ix,iy]=[-iy,ix]}
     // splitter input (back) face is not a game port: never toggleable, always enabled
     const key=f+i,tg=!!L.toggleable&&!(q.dir==="in"&&isSplitterCls(b.cls));o.push({key,f,i,pos:q.pos,dir:q.dir||null,tg,en:!tg||!off.includes(key),pr:tg&&hasPrio(b.cls)&&q.dir==="out"&&!!b.pr&&b.pr[0]===prIdx(b,{f,pos:q.pos}),wf:(fi+(b.rot&3))%4,x:ox+x,y:oy+y,nx,ny,line:!!L.line,io:d&&d.elevator?[ix,iy]:null});
