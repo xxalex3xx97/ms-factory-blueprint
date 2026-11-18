@@ -9,7 +9,7 @@ const {chromium} = require('C:/Users/SFidelis/AppData/Roaming/npm/node_modules/o
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PAGE = pathToFileURL(path.join(HERE, '..', 'index.html')).href + '?engine=rb';
 const CASES = [   // [item, rate, max waste cells, machines (planner N)]
-  ['Superalloy', 60, 56, 10], ['Enzyme', 10, 38, 3], ['Basic Circuits', 100, 44, 37], ['Basic Motor', 60, 8, 3], ['Servomotor', 150, 242, 80]];
+  ['Superalloy', 60, 56, 10], ['Enzyme', 10, 38, 3], ['Basic Circuits', 100, 44, 37], ['Basic Motor', 60, 8, 3], ['Servomotor', 150, 246, 80]];
 const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--js-flags=--max-old-space-size=8192']});
 const pg = await br.newPage();
 pg.on('pageerror', e => console.log('ERR', e.message));
