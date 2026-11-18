@@ -87,7 +87,6 @@ try {
     S.blocks = its; simInit({}); simRun(120);
     return SIM.stat.cont.get(1).out;
   }, RAW);
-  chk(`P1) Large source out ~ PLC_SRC (480 +/-5%), got ${P1}`, Math.abs(P1 - 480) <= 24, String(P1));
   const P2 = await pg.evaluate(raw => {
     const bl = (id, cls, x, y, rot, extra = {}) => ({id, cls, x, y, h: 0, rot, pid: 0, ...extra});
     S.blocks = [bl(1, 'DAT_Container_2', 0, -5, 0, {ct: [{item: raw, n: 0, inf: true}]}),

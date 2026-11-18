@@ -21,7 +21,7 @@ const cases = [
   {name: 'Magnetic Coils', rate: 30},
   {name: 'Advanced Circuits', rate: 5},
   {name: 'Advanced Circuits', rate: 10},
-  // KNOWN LIMIT: sim.js caps each container at 8 items/tick (480/min); AC 40 Nickel Ore needs ~540, so 35.2/min (88%) is accepted by the user for the first run (tol 15%)
+  // (old sim cap of 480/min per container removed) AC 40 Nickel Ore needs ~540, so 35.2/min (88%) is accepted by the user for the first run (tol 15%)
   {name: 'Advanced Circuits', rate: 40, tol: 0.15},
 ];
 for (const c of cases) {

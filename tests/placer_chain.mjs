@@ -188,7 +188,7 @@ try {
   chk('A) modal open, all blocks ticked, no modal error, plcL.bank, stages===2, hubs===1', A.open && A1.err === '' && Al.bank === true && Al.stages === 2 && Al.hubs === 1, JSON.stringify({A1, Al}));
   chk('A) note: Stage 1 Titanium Plates line', /Stage 1 Titanium Plates: 3 machines, 1 trunk \(3\), \d+ rows/.test(A1.note), A1.note);
   chk('A) note: Stage 2 Basic Motor line', /Stage 2 Basic Motor: 2 machines, 2 trunks \(1\+1\)/.test(A1.note), A1.note);
-  chk('A) note: hub line 60/min (max 480)', /Hub container between stages: 60\/min \(max 480\)/.test(A1.note), A1.note);
+  chk('A) note: hub line 60/min', /Hub container between stages: 60\/min/.test(A1.note), A1.note);
   chk('A) pvIO: 1 hub container(s) between stages', /1 hub container\(s\) between stages/.test(A1.io), A1.io);
   const Aio = await pg.evaluate(() => ({io: $('pvIO').textContent, drawn: plcT.ms.filter(b => b.cls === 'DAT_Container').length}));
   const Am = /closed: (\d+) source \+ (\d+) in-buffer west, (\d+) out-buffer \+ (\d+) sink east \+ (\d+) hub container\(s\) between stages; (\d+) containers in all/.exec(Aio.io);
