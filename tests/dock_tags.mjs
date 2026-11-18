@@ -1,5 +1,5 @@
 // dock_tags: generated dock names carry the mining-mod tag words (cmpDockTag in js/cmp_dock.js).
-// Every ore-only dock -> "[AUTO-FILTER] " + one tag per ore (first appearance, deduplicated); non-ore, mixed or none -> ''. Name survives the blueprint export.
+// One ore, one filter per dock: exactly one ore key after dedupe -> "[AUTO-FILTER] [ORE]"; 2+ different ores, non-ore, mixed or none -> ''. Name survives the blueprint export.
 // Run: node tests/dock_tags.mjs   Exit 1 on FAIL or page error.
 import {createRequire} from 'module';
 import path from 'path';
@@ -17,13 +17,13 @@ try {
   await page.waitForFunction(() => window.__fb && typeof cmpDockTag === 'function');
   const r = await page.evaluate(() => {
     S.blocks = [{id: 1, cls: plcCls('BPO_Dock'), x: 0, y: 0, h: 0, rot: 0, pid: 0, nm: cmpDockTag(['titaniumore', '', ''])}];
-    return {one: cmpDockTag(['titaniumore', '']), two: cmpDockTag(['nickelore', 'waterice']), three: cmpDockTag(['titaniumore', 'nickelore', 'cobaltore']), dup: cmpDockTag(['nickelore', 'nickelore', 'waterice']), ice: cmpDockTag(['waterice']), non: cmpDockTag(['basiccircuit']), mix: cmpDockTag(['silica', 'basiccircuit']), none: cmpDockTag([]), name: __fb.build().Blocks[0].Name};
+    return {one: cmpDockTag(['titaniumore', '']), dup: cmpDockTag(['titaniumore', 'titaniumore']), ice: cmpDockTag(['waterice']), two: cmpDockTag(['nickelore', 'waterice']), three: cmpDockTag(['titaniumore', 'nickelore', 'cobaltore']), non: cmpDockTag(['basiccircuit']), mix: cmpDockTag(['silica', 'basiccircuit']), none: cmpDockTag([]), name: __fb.build().Blocks[0].Name};
   });
   check(r.one === '[AUTO-FILTER] [TITANIUM]', 'one ore: ' + r.one);
-  check(r.two === '[AUTO-FILTER] [NICKEL] [WATERICE]', 'two ores: auto-filter plus one tag per ore: ' + r.two);
-  check(r.three === '[AUTO-FILTER] [TITANIUM] [NICKEL] [COBALT]', 'three ores in tag order: ' + r.three);
-  check(r.dup === '[AUTO-FILTER] [NICKEL] [WATERICE]', 'duplicate ore keys deduplicated: ' + r.dup);
+  check(r.dup === '[AUTO-FILTER] [TITANIUM]', 'duplicate ore keys give the one ore tag: ' + r.dup);
   check(r.ice === '[AUTO-FILTER] [WATERICE]', 'ice: ' + r.ice);
+  check(r.two === '', 'two different ores give no tag: ' + r.two);
+  check(r.three === '', 'three ores give no tag: ' + r.three);
   check(r.non === '' && r.mix === '' && r.none === '', 'non-ore, mixed, none give no tag');
   check(r.name === '[AUTO-FILTER] [TITANIUM]', 'tag survives the blueprint export Name: ' + r.name);
 } catch (e) { fails++; console.log('FAIL exception ' + e.stack) } finally { await br.close() }
