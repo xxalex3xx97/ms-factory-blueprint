@@ -8,10 +8,10 @@ const require = createRequire(import.meta.url);
 const {chromium} = require('C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PAGE = pathToFileURL(path.join(HERE, '..', 'index.html')).href;
-const CASES = [   // [item, rate, machines (planner N), max blocks, max waste]
-  ['Servomotor', 150, 80, 26, 0], ['Servomotor', 60, 32, 26, 0], ['Servomotor', 300, 160, 42, 0], ['Superalloy', 120, 17, 22, 0],
+const CASES = [   // [item, rate, machines (planner N), max blocks, max waste]; fails also counts HAND.check() problems (a layout with a foreign underground pair is not placeable)
+  ['Servomotor', 150, 80, 26, 0], ['Servomotor', 180, 96, 27, 96], ['Servomotor', 60, 32, 26, 0], ['Servomotor', 300, 160, 44, 224], ['Superalloy', 120, 17, 23, 102],
   ['BasicCircuit', 200, 74, 26, 120], ['Capacitor', 100, 22, 13, 0], ['MagneticCoils', 300, 25, 8, 0],
-  ['Enzyme', 20, 3, 24, 144], ['AdvancedCircuits', 60, 220, 188, 1012]];
+  ['Enzyme', 20, 3, 24, 144], ['AdvancedCircuits', 60, 220, 188, 1084]];
 const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 const pg = await br.newPage();
 pg.on('pageerror', e => console.log('ERR', e.message));
@@ -57,7 +57,7 @@ const run = async (item, rate) => pg.evaluate(([item, rate]) => {
  return {waste,backT};};
   const T = chainBuild({item, rate, mk: 1, tile: 'BPO_Station_02', dockType: 'ind', outDockType: 'ind', docks: false, outDock: false, maxStates: 60000, hw: 3});
   const mm = metric(T);
-  return {mach: T.ms.filter(m => m.rec).length, blocks: T.blocks.length, fails: T.fails.length + (T.report.failed || 0), waste: mm.waste};
+  return {mach: T.ms.filter(m => m.rec).length, blocks: T.blocks.length, fails: T.fails.length + (T.report.failed || 0) + HAND.check().bad.length, waste: mm.waste};
 }, [item, rate]);
 let fail = 0;
 for (const [item, rate, mach, maxB, maxW] of CASES) {

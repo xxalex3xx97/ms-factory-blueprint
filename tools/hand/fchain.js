@@ -9,8 +9,8 @@ window.chainBuild=function(opts){
   HAND.nrm=opts.dockType==='nrm';   // input dock kind only; output dock kind is nrmO below
   // docks off: try factory rows packed directly against each other and with a street row between them, keep the build with fewer blocks (packed rows lose the street rows as trunks on big chains)
   if(opts.pack===undefined&&HAND.noDock&&!opts.dry&&!opts.noAdapt&&!opts.capsDone){
-    const A=chainBuild({...opts,pack:false}),B=chainBuild({...opts,pack:true});
-    const score=r=>[r.report.failed||0,r.blocks.length,r.report.skipped?r.report.skipped.length:0];
+    const A=chainBuild({...opts,pack:false});A.badN=HAND.check().bad.length;const B=chainBuild({...opts,pack:true});B.badN=HAND.check().bad.length;
+    const score=r=>[(r.report.failed||0)+r.badN,r.blocks.length];
     const better=score(B)[0]<score(A)[0]||(score(B)[0]===score(A)[0]&&score(B)[1]<score(A)[1]);
     return better?B:chainBuild({...opts,pack:false});
   }
@@ -84,10 +84,12 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     const take=(key,a,b,n,lo=0)=>{const l=lanes.get(key)||lanes.set(key,[]).get(key);for(let k=lo;k<n;k++){if(!l[k])l[k]=[];if(!l[k].some(([c,d])=>!(b+PAD<c||a-PAD>d))){l[k].push([a,b]);return k}}return -1};
     const LB={},sgn=v=>v>0?1:v<0?-1:0,dirOf=(dx,dy)=>dx>0?0:dy>0?1:dx<0?2:3;
     // plan one straight run between two waypoints (both exclusive): greedy underground chains over occupied cells; false when a needed cell is taken
+    const UGX=new Map();let ugN=-1;   // underground pieces on the floor (cell -> axis): a tunnel must not pass over another underground piece of the same line, the game would pair the wrong ends ('foreign pair')
+    const ugIdx=()=>{const P=HAND.S.pcs;if(ugN!==P.length){UGX.clear();P.forEach(q=>{if(q.cls===UGC)UGX.set(q.x+','+q.y,q.rot%2)});ugN=P.length}return UGX};
     const planRun=(a,b,mine,out,endCell)=>{const dx=sgn(b[0]-a[0]),dy=sgn(b[1]-a[1]),dir=dirOf(dx,dy),cells=[];let x=a[0]+dx,y=a[1]+dy;while(x!==b[0]||y!==b[1]){cells.push([x,y]);x+=dx;y+=dy}if(endCell)cells.push([b[0],b[1]]);
-      const N=cells.length;if(!N)return true;const ok=c=>HAND.free(c[0],c[1])&&(!mine.has(c[0]+','+c[1])||(endCell&&c[0]===b[0]&&c[1]===b[1]));let i=0;
+      const N=cells.length;if(!N)return true;const U=ugIdx(),axis=dir%2,clr=(i,j)=>{for(let q=i+1;q<j;q++){const v=U.get(cells[q][0]+','+cells[q][1]);if(v!==undefined&&v===axis)return false}return true};const ok=c=>HAND.free(c[0],c[1])&&(!mine.has(c[0]+','+c[1])||(endCell&&c[0]===b[0]&&c[1]===b[1]));let i=0;
       const n0=out.length,snap=new Set(mine);   // greedy first (unchanged layouts); only when it hits an obstacle cluster it cannot hop from its fixed start, the search below tries every hop combination
-      const greedy=()=>{while(i<N){if(!ok(cells[i])){LB.cell=cells[i];LB.run=[a,b];return false}let best=-1;for(let j=Math.min(i+DH,N-1);j>=i+2;j--)if(ok(cells[j])&&(j===N-1||ok(cells[j+1]))){best=j;break}
+      const greedy=()=>{while(i<N){if(!ok(cells[i])){LB.cell=cells[i];LB.run=[a,b];return false}let best=-1;for(let j=Math.min(i+DH,N-1);j>=i+2;j--)if(ok(cells[j])&&(j===N-1||ok(cells[j+1]))&&clr(i,j)){best=j;break}
         if(best>=0){out.push({cls:UGC,x:cells[i][0],y:cells[i][1],rot:dir},{cls:UGC,x:cells[best][0],y:cells[best][1],rot:dir,span:[cells[i],cells[best]]});cells.slice(i,best+1).forEach(c=>mine.add(c[0]+','+c[1]));i=best+1}
         else{out.push({cls:BELT,x:cells[i][0],y:cells[i][1],rot:dir});mine.add(cells[i][0]+','+cells[i][1]);i++}}
       return true};
@@ -97,7 +99,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
       const cost=Array(N+1).fill(Infinity),par=Array(N+1).fill(null);cost[0]=0;
       for(let k=0;k<N;k++){if(cost[k]===Infinity||!ok(cells[k]))continue;
         if(cost[k]+1<cost[k+1]){cost[k+1]=cost[k]+1;par[k+1]=[k,-1]}
-        for(let j=k+2;j<=Math.min(k+DH,N-1);j++)if(ok(cells[j])&&(j===N-1||ok(cells[j+1]))&&cost[k]+3<cost[j+1]){cost[j+1]=cost[k]+3;par[j+1]=[k,j]}}
+        for(let j=k+2;j<=Math.min(k+DH,N-1);j++)if(ok(cells[j])&&(j===N-1||ok(cells[j+1]))&&clr(k,j)&&cost[k]+3<cost[j+1]){cost[j+1]=cost[k]+3;par[j+1]=[k,j]}}
       if(cost[N]===Infinity){LB.cell=cells[0];LB.run=[a,b];return false}
       const seq=[];for(let k=N;k>0;){const [f,j]=par[k];seq.unshift([f,j]);k=f}
       seq.forEach(([f,j])=>{if(j<0){out.push({cls:BELT,x:cells[f][0],y:cells[f][1],rot:dir});mine.add(cells[f][0]+','+cells[f][1])}
