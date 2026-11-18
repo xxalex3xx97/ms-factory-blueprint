@@ -44,9 +44,11 @@ export async function checkIface(page, build, blockType, ref) {
     if (!b || b.rot !== 0) E('rail out no belt rot0 at x=' + (W - 1) + ' y=' + p.y);
   });
   mains.forEach((p, s) => {
-    if (p.set !== s || p.x !== W - 1 || p.y !== t.o[s]) E('out ' + s + ' at ' + p.x + ',' + p.y + ' want ' + (W - 1) + ',' + t.o[s]);
-    const b = beltAt(W - 1, t.o[s]);
-    if (!b || b.rot !== 0) E('out ' + s + ' no belt rot0 at x=' + (W - 1) + ' y=' + t.o[s]);
+    // out belt row = collector row (iface.sets.outs[0]) when the template sets it, else the set origin; p.o = set origin (set identity)
+    const q = f.sets[s], want = (q && q.outs && q.outs[0] != null) ? q.outs[0] : t.o[s], setO = p.o != null ? p.o : t.o[s];
+    if (p.set !== s || p.x !== W - 1 || p.y !== want || setO !== t.o[s]) E('out ' + s + ' at ' + p.x + ',' + p.y + ' want ' + (W - 1) + ',' + want + ' (set origin ' + t.o[s] + ')');
+    const b = beltAt(W - 1, want);
+    if (!b || b.rot !== 0) E('out ' + s + ' no belt rot0 at x=' + (W - 1) + ' y=' + want);
   });
   // 3) in ports: x=0, standard or side row, belt rot 0; set main row present with item = main
   build.ports.in.forEach((p, i) => {
@@ -85,6 +87,7 @@ export async function checkIface(page, build, blockType, ref) {
 }
 
 // A -> B direct chain: same S, same height class, not 2x2c<->2x2, A.out[s].y === B.in main copy 0 of set s (row o_s).
+// A.out row = collector row (outs[0], else set origin o); B.in main row = o_s; hub joins them.
 export function checkChain(bA, bB) {
   const errs = [], E = m => errs.push(m);
   const a = bA && bA.iface, b = bB && bB.iface;
@@ -95,8 +98,9 @@ export function checkChain(bA, bB) {
   const o = tplIfSets(b.block, b.S).o;
   for (let s = 0; s < a.S; s++) {
     const aOut = bA.ports.out[s], bIn = bB.ports.in.find(p => p.set === s && p.copy === 0 && p.y === o[s]);
+    const q = a.sets[s], aRow = (q && q.outs && q.outs[0] != null) ? q.outs[0] : q.o;
     if (!bIn) E('set ' + s + ': B has no main copy 0 in port at row ' + o[s]);
-    else if (!aOut || aOut.y !== bIn.y) E('set ' + s + ': A.out y ' + (aOut && aOut.y) + ' != B.in y ' + bIn.y);
+    else if (!aOut || aOut.y !== aRow) E('set ' + s + ': A.out y ' + (aOut && aOut.y) + ' != collector row ' + aRow);
   }
   return {ok: errs.length === 0, errs};
 }

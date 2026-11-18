@@ -12,7 +12,7 @@ window.fbBuild=function(opts){
   const CLASSES=[['Refinery','DAT_Refinery','CRAFT_Refinery',6],['Assembler','DAT_Assembler','CRAFT_Assembler'],['GrowthChamber','DAT_GrowthChamber','CRAFT_GrowthChamber'],['Supercomputer','DAT_Supercomputer','CRAFT_Supercomputer'],['AdvancedAssembler','DAT_AdvancedAssembler','CRAFT_AdvancedAssembler'],['Enrichment','DAT_EnrichmentChamber','CRAFT_Enrichment']];
   const hopSpan=(ax,a,b)=>{const l=HAND.S.span.get(ax)||[];l.push([a,b]);HAND.S.span.set(ax,l)};   // tell check() the pair is intended
   const info=[],dockBlk=[],anch=[];
-  function one(gx,gy,name,cls,crafter,rc,perOv,nTot,chain){
+  function one(gx,gy,name,cls,crafter,rc,perOv,nTot,chain,yUp){
     const isRawL=it=>isRaw(it)||(chain&&it===rc.o[0]);   // an input that is the recipe's own product (growth seed) arrives from a dock like a raw item: no loop of the output into itself
     const dk=DOCK||(chain&&rc.i.some(([it])=>isRawL(it)));
     const ox=gx*TW,oy=gy*TW,put1=(x,y,rot,c,extra)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+y,rot,...extra}))throw new Error(name+': cell taken '+x+','+y)};
@@ -27,8 +27,9 @@ window.fbBuild=function(opts){
     const rawList=[...new Set(rc.i.map(([it])=>it).filter(isRawL))],extraItems=chain&&dk?rawList.slice(HAND.noDock||HAND.nrm?2:1):[];   // source containers / normal docks: the block's own two dock groups carry two different items; an industrial dock carries one   // an industrial dock carries ONE ore: further raw items get their own dock (rows gy-1, gy+1) and arrive like bus items from the north
     const inItem=j=>rc.i[j][0],rawIn=rc.i.map(([it])=>isRawL(it)&&!extraItems.includes(it));   // input index: N lane j = input j, S lane j = input nN+j
     const nrm=!!(HAND.nrm&&dk&&chain),capRows=!nrm?99:Math.min(...rawList.map(it=>Math.floor((extraItems.includes(it)?2:rawList.length-extraItems.length>1?2:4)/rc.i.filter(([x])=>x===it).length))),LIM=nrm?2:4;   // normal docks: a dock has 2 belt ports and a block face holds 2 docks, so at most 4 raw lane rows (2 per dock, 2 for an extra item's own dock)
-    const yTop=chain&&dk&&rawIn.some(v=>!v)?2:0,   // dock blocks fed from the north: two empty rows on top so the entry belt can turn after the wall tunnel
-    band=side?nN+s+nS+2:nN+s+(nS?1:0)+1,rowsN=side?2:Math.floor((30-yTop)/band),pitch=side?s+1:s,iO=nS&&!side?pf-1:0;
+    const band=side?nN+s+nS+2:nN+s+(nS?1:0)+1,
+    yTop=chain&&(dk&&rawIn.some(v=>!v)||yUp&&(side||Math.floor(28/band)===Math.floor(30/band)))?2:0,   // yUp: a producer block sits on a higher row: its belts come down from the north, so the entry rows start 2 rows lower (no wall row right before the first entry = no down-and-back detour); only when the block keeps its machine rows
+    rowsN=side?2:Math.floor((30-yTop)/band),pitch=side?s+1:s,iO=nS&&!side?pf-1:0;
     const yStart=r=>side?(r===0?yTop:30-band):yTop+r*band,nRows=Math.min(side?2:rowsN,capRows);
     // ---- dock hub: which lane rows are raw, grouped by item
     const targets=new Map();   // item -> [{row,key}]
@@ -124,7 +125,7 @@ window.fbBuild=function(opts){
         exits.push({obj:c,item:rc.o[0],rate:m*prodRate})}}
     if(chain)anch.push({name,gx,gy,entries,exits,item:rc.o[0]});
     info.push({name,cls,recipe:rk(rc),k,pf,raw:rawIn.map((v,i)=>v?inItem(i).replace('ITEM_',''):null).filter(Boolean).join('+'),J,X0,band,rows:nRows,per,cap,undocked,entryBlocked,side})}
-  if(opts.plan){opts.plan.forEach(sp=>one(sp.gx,sp.gy,sp.name,sp.cls,sp.crafter,sp.rc,sp.perOv,sp.n,true))}
+  if(opts.plan){opts.plan.forEach(sp=>one(sp.gx,sp.gy,sp.name,sp.cls,sp.crafter,sp.rc,sp.perOv,sp.n,true,sp.yUp))}
   else if(!DOCK){CLASSES.forEach(([name,cls,crafter,perOv],bi)=>{let rc=null;for(const x of RECS[crafter])if(!rc||x.i.length>rc.i.length)rc=x;one(bi,0,name,cls,crafter,rc,perOv)})}
   else{let n=0;const list=[];
     CLASSES.forEach(([cn,cls,crafter,perOv])=>{const seen=new Set();by.forEach(l=>{for(const {r,c} of l)if(c===crafter&&r.i.some(([x])=>isRaw(x))&&!seen.has(rk(r))){seen.add(rk(r));list.push([cn,cls,crafter,perOv,r])}})});

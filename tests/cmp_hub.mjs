@@ -102,9 +102,10 @@ for (const cfg of cfgs) for (const nTag of ['n=1', 'nMax']) {
     const fr = floorRect({cls: plcCls(cfg.block === '1x2' ? 'BPO_Station_2x1' : 'BPO_Station_02'), x: 0, y: 0, rot: 0}); out.floor = fr && [fr.w, fr.h];
     const used = T => T.iface.sets.map((s, i) => ({...s, i})).filter(s => s.n > 0);
     const u1 = used(T1), u2 = used(T2), sets1 = tplIfSets(cfg.block, cfg.S), M2 = T2.iface.M, k2 = T2.iface.k;
-    const in1 = u1.map(s => s.o), out1 = u1.map(s => s.o);   // refinery: in (0,o), out (W-1,o)
+    const orow = s => s.outs && s.outs[0] != null ? s.outs[0] : s.o;
+    const in1 = u1.map(s => s.o), out1 = u1.map(orow);   // refinery: in (0,o), out (W-1,collector row)
     const slot = (u, i, M) => u.flatMap(s => Array.from({length: M}, (_, c) => s.o + i * M + c));
-    const in2main = slot(u2, 0, M2), out2 = u2.map(s => s.o);
+    const in2main = slot(u2, 0, M2), out2 = u2.map(orow);
     out.rows = {in1, in2main, out2, k2, M2};
     // ports of T2 in rows must equal the slot formula
     out.portsOk = JSON.stringify(T2.ports.in.map(p => p.y).sort((a, b) => a - b)) === JSON.stringify(slot(T2.iface.sets.map(s => s), 0, M2).concat(slot(T2.iface.sets.map(s => s), 1, M2)).sort((a, b) => a - b));

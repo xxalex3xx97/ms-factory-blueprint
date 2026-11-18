@@ -33,8 +33,10 @@ function rbBuild(x){
     const gr=G[o.id],m={o,gr,id:o.id,B:gr.B,mem:gr.mem,kids:gr.kids.map(k=>M[k.o.id]),lanes:[],outRows:[]};M[o.id]=m;
     if(o.parents&&o.parents.length){
       m.pj={};   // lanes out of the pool: one per consumer port (of EVERY consumer), leaving at the port's own row when free, else the nearest free row (near rule of cmp_groups.js 70)
-      const used=new Set(),near=y0=>{for(let q=0;q<H;q++)for(const y of[y0-q,y0+q])if(y>=0&&y<=H-1&&!used.has(y)){used.add(y);return y}};
-      o.parents.forEach(pid=>{const pj=m.pj[pid]=G[pid].o.rec.i.findIndex(([it])=>it===o.key);G[pid].mem.forEach((cm,ci)=>NB[cm.id].inR[pj].slice().sort(asc).forEach(y=>m.lanes.push({ci,y,ya:near(y),par:pid,id:o.id+'#'+m.lanes.length})))});
+      const used=new Set();let SH=0;const near=y0=>{y0=Math.max(0,Math.min(H-1,y0+SH));for(let q=0;q<H;q++)for(const y of[y0-q,y0+q])if(y>=0&&y<=H-1&&!used.has(y)){used.add(y);return y}};
+      o.parents.forEach(pid=>{const pj=m.pj[pid]=G[pid].o.rec.i.findIndex(([it])=>it===o.key);
+        {const ys=G[pid].B>1?G[pid].mem.flatMap(cm=>NB[cm.id].inR[pj]):[];SH=ys.length?Math.round((H-1)/2-ys.reduce((x,y)=>x+y,0)/ys.length):0}   // consumer on several block rows: lanes leave near the pool centre (not at the consumer's local row), the region crosses the rows anyway = no up-then-down U-turn
+        G[pid].mem.forEach((cm,ci)=>NB[cm.id].inR[pj].slice().sort(asc).forEach(y=>m.lanes.push({ci,y,ya:near(y),par:pid,id:o.id+'#'+m.lanes.length})))});
       if(m.lanes.length>H-2)return no('rb: shared producer '+o.item+' feeds '+m.lanes.length+' consumer ports (one belt each) in '+o.parents.reduce((a,p)=>a+G[p].mem.length,0)+' consumer blocks; more than '+(H-2)+' lanes per producer block: needs row-local partitioning of producer blocks to consumer ports (not built)',o.key);
       const mu=new Map(),pk0=l=>l.ci+','+l.y+','+l.par;m.lanes.forEach(l=>mu.set(pk0(l),(mu.get(pk0(l))||0)+1));   // lane demand weight as cmp_groups.js 71: machines on its port / lanes sharing the port
       const ix=m.lanes.map((l,i)=>i).sort((a,b)=>m.lanes[a].ya-m.lanes[b].ya);
@@ -59,8 +61,9 @@ function rbBuild(x){
     if(!m.kids.length&&o.parents&&o.parents.length===1){m.defer=true;continue}
     const th=th0,own=[];kp.forEach(p=>p.mem.forEach((pm,pb)=>p.lanes.filter(l=>l.par===m.id).forEach(l=>own.push({p,pb,l}))));
     const ownIds=new Set(own.map(a=>a.l.id)),okIds=new Set([...ownIds,...th.map(t=>t.l.id)]),c0=Math.max(hb?1:0,...kp.map(p=>p.c+p.pk.nPhys),...own.map(a=>fr(a.p,a.l)+1),...dk.map(p=>p.pk.nPhys+(hubOwn&&!p.o.raw?1:0)));let hit=false,lastWhy='';   // docks: gx=0 holds raw hubs only
-    for(const cd of rbCandidates(c0,rowWant,24)){
-      if(Date.now()-t0>15000)return no('rb: time');
+    const tc=Date.now();   // 15 s budget covers this module's candidate loop only, not pack sizing / earlier routing
+    for(const cd of rbCandidates(c0,rowWant-Math.floor((m.B-1)/2),24)){   // B stacked member blocks hang from r: centre the column on the producers (no tail below them)
+      if(Date.now()-tc>15000||Date.now()-t0>60000)return no('rb: time');
       const {c,r}=cd;
       if(th.some(t=>clash(r,t)))continue;   // a lane crossing this module must run through a hull block, not through a member row
       const lcells=[],taken=new Set();let okL=true;

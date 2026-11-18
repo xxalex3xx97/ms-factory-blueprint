@@ -45,7 +45,7 @@ function tplBuild(spec){
   let left=n;const cnt=new Map();for(const r of order){const m=Math.min(left,r.cap);cnt.set(r,m);left-=m}
   const ports={in:[],out:[]},lanes=[],ex=[],outsOf=[],outN=P.rows.map(()=>[]);   // lanes: one entry per in port (planner test weights injection by lanes[p.row].m)
   P.rows.forEach((r,s)=>{
-    const m=cnt.get(r),y0=r.y0,D=r.t==='D',yc=y0+(D?7:6),mx=k=>5*k+1,outs=[y0];
+    const m=cnt.get(r),y0=r.y0,D=r.t==='D',yc=y0+(D?7:6),mx=k=>5*k+1,yo=P.lay?y0:yc,outs=[yo];
     const inP=(y,copy,mm)=>{ports.in.push({x:0,y,item:main,dir:'E',set:s,copy,row:lanes.length});lanes.push({set:s,t:r.t,y0,copy,m:mm,n:mm})};
     if(!D){
       const last=m?mx(m-1)+1:0;
@@ -78,12 +78,12 @@ function tplBuild(spec){
         const xl=mx(kmax)+1;   // last injection column of this rail: belts up to it, UG hops beyond (SHAPE)
         for(let x=mx(kmin)+1;x<=xl;x++)bt(x,yr,0);
         tplRun(items,{bc,ug,y:yr,xa:xl+1,xb:e?W-1:W-3});
-        if(!e)tplOutTail(items,{bc,W,yc,yo:y0});else{ex.push({x:W-1,y:yr,dir:'E',set:s,rail:e});outs.push(yr)}
+        if(!e)tplOutTail(items,{bc,W,yc,yo});else{ex.push({x:W-1,y:yr,dir:'E',set:s,rail:e});outs.push(yr)}
         outN[s].push(sz[e]);kmax=kmin-1;
       }
-    }else if(m>0){const xl=mx(m-1)+1;for(let x=2;x<=xl;x++)bt(x,yc,0);tplRun(items,{bc,ug,y:yc,xa:xl+1,xb:W-3});tplOutTail(items,{bc,W,yc,yo:y0})}   // SHAPE: belts from the first injection column to the last, UG hops to the trunk
-    else bt(W-1,y0,0);   // stub: the edge cell only
-    ports.out.push({x:W-1,y:y0,dir:'E',set:s});
+    }else if(m>0){const xl=mx(m-1)+1;for(let x=2;x<=xl;x++)bt(x,yc,0);tplRun(items,{bc,ug,y:yc,xa:xl+1,xb:W-3});tplOutTail(items,{bc,W,yc,yo})}   // SHAPE: belts from the first injection column to the last, UG hops to the trunk
+    else bt(W-1,yo,0);   // stub: the edge cell only
+    ports.out.push({x:W-1,y:yo,o:y0,dir:'E',set:s});
     outsOf.push(outs);
   });
   ports.out.push(...ex);

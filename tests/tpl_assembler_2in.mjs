@@ -112,7 +112,7 @@ async function run(spec, shot) {
     mach.forEach(m => {
       const sp = mports.get(m).filter(p => p.ny === 1 && p.en);
       if (sp.length < 1) { outErr++; return }
-      const tgt = T.ports.out.find(p => m.y >= p.y && m.y < p.y + 10);
+      const tgt = T.ports.out.find(p => m.y >= p.o && m.y < p.o + 10);
       sp.forEach(p => { const r = flood(p.x + p.nx, p.y + p.ny, 'o', 0); if (!r.has(tgt.x + ',' + tgt.y)) outErr++ });
     });
     out.outErr = outErr;
@@ -124,7 +124,7 @@ async function run(spec, shot) {
     if (T.rin) {
       out.laneLoad = Math.max(0, ...Object.entries(cnt).map(([t, c]) => c * T.rin[itemOf(t)]));
       out.laneLim = der * cap;
-      const perRow = {}; mach.forEach(m => { const r = T.ports.out.find(p => m.y >= p.y && m.y < p.y + 10).set; perRow[r] = (perRow[r] || 0) + 1 });
+      const perRow = {}; mach.forEach(m => { const r = T.ports.out.find(p => m.y >= p.o && m.y < p.o + 10).set; perRow[r] = (perRow[r] || 0) + 1 });
       out.outLoad = Math.max(0, ...Object.values(perRow)) * T.rout; out.outCap = cap;
     }
     out.ports = {in: T.ports.in.length, out: T.ports.out.length, sets: T.sets};
@@ -193,8 +193,10 @@ console.log('\nblock | n | machines | belts | ug | spl | area | belts/m | (belts
 for (const r of rows) console.log(r.join(' | '));
 // mutation sanity: removing the first machine's B crossover belt (and a lane head) must be caught by the flood
 {
-  const T = await pg.evaluate(s => { const t = tplBuild(s); return {items: t.items.map(b => ({x: b.x, y: b.y, cls: b.cls}))} }, {...base('1x2'), n: 5});
-  const m1 = await run({...base('1x2'), n: 5, drop: [4, 2]}), m2 = await run({...base('1x2'), n: 5, drop: [0, 3]}), m3 = await run({...base('1x2'), n: 5, drop: [28, 5]});
+  const T = await pg.evaluate(s => { const t = tplBuild(s); return {w: t.w, y0: t.ports.out[0].o, items: t.items.map(b => ({x: b.x, y: b.y, cls: b.cls}))} }, {...base('1x2'), n: 5});
+  const tail = T.items.find(b => b.x === T.w - 2 && b.y === T.y0 + 9);   // collector tail belt (straight now)
+  if (!tail) check(false, 'mutation: collector tail belt at x=W-2 y=y0+9 found');
+  const m1 = await run({...base('1x2'), n: 5, drop: [4, 2]}), m2 = await run({...base('1x2'), n: 5, drop: [0, 3]}), m3 = await run({...base('1x2'), n: 5, drop: tail ? [tail.x, tail.y] : [-1, -1]});
   check(m1.portErr > 0 || m1.bad > 0, 'mutation: crossover removed is detected (portErr ' + m1.portErr + ', bad ' + m1.bad + ')');
   check(m2.portErr > 0 || m2.bad > 0, 'mutation: A1 lane head removed is detected (portErr ' + m2.portErr + ')');
   check(m3.outErr > 0, 'mutation: collector end removed is detected (outErr ' + m3.outErr + ')');

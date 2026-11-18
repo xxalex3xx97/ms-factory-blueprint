@@ -41,9 +41,9 @@ function tplBuild(spec){
     sp=(x,y,keep)=>items.push({cls:sc,x,y,rot:0,h:0,pid:0,off:pfSplOff(sc,0,keep),pr:[0,-1]});
   const fill=tplEnrFill(c.caps,n),ports={in:[],out:[]};
   st0.o.forEach((o,s)=>{
-    const m=fill[s];
-    ports.in.push({x:0,y:o,item:0,dir:'E',set:s,copy:0,row:s});ports.out.push({x:W-1,y:o,dir:'E',set:s});
-    if(!m){bt(0,o,0);bt(W-1,o,0);return}
+    const m=fill[s];const yo=st0.hs[s]>=11?o+10:o;
+    ports.in.push({x:0,y:o,item:0,dir:'E',set:s,copy:0,row:s});ports.out.push({x:W-1,y:yo,o,dir:'E',set:s});
+    if(!m){bt(0,o,0);bt(W-1,yo,0);return}
     for(let q=0;q<m;q++)items.push({cls:TPLE_CLS,x:1+q*9,y:o+1,rot:0,h:0,pid:0,off:TPLE_PORTS.filter(k=>k!=='N1'&&k!=='S7'),rec:spec.rec});
     for(let x=0;x<=(m-1)*9+5;x++){   // manifold lane
       const q=(x-5)/9;
@@ -52,13 +52,13 @@ function tplBuild(spec){
       else bt(x,o,1);
     }
     for(let x=5;x<=W-3;x++)bt(x,o+10,0);   // collector
-    tplOutTail(items,{bc,W,yc:o+10,yo:o});
+    tplOutTail(items,{bc,W,yc:o+10,yo});
   });
   const stt={belts:0,ug:0,spl:0,machines:n};
   for(const b of items){if(PLC_BELT.includes(b.cls))stt.belts++;else if(PLC_UG.includes(b.cls))stt.ug++;else if(PLC_SPL.includes(b.cls))stt.spl++}
   const H=TPL_IF_H[spec.block]||(W===14?14:30);
   return{ok:true,items,w:W,h:H,ports,nMax,stats:stt,layout:'row',rows:fill.map(m=>({m})),
-    iface:{v:1,block:spec.block,S:c.S,M:1,k:1,main:0,sets:st0.o.map((o,s)=>({o,n:fill[s]})),side:[]}};
+    iface:{v:1,block:spec.block,S:c.S,M:1,k:1,main:0,sets:st0.o.map((o,s)=>({o,n:fill[s],outs:[st0.hs[s]>=11?o+10:o]})),side:[]}};
 }
 // rate model: per-machine rates of the 1-input recipe (qty*1800/t). Per set lane loads (in) and out loads. cap per belt Mk index.
 function tplEnrRate(spec){
