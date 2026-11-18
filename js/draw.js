@@ -348,15 +348,15 @@ function hatchShape(b,t,s){
   const fr=SHIPEND(b)&&floorRect(b);if(fr){cx.beginPath();cx.rect(0,0,W,H);cx.rect(V.ox+fr.x*s,V.oy+fr.y*s,fr.w*s,fr.h*s);cx.clip("evenodd")}
   nbHatch(0,0,W,H,false);cx.restore();
 }
-function drawShapeFloor(A,s){
+function drawShapeFloor(A,s,wo){   // wo: walls only (tall block seen from a level above its base)
   const X=x=>Math.round(V.ox+x*s),Y=y=>Math.round(V.oy+y*s),ST="rgba(150,165,190,.6)",WF="#262e3c";
   A.floors.forEach(r=>{if(r.w!=null&&!vis(V.ox+(r.x-24)*s,V.oy+(r.y-24)*s,(r.w+48)*s,(r.h+48)*s))return;   // off screen (a shape reaches at most ~24 cells past its floor)
     const b=r.b,t=shapeTf(b);if(!t)return;
     const sh=t.sh,dock=SHIPEND(b),tr=(a,c,e,g)=>{const[p,q]=t.f(a,c),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}};
     const rc=(q,f,g=0)=>{cx.fillStyle=f;const x0=X(q.x),y0=Y(q.y);cx.fillRect(x0-g,y0-g,X(q.x+q.w)-x0+2*g,Y(q.y+q.h)-y0+2*g)};
-    if((dock||r.w!=null)&&sh.hatch)hatchShape(b,t,s);   // floored blocks (dock, elevator): hatch behind the shape   // Industrial Dock: grey hatch inside the walls, minus the buildable floor box, behind everything
+    if(!wo&&(dock||r.w!=null)&&sh.hatch)hatchShape(b,t,s);   // floored blocks (dock, elevator): hatch behind the shape   // Industrial Dock: grey hatch inside the walls, minus the buildable floor box, behind everything
     const d=def(b.cls),R0=floorRect(b),hall=dock?tr(0,0,Math.min(...sh.walls.filter(w=>w[0]>=20&&w[0]<24&&w[3]-w[1]>=8).map(w=>w[0])),d.fh):R0&&{x:R0.x,y:R0.y,w:R0.w,h:R0.h};   // dock: hall up to the partition (shaft beyond); other blocks: whole floor; no-floor blocks: no tint
-    if(hall&&!sh.polys)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
+    if(!wo&&hall&&!sh.polys)rc(hall,"rgba(150,190,230,.08)");   // hall interior (floor tint, as the floor itself)
     // pods (dock only): one per decoded port cell (1 cell, contiguous), x extent from the arm mesh rows of that cell
     const pods=!dock?[]:podsOf(sh,tr);
     const marks=dock?pods:sh.ports.map(([bay,x,y])=>({bay,x,y}));   // port markers: dock = one per pod (numbered); other shapes = one per SHAPES port (unnumbered)
@@ -365,18 +365,18 @@ function drawShapeFloor(A,s){
     const rg=sh.ring,ringPath=()=>{const[ccx,ccy]=t.f(rg.c[0],rg.c[1]).map((n,i)=>i?V.oy+n*s:V.ox+n*s),base=({E:0,S:1,W:2,N:3})[rg.gap.side]*Math.PI/2+(b.rot&3)*Math.PI/2,ao=Math.asin(rg.gap.half/rg.ro),ai=Math.asin(rg.gap.half/rg.ri);
       cx.beginPath();cx.arc(ccx,ccy,rg.ro*s,base+ao,base-ao+2*Math.PI);cx.arc(ccx,ccy,rg.ri*s,base-ai+2*Math.PI,base+ai,true);cx.closePath()};
     if(rg){ringPath();cx.fillStyle=ST;cx.strokeStyle=ST;cx.lineWidth=2;cx.stroke();cx.fill()}
-    props.forEach(q=>rc(q,ST,1));props.forEach(q=>rc(q,"#3b4659"));
-    if(rg){ringPath();cx.fillStyle="#3b4659";cx.fill()}
-    pods.forEach(p=>rc(p.q,ST,1));pods.forEach(p=>rc(p.q,"#2c3648"));
+    if(!wo){props.forEach(q=>rc(q,ST,1));props.forEach(q=>rc(q,"#3b4659"));}
+    if(rg&&!wo){ringPath();cx.fillStyle="#3b4659";cx.fill()}
+    if(!wo){pods.forEach(p=>rc(p.q,ST,1));pods.forEach(p=>rc(p.q,"#2c3648"));}
     // walls: strokes (grown 1px) under all fills = outline of the union only
     const wp=wallPlan(sh,dock,sh.chain?chainOpenEdges(b).map(k=>sh.chain.closing[k]):[]),wr=wp.w.map(a=>tr(...a)),poly=wp.corners.map(c=>{const[x0,y0,x1,y1]=c.box,o=c.out,k=Math.min(x1-x0,y1-y0)*.6;
       return[[x0,y0],[x1,y0],[x1,y1],[x0,y1]].flatMap(v=>{if(v[0]!==o[0]||v[1]!==o[1])return[v];const dx=v[0]===x0?1:-1,dy=v[1]===y0?1:-1;const pr=[[v[0]+dx*k,v[1]],[v[0],v[1]+dy*k]];return dx===dy?pr.reverse():pr}).map(v=>t.f(...v).map((n,i)=>Math.round(i?V.oy+n*s:V.ox+n*s)))});
     const path=pg=>{cx.beginPath();pg.forEach((v,i)=>i?cx.lineTo(v[0],v[1]):cx.moveTo(v[0],v[1]));cx.closePath()};
     wr.forEach(q=>rc(q,ST,1));poly.forEach(pg=>{path(pg);cx.fillStyle=ST;cx.strokeStyle=ST;cx.lineWidth=2;cx.stroke();cx.fill()});
     wr.forEach(q=>rc(q,WF));poly.forEach(pg=>{path(pg);cx.fillStyle=WF;cx.fill()});
-    if(s>=10)bayRects(b).forEach(q=>{const x0=X(q.x),y0=Y(q.y);bayBox(b,q.i,x0,y0,X(q.x+q.w)-x0,Y(q.y+q.h)-y0)});
+    if(s>=10&&!wo)bayRects(b).forEach(q=>{const x0=X(q.x),y0=Y(q.y);bayBox(b,q.i,x0,y0,X(q.x+q.w)-x0,Y(q.y+q.h)-y0)});
     // ports (display only): green bar on each port's edge (dock: pod floor-facing edge), bay number only on numbered ports
-    if(s>=6){const Ln=Math.min(.6*s,18),Tk=Math.min(5,Math.max(3,.2*s)),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
+    if(s>=6&&!wo){const Ln=Math.min(.6*s,18),Tk=Math.min(5,Math.max(3,.2*s)),odd=b.rot&1;cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
       marks.forEach(p=>{const[ex,ey]=t.f(p.x,p.y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),w=odd?Ln:Tk,h=odd?Tk:Ln;
         cx.fillStyle="hsl(140,70%,48%)";cx.fillRect(ex-w/2,ey-h/2,w,h);cx.strokeRect(ex-w/2+.5,ey-h/2+.5,w-1,h-1)});
       (sh.iports||[]).forEach(([sd,x,y])=>{const[ex,ey]=t.f(x,y).map((n,i)=>i?V.oy+n*s:V.ox+n*s),v=("EW".includes(sd))!==!!odd,w=v?Tk:Ln,h=v?Ln:Tk;   // info ports (elevator): same bar, vertical on E/W sides, display only
@@ -388,7 +388,7 @@ function drawShapeFloor(A,s){
 }
 const BAYHIT=[];   // dock bay number labels of the last paint: {b,i (0-based filter slot),x,y screen px}
 function paintFloorBase(s){
-  const A=typeof HAR==="function"?HAR(layer):areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;   // HAR: the areas() result cached per block set (it was rebuilt on every paint)
+  const LB=[],A=typeof HAR==="function"?HAR(layer):areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;   // HAR: the areas() result cached per block set (it was rebuilt on every paint)
   if(LOWD()){cx.fillStyle="rgba(48,60,76,.95)";A.floors.forEach(r=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s;if(x>W||y>H||x+w<0||y+h<0)return;cx.fillRect(x,y,w,h)});return A}   // zooming / panning a big factory: plain floor rects, the full floor comes back 160 ms after the last frame
   // gap strips: only between two facing floor blocks; strip = the distance between their SHELLS, long axis = overlap of their shells
   if(!A.strips){   // the gap strips are found once per areas() result (they were rebuilt on every paint)
@@ -413,16 +413,10 @@ function paintFloorBase(s){
     if(!r.known)hatch(x,y,w,h);
     cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(c)},70%,70%,.5)`;if(!pr)cx.strokeRect(x+.5,y+.5,w-1,h-1);
     // walls: dark band outside the floor edge, gaps at the doors
-    cx.fillStyle="#262e3c";cx.strokeStyle="rgba(150,165,190,.6)";cx.lineWidth=1;
-    for(let ed=0;ed<4&&noShape;ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;
-      pieces(a0,a1,r.wcuts[ed]).forEach(([p,q])=>{
-        const b=ed===0?{x:sx+sw,y:p,w:T,h:q-p}:ed===2?{x:sx-T,y:p,w:T,h:q-p}:ed===1?{x:p,y:sy+sn,w:q-p,h:T}:{x:p,y:sy-T,w:q-p,h:T};
-        R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
-      });
-    }
-    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(doorTxt(r.b)?" · "+doorTxt(r.b):""),x,y,w);if(!((def(r.b.cls)||{}).elevator&&!def(r.b.cls).elevator.hid))nameTag(r.b,x,y,w)}
+    wallBands([r],s);
+    if(w>70&&!PLC_PREV)LB.push(()=>{const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(doorTxt(r.b)?" · "+doorTxt(r.b):""),x,y,w);if(!((def(r.b.cls)||{}).elevator&&!def(r.b.cls).elevator.hid))nameTag(r.b,x,y,w)});   // drawn after the shapes: wall corners must not hide the label
   });
-  drawShapeFloor(A,s);
+  drawShapeFloor(A,s);LB.forEach(f=>f());
   const NF=lyBlocks().nf;
   NF.forEach(b=>{const r=nfOut(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
   NF.forEach(b=>{const t=shapeTf(b);if(t&&t.sh.hatch)return hatchShape(b,t,s);const r=nfRect(b);nbHatch(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s,true)});   // grey no-build hatch on the whole tile, behind the shape
@@ -486,6 +480,14 @@ function vpBlocks(m){
   const s=sc(),mg=Math.ceil(m/s)+1,f=n=>Math.floor(n/64),ix=[];
   for(let i=f(-V.ox/s-mg-L.mw);i<=f((W-V.ox)/s+mg);i++)for(let j=f(-V.oy/s-mg-L.mh);j<=f((H-V.oy)/s+mg);j++){const a=L.g.get(i+","+j);if(a)for(const n of a)ix.push(n)}
   const r=ix.sort((a,b)=>a-b).map(n=>v[n]);r.tot=v.length;return r}
+const tallLabels=()=>{const A=tallAbove();return A.floors.concat(A.nfb.map(b=>({...nfOut(b),b})))};
+let TLB=null;function tallAbove(){const k=PK+"|"+layer;if(!TLB||TLB.k!==k)TLB={k,v:areas(layer,true)};return TLB.v}
+// wall bands (dark, outside the floor edge, gaps at the doors) of block floors without a decoded shape: same as paintFloorBase
+function wallBands(fl,s){const T=.5,R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s);cx.fillStyle="#262e3c";cx.strokeStyle="rgba(150,165,190,.6)";cx.lineWidth=1;
+  fl.forEach(r=>{if(shapeTf(r.b))return;const Q=((def(r.b.cls)||{}).floorInset)||0,sx=r.x-Q,sy=r.y-Q,sw=r.w+2*Q,sn=r.h+2*Q;
+    for(let ed=0;ed<4;ed++){const v=ed%2===0,a0=(v?sy:sx)-T,a1=(v?sy+sn:sx+sw)+T;
+      pieces(a0,a1,r.wcuts[ed]).forEach(([p,q])=>{const b=ed===0?{x:sx+sw,y:p,w:T,h:q-p}:ed===2?{x:sx-T,y:p,w:T,h:q-p}:ed===1?{x:p,y:sy+sn,w:q-p,h:T}:{x:p,y:sy-T,w:q-p,h:T};
+        R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)})})}})}
 let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k!==k)GHB={k,v:S.blocks.filter(b=>!onLv(b)&&inView(b))};return GHB.v}
 let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(lyBlocks().all.map(b=>[b.id,b]));return LBM.get(id)};
 const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
@@ -548,10 +550,13 @@ function paint0(){
   RCT=null;
   BAYHIT.length=0;
   if(F)RCT=paintFloorBase(s).rects;
+  if(F){const A2=tallAbove();if(A2.floors.length||A2.nfb.length){cx.save();wallBands(A2.floors,s);drawShapeFloor(A2,s,true);drawShapeFloor({floors:A2.nfb.map(b=>({...nfOut(b),b}))},s,true);cx.restore()   // tall block from a lower level: walls and door gaps only (no floor, ports or machines), nothing buildable
+  }}
   grid(F?16:8,F?GRIDOFF:0);
   if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||lvDist(b)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*lvDist(b));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
   const cur=vpBlocks(CULLM+20*s);CUR=cur;   // +20 cells: an underground pair (max 13 cells) is found whole at the screen edge
   drawBlocks(cur,.92,true);   // viewport cull inside drawBlocks
+  if(F)tallLabels().forEach(r=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s;if(w>90&&vis(x,y,w,r.h*s)){cx.save();cx.shadowColor="rgba(0,0,0,.9)";cx.shadowBlur=3;cx.fillStyle="rgba(215,225,240,.95)";cx.font="11px system-ui,sans-serif";cx.textAlign="left";cx.textBaseline="top";cx.fillText(nameOf(r.b)+" - from level "+(r.b.h+1),x+5,y+4,w-8);cx.restore()}});   // label on top of everything, top-left like the floor labels   // viewport cull inside drawBlocks
   cx.fillStyle="rgba(255,60,60,.5)";
   // overlap marks: the duplicate cells of this layer, found once per paint key (all blocks; only the ones on screen are drawn, same pixels as before)
   const OVK=PK+"|"+layer+"|"+S.blocks.length;
