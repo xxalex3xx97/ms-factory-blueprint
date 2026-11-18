@@ -193,7 +193,7 @@ function theoProd0(allFloors){
   let inj=new Map(all.map(l=>[l,[]])),res,prev="";   // elevator transfers need every level: repeat until the flow stops changing
   for(let pass=0;pass<Math.min(all.length,6)+1;pass++){
     res=new Map(all.map(l=>[l,theoLevel(l,inj.get(l))]));
-    const{inj:nj,sig}=elvInject(all,l=>res.get(l).K,(l,id)=>res.get(l).load.get(id));   // same rule as links (model.js)
+    const{inj:nj,sig}=elvInject(all,l=>res.get(l).K,(l,id)=>res.get(l).load.get(id),inj);   // same rule as links (model.js)
     const sg=sig.join();if(sg===prev)break;prev=sg;inj=nj;
   }
   levels.forEach(L=>{const t=res.get(L);['byItem','byType','count'].forEach(k=>Object.entries(t[k]).forEach(([id,v])=>out[k][id]=(out[k][id]||0)+v))});

@@ -252,11 +252,12 @@ function links(L){
   const res=linksAll(L,hk);LKM={k,res};return res.get(L);
 }
 // elevator transfer, shared by links and theoProd: per port, all input loads (every level) go to ALL levels with an output belt on that port: equal share, each output capped at its belt speed, the unused part goes to outputs with room left
-function elvInject(lv,Kf,ldf){
+function elvInject(lv,Kf,ldf,prev){   // prev: the injection the Kf results were built with (their belt loads include it)
   const by=new Map(),inj=new Map(lv.map(l=>[l,[]])),sig=[];
   lv.forEach(l=>Kf(l).elvIn.forEach(({k,id})=>{const ld=ldf(l,id);if(!ld)return;
     let e=by.get(k);if(!e)by.set(k,e={src:[],outs:[]});e.src.push({l,items:ld.items})}));
-  lv.forEach(h=>{const K=Kf(h);K.elvOut.forEach((id,k)=>{const e=by.get(k);if(!e)return;const bl=K.belts.find(b=>b.id===id);e.outs.push({h,id,room:(bl&&beltMax(bl))||Infinity})})});
+  lv.forEach(h=>{const K=Kf(h);K.elvOut.forEach((id,k)=>{const e=by.get(k);if(!e)return;const bl=K.belts.find(b=>b.id===id);const cap=(bl&&beltMax(bl))||Infinity,ld=K.load.get(id),tot=ld?[...ld.items.values()].reduce((a,v)=>a+v,0):0,pj=((prev&&prev.get(h))||[]).filter(x=>x.id===id).reduce((a,x)=>a+x.rate,0);   // room = belt speed minus what the belt already carries from its own sources
+    e.outs.push({h,id,room:Math.max(0,cap-Math.max(0,tot-pj))})})});
   by.forEach((e,k)=>{const got=new Map();   // a source level never feeds its own output belt (same as the sim)
     e.src.forEach(({l,items})=>items.forEach((v,item)=>{
       let left=v,act=e.outs.filter(o=>o.h!==l&&o.room>1e-9);
@@ -268,10 +269,10 @@ function elvInject(lv,Kf,ldf){
 }
 function linksAll(L,hk){
   const lv=[...new Set(S.blocks.map(b=>b.h))];if(!lv.includes(L))lv.push(L);
-  let res=new Map(lv.map(l=>[l,links1c(l,LKI.get(l)||null,hk)])),prev=LKS;
+  let res=new Map(lv.map(l=>[l,links1c(l,LKI.get(l)||null,hk)])),prev=LKS,used=LKI;
   if(!lv.some(l=>res.get(l).elvIn.length)){LKI=new Map();LKS="";return res}
   for(let pass=0;pass<Math.min(lv.length,6);pass++){
-    const{inj,sig}=elvInject(lv,l=>res.get(l),(l,id)=>res.get(l).load.get(id));
+    const{inj,sig}=elvInject(lv,l=>res.get(l),(l,id)=>res.get(l).load.get(id),used);used=inj;
     const sg=sig.join();if(sg===prev)break;prev=sg;LKI=inj;LKS=sg;
     res=new Map(lv.map(l=>[l,links1c(l,inj.get(l),hk)]));
   }
