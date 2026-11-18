@@ -108,10 +108,11 @@ const shapeRects=(b,k)=>{const t=shapeTf(b);return t?t.sh[k].map(([a,c,e,g])=>{c
 function polyCells(sh){if(sh._pc)return sh._pc;const P=sh.polys,W=Math.ceil(Math.max(...P.flat().map(v=>v[0]))),H=Math.ceil(Math.max(...P.flat().map(v=>v[1])));const inP=(x,y)=>P.some(p=>{let c=false;for(let i=0,j=p.length-1;i<p.length;j=i++)if((p[i][1]>y)!==(p[j][1]>y)&&x<(p[j][0]-p[i][0])*(y-p[i][1])/(p[j][1]-p[i][1])+p[i][0])c=!c;return c});const ok=[],cut=[];for(let j=0;j<H;j++)for(const[arr,want]of[[ok,true],[cut,false]]){let s=-1;for(let i=0;i<=W;i++){const m=i<W&&inP(i+.5,j+.5)===want;if(m&&s<0)s=i;if(!m&&s>=0){arr.push([s,j,i,j+1]);s=-1}}}return sh._pc={ok,cut}}
 function polyRects(b){const t=shapeTf(b);if(!t||!t.sh.polys||!floorRect(b))return null;const c=polyCells(t.sh),m=l=>l.map(([a,d,e,g])=>{const[p,q]=t.f(a,d),[u,v]=t.f(e,g);return{x:Math.min(p,u),y:Math.min(q,v),w:Math.abs(u-p),h:Math.abs(v-q)}});return{ok:m(c.ok),cut:m(c.cut)}}
 const elvRect=b=>{const d=def(b.cls),r=d&&d.elevator&&!d.elevator.hid&&floorRect(b);return r?{x:r.x+((r.w-d.elevator.w)>>1),y:r.y+((r.h-d.elevator.h)>>1),w:d.elevator.w,h:d.elevator.h,b}:null};
-function areas(L){
+function areas(L,tall){   // tall: only the multi-level blocks standing on lower levels (their walls above their base level)
   const fb=[],floors=[],doors=[],gaps=[],strips=[],blocked=[],mis=[],own=new Map(),pn=new Set();   // pn: cells of no-floor blocks with ports (dock, drone bay): a station door next to them is 1 deep (station side only)
-  S.blocks.forEach(b=>{if(b.h!==L||!nfRect(b))return;const sh=SHAPES[(def(b.cls)||{}).name];if(!sh||!sh.ports||!sh.ports.length)return;const c=fcell(b);for(let i=0;i<c.cw;i++)for(let j=0;j<c.ch;j++)pn.add((c.cx+i)+","+(c.cy+j))});
-  S.blocks.filter(b=>b.h===L&&!isM(b)).forEach(b=>{
+  const inL=tall?(b=>b.h<L&&L<b.h+lvl(b)):(b=>b.h===L);
+  S.blocks.forEach(b=>{if(!inL(b)||!nfRect(b))return;const sh=SHAPES[(def(b.cls)||{}).name];if(!sh||!sh.ports||!sh.ports.length)return;const c=fcell(b);for(let i=0;i<c.cw;i++)for(let j=0;j<c.ch;j++)pn.add((c.cx+i)+","+(c.cy+j))});
+  S.blocks.filter(b=>inL(b)&&!isM(b)).forEach(b=>{
     const r=floorRect(b);if(!r)return;
     const f={b,d:dim(b),r};r.cuts=[[],[],[],[]];r.wcuts=[[],[],[],[]];floors.push(r);fb.push(f);   // cuts: ring floor in door slots; wcuts: band cut only where a door passage joins two blocks
     const fo=fcell(b);for(let i=0;i<fo.cw;i++)for(let j=0;j<fo.ch;j++)own.set((fo.cx+i)+","+(fo.cy+j),f);
@@ -145,7 +146,7 @@ function areas(L){
   // elevator ring: inset strip (floorInset Q) inside each open door slot, same geometry as draw.js paintFloorBase
   const ring=[];floors.forEach(r=>{const Q=((def(r.b.cls)||{}).floorInset)||0;if(!Q)return;
     for(let ed=0;ed<4;ed++)r.cuts[ed].forEach(([a0,a1])=>ring.push(ed===0?{x:r.x+r.w,y:a0,w:Q,h:a1-a0}:ed===2?{x:r.x-Q,y:a0,w:Q,h:a1-a0}:ed===1?{x:a0,y:r.y+r.h,w:a1-a0,h:Q}:{x:a0,y:r.y-Q,w:a1-a0,h:Q}))});
-  return{floors,doors,gaps,strips,blocked,mis,rects:floors.flatMap(r=>{const pr=polyRects(r.b);return pr?pr.ok:[r]}).concat(doors.filter(d=>d.open),strips,ring),nob:floors.flatMap(r=>{const pr=polyRects(r.b);return pr?pr.cut:[]})};
+  return{floors,doors,gaps,strips,blocked,mis,rects:floors.flatMap(r=>{const pr=polyRects(r.b);return pr?pr.ok:[r]}).concat(doors.filter(d=>d.open),strips,ring),nob:floors.flatMap(r=>{const pr=polyRects(r.b);return pr?pr.cut:[]}).concat(tall?[]:areas(L,true).floors)};   // a tall block from below: its footprint is no-build on this level
 }
 // elevator shaft (blocked 4x4 centre): machines may not overlap it
 let STRICT=true;   // Settings: keep buildables on the floor (no outside / across walls); overlaps are always refused

@@ -1832,6 +1832,8 @@ async function s16e(br) {
     await imp(pg, bp([blk('BPO_Station_02', 0, 0, {h: 0})]));
     const r = await pg.evaluate(() => [0, 1, 2].map(L => { __fb.setLayer(L); return [__fb.areas(L).floors.length, __fb.tallAbove()]; }));
     chk('16e tall block (2 levels): floor only on L0; footprint on L1 only', JSON.stringify(r) === '[[1,0],[0,1],[0,0]]', JSON.stringify(r));
+    const nb = await pg.evaluate(() => { STRICT = false; try { const f = areas(0).floors[0], c = (l, x, y) => noBuild([{id: 1, l, x, y, w: 1, h: 1}]); const x = Math.floor(f.x + f.w / 2), y = Math.floor(f.y + f.h / 2); return [c(1, x, y), c(2, x, y)]; } finally { STRICT = true; } });   // STRICT off: only the footprint rule can refuse
+    chk('16e tall block: nothing buildable inside it on L1, free on L2 without strict mode', nb[0] === true && nb[1] === false, JSON.stringify(nb));
   }
   // i) sideways output: belt across the wall at the connection cell on level 1 (pointing away from the elevator) takes items
   await scene([0, 1], [{h: 0, kind: 'in', contents: INF}, {h: 1, kind: 'side'}]);
