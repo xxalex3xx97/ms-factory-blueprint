@@ -112,7 +112,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
         const bx1=s.x+2,dock=!!e.north,bx2=dock?e.gx+2:westOf0[e.gx],tgtY=dock?(e.gy-1)*TW:e.y;
         const pr=pre.get(e),top=(pr&&typeof pr==='object')?pr.top:(sy+tgtY)<=(2*Hpx-sy-tgtY),tk=top?'tT':'tB',tBase=top?0:(H-TBS)*TW;
         const dir=bx1===bx2&&!dock&&pr&&typeof pr==='object';   // same street: straight to the reserved consumer lane, no trunk loop (lay only uses free cells, tunnelling the rest; the trunk route stays the fallback)
-        const srows=[];for(let g=TBS;g<=TBS+2*maxRows;g+=2){const yc=g*TW+16;srows.push([g,Math.abs(sy-yc)+Math.abs(tgtY-yc)])}srows.sort((a,b)=>a[1]-b[1]);   // street rows between the factory rows: short trunk, two nearest tried
+        const srows=[];for(let g=TBS;g<=TBS+2*maxRows;g+=2){const yc=g*TW+16;if(pr&&typeof pr==='object'&&(pr.top?yc>tgtY:yc<tgtY))continue;srows.push([g,Math.abs(sy-yc)+Math.abs(tgtY-yc)])}srows.sort((a,b)=>a[1]-b[1]);   // street rows between the factory rows: short trunk, two nearest tried
         for(const direct of [...(dir?[1]:[]),...srows.slice(0,2).map(r=>r[0]),0]){   // 1 = straight lane, g>=3 = street row g as trunk, 0 = far top/bottom trunk band
         let X1,X2,Yt=null;
         if(direct===1)X1=X2=laneX(bx2,pr.k);
