@@ -35,17 +35,17 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     colList.push(cur)});
   if(!colList.length)colList.push({items:[]});   // only an observatory: one empty column so the east edge has a street to connect to
   let x=0;const specs=[],streetBx=new Set(),westOf={},westOf0={},swMap={};let maxRows=1;
-  colList.forEach((col,ci)=>{col.hasRaw=col.items.some(i=>rawOf(i.n));x+=col.hasRaw?4:0;col.gx=x;col.sw=sws[ci]||SW;col.half=(opts.halfs||[])[ci];col.west=ci?colList[ci-1].gx+1+colList[ci-1].sw:null;col.west0=ci?colList[ci-1].gx+2:null;swMap[col.gx+2]={sw:col.sw,half:col.half};x+=2+col.sw;for(let d=2;d<2+col.sw;d++)streetBx.add(col.gx+d);   // block, output block, street 4 strides wide (64 lanes)
+  colList.forEach((col,ci)=>{col.hasRaw=col.items.some(i=>rawOf(i.n));x+=col.hasRaw?(HAND.noDock?2:4):0;col.gx=x;col.sw=sws[ci]||SW;col.half=(opts.halfs||[])[ci];col.west=ci?colList[ci-1].gx+1+colList[ci-1].sw:null;col.west0=ci?colList[ci-1].gx+2:null;swMap[col.gx+2]={sw:col.sw,half:col.half};x+=2+col.sw;for(let d=2;d<2+col.sw;d++)streetBx.add(col.gx+d);   // block, output block, street 4 strides wide (64 lanes)
     let cur=0;col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter],nExtra=rawOf(it.n)?Math.max(0,new Set(it.n.rec.i.map(([q])=>q).filter(q=>isRaw(q)||q===it.n.rec.o[0])).size-(HAND.noDock||HAND.nrm?2:1)):0;westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
       if(nExtra)cur+=2;const gyRow=cur;cur+=nExtra?4:2;maxRows=Math.max(maxRows,cur/2);   // a block with extra docks keeps the rows above and below for them
-      specs.push({gx:col.gx,gy:TBS+1+gyRow,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),col:dep[it.n.item]})})});
+      specs.push({gx:col.gx,gy:TBS+1+gyRow,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),nx:nExtra,col:dep[it.n.item]})})});
   specs.forEach(s=>{const pr=P.edges.filter(e=>e.to===s.item&&e.from!==s.item).map(e=>e.from);s.yUp=specs.some(q=>pr.includes(q.item)&&q.gy<s.gy)});   // a producer block on a higher row: this block's entries must be reachable from the north
   const lastCol=colList[colList.length-1],lastGx=lastCol.gx,gxO=lastGx+2+lastCol.sw,nLn=Math.ceil(RATE/[60,120,180][MK]-1e-9),nrmO=(opts.outDockType||opts.dockType)==='nrm',nOD=opts.outDock?Math.ceil(nLn/(nrmO?4:8)):0;   // output dock: an extra tile column east of everything (nLn lanes of the final item, 8 lanes per industrial dock)
   // Deep Space Observatory (a block, not a machine): only the final product, east of everything, on 2x2 C tiles (its west face has two ports at mid height and needs an open-sided block)
   if(nOD||nDSO){maxRows=Math.max(maxRows,nOD+nDSO);westOf[gxO]=lastGx+1+lastCol.sw;westOf0[gxO]=lastGx+2}
   const W=nOD||nDSO?gxO+1:gxO,H=TBS+1+2*maxRows+TBS,odRow0=nOD||nDSO?Math.min(Math.min(...specs.filter(q=>q.item===ITEM).map(q=>q.gy))+1,TBS+2*maxRows-2*(nOD+nDSO-1)):0,dsoRow0=odRow0+2*nOD;   // the output docks sit on the street row right below the final blocks: the belt stays beside them, and its rows never coincide with a box port row   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
   const nCols=colList.length,report={skipped:Object.values(P.nodes).filter(n=>n.crafter&&n.machines>0&&!CM[n.crafter]&&!(n.crafter==='CRAFT_DeepSpaceObservatory')).map(n=>n.item.replace('ITEM_','')+' ('+n.crafter.replace('CRAFT_','')+')').concat(dsoR&&!dsoOk?[ITEM.replace('ITEM_','')+' (Deep Space Observatory needs 2x2 C blocks)']:[]),recipes:nodes.length,blocks:specs.length,cols:nCols,rows:maxRows,routed:0,failed:0,entries:0,unsupplied:[]};
-  const dockZone=new Set();specs.forEach(s=>{if(s.dock)for(let d=1;d<=4;d++)for(let dy=-1;dy<=1;dy++)dockZone.add((s.gx-d)+','+(s.gy+dy))});   // dock + adapter (2 strides) and 3 units of ship space in front (2 strides)
+  const dockZone=new Set();specs.forEach(s=>{if(s.dock)for(let d=1;d<=(HAND.noDock?2:4);d++)for(let dy=HAND.noDock&&!s.nx?0:-1;dy<=(HAND.noDock&&!s.nx?0:1);dy++)dockZone.add((s.gx-d)+','+(s.gy+dy))});   // dock + adapter (2 strides) and 3 units of ship space in front (2 strides)
   const outBlk=new Set(specs.map(s=>(s.gx+1)+','+s.gy));
   const t0=Date.now(),odBlk=[];
   const R=fbBuild({mk:MK,plan:specs,after:(anch)=>{
@@ -79,9 +79,22 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     // plan one straight run between two waypoints (both exclusive): greedy underground chains over occupied cells; false when a needed cell is taken
     const planRun=(a,b,mine,out,endCell)=>{const dx=sgn(b[0]-a[0]),dy=sgn(b[1]-a[1]),dir=dirOf(dx,dy),cells=[];let x=a[0]+dx,y=a[1]+dy;while(x!==b[0]||y!==b[1]){cells.push([x,y]);x+=dx;y+=dy}if(endCell)cells.push([b[0],b[1]]);
       const N=cells.length;if(!N)return true;const ok=c=>HAND.free(c[0],c[1])&&(!mine.has(c[0]+','+c[1])||(endCell&&c[0]===b[0]&&c[1]===b[1]));let i=0;
-      while(i<N){if(!ok(cells[i])){LB.cell=cells[i];LB.run=[a,b];return false}let best=-1;for(let j=Math.min(i+DH,N-1);j>=i+2;j--)if(ok(cells[j])&&(j===N-1||ok(cells[j+1]))){best=j;break}
+      const n0=out.length,snap=new Set(mine);   // greedy first (unchanged layouts); only when it hits an obstacle cluster it cannot hop from its fixed start, the search below tries every hop combination
+      const greedy=()=>{while(i<N){if(!ok(cells[i])){LB.cell=cells[i];LB.run=[a,b];return false}let best=-1;for(let j=Math.min(i+DH,N-1);j>=i+2;j--)if(ok(cells[j])&&(j===N-1||ok(cells[j+1]))){best=j;break}
         if(best>=0){out.push({cls:UGC,x:cells[i][0],y:cells[i][1],rot:dir},{cls:UGC,x:cells[best][0],y:cells[best][1],rot:dir,span:[cells[i],cells[best]]});cells.slice(i,best+1).forEach(c=>mine.add(c[0]+','+c[1]));i=best+1}
         else{out.push({cls:BELT,x:cells[i][0],y:cells[i][1],rot:dir});mine.add(cells[i][0]+','+cells[i][1]);i++}}
+      return true};
+      if(greedy())return true;
+      out.length=n0;mine.clear();snap.forEach(c=>mine.add(c));
+      // cheapest piece sequence over the run: a belt on cell k, or an underground pair k -> j (2..DH apart, only k and j+1 need to be free)
+      const cost=Array(N+1).fill(Infinity),par=Array(N+1).fill(null);cost[0]=0;
+      for(let k=0;k<N;k++){if(cost[k]===Infinity||!ok(cells[k]))continue;
+        if(cost[k]+1<cost[k+1]){cost[k+1]=cost[k]+1;par[k+1]=[k,-1]}
+        for(let j=k+2;j<=Math.min(k+DH,N-1);j++)if(ok(cells[j])&&(j===N-1||ok(cells[j+1]))&&cost[k]+3<cost[j+1]){cost[j+1]=cost[k]+3;par[j+1]=[k,j]}}
+      if(cost[N]===Infinity){LB.cell=cells[0];LB.run=[a,b];return false}
+      const seq=[];for(let k=N;k>0;){const [f,j]=par[k];seq.unshift([f,j]);k=f}
+      seq.forEach(([f,j])=>{if(j<0){out.push({cls:BELT,x:cells[f][0],y:cells[f][1],rot:dir});mine.add(cells[f][0]+','+cells[f][1])}
+        else{out.push({cls:UGC,x:cells[f][0],y:cells[f][1],rot:dir},{cls:UGC,x:cells[j][0],y:cells[j][1],rot:dir,span:[cells[f],cells[j]]});cells.slice(f,j+1).forEach(c=>mine.add(c[0]+','+c[1]))}});
       return true};
     const lay=(wps,tag)=>{const out=[],mine=new Set();
       const L2=wps.length,gl=wps[L2-1],pv=wps[L2-2],gdx=sgn(gl[0]-pv[0]),gdy=sgn(gl[1]-pv[1]),goalExit=!HAND.inFloor(gl[0]-gdx,gl[1]-gdy);   // a wall right before the goal: the goal itself is the exit of the last tunnel
@@ -110,7 +123,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
         if(done){report.routed++;continue}}
       let ok=0,why='';const order=L.slice().sort((a,b)=>(a.room<e.dem-1e-6)-(b.room<e.dem-1e-6)||((a.obj.routed||0)>0)-((b.obj.routed||0)>0)||Math.abs(a.x-e.gx)-Math.abs(b.x-e.gx)||b.room-a.room);   // a box nothing leaves yet comes first: every box (= every machine row of the product) gets a belt
       for(const [s,p] of order.flatMap(s=>s.ports.map(p=>[s,p]))){const sx=p.x+p.nx,sy=p.y+p.ny;
-        const bx1=s.x+2,dock=!!e.north,bx2=dock?e.gx+2:westOf0[e.gx],tgtY=dock?(e.gy-1)*TW:e.y;
+        const bx1=s.x+2,dock=!!e.north,bx2=dock&&!(HAND.noDock&&westOf0[e.gx]!=null)?e.gx+2:westOf0[e.gx],tgtY=dock?(e.gy-1)*TW:e.y;
         const pr=pre.get(e),top=(pr&&typeof pr==='object')?pr.top:(sy+tgtY)<=(2*Hpx-sy-tgtY),tk=top?'tT':'tB',tBase=top?0:(H-TBS)*TW;
         const dir=bx1===bx2&&!dock&&pr&&typeof pr==='object';   // same street: straight to the reserved consumer lane, no trunk loop (lay only uses free cells, tunnelling the rest; the trunk route stays the fallback)
         const srows=[];for(let g=TBS;g<=TBS+2*maxRows;g+=2){const yc=g*TW+16;if(pr&&typeof pr==='object'&&(pr.top?yc>tgtY:yc<tgtY))continue;srows.push([g,Math.abs(sy-yc)+Math.abs(tgtY-yc)])}srows.sort((a,b)=>a[1]-b[1]);   // street rows between the factory rows: short trunk, two nearest tried
