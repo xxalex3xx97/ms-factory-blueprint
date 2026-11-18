@@ -7,12 +7,13 @@
 window.chainBuild=function(opts){
   opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.noDock=opts.docks===false;HAND.allRaw=!!opts.single;   // single: one recipe only (template gallery), every input is a source
   HAND.nrm=opts.dockType==='nrm';   // input dock kind only; output dock kind is nrmO below
-  // docks off: try factory rows packed directly against each other and with a street row between them, keep the build with fewer blocks (packed rows lose the street rows as trunks on big chains)
+  // try factory rows packed / with a street row between them, and with / without the sideways jog at a blocked source port; keep the build with the fewest problems, then blocks, then belts (packing or jogging can lose on big chains)
   if(opts.pack===undefined&&!opts.dry&&!opts.noAdapt&&!opts.capsDone){
-    const A=chainBuild({...opts,pack:false});A.badN=HAND.check().bad.length;const B=chainBuild({...opts,pack:true});B.badN=HAND.check().bad.length;
-    const score=r=>[(r.report.failed||0)+r.badN,r.blocks.length];
-    const better=score(B)[0]<score(A)[0]||(score(B)[0]===score(A)[0]&&score(B)[1]<score(A)[1]);
-    return better?B:chainBuild({...opts,pack:false});
+    let combos=[[false,false],[true,false],[false,true],[true,true]];const res=[];
+    for(let k=0;k<combos.length;k++){const [pack,jog]=combos[k],r=chainBuild({...opts,pack,jog});r.badN=HAND.check().bad.length;res.push(r);if(res.length===1&&r.blocks.length>150)combos=combos.slice(0,2)}   // very big chains: only the two packing variants (the preview builds on the main thread)
+    const sc=r=>[(r.report.failed||0)+r.badN,r.blocks.length,r.belts||0];let bi=0;
+    res.forEach((r,k)=>{const a=sc(r),b=sc(res[bi]);for(let q=0;q<3;q++){if(a[q]!==b[q]){if(a[q]<b[q])bi=k;break}}});
+    return bi===res.length-1?res[bi]:chainBuild({...opts,pack:combos[bi][0],jog:combos[bi][1]});
   }
   // pass 1 measures the lanes every street column and the trunk bands really need (wide streets), pass 2 builds with exactly that much street: a much smaller factory, far fewer pieces
   if(!opts.noAdapt&&!opts.capsDone){let caps={...(opts.caps||{})};   // normal docks: each block holds fewer machines; find the real capacity per product with dry builds, then plan the block count with it
@@ -136,9 +137,10 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
         const pr=pre.get(e),top=(pr&&typeof pr==='object')?pr.top:(sy+tgtY)<=(2*Hpx-sy-tgtY),tk=top?'tT':'tB',tBase=top?0:(H-TBS)*TW;
         const dir=bx1===bx2&&!dock&&pr&&typeof pr==='object';   // same street: straight to the reserved consumer lane, no trunk loop (lay only uses free cells, tunnelling the rest; the trunk route stays the fallback)
         const srows=[];for(let g=TBS;g<=TBS+2*maxRows;g+=2){const yc=g*TW+16;if(pr&&typeof pr==='object'&&(pr.top?yc>tgtY:yc<tgtY))continue;srows.push([g,Math.abs(sy-yc)+Math.abs(tgtY-yc)])}srows.sort((a,b)=>a[1]-b[1]);   // street rows between the factory rows: short trunk, two nearest tried
-        for(const direct of [...(dir?[1]:[]),...srows.slice(0,2).map(r=>r[0]),0]){   // 1 = straight lane, g>=3 = street row g as trunk, 0 = far top/bottom trunk band
-        let X1,X2,Yt=null;
+        for(const direct of [...(dir?[1,...(opts.jog!==false?[1001,1002,1003,1004]:[])]:[]),...srows.slice(0,2).map(r=>r[0]),0]){   // 1 = straight lane, g>=3 = street row g as trunk, 0 = far top/bottom trunk band
+        let X1,X2,Yt=null,jog=0;
         if(direct===1)X1=X2=laneX(bx2,pr.k);
+        else if(direct>1000){jog=[2,-2,4,-4][direct-1001];X1=X2=laneX(bx2,pr.k)}   // straight lane blocked on the port's row (another belt's tunnel): step 2-4 rows sideways right at the port and run on that row instead of detouring through a far street row
         else if(direct>1){if(bx1===bx2&&!pr)continue;const yc=direct*TW+16;
           const k1=take('v'+bx1,Math.min(sy,yc),Math.max(sy,yc),halfOf(bx1));if(k1<0){why='no source lane';continue}X1=laneX(bx1,k1);
           let k2;if(pr&&typeof pr==='object')k2=pr.k;else k2=take('v'+bx2,Math.min(yc,tgtY),Math.max(yc,tgtY),nlOf(bx2),halfOf(bx2));if(k2==null||k2<0){why='no consumer lane';continue}X2=laneX(bx2,k2);
@@ -148,7 +150,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
         let wps;
         if(dock){const kh=take('h'+(e.gy-1),Math.min(X2,e.x),Math.max(X2,e.x),14);if(kh<0){why='no street row lane';continue}const Yh=(e.gy-1)*TW+2+2*kh;
           wps=[[sx,sy],[X1,sy],...(Yt!=null?[[X1,Yt],[X2,Yt]]:[]),[X2,Yh],[e.x,Yh],[e.x,e.y]]}
-        else wps=[[sx,sy],[X1,sy],...(Yt!=null?[[X1,Yt],[X2,Yt]]:[]),[X2,e.y],[e.x,e.y]];
+        else wps=jog?[[sx,sy],[sx+2,sy],[sx+2,sy+jog],[X1,sy+jog],[X2,e.y],[e.x,e.y]]:[[sx,sy],[X1,sy],...(Yt!=null?[[X1,Yt],[X2,Yt]]:[]),[X2,e.y],[e.x,e.y]];
         const clean=wps.filter((w,i)=>i===0||w[0]!==wps[i-1][0]||w[1]!==wps[i-1][1]);
         if(lay(clean,e.gx+','+e.gy)){s.obj.used.add(p.key);s.obj.routed=(s.obj.routed||0)+1;s.ports.splice(s.ports.indexOf(p),1);s.room-=e.dem;ok=1;break}else why='blocked '+JSON.stringify((()=>{const c=LB.cell,q=c&&HAND.S.pcs.find(p=>p.x===c[0]&&p.y===c[1]);return q?{g:q.g,cls:q.cls.slice(-4),rot:q.rot}:{floor:c&&HAND.inFloor(c[0],c[1]),occ:c&&HAND.S.occ.get(c[0]+','+c[1])}})())+' '+JSON.stringify(LB.cell)+' '+JSON.stringify(LB.run)+' dock='+dock+' wps='+JSON.stringify(clean)}if(ok)break}
       if(ok)report.routed++;else{report.failed++;HAND.S.fails.push(e.item.replace('ITEM_','')+' > '+e.blk+' no route ('+why+')')}}

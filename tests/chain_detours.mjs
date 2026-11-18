@@ -8,12 +8,12 @@ const require = createRequire(import.meta.url);
 const {chromium} = require('C:/Users/SFidelis/AppData/Roaming/npm/node_modules/omniroute/node_modules/playwright-core');
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PAGE = pathToFileURL(path.join(HERE, '..', 'index.html')).href;
-const CASES = [   // [item, rate, machines (planner N), max blocks, max waste]; fails also counts HAND.check() problems (a layout with a foreign underground pair is not placeable)
-  ['Servomotor', 150, 80, 26, 0], ['Servomotor', 180, 96, 27, 96], ['Servomotor', 60, 32, 26, 0], ['Servomotor', 300, 160, 44, 224], ['Superalloy', 120, 17, 23, 102],
+const CASES = [   // [item, rate, machines (planner N), max blocks, max waste, docks in, docks out]; fails also counts HAND.check() problems (a layout with a foreign underground pair is not placeable)
+  ['Servomotor', 150, 80, 26, 0], ['Servomotor', 180, 96, 26, 0], ['Servomotor', 60, 32, 26, 0], ['Servomotor', 300, 160, 42, 0], ['Superalloy', 120, 17, 21, 0],
   ['BasicCircuit', 200, 74, 26, 120], ['Capacitor', 100, 22, 13, 0], ['MagneticCoils', 300, 25, 8, 0],
   ['Enzyme', 20, 3, 24, 144], ['AdvancedCircuits', 60, 220, 188, 1084],
-  ['Servomotor', 150, 80, 24, 0, true], ['Servomotor', 180, 96, 25, 96, true], ['Superalloy', 120, 17, 20, 102, true], ['Capacitor', 100, 22, 11, 0, true],
-  ['Servomotor', 150, 80, 28, 0, true, true], ['Servomotor', 180, 96, 29, 96, true, true]];   // 7th = output dock too   // 6th = raw inputs from industrial docks
+  ['Servomotor', 150, 80, 24, 0, true], ['Servomotor', 180, 96, 24, 0, true], ['Superalloy', 120, 17, 20, 0, true], ['Capacitor', 100, 22, 11, 0, true],
+  ['Servomotor', 150, 80, 28, 0, true, true], ['Servomotor', 180, 96, 28, 0, true, true]];
 const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 const pg = await br.newPage();
 pg.on('pageerror', e => console.log('ERR', e.message));
