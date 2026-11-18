@@ -39,6 +39,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     let cur=0;col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter],nExtra=rawOf(it.n)?Math.max(0,new Set(it.n.rec.i.map(([q])=>q).filter(q=>isRaw(q)||q===it.n.rec.o[0])).size-(HAND.noDock||HAND.nrm?2:1)):0;westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
       if(nExtra)cur+=2;const gyRow=cur;cur+=nExtra?4:2;maxRows=Math.max(maxRows,cur/2);   // a block with extra docks keeps the rows above and below for them
       specs.push({gx:col.gx,gy:TBS+1+gyRow,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),col:dep[it.n.item]})})});
+  specs.forEach(s=>{const pr=P.edges.filter(e=>e.to===s.item&&e.from!==s.item).map(e=>e.from);s.yUp=specs.some(q=>pr.includes(q.item)&&q.gy<s.gy)});   // a producer block on a higher row: this block's entries must be reachable from the north
   const lastCol=colList[colList.length-1],lastGx=lastCol.gx,gxO=lastGx+2+lastCol.sw,nLn=Math.ceil(RATE/[60,120,180][MK]-1e-9),nrmO=(opts.outDockType||opts.dockType)==='nrm',nOD=opts.outDock?Math.ceil(nLn/(nrmO?4:8)):0;   // output dock: an extra tile column east of everything (nLn lanes of the final item, 8 lanes per industrial dock)
   // Deep Space Observatory (a block, not a machine): only the final product, east of everything, on 2x2 C tiles (its west face has two ports at mid height and needs an open-sided block)
   if(nOD||nDSO){maxRows=Math.max(maxRows,nOD+nDSO);westOf[gxO]=lastGx+1+lastCol.sw;westOf0[gxO]=lastGx+2}
@@ -91,7 +92,7 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     // entries without dock of one block sit on adjacent rows: their consumer lanes are taken together, in the order that keeps every corner free (from the top: lower row = lower lane x; from the bottom: the opposite)
     const pre=new Map();
     {const g={};ents.forEach(e=>{if(!e.north&&!e.out&&westOf[e.gx]!=null)(g[e.gx+','+e.gy]=g[e.gx+','+e.gy]||[]).push(e)});
-     Object.values(g).forEach(L=>{L.sort((a,b)=>a.y-b.y);const e0=L[0],bx2=westOf0[e0.gx],top=L.some(e=>e.y%TW===0)?false:L.some(e=>e.y%TW===29)?true:e0.y<=Hpx/2,key='v'+bx2;   // a lane row on the first cell line of a block cannot be reached from the north (a wall is right before it)
+     Object.values(g).forEach(L=>{L.sort((a,b)=>a.y-b.y);const e0=L[0],bx2=westOf0[e0.gx],top=L.some(e=>e.y%TW===0)?false:L.some(e=>e.y%TW===29)?true:((u,n)=>n?u>0:e0.y<=Hpx/2)(...L.reduce(([u,n],e)=>(src[e.item]||[]).reduce(([u2,n2],q)=>[u2+(q.obj.y<e.y?1:-1),n2+1],[u,n]),[0,0])),key='v'+bx2;   // entries off the first line: lanes come from the side the sources are on (no down-and-back)   // a lane row on the first cell line of a block cannot be reached from the north (a wall is right before it)
        const a0=top?0:L[0].y,b0=top?L[L.length-1].y:Hpx;const free=[];const l=lanes.get(key)||lanes.set(key,[]).get(key);
        for(let k=halfOf(bx2);k<nlOf(bx2)&&free.length<L.length;k++){if(!l[k])l[k]=[];if(!l[k].some(([c,d])=>!(b0+PAD<c||a0-PAD>d)))free.push(k)}
        if(free.length<L.length){L.forEach(e=>pre.set(e,-1));return}
