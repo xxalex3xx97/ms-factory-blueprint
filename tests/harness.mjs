@@ -1,4 +1,4 @@
-﻿// Black-box browser tests for tools/factory-blueprint/index.html (round 4 harness, rebuilt).
+// Black-box browser tests for tools/factory-blueprint/index.html (round 4 harness, rebuilt).
 // Run:  cd F:/ms-factory-bp/tools/factory-blueprint && node tests/harness.mjs
 // Screenshots -> tests/shots/. Exit code 1 on any failed check or page error.
 // Never weakens a check: a mismatch with ground_truth.json or the brief is reported as FAIL.
@@ -3317,7 +3317,7 @@ async function s28(br) {
       __fb.importJson(JSON.stringify({Version: 2, DisplayName: 't', Blocks: [{Class: cls, GridLocation: {X: 40, Y: 40}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0}], DefaultMachines: []}));
       __fb.setView('F'); __fb.fit(); const b = __fb.S.blocks[0]; V.z = Math.min(W, H) / (2 * FC * CELLS.F) * .9; V.ox = W / 2 - (b.x + .5) * FC * sc(); V.oy = H / 2 - (b.y + .5) * FC * sc();
       const g = document.getElementById('cv').getContext('2d'), tx = [], o = g.fillText; g.fillText = function (t, ...a) { tx.push(t); return o.call(this, t, ...a) };
-      __fb.paint(); g.fillText = o; return {tx, want: `${lab(def(b.cls))}  ${FC}Ã—${FC}`};
+      __fb.paint(); g.fillText = o; return {tx, want: `${lab(def(b.cls))}  ${FC}×${FC}`};
     }, `${P}${n}.${n}_C`);
     chk(`28 Factory floor label "${got.want}" drawn for ${n}`, got.tx.includes(got.want), JSON.stringify(got.tx));
   }
@@ -3911,10 +3911,10 @@ async function s42(br) {
   chk('42 imported nested game undergrounds (Length 10 and 4) keep both lengths', JSON.stringify(imported) === JSON.stringify([4, 10]), JSON.stringify(imported));
   const rt0 = await pg.evaluate(() => { const u = (id, x, pu) => ({id, cls: 'DAT_UndergroundBelt', x, y: 5, h: 0, rot: 0, pid: 0, pu}); S.blocks = [u(901, 0, 903), u(902, 3, 904), u(903, 9, 901), u(904, 6, 902)]; __fb.importJson(JSON.stringify(__fb.build())); return __fb.ugPairs(S.blocks.filter(isM)).map(p => p.n).sort((a, b) => a - b); });
   chk('42 nested undergrounds survive export -> import (refresh / autosave)', JSON.stringify(rt0) === JSON.stringify([4, 10]), JSON.stringify(rt0));
-  const dsg = await pg.evaluate(() => { const j0 = {Version: 2, DisplayName: 'Dz', Blocks: [{Class: '/Game/Blueprints/BuildingBlocks/BPO_Dock.BPO_Dock_C', GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0, Name: 'Dock Ã¼'}, {Class: '/Game/Blueprints/BuildingBlocks/BPO_MiningDroneBayBlock.BPO_MiningDroneBayBlock_C', GridLocation: {X: 40, Y: 0}, Height: 0, GridRotation: 0, BlockID: 2, PaletteID: 0, Resource: 'silica'}], DefaultMachines: []};
+  const dsg = await pg.evaluate(() => { const j0 = {Version: 2, DisplayName: 'Dz', Blocks: [{Class: '/Game/Blueprints/BuildingBlocks/BPO_Dock.BPO_Dock_C', GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0, Name: 'Dock ü'}, {Class: '/Game/Blueprints/BuildingBlocks/BPO_MiningDroneBayBlock.BPO_MiningDroneBayBlock_C', GridLocation: {X: 40, Y: 0}, Height: 0, GridRotation: 0, BlockID: 2, PaletteID: 0, Resource: 'silica'}], DefaultMachines: []};
     const r = savExport(j0, {size: () => [1, 1], icon: new Array(65536).fill(0)}), j = savImport(r.bytes);
     return {n: j && j.DisplayName, b: j && j.Blocks.map(e => [e.Name || null, e.Resource || null]), none: savImport(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32])) === null}; });
-  chk('42 design .sav import: savExport -> savImport keeps name, Dock Name, bay Resource; non-GVAS = null', dsg.n === 'Dz' && JSON.stringify(dsg.b) === JSON.stringify([['Dock Ã¼', null], [null, 'silica']]) && dsg.none, JSON.stringify(dsg));
+  chk('42 design .sav import: savExport -> savImport keeps name, Dock Name, bay Resource; non-GVAS = null', dsg.n === 'Dz' && JSON.stringify(dsg.b) === JSON.stringify([['Dock ü', null], [null, 'silica']]) && dsg.none, JSON.stringify(dsg));
   await reset(pg);
   await imp(pg, bp([{...blk('BPO_MiningDroneBayBlock', 0, 0), Resource: 'silica'}, {...blk('BPO_ElevatorBlock_03', 20, 0), Name: 'Lift A'}, blk('BPO_Station_01', 40, 0)],
     [{Class: 'DAT_Teleporter', Transform: {GridLocation: {X: 80, Y: 80}, Height: 0, GridRotation: 0}, ConfigHex: '020000000000ff', MachineID: 5, PaletteID: 0}]));
@@ -4027,12 +4027,12 @@ async function s40(br) {
   const py = spawnSync(process.env.PYTHON || 'py', ['-I', '-c', `import sys;sys.path.insert(0,r'${path.join(ROOT, 'extract')}');import config_codec as c;print(c.encode('dock',{'name':'Dock \\u00dcn\\u00ef \\u6d4b\\u8bd5 \\u2713','filters':[]}).hex())`], {encoding: 'utf8'});
   chk('40 python config_codec encodes the same bytes as cfgEnc (non-ASCII)', py.status === 0 && py.stdout.trim() === cc.u, `js ${cc.u} py ${(py.stdout || '').trim()} ${py.stderr || ''}`);
   // chars > 0x7F (Latin-1 too) go UTF-16 like UE IsPureAnsi: round trip, negative length, python identical bytes
-  const CN = ['CafÃ©', 'ÃœnÃ¯', NM];
+  const CN = ['Café', 'Ünï', NM];
   const cl = await pg.evaluate(names => names.map(nm => { const h = cfgEnc('dock', {name: nm, filters: []}); return {h, len: new DataView(new Uint8Array(h.match(/../g).map(x => parseInt(x, 16))).buffer).getInt32(2, true), back: cfgDec('BP_StationBlockDock_C', h).name}; }), CN);
-  chk('40 cfgEnc Latin-1 names (CafÃ©, ÃœnÃ¯) and >0xFF name go UTF-16 (negative length), round trip', cl.every((x, i) => x.back === CN[i] && x.len === -(CN[i].length + 1)), JSON.stringify(cl));
+  chk('40 cfgEnc Latin-1 names (Café, Ünï) and >0xFF name go UTF-16 (negative length), round trip', cl.every((x, i) => x.back === CN[i] && x.len === -(CN[i].length + 1)), JSON.stringify(cl));
   const cnPy = CN.map(s => "'" + [...s].map(ch => '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0')).join('') + "'").join(',');
   const pyCn = spawnSync(process.env.PYTHON || 'py', ['-I', '-c', `import sys;sys.path.insert(0,r'${path.join(ROOT, 'extract')}');import config_codec as c;print(' '.join(c.encode('dock',{'name':n,'filters':[]}).hex() for n in [${cnPy}]))`], {encoding: 'utf8'});
-  chk('40 python config_codec = cfgEnc bytes for CafÃ©, ÃœnÃ¯, >0xFF names', pyCn.status === 0 && pyCn.stdout.trim() === cl.map(x => x.h).join(' '), `js ${cl.map(x => x.h).join(' ')} py ${(pyCn.stdout || '').trim()} ${pyCn.stderr || ''}`);
+  chk('40 python config_codec = cfgEnc bytes for Café, Ünï, >0xFF names', pyCn.status === 0 && pyCn.stdout.trim() === cl.map(x => x.h).join(' '), `js ${cl.map(x => x.h).join(' ')} py ${(pyCn.stdout || '').trim()} ${pyCn.stderr || ''}`);
   // label on the canvas: Layout, zoomed onto the imported Rich Titan dock; one long name shows the ellipsis
   await pg.evaluate(() => { __fb.setView('L'); const yard = S.blocks.find(b => b.nm === 'S Titan') || S.blocks[0]; yard.nm = 'A very long industrial dock name that cannot fit the block'; sel = new Set(); all(); });
   await pg.evaluate(() => { const b = S.blocks.find(q => q.nm && q.nm.startsWith('Station Dock')); V.z = 4; const d = __fb.dim(b); V.ox = W / 2 - (b.x + d.w / 2) * sc(); V.oy = H / 2 - (b.y + d.h / 2) * sc(); __fb.paint(); });

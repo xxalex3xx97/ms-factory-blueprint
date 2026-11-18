@@ -255,14 +255,15 @@ function links(L){
 function elvInject(lv,Kf,ldf){
   const by=new Map(),inj=new Map(lv.map(l=>[l,[]])),sig=[];
   lv.forEach(l=>Kf(l).elvIn.forEach(({k,id})=>{const ld=ldf(l,id);if(!ld)return;
-    let e=by.get(k);if(!e)by.set(k,e={src:new Map(),outs:[]});ld.items.forEach((v,it)=>e.src.set(it,(e.src.get(it)||0)+v))}));
+    let e=by.get(k);if(!e)by.set(k,e={src:[],outs:[]});e.src.push({l,items:ld.items})}));
   lv.forEach(h=>{const K=Kf(h);K.elvOut.forEach((id,k)=>{const e=by.get(k);if(!e)return;const bl=K.belts.find(b=>b.id===id);e.outs.push({h,id,room:(bl&&beltMax(bl))||Infinity})})});
-  by.forEach((e,k)=>e.src.forEach((v,item)=>{
-    let left=v,act=e.outs.filter(o=>o.room>1e-9);const got=new Map();
-    while(left>1e-9&&act.length){const sh=left/act.length;let used=0;
-      act.forEach(o=>{const g=Math.min(sh,o.room);o.room-=g;used+=g;got.set(o,(got.get(o)||0)+g)});
-      left-=used;act=act.filter(o=>o.room>1e-9);if(used<1e-9)break}
-    got.forEach((g,o)=>{inj.get(o.h).push({id:o.id,item,rate:g});sig.push(o.h+k+item+r2(g))})}));
+  by.forEach((e,k)=>{const got=new Map();   // a source level never feeds its own output belt (same as the sim)
+    e.src.forEach(({l,items})=>items.forEach((v,item)=>{
+      let left=v,act=e.outs.filter(o=>o.h!==l&&o.room>1e-9);
+      while(left>1e-9&&act.length){const sh=left/act.length;let used=0;
+        act.forEach(o=>{const g=Math.min(sh,o.room);o.room-=g;used+=g;const q=o.h+"|"+item;got.set(q,{o,item,g:(got.has(q)?got.get(q).g:0)+g})});
+        left-=used;act=act.filter(o=>o.room>1e-9);if(used<1e-9)break}}));
+    got.forEach(({o,item,g})=>{inj.get(o.h).push({id:o.id,item,rate:g});sig.push(o.h+k+item+r2(g))})});
   return{inj,sig};
 }
 function linksAll(L,hk){
