@@ -258,7 +258,7 @@ function linksAll(L,hk){
   for(let pass=0;pass<Math.min(lv.length,6);pass++){
     const inj=new Map(lv.map(l=>[l,[]])),sig=[];
     lv.forEach(l=>{const K=res.get(l);K.elvIn.forEach(({k,id})=>{const ld=K.load.get(id);if(!ld)return;
-      const dst=[lv.filter(h=>h>l).sort((x,y)=>x-y),lv.filter(h=>h<l).sort((x,y)=>y-x)].map(c=>c.find(h=>res.get(h).elvOut.has(k))).filter(h=>h!=null);   // nearest level up / down with an output belt on that portif(!dst.length)return;
+      const dst=[lv.filter(h=>h>l).sort((x,y)=>x-y),lv.filter(h=>h<l).sort((x,y)=>y-x)].map(c=>c.find(h=>res.get(h).elvOut.has(k))).filter(h=>h!=null);if(!dst.length)return;   // nearest level up / down with an output belt on that port
       ld.items.forEach((v,item)=>dst.forEach(h=>{inj.get(h).push({id:res.get(h).elvOut.get(k),item,rate:v/dst.length});sig.push(h+k+item+r2(v/dst.length))}))})});
     const sg=sig.join();if(sg===prev)break;prev=sg;LKI=inj;LKS=sg;
     res=new Map(lv.map(l=>[l,links1c(l,inj.get(l),hk)]));
