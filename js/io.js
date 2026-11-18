@@ -79,6 +79,12 @@ function parseSav(buf){
   const hasAt=(o,s)=>{for(let k=0;k<s.length;k++)if(u8[o+k]!==s.charCodeAt(k))return false;return true};
   const fstr=o=>{if(o<0||o+4>L)return null;const n=I(o);if(n<1||n>400||o+4+n>L||u8[o+3+n]!==0)return null;let s="";for(let k=o+4;k<o+3+n;k++){if(u8[k]<32||u8[k]>126)return null;s+=String.fromCharCode(u8[k])}return[s,o+4+n]};
   const localAt=o=>{const c=I(o);if(c<1||c>255)return null;const cls=[];let q=o+4;for(let k=0;k<c;k++){const r=fstr(q);if(!r||!r[0].startsWith("/Game/"))return null;cls.push(r[0]);q=r[1]}return{cls,end:q}};
+  // names of machines (elevators) live in the world's machine records, not in the blueprint struct: Name property (12 00 00 00 ff 01 00 00 00, FString) with the MachineID 148 bytes before it
+  let NM=null;const nameByMid=()=>{if(NM)return NM;NM=new Map();const PAT=[0x12,0,0,0,0xff,1,0,0,0];
+    for(let q=148,lim=L-16;q<lim;q++){if(u8[q]!==0x12)continue;let k=1;while(k<9&&u8[q+k]===PAT[k])k++;if(k<9)continue;
+      const n=I(q+9);if(n<2||n>200||q+13+n>L||u8[q+12+n]!==0)continue;let s="";for(let j=q+13;j<q+12+n;j++){if(u8[j]<32||u8[j]>126){s=null;break}s+=String.fromCharCode(u8[j])}
+      if(s)NM.set(I(q-148),s)}
+    return NM};
   const parseStruct=p=>{
     const nm=fstr(p+13);if(!nm)return null;
     let t=null;
@@ -100,7 +106,7 @@ function parseSav(buf){
     const C=A.cls,pth=i=>i>=0&&i<C.length?C[i]:null;
     const blocks=[],machs=A.machs.slice();
     for(const{b,ms}of A.blocks){machs.push(...ms);const p=pth(b.cls);if(p){const e={Class:p,GridLocation:{X:b.X,Y:b.Y},Height:b.H,GridRotation:b.R,BlockID:b.ID,PaletteID:b.PAL};   // dock name: string in the built-in dock child machine's ConfigHex (kept as an opaque machine too)
-      {const bn=p.split("/").pop().split(".")[0];if(NMC.includes(bn)||DBC.includes(bn))for(const m of ms){const q=pth(m.cls),c=q&&q.split("/").pop().split(".")[0];if(c&&/(StationBlockDock|IndustrialDock|ShipyardBlockDock|Elevator|MiningDroneBay)/.test(c)&&!/ItemElevator/.test(c)&&m.hx){const d=cfgDec(c,m.hx);if(d&&d.name)e.Name=d.name;if(d&&d.resource)e.Resource=d.resource;if(d&&d.filters&&d.filters.some(f=>f.item))e.Filters=d.filters}}}
+      {const bn=p.split("/").pop().split(".")[0];if(NMC.includes(bn)||DBC.includes(bn))for(const m of ms){const q=pth(m.cls),c=q&&q.split("/").pop().split(".")[0];if(c&&/(StationBlockDock|IndustrialDock|ShipyardBlockDock|Elevator|MiningDroneBay)/.test(c)&&!/ItemElevator/.test(c)){if(!m.hx){const w=/Elevator/.test(c)?nameByMid().get(m.MID):null;if(w)e.Name=w;continue}const d=cfgDec(c,m.hx);if(d&&d.name)e.Name=d.name;else if(!e.Name&&/Elevator/.test(c)&&!/ItemElevator/.test(c)){const w=nameByMid().get(m.MID);if(w)e.Name=w}if(d&&d.resource)e.Resource=d.resource;if(d&&d.filters&&d.filters.some(f=>f.item))e.Filters=d.filters}}}
       blocks.push(e)}}
     const dm=[],dup=ugDupes(machs,UG);
     for(const m of machs){const p=pth(m.cls);if(p){const c=p.split("/").pop().split(".")[0],e={Class:c,Transform:{GridLocation:{X:m.X,Y:m.Y},Height:m.H,GridRotation:m.R},MachineID:m.MID,PaletteID:m.PAL,...(m.hx?cfgView(c,m.hx):{})};
