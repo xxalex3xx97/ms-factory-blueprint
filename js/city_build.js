@@ -83,7 +83,7 @@ function cityBuild(x){
     const ownIds=new Set(own.map(a=>a.l.id)),okIds=new Set([...ownIds,...th.map(t=>t.l.id)]),c0=Math.max(hb?1:0,...kp.map(p=>p.c+p.pk.nPhys),...own.map(a=>fr(a.p,a.l)+1),...dk.map(p=>p.pk.nPhys+(hubOwn&&!p.o.raw?1:0)));let hit=false,lastWhy='';   // docks: gx=0 holds raw hubs only
     const tc=Date.now();   // 15 s budget covers this module's candidate loop only
     for(const cd of (x.place&&x.place[o.key]?[{c:x.place[o.key].c,r:x.place[o.key].r}]:rbCandidates(c0,rowWant,24))){
-      if(Date.now()-tc>15000)return no('rb: time');
+      if(Date.now()-tc>15000||Date.now()-t0>60000)return no('rb: time');
       const {c,r}=cd,RMc=rowsM(m,r),LSP=RMc[RMc.length-1]-RMc[0]+1;
       if(th.some(t=>clash(r,t)))continue;   // a lane crossing this module must run through a hull block, not through a member row
       const lcells=[],taken=new Set();let okL=true;
