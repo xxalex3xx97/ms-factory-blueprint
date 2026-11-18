@@ -36,13 +36,13 @@ function tplBuild(spec){
   const main=spec.main|0,perm=[main,...[0,1].filter(i=>i!==main)],T=tplIfSets(spec.block,B.S);
   let left=n;const sets=[];
   for(let k=0;k<B.S;k++){
-    const y0=T.o[k],m=Math.min(L.nRow,left);left-=m;sets.push({o:y0,n:m});
+    const y0=T.o[k],m=Math.min(L.nRow,left);left-=m;sets.push({o:y0,n:m,outs:[y0+9]});
     const put=(c,x,y,rot,o)=>items.push({cls:c,x,y:y0+y,rot,h:0,pid:0,...o}),Bt=(x,y,rot)=>put(bc,x,y,rot),U=(x,y)=>put(ug,x,y,0),P=(x,y,t)=>put(sc,x,y,0,{off:O[t],pr:[0,-1]});
     const s1=Math.ceil(m/2),cnt=[m-s1,s1,m-s1,s1];   // machines fed by lane row y0+0..3
     for(let c=0;c<4;c++){ports.in.push({x:0,y:y0+c,item:perm[c>>1],dir:'E',set:k,copy:c&1,lane:['B2','B1','A2','A1'][c],row:ports.in.length});rows.push({m:cnt[c]})}
-    ports.out.push({x:W-1,y:y0,dir:'E',set:k});
+    ports.out.push({x:W-1,y:y0+9,o:y0,dir:'E',set:k});
     const r=i=>1+5*i;
-    if(m===0){[0,1,2,3].forEach(y=>Bt(0,y,0));Bt(W-1,0,0);continue}
+    if(m===0){[0,1,2,3].forEach(y=>Bt(0,y,0));Bt(W-1,9,0);continue}
     for(let i=0;i<m;i++){const off=[...(i===0?keysW:[]),...(i===m-1?keysE:[])];put(spec.cls,r(i),4,3,{rec:spec.rec,...(off.length?{off}:{})})}
     // lane A1 (y 3)
     for(let x=0;x<=r(0);x++)Bt(x,3,0);if(s1<m)Bt(r(s1),3,0);
@@ -69,7 +69,7 @@ function tplBuild(spec){
       Bt(r(s1)+2,0,1);
     }else{Bt(0,2,0);Bt(0,0,0)}   // stubs
     for(let x=1;x<=W-3;x++)Bt(x,9,0);   // collector to W-3, then the east tail jog
-    const tl=[];tplOutTail(tl,{bc,W,yc:9,yo:0});tl.forEach(q=>items.push({...q,y:y0+q.y}));
+    const tl=[];tplOutTail(tl,{bc,W,yc:9,yo:9});tl.forEach(q=>items.push({...q,y:y0+q.y}));
   }
   const st={belts:0,ug:0,spl:0,machines:0};
   items.forEach(b=>{if(PLC_BELT.includes(b.cls))st.belts++;else if(PLC_UG.includes(b.cls))st.ug++;else if(PLC_SPL.includes(b.cls))st.spl++;else st.machines++});
