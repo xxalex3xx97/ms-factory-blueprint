@@ -388,7 +388,7 @@ function drawShapeFloor(A,s,wo){   // wo: walls only (tall block seen from a lev
 }
 const BAYHIT=[];   // dock bay number labels of the last paint: {b,i (0-based filter slot),x,y screen px}
 function paintFloorBase(s){
-  const A=typeof HAR==="function"?HAR(layer):areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;   // HAR: the areas() result cached per block set (it was rebuilt on every paint)
+  const LB=[],A=typeof HAR==="function"?HAR(layer):areas(layer),R=(r,f)=>f(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s),T=.5;   // HAR: the areas() result cached per block set (it was rebuilt on every paint)
   if(LOWD()){cx.fillStyle="rgba(48,60,76,.95)";A.floors.forEach(r=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s;if(x>W||y>H||x+w<0||y+h<0)return;cx.fillRect(x,y,w,h)});return A}   // zooming / panning a big factory: plain floor rects, the full floor comes back 160 ms after the last frame
   // gap strips: only between two facing floor blocks; strip = the distance between their SHELLS, long axis = overlap of their shells
   if(!A.strips){   // the gap strips are found once per areas() result (they were rebuilt on every paint)
@@ -420,9 +420,9 @@ function paintFloorBase(s){
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
       });
     }
-    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(doorTxt(r.b)?" · "+doorTxt(r.b):""),x,y,w);if(!((def(r.b.cls)||{}).elevator&&!def(r.b.cls).elevator.hid))nameTag(r.b,x,y,w)}
+    if(w>70&&!PLC_PREV)LB.push(()=>{const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(doorTxt(r.b)?" · "+doorTxt(r.b):""),x,y,w);if(!((def(r.b.cls)||{}).elevator&&!def(r.b.cls).elevator.hid))nameTag(r.b,x,y,w)});   // drawn after the shapes: wall corners must not hide the label
   });
-  drawShapeFloor(A,s);
+  drawShapeFloor(A,s);LB.forEach(f=>f());
   const NF=lyBlocks().nf;
   NF.forEach(b=>{const r=nfOut(b);cx.lineWidth=1;cx.strokeStyle=`hsla(${hue(catOf(b)||"")},70%,70%,.3)`;cx.strokeRect(V.ox+r.x*s+.5,V.oy+r.y*s+.5,r.w*s-1,r.h*s-1)});   // faint tile outline: the shape sits inside its block cell
   NF.forEach(b=>{const t=shapeTf(b);if(t&&t.sh.hatch)return hatchShape(b,t,s);const r=nfRect(b);nbHatch(V.ox+r.x*s,V.oy+r.y*s,r.w*s,r.h*s,true)});   // grey no-build hatch on the whole tile, behind the shape
