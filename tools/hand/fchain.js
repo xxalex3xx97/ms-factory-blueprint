@@ -8,7 +8,7 @@ window.chainBuild=function(opts){
   opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.noDock=opts.docks===false;HAND.allRaw=!!opts.single;   // single: one recipe only (template gallery), every input is a source
   HAND.nrm=opts.dockType==='nrm';   // input dock kind only; output dock kind is nrmO below
   // docks off: try factory rows packed directly against each other and with a street row between them, keep the build with fewer blocks (packed rows lose the street rows as trunks on big chains)
-  if(opts.pack===undefined&&HAND.noDock&&!opts.dry&&!opts.noAdapt&&!opts.capsDone){
+  if(opts.pack===undefined&&!opts.dry&&!opts.noAdapt&&!opts.capsDone){
     const A=chainBuild({...opts,pack:false});A.badN=HAND.check().bad.length;const B=chainBuild({...opts,pack:true});B.badN=HAND.check().bad.length;
     const score=r=>[(r.report.failed||0)+r.badN,r.blocks.length];
     const better=score(B)[0]<score(A)[0]||(score(B)[0]===score(A)[0]&&score(B)[1]<score(A)[1]);
@@ -42,17 +42,17 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
     colList.push(cur)});
   if(!colList.length)colList.push({items:[]});   // only an observatory: one empty column so the east edge has a street to connect to
   let x=0;const specs=[],streetBx=new Set(),westOf={},westOf0={},swMap={};let maxRows=1;
-  colList.forEach((col,ci)=>{col.hasRaw=col.items.some(i=>rawOf(i.n));x+=col.hasRaw?(HAND.noDock?2:4):0;col.gx=x;col.sw=sws[ci]||SW;col.half=(opts.halfs||[])[ci];col.west=ci?colList[ci-1].gx+1+colList[ci-1].sw:null;col.west0=ci?colList[ci-1].gx+2:null;swMap[col.gx+2]={sw:col.sw,half:col.half};x+=2+col.sw;for(let d=2;d<2+col.sw;d++)streetBx.add(col.gx+d);   // block, output block, street 4 strides wide (64 lanes)
+  colList.forEach((col,ci)=>{col.hasRaw=col.items.some(i=>rawOf(i.n));x+=col.hasRaw?(HAND.noDock||ci===0?2:4):0;col.gx=x;col.sw=sws[ci]||SW;col.half=(opts.halfs||[])[ci];col.west=ci?colList[ci-1].gx+1+colList[ci-1].sw:null;col.west0=ci?colList[ci-1].gx+2:null;swMap[col.gx+2]={sw:col.sw,half:col.half};x+=2+col.sw;for(let d=2;d<2+col.sw;d++)streetBx.add(col.gx+d);   // block, output block, street 4 strides wide (64 lanes)
     let cur=0;col.items.forEach((it,r)=>{const [cn,cls,pov]=CM[it.n.crafter],nExtra=rawOf(it.n)?Math.max(0,new Set(it.n.rec.i.map(([q])=>q).filter(q=>isRaw(q)||q===it.n.rec.o[0])).size-(HAND.noDock||HAND.nrm?2:1)):0;westOf[col.gx]=col.west;westOf0[col.gx]=col.west0;
-      if(nExtra)cur+=2;const gyRow=cur;cur+=HAND.noDock&&opts.pack!==false?(nExtra?3:1):(nExtra?4:2);maxRows=Math.max(maxRows,cur/2);   // a block with extra docks keeps the rows above and below for them
-      specs.push({gx:col.gx,gy:TBS+1+gyRow,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),nx:nExtra,col:dep[it.n.item]})})});
+      if(nExtra)cur+=2;const gyRow=cur;cur+=opts.pack!==false&&(HAND.noDock||ci===0||!rawOf(it.n))?(nExtra?3:1):(nExtra?4:2);maxRows=Math.max(maxRows,cur/2);   // a block with extra docks keeps the rows above and below for them
+      specs.push({gx:col.gx,gy:TBS+1+gyRow,name:cn+': '+it.n.item.replace('ITEM_','')+(it.nb>1?' '+(it.b+1)+'/'+it.nb:''),cls,crafter:it.n.crafter,rc:it.n.rec,perOv:pov,n:it.m,item:it.n.item,dock:rawOf(it.n),nx:nExtra,first:ci===0,col:dep[it.n.item]})})});
   specs.forEach(s=>{const pr=P.edges.filter(e=>e.to===s.item&&e.from!==s.item).map(e=>e.from);s.yUp=specs.some(q=>pr.includes(q.item)&&q.gy<s.gy)});   // a producer block on a higher row: this block's entries must be reachable from the north
   const lastCol=colList[colList.length-1],lastGx=lastCol.gx,gxO=lastGx+2+lastCol.sw,nLn=Math.ceil(RATE/[60,120,180][MK]-1e-9),nrmO=(opts.outDockType||opts.dockType)==='nrm',nOD=opts.outDock?Math.ceil(nLn/(nrmO?4:8)):0;   // output dock: an extra tile column east of everything (nLn lanes of the final item, 8 lanes per industrial dock)
   // Deep Space Observatory (a block, not a machine): only the final product, east of everything, on 2x2 C tiles (its west face has two ports at mid height and needs an open-sided block)
   if(nOD||nDSO){maxRows=Math.max(maxRows,nOD+nDSO);westOf[gxO]=lastGx+1+lastCol.sw;westOf0[gxO]=lastGx+2}
   const W=nOD||nDSO?gxO+1:gxO,H=TBS+1+2*maxRows+TBS,odRow0=nOD||nDSO?Math.min(Math.min(...specs.filter(q=>q.item===ITEM).map(q=>q.gy))+1,TBS+2*maxRows-2*(nOD+nDSO-1)):0,dsoRow0=odRow0+2*nOD;   // the output docks sit on the street row right below the final blocks: the belt stays beside them, and its rows never coincide with a box port row   // rows 0..2 and the last 3 stay street: trunk rows above and below every berth zone
   const nCols=colList.length,report={skipped:Object.values(P.nodes).filter(n=>n.crafter&&n.machines>0&&!CM[n.crafter]&&!(n.crafter==='CRAFT_DeepSpaceObservatory')).map(n=>n.item.replace('ITEM_','')+' ('+n.crafter.replace('CRAFT_','')+')').concat(dsoR&&!dsoOk?[ITEM.replace('ITEM_','')+' (Deep Space Observatory needs 2x2 C blocks)']:[]),recipes:nodes.length,blocks:specs.length,cols:nCols,rows:maxRows,routed:0,failed:0,entries:0,unsupplied:[]};
-  const dockZone=new Set();specs.forEach(s=>{if(s.dock)for(let d=1;d<=(HAND.noDock?2:4);d++)for(let dy=HAND.noDock&&!s.nx?0:-1;dy<=(HAND.noDock&&!s.nx?0:1);dy++)dockZone.add((s.gx-d)+','+(s.gy+dy))});   // dock + adapter (2 strides) and 3 units of ship space in front (2 strides)
+  const dockZone=new Set();specs.forEach(s=>{if(!s.dock)return;const cp=HAND.noDock||s.first;for(let d=1;d<=(cp?2:4);d++)for(let dy=cp&&!s.nx?0:-1;dy<=(cp&&!s.nx?0:1);dy++)dockZone.add((s.gx-d)+','+(s.gy+dy))});   // dock + adapter (2 strides) and 3 units of ship space in front (2 strides)
   const outBlk=new Set(specs.map(s=>(s.gx+1)+','+s.gy));
   const t0=Date.now(),odBlk=[];
   const R=fbBuild({mk:MK,plan:specs,after:(anch)=>{
