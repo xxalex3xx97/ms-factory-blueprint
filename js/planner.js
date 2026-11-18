@@ -151,8 +151,11 @@ $("plnOut").addEventListener("dblclick",ev=>{if(ev.target.closest(".plnVp")&&!ev
 $("plnGx").onclick=()=>{PLN_EX=!PLN_EX;$("plnGx").setAttribute("aria-pressed",PLN_EX);$("plnGx").textContent=PLN_EX?"Expanded":"Grouped";plnDraw()};
 const plnProto=()=>$("plnProto").value==="1";
 // craftable items for the current Protomatter setting; keeps the selection if it is still craftable
-const plnFillItems=()=>{const cur=$("plnItem").value;$("plnItem").innerHTML='<option value="">(none)</option>'+[...plnBy(plnProto()).keys()].sort((a,b)=>plnNm(a).localeCompare(plnNm(b))).map(k=>`<option value="${esc(k)}">${esc(plnNm(k))}</option>`).join("");if([...$("plnItem").options].some(o=>o.value===cur))$("plnItem").value=cur};
-plnFillItems();
+const plnFillItems=()=>{const cur=$("plnItem").value;$("plnItem").innerHTML='<option value="">(none)</option>'+[...plnBy(plnProto()).keys()].sort((a,b)=>plnNm(a).localeCompare(plnNm(b))).map(k=>`<option value="${esc(k)}">${esc(plnNm(k))}</option>`).join("");if([...$("plnItem").options].some(o=>o.value===cur))$("plnItem").value=cur;if(typeof plnItemRefresh==="function")plnItemRefresh()};
+// item picker: icon + search dropdown (inlinePick, as the dock filters) on a button; the hidden select keeps the value for the rest of the planner
+const plnItemRefresh=()=>{const v=$("plnItem").value,b=$("plnItemB");b.innerHTML=(v&&iurl(v)?'<img class="ic" alt="" src="'+iurl(v)+'">':'<span class="ic"></span>')+'<span>'+esc(v?plnNm(v):"(none)")+'</span><span class="ar" aria-hidden="true">▾</span>'};
+const plnItemFill=()=>{const sl=$("plnItem");plnItemRefresh();$("plnItemB").onclick=()=>inlinePick($("plnItemB"),[...plnBy(plnProto()).keys()].filter(k=>ITEMS[k]).sort((a,b)=>plnNm(a).localeCompare(plnNm(b))),id=>{sl.value=id;sl.dispatchEvent(new Event("change"));$("plnItemB").focus()},"(none)")};
+plnFillItems();plnItemFill();$("plnItem").addEventListener("change",plnItemRefresh);
 $("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribute("aria-pressed",!d.hidden);if(!d.hidden&&PLNO===null)plnOptFold(d.clientWidth<720);plnDraw();if(!d.hidden)plnFit()};
 $("plnX").onclick=()=>{$("pln").hidden=true;$("plnB").setAttribute("aria-pressed",false);$("plnB").focus()};
 $("plnC").onclick=()=>{const c=$("pln").classList.toggle("col");$("plnC").setAttribute("aria-expanded",!c);$("plnC").title=c?"Expand":"Collapse to title bar";if(!c)plnDraw()};   // arrows are measured from the boxes: a redraw while collapsed (hidden, zero size) leaves them broken, so redraw on expand

@@ -85,7 +85,7 @@
       <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnPng" title="Export the planner diagram as a PNG image (2x)">PNG</button><button id="plnSv" title="Export the planner diagram as SVG (keeps your box positions)">SVG</button><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
       <div id="plnBody">
       <div id="plnForm">
-      <label>Item <select id="plnItem" aria-label="Target item"></select></label>
+      <div class="plnIt"><span>Item</span><button id="plnItemB" type="button" aria-haspopup="listbox" title="Pick the item to plan (type to search)"></button><select id="plnItem" class="plnSelHid" tabindex="-1" aria-hidden="true" aria-label="Target item"></select></div>
       <label>Rate (items/min) <input id="plnRate" type="number" min="0.001" step="any" value="1" aria-label="Target rate in items per minute"></label>
       <button id="plnBuild" type="button" title="Preview and place machines, belts and source containers for this plan">Build factory</button>
       <button id="galOpen" type="button" hidden title="Template gallery: one preview per craftable recipe">Templates</button>
