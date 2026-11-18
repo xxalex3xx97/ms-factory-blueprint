@@ -486,6 +486,7 @@ function vpBlocks(m){
   const s=sc(),mg=Math.ceil(m/s)+1,f=n=>Math.floor(n/64),ix=[];
   for(let i=f(-V.ox/s-mg-L.mw);i<=f((W-V.ox)/s+mg);i++)for(let j=f(-V.oy/s-mg-L.mh);j<=f((H-V.oy)/s+mg);j++){const a=L.g.get(i+","+j);if(a)for(const n of a)ix.push(n)}
   const r=ix.sort((a,b)=>a-b).map(n=>v[n]);r.tot=v.length;return r}
+let TLB=null;function tallAbove(){const k=PK+"|"+layer;if(!TLB||TLB.k!==k)TLB={k,v:S.blocks.filter(b=>!isM(b)&&b.h<layer&&layer<b.h+lvl(b)).map(b=>({b,r:floorRect(b)})).filter(e=>e.r)};return TLB.v}
 let GHB=null;function ghostBlocks(){const k=PK+"|"+view+"|"+layer;if(!GHB||GHB.k!==k)GHB={k,v:S.blocks.filter(b=>!onLv(b)&&inView(b))};return GHB.v}
 let LBM=null;const lblk=id=>{if(!LBM)LBM=new Map(lyBlocks().all.map(b=>[b.id,b]));return LBM.get(id)};
 const vis=(x,y,w,h)=>x<W&&y<H&&x+w>0&&y+h>0;
@@ -548,6 +549,9 @@ function paint0(){
   RCT=null;
   BAYHIT.length=0;
   if(F)RCT=paintFloorBase(s).rects;
+  if(F)tallAbove().forEach(({b,r})=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s,h=r.h*s;if(!vis(x,y,w,h))return;   // tall block from a lower level: footprint only (no upper floor, nothing buildable)
+    cx.save();cx.setLineDash([6,4]);cx.lineWidth=2;cx.strokeStyle="rgba(96,165,250,.85)";cx.fillStyle="rgba(96,165,250,.08)";cx.fillRect(x,y,w,h);cx.strokeRect(x+1,y+1,w-2,h-2);cx.setLineDash([]);
+    cx.fillStyle="rgba(200,215,235,.9)";cx.font="11px system-ui,sans-serif";cx.textAlign="left";cx.textBaseline="top";if(w>90)cx.fillText(nameOf(b)+" - from level "+(b.h+1),x+5,y+4,Math.max(20,w-8));cx.restore()});
   grid(F?16:8,F?GRIDOFF:0);
   if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||lvDist(b)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*lvDist(b));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
   const cur=vpBlocks(CULLM+20*s);CUR=cur;   // +20 cells: an underground pair (max 13 cells) is found whole at the screen edge

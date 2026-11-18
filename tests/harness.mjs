@@ -1827,6 +1827,12 @@ async function s16e(br) {
     const r = await pg.evaluate(() => { const a = __fb.simSig(), b1 = __fb.S.blocks.find(q => q.h === 1); const same = a === __fb.simSig(); b1.rot = ((b1.rot || 0) + 1) & 3; return {same, changed: a !== __fb.simSig()}; });
     chk('16e simSig changes on an edit on a non-selected level', r.changed && r.same, JSON.stringify(r));
   }
+  // tall block (levels 2) at h 0: floor view shows only a footprint one level up (L1): no floor there (not buildable), nothing on L2
+  {
+    await imp(pg, bp([blk('BPO_Station_02', 0, 0, {h: 0})]));
+    const r = await pg.evaluate(() => [0, 1, 2].map(L => { __fb.setLayer(L); return [__fb.areas(L).floors.length, __fb.tallAbove()]; }));
+    chk('16e tall block (2 levels): floor only on L0; footprint on L1 only', JSON.stringify(r) === '[[1,0],[0,1],[0,0]]', JSON.stringify(r));
+  }
   // i) sideways output: belt across the wall at the connection cell on level 1 (pointing away from the elevator) takes items
   await scene([0, 1], [{h: 0, kind: 'in', contents: INF}, {h: 1, kind: 'side'}]);
   {
