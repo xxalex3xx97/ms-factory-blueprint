@@ -82,7 +82,7 @@ const portBox=(b,s)=>{const r=(def(b.cls)||{}).elevator&&floorRect(b);
 function drawPorts(s,only){   // only: [block] = a placement/paste ghost (not in S.blocks), drawn with the same bars + chevrons
   if(s<6)return;
   const Ln=Math.min(.6*s,18),T=Math.min(5,Math.max(3,.2*s));cx.save();cx.lineWidth=1;cx.strokeStyle="rgba(0,0,0,.75)";
-  (only||(view==="F"&&CUR.length?lyBlocks().nm.concat(CUR):lyBlocks().all)).forEach(b=>{if(!vis(...portBox(b,s)))return;const bars=barPorts(b);
+  (only||(view==="F"&&CUR.length?lyBlocks().nm.concat(CUR):lyBlocks().all)).forEach(b=>{if((def(b.cls)||{}).elevator&&def(b.cls).elevator.hid)return;if(!vis(...portBox(b,s)))return;const bars=barPorts(b);
     // splitter input (back) face: no bar; small neutral chevron pointing into the machine (not clickable, no hover state)
     portsOf(b).filter(p=>!bars.some(q=>q.key===p.key)).forEach(p=>{const ex=V.ox+(p.x+.5+p.nx*.5)*s,ey=V.oy+(p.y+.5+p.ny*.5)*s,r=Math.min(8,Math.max(3,s*.2)),ix=-p.nx,iy=-p.ny,qx=-iy,qy=ix;
       cx.strokeStyle="rgba(230,240,255,.45)";cx.lineWidth=Math.max(1.5,s*.08);cx.beginPath();
@@ -420,7 +420,7 @@ function paintFloorBase(s){
         R(b,(X,Y,W2,H2)=>{cx.fillRect(X,Y,W2,H2);cx.strokeRect(X+.5,Y+.5,W2-1,H2-1)});
       });
     }
-    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(doorTxt(r.b)?" · "+doorTxt(r.b):""),x,y,w);if(!(def(r.b.cls)||{}).elevator)nameTag(r.b,x,y,w)}
+    if(w>70&&!PLC_PREV){const d=def(r.b.cls);note(`${lab(d)}  ${r.w}×${r.h}`+(r.known?(r.guess?" · floor !?":""):" · floor unknown !?")+(doorTxt(r.b)?" · "+doorTxt(r.b):""),x,y,w);if(!((def(r.b.cls)||{}).elevator&&!def(r.b.cls).elevator.hid))nameTag(r.b,x,y,w)}
   });
   drawShapeFloor(A,s);
   const NF=lyBlocks().nf;
