@@ -555,7 +555,7 @@ function paint0(){
   RCT=null;
   BAYHIT.length=0;
   if(F)RCT=paintFloorBase(s).rects;
-  if(F){const A2=tallAbove();if(A2.floors.length){cx.save();cx.globalAlpha=.6;wallBands(A2.floors,s);drawShapeFloor(A2,s,true);cx.restore()   // tall block from a lower level: walls and door gaps only (no floor, ports or machines), nothing buildable
+  if(F){const A2=tallAbove();if(A2.floors.length){cx.save();wallBands(A2.floors,s);drawShapeFloor(A2,s,true);cx.restore()   // tall block from a lower level: walls and door gaps only (no floor, ports or machines), nothing buildable
     A2.floors.forEach(r=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s;if(w>90&&vis(x,y,w,r.h*s)){cx.save();cx.fillStyle="rgba(200,215,235,.9)";cx.font="11px system-ui,sans-serif";cx.textAlign="left";cx.textBaseline="top";cx.fillText(nameOf(r.b)+" - from level "+(r.b.h+1),x+5,y+4,w-8);cx.restore()}})}}
   grid(F?16:8,F?GRIDOFF:0);
   if($("ghost").checked){const gA=new Map();ghostBlocks().forEach(b=>{if(($("ghostAll").checked||lvDist(b)===1)&&vis(V.ox+b.x*s,V.oy+b.y*s,dim(b).w*s,dim(b).h*s)){const a=Math.max(.08,.3-.07*lvDist(b));let g=gA.get(a);if(!g)gA.set(a,g=[]);g.push(b)}});gA.forEach((g,a)=>drawBlocks(g,a,false))}
