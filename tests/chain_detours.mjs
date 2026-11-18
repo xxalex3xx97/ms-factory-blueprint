@@ -12,7 +12,8 @@ const CASES = [   // [item, rate, machines (planner N), max blocks, max waste]; 
   ['Servomotor', 150, 80, 26, 0], ['Servomotor', 180, 96, 27, 96], ['Servomotor', 60, 32, 26, 0], ['Servomotor', 300, 160, 44, 224], ['Superalloy', 120, 17, 23, 102],
   ['BasicCircuit', 200, 74, 26, 120], ['Capacitor', 100, 22, 13, 0], ['MagneticCoils', 300, 25, 8, 0],
   ['Enzyme', 20, 3, 24, 144], ['AdvancedCircuits', 60, 220, 188, 1084],
-  ['Servomotor', 150, 80, 24, 0, true], ['Servomotor', 180, 96, 25, 96, true], ['Superalloy', 120, 17, 20, 102, true], ['Capacitor', 100, 22, 11, 0, true]];   // 6th = raw inputs from industrial docks
+  ['Servomotor', 150, 80, 24, 0, true], ['Servomotor', 180, 96, 25, 96, true], ['Superalloy', 120, 17, 20, 102, true], ['Capacitor', 100, 22, 11, 0, true],
+  ['Servomotor', 150, 80, 28, 0, true, true], ['Servomotor', 180, 96, 29, 96, true, true]];   // 7th = output dock too   // 6th = raw inputs from industrial docks
 const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 const pg = await br.newPage();
 pg.on('pageerror', e => console.log('ERR', e.message));
@@ -20,7 +21,7 @@ await pg.goto(PAGE);
 await pg.waitForFunction(() => window.__fb && typeof engineReady === 'function');
 await pg.evaluate(() => engineReady());
 await pg.waitForFunction(() => typeof chainBuild === 'function');
-const run = async (item, rate, docks) => pg.evaluate(([item, rate, docks]) => {
+const run = async (item, rate, docks, outDock) => pg.evaluate(([item, rate, docks, outDock]) => {
   const metric=(T)=>{ const ms=T.ms,ids=ms.map((b,i)=>({...b,h:0,id:i+1}));
  const isB=b=>PLC_BELT.includes(b.cls),isU=b=>PLC_UG.includes(b.cls),isP=b=>PLC_SPL.includes(b.cls),isL=b=>isB(b)||isU(b)||isP(b);
  const occ=new Map();ids.forEach(b=>{const d=dim(b);for(let x=b.x;x<b.x+d.w;x++)for(let y=b.y;y<b.y+d.h;y++)occ.set(x+','+y,b)});
@@ -56,18 +57,18 @@ const run = async (item, rate, docks) => pg.evaluate(([item, rate, docks]) => {
  }
  const waste=segs.reduce((s,q)=>s+Math.max(0,q.len-q.man),0),backT=segs.reduce((s,q)=>s+q.back,0);
  return {waste,backT};};
-  const T = chainBuild({item, rate, mk: 1, tile: 'BPO_Station_02', dockType: 'ind', outDockType: 'ind', docks: !!docks, outDock: false, maxStates: 60000, hw: 3});
+  const T = chainBuild({item, rate, mk: 1, tile: 'BPO_Station_02', dockType: 'ind', outDockType: 'ind', docks: !!docks, outDock: !!outDock, maxStates: 60000, hw: 3});
   const mm = metric(T);
   return {mach: T.ms.filter(m => m.rec).length, blocks: T.blocks.length, fails: T.fails.length + (T.report.failed || 0) + HAND.check().bad.length, waste: mm.waste};
-}, [item, rate, docks]);
+}, [item, rate, docks, outDock]);
 let fail = 0;
-for (const [item, rate, mach, maxB, maxW, docks] of CASES) {
-  const r = await run(item, rate, docks), errs = [];
+for (const [item, rate, mach, maxB, maxW, docks, outDock] of CASES) {
+  const r = await run(item, rate, docks, outDock), errs = [];
   if (r.mach !== mach) errs.push('machines ' + r.mach + ' != ' + mach);
   if (r.fails) errs.push(r.fails + ' unrouted/failed');
   if (r.blocks > maxB) errs.push('blocks ' + r.blocks + ' > ' + maxB);
   if (r.waste > maxW) errs.push('waste ' + r.waste + ' > ' + maxW);
-  console.log((errs.length ? 'FAIL ' : 'PASS ') + item + ' ' + rate + (docks ? ' +docks' : '') + ' machines ' + r.mach + ' blocks ' + r.blocks + ' waste ' + r.waste + (errs.length ? ' :: ' + errs.join('; ') : ''));
+  console.log((errs.length ? 'FAIL ' : 'PASS ') + item + ' ' + rate + (docks ? ' +docks' : '') + (outDock ? '+out' : '') + ' machines ' + r.mach + ' blocks ' + r.blocks + ' waste ' + r.waste + (errs.length ? ' :: ' + errs.join('; ') : ''));
   fail += errs.length ? 1 : 0;
 }
 await br.close();
