@@ -13,6 +13,7 @@
     box.onclick=e=>{const id=e.target.id;if(id==="pvPartsFin"){exSet(item,direct);window.placerRun(true)}else if(id==="pvPartsAll"){exSet(item,[]);window.placerRun(true)}}};
   window.engineReady=async()=>{if(typeof chainBuild!=="function")for(const f of ["tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f)};
   window.placerRun=async function(open,defer){
+    const pp=$("pvParts");if(pp)pp.hidden=true;   // the parts checklist only belongs to the chain engine builds below
     if(SMALL.includes($("plnBk").value)){++tok;ENG=null;$("plnPlace").onclick=OPLACE;return ORUN.call(this,open,defer)}   // 1x1 / 2x1: composer + templates; shows "Not supported yet: reason" itself
     $("plnPlace").onclick=placerPlace;$("plnEngBadge").textContent="";
     const dl=$("plnPrev");if(!open&&!dl.open)return;
@@ -24,7 +25,7 @@
     $("pvLine").textContent="Building...";$("plnPrevMap").style.opacity=".45";await nx();
     if(typeof chainBuild!=="function")for(const f of ["tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f);
     if(me!==tok)return;
-    const ext=exGet(item);try{partsUi(item,rate,mk,ext)}catch(e){}
+    let ext=exGet(item).filter(x=>x!==item);try{partsUi(item,rate,mk,ext)}catch(e){ext=[];if(pp)pp.hidden=true}
     let T;try{T=chainBuild({item:item.replace(/^ITEM_/,""),rate,mk,ext,pick:typeof PLN_PICK==="object"?PLN_PICK:undefined,tile:$("plnBk").value,dockType:$("plnDk").value,outDockType:$("plnDkOT").value||$("plnDk").value,docks:$("plnDkI").checked,outDock:$("plnDkO").checked,maxStates:60000,hw:3})}catch(e){$("pvLine").textContent="Build failed";$("plnPrevErr").textContent=e.message;$("plnPrevMap").style.opacity="";return}
     const bad=T.fails.length+HAND.check().bad.length,mach=T.ms.filter(m=>m.rec).length,boxes=T.ms.filter(m=>/Container/.test(m.cls)).length,docks=T.blocks.filter(b=>/Dock/.test(b.cls)).length;
     T.machines=mach;ENG={T};const mx=Math.min(...T.blocks.map(q=>q.x)),my=Math.min(...T.blocks.map(q=>q.y));plcT={ok:true,blocks:T.blocks.map(q=>({...q,x:q.x-mx,y:q.y-my})),ms:T.ms.map(q=>({...q,x:q.x-mx*FC,y:q.y-my*FC}))};   // the preview starts at the origin (its axes and fit assume that)

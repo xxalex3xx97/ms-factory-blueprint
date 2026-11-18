@@ -5,7 +5,7 @@
 // PLANNED ROUTES: a belt may only use the street tracks (pairs of adjacent cell lines of every street row and street column), the output blocks and the entry stubs, so the search is a thin graph, not open floor.
 //   Entry of a block without dock: stub row from the street column to (0,lane row). Entry of a dock block: stub column from the north street down to its approach column inside the block.
 window.chainBuild=function(opts){
-  opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.ext=new Set(opts.ext||[]);HAND.noDock=opts.docks===false;   // external parts (opts.ext) always come from source containers, real raw items from docks unless docks are off
+  opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.ext=new Set((opts.ext||[]).filter(x=>x!=='ITEM_'+opts.item));HAND.noDock=opts.docks===false;   // external parts (opts.ext) always come from source containers, real raw items from docks unless docks are off
   HAND.allRaw=!!opts.single;   // single: one recipe only (template gallery), every input is a source
   HAND.nrm=opts.dockType==='nrm';   // input dock kind only; output dock kind is nrmO below
   // try factory rows packed / with a street row between them, and with / without the sideways jog at a blocked source port; keep the build with the fewest problems, then blocks, then belts (packing or jogging can lose on big chains)
