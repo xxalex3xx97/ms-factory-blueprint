@@ -151,8 +151,11 @@ $("plnOut").addEventListener("dblclick",ev=>{if(ev.target.closest(".plnVp")&&!ev
 $("plnGx").onclick=()=>{PLN_EX=!PLN_EX;$("plnGx").setAttribute("aria-pressed",PLN_EX);$("plnGx").textContent=PLN_EX?"Expanded":"Grouped";plnDraw()};
 const plnProto=()=>$("plnProto").value==="1";
 // craftable items for the current Protomatter setting; keeps the selection if it is still craftable
-const plnFillItems=()=>{const cur=$("plnItem").value;$("plnItem").innerHTML='<option value="">(none)</option>'+[...plnBy(plnProto()).keys()].sort((a,b)=>plnNm(a).localeCompare(plnNm(b))).map(k=>`<option value="${esc(k)}">${esc(plnNm(k))}</option>`).join("");if([...$("plnItem").options].some(o=>o.value===cur))$("plnItem").value=cur};
-plnFillItems();
+const plnFillItems=()=>{const cur=$("plnItem").value;$("plnItem").innerHTML='<option value="">(none)</option>'+[...plnBy(plnProto()).keys()].sort((a,b)=>plnNm(a).localeCompare(plnNm(b))).map(k=>`<option value="${esc(k)}">${esc(plnNm(k))}</option>`).join("");if([...$("plnItem").options].some(o=>o.value===cur))$("plnItem").value=cur;if(typeof plnItemRefresh==="function")plnItemRefresh()};
+// item picker: icon + search dropdown (inlinePick, as the dock filters) on a button; the hidden select keeps the value for the rest of the planner
+const plnItemRefresh=()=>{const v=$("plnItem").value,b=$("plnItemB");b.innerHTML=(v&&iurl(v)?'<img class="ic" alt="" src="'+iurl(v)+'">':'<span class="ic"></span>')+'<span>'+esc(v?plnNm(v):"(none)")+'</span><span class="ar" aria-hidden="true">▾</span>'};
+const plnItemFill=()=>{const sl=$("plnItem");plnItemRefresh();$("plnItemB").onclick=()=>inlinePick($("plnItemB"),[...plnBy(plnProto()).keys()].filter(k=>ITEMS[k]).sort((a,b)=>plnNm(a).localeCompare(plnNm(b))),id=>{sl.value=id;sl.dispatchEvent(new Event("change"));$("plnItemB").focus()},"(none)")};
+plnFillItems();plnItemFill();$("plnItem").addEventListener("change",plnItemRefresh);
 $("plnB").onclick=()=>{const d=$("pln");d.hidden=!d.hidden;$("plnB").setAttribute("aria-pressed",!d.hidden);if(!d.hidden&&PLNO===null)plnOptFold(d.clientWidth<720);plnDraw();if(!d.hidden)plnFit()};
 $("plnX").onclick=()=>{$("pln").hidden=true;$("plnB").setAttribute("aria-pressed",false);$("plnB").focus()};
 $("plnC").onclick=()=>{const c=$("pln").classList.toggle("col");$("plnC").setAttribute("aria-expanded",!c);$("plnC").title=c?"Expand":"Collapse to title bar";if(!c)plnDraw()};   // arrows are measured from the boxes: a redraw while collapsed (hidden, zero size) leaves them broken, so redraw on expand
@@ -161,6 +164,10 @@ const plnDefRate=()=>{const it=$("plnItem").value;if(!it)return;const P=plan(it,
 $("plnItem").onchange=()=>{PLN_PICK={};PLN_OFF=new Map();plnDefRate();plnDraw();plnFit()};
 $("plnEnr").onchange=plnDraw;
 $("plnProto").onchange=()=>{plnFillItems();plnDraw()};   // PLN_OFF kept: drag offsets survive
+// rate fields take a calculation (30*36, 1200/4, (10+5)*2): evaluated on Enter / leaving the field; no replan while an operator is being typed
+const rateCalc=s=>{s=String(s).replace(/[x×]/gi,"*").replace(/,/g,".").trim();if(!/^[\d\s.+\-*/()]+$/.test(s)||!/[+*/()]|.-/.test(s))return null;try{const v=Function('"use strict";return ('+s+')')();return Number.isFinite(v)&&v>0?Math.round(v*1e6)/1e6:null}catch(e){return null}};
+["input","change"].forEach(t=>document.addEventListener(t,e=>{const el=e.target;if(!el||!el.dataset||el.dataset.calc===undefined)return;
+  if(t==="input"){if(/[+*/()x×]|.-/i.test(el.value))e.stopImmediatePropagation()}else{const v=rateCalc(el.value);if(v!=null)el.value=v}},true));
 $("plnRate").oninput=plnDraw;$("plnRate").onchange=()=>{if(!(+$("plnRate").value>0)){$("plnRate").value=1;plnDraw()}};   // redraw only when clamped: a plain blur must not re-render the diagram under a pointer press
 $("plnMk").onchange=$("plnSp").onchange=$("plnBal").onchange=plnDraw;
 $("plnOut").onchange=ev=>{const t=ev.target;if(t.classList.contains("plnAlt")){PLN_PICK[t.dataset.item]=t.value;plnDraw()}};

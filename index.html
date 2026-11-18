@@ -85,8 +85,8 @@
       <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnPng" title="Export the planner diagram as a PNG image (2x)">PNG</button><button id="plnSv" title="Export the planner diagram as SVG (keeps your box positions)">SVG</button><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
       <div id="plnBody">
       <div id="plnForm">
-      <label>Item <select id="plnItem" aria-label="Target item"></select></label>
-      <label>Rate (items/min) <input id="plnRate" type="number" min="0.001" step="any" value="1" aria-label="Target rate in items per minute"></label>
+      <div class="plnIt"><span>Item</span><button id="plnItemB" type="button" aria-haspopup="listbox" title="Pick the item to plan (type to search)"></button><select id="plnItem" class="plnSelHid" tabindex="-1" aria-hidden="true" aria-label="Target item"></select></div>
+      <label>Rate (items/min) <input id="plnRate" type="text" inputmode="decimal" data-calc value="1" title="You can type a calculation, e.g. 30*36" aria-label="Target rate in items per minute"></label>
       <button id="plnBuild" type="button" title="Preview and place machines, belts and source containers for this plan">Build factory</button>
       <button id="galOpen" type="button" hidden title="Template gallery: one preview per craftable recipe">Templates</button>
       </div>
@@ -297,7 +297,7 @@
   <aside id="pvCost" aria-label="Shopping list: material cost"><h4>Shopping list</h4><div id="pvCostList"></div><label class="chk"><input type="checkbox" id="pvCtChk"> Restore container items</label></aside>
   <div id="pvMain">
   <div id="pvSet">
-    <label>Rate (items/min) <input id="pvRate" type="number" min="0.001" step="any" aria-label="Target rate in items per minute"></label>
+    <label>Rate (items/min) <input id="pvRate" type="text" inputmode="decimal" data-calc title="You can type a calculation, e.g. 30*36" aria-label="Target rate in items per minute"></label>
     <label>Belt <select id="pvMk"aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
     <label>Blocks <select id="plnBk" aria-label="Block type" title="Block type the factory is cut from"><option value="BPO_Station_01">1x1</option><option value="BPO_Station_2x1">2x1</option><option value="BPO_Station_02A">2x2 A</option><option value="BPO_Station_02" selected>2x2 B</option><option value="BPO_Station_03">2x2 C</option></select></label>
     <span id="plnEngBadge" role="status" title="Layout template used for this preview"></span>
