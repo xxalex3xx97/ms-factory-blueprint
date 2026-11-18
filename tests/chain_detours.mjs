@@ -15,6 +15,7 @@ const CASES = [   // [item, rate, machines (planner N), max blocks, max waste, d
   ['Servomotor', 150, 80, 24, 0, true], ['Servomotor', 180, 96, 24, 0, true], ['Superalloy', 120, 17, 20, 0, true], ['Capacitor', 100, 22, 11, 0, true],
   ['Servomotor', 150, 80, 28, 0, true, true], ['Servomotor', 180, 96, 28, 0, true, true],
   ['Servomotor', 150, 55, 41, 398, false, false, ['ITEM_BasicMotor']], ['Servomotor', 150, 10, 14, 99999, false, false, ['ITEM_BasicMotor', 'ITEM_Capacitor', 'ITEM_LightweightFrame']],
+  ['Servomotor', 150, 55, 43, 1478, true, false, ['ITEM_BasicMotor']],
   ['AdvancedCircuits', 50, 185, 135, 510], ['AdvancedCircuits', 50, 185, 200, 7598, true]];   // the last ones route every belt (unrouted belts are routed first on a retry)
 const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 const pg = await br.newPage();
