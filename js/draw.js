@@ -477,7 +477,7 @@ function drawUG(s){
 }
 // Layout view: a block spanning several levels (catalog `levels`) shows on every level it covers
 const lvDist=b=>layer<b.h?b.h-layer:Math.max(0,layer-(b.h+lvl(b)-1));   // levels between the viewed level and the nearest level the block covers (ghost layers count a tall block from its nearest storey)
-const onLv=b=>b.h===layer||(b.h<layer&&layer<b.h+lvl(b));
+const onLv=b=>b.h===layer||(view!=="F"&&b.h<layer&&layer<b.h+lvl(b));
 let LYB=null;function lyBlocks(){const k=PK+"|"+layer+"|"+view;if(!LYB||LYB.k!==k){const all=S.blocks.filter(onLv);LYB={k,all,v:all.filter(inView),nm:all.filter(b=>!inView(b)),nf:all.filter(b=>!isM(b)&&nfRect(b))}}return LYB}
 // F view of a big factory: only the blocks near the viewport (bucket grid of 64 cells built once per block set); m = margin in px
 function vpBlocks(m){
