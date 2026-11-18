@@ -14,6 +14,8 @@ const CASES = [   // [item, rate, machines (planner N), max blocks, max waste, d
   ['Enzyme', 20, 3, 24, 144], ['AdvancedCircuits', 60, 220, 188, 1084],
   ['Servomotor', 150, 80, 24, 0, true], ['Servomotor', 180, 96, 24, 0, true], ['Superalloy', 120, 17, 20, 0, true], ['Capacitor', 100, 22, 11, 0, true],
   ['Servomotor', 150, 80, 28, 0, true, true], ['Servomotor', 180, 96, 28, 0, true, true],
+  ['Servomotor', 150, 55, 41, 398, false, false, ['ITEM_BasicMotor']], ['Servomotor', 150, 10, 14, 99999, false, false, ['ITEM_BasicMotor', 'ITEM_Capacitor', 'ITEM_LightweightFrame']],
+  ['Servomotor', 150, 55, 43, 1478, true, false, ['ITEM_BasicMotor']],
   ['AdvancedCircuits', 50, 185, 135, 510], ['AdvancedCircuits', 50, 185, 200, 7598, true]];   // the last ones route every belt (unrouted belts are routed first on a retry)
 const br = await chromium.launch({executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true});
 const pg = await br.newPage();
@@ -22,7 +24,7 @@ await pg.goto(PAGE);
 await pg.waitForFunction(() => window.__fb && typeof engineReady === 'function');
 await pg.evaluate(() => engineReady());
 await pg.waitForFunction(() => typeof chainBuild === 'function');
-const run = async (item, rate, docks, outDock) => pg.evaluate(([item, rate, docks, outDock]) => {
+const run = async (item, rate, docks, outDock, ext) => pg.evaluate(([item, rate, docks, outDock, ext]) => {
   const metric=(T)=>{ const ms=T.ms,ids=ms.map((b,i)=>({...b,h:0,id:i+1}));
  const isB=b=>PLC_BELT.includes(b.cls),isU=b=>PLC_UG.includes(b.cls),isP=b=>PLC_SPL.includes(b.cls),isL=b=>isB(b)||isU(b)||isP(b);
  const occ=new Map();ids.forEach(b=>{const d=dim(b);for(let x=b.x;x<b.x+d.w;x++)for(let y=b.y;y<b.y+d.h;y++)occ.set(x+','+y,b)});
@@ -58,18 +60,20 @@ const run = async (item, rate, docks, outDock) => pg.evaluate(([item, rate, dock
  }
  const waste=segs.reduce((s,q)=>s+Math.max(0,q.len-q.man),0),backT=segs.reduce((s,q)=>s+q.back,0);
  return {waste,backT};};
-  const T = chainBuild({item, rate, mk: 1, tile: 'BPO_Station_02', dockType: 'ind', outDockType: 'ind', docks: !!docks, outDock: !!outDock, maxStates: 60000, hw: 3});
+  const T = chainBuild({item, rate, mk: 1, tile: 'BPO_Station_02', dockType: 'ind', outDockType: 'ind', docks: !!docks, outDock: !!outDock, ext: ext || [], maxStates: 60000, hw: 3});
   const mm = metric(T);
-  return {mach: T.ms.filter(m => m.rec).length, blocks: T.blocks.length, fails: T.fails.length + (T.report.failed || 0) + HAND.check().bad.length, waste: mm.waste};
-}, [item, rate, docks, outDock]);
+  const fyf = T.ms.filter(m => /^From your factory: /.test(m.nm || '')).length;
+  return {fyf, mach: T.ms.filter(m => m.rec).length, blocks: T.blocks.length, fails: T.fails.length + (T.report.failed || 0) + HAND.check().bad.length, waste: mm.waste};
+}, [item, rate, docks, outDock, ext]);
 let fail = 0;
-for (const [item, rate, mach, maxB, maxW, docks, outDock] of CASES) {
-  const r = await run(item, rate, docks, outDock), errs = [];
+for (const [item, rate, mach, maxB, maxW, docks, outDock, ext] of CASES) {
+  const r = await run(item, rate, docks, outDock, ext), errs = [];
   if (r.mach !== mach) errs.push('machines ' + r.mach + ' != ' + mach);
+  if (ext && ext.length && !r.fyf) errs.push('no "From your factory" container');
   if (r.fails) errs.push(r.fails + ' unrouted/failed');
   if (r.blocks > maxB) errs.push('blocks ' + r.blocks + ' > ' + maxB);
   if (r.waste > maxW) errs.push('waste ' + r.waste + ' > ' + maxW);
-  console.log((errs.length ? 'FAIL ' : 'PASS ') + item + ' ' + rate + (docks ? ' +docks' : '') + (outDock ? '+out' : '') + ' machines ' + r.mach + ' blocks ' + r.blocks + ' waste ' + r.waste + (errs.length ? ' :: ' + errs.join('; ') : ''));
+  console.log((errs.length ? 'FAIL ' : 'PASS ') + item + ' ' + rate + (docks ? ' +docks' : '') + (outDock ? '+out' : '') + (ext ? ' ext ' + ext.length : '') + ' machines ' + r.mach + ' blocks ' + r.blocks + ' waste ' + r.waste + (errs.length ? ' :: ' + errs.join('; ') : ''));
   fail += errs.length ? 1 : 0;
 }
 await br.close();

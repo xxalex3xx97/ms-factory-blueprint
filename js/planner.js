@@ -15,12 +15,13 @@ const PLN_ENR=/^ITEM_Enriched\w*Ore$/;
 function plan(item,rate,mk,ovr,pick,opts){const P=planOnce(item,rate,mk,ovr,pick,opts,false);if(!P.cycle)return P;const Q=planOnce(item,rate,mk,ovr,pick,opts,true);return Q.cycle?P:Q}
 function planOnce(item,rate,mk,ovr,pick,opts,avoid){
   ovr=ovr||{};pick=pick||{};opts=opts||{};
-  const by=plnBy(!!opts.proto,!opts.obs),nodes={},edges=[],st={cycle:false},cap=i=>MKS[i][1];
+  const by=plnBy(!!opts.proto,!opts.obs),nodes={},edges=[],st={cycle:false},cap=i=>MKS[i][1],ext=new Set(opts.ext||[]);   // opts.ext: items the player already makes elsewhere: no recipe, they stay plain inputs (the final item is never external)
   const find=it=>{const l=by.get(it)||[];return l.find(x=>rk(x.r)===pick[it])||l.find(x=>rkb(x.r)===pick[it])||l.find(x=>x.r.i.some(([y])=>PLN_ENR.test(y))===!!opts.enr)||l[0]||null};
   const ex=(it,rt,stack)=>{
     if(stack.has(it)){st.cycle=true;if(!st.loop){const a=[...stack];st.loop=a.slice(a.indexOf(it)).concat([it])}return}
     const n=nodes[it]||(nodes[it]={item:it,rate:0,rec:null,crafter:null,alts:(by.get(it)||[]).length,pmach:null,machines:0,util:null,in:[]});
     n.rate+=rt;
+    if(stack.size&&ext.has(it))return;
     const pref=[find(it),...(by.get(it)||[])].filter(Boolean),c=(avoid&&stack.size?pref.find(x=>!x.r.i.some(([y])=>stack.has(y))):null)||find(it);if(!c)return;
     n.rec=c.r;n.crafter=c.c;stack.add(it);
     // growth recipe (the item is one of its own inputs and the output is bigger): net output per cycle = out - in; the growth input is fed back from the output (no edge); other inputs scale with the cycles
@@ -45,7 +46,7 @@ function planOnce(item,rate,mk,ovr,pick,opts,avoid){
     return {from:e.from,to:e.to,flow:e.flow,m,belts,fits,split,warn,note,label:plnR2(e.flow)+" items/min, "+belts+" belts ("+MKS[mk][0]+")"};
   });
   E.forEach(e=>{if(e.to!=null)nodes[e.to].in.push(e)});
-  return {nodes,edges:E,raw:Object.values(nodes).filter(n=>!n.rec),cycle:st.cycle,loop:st.loop,nofp:opts.obs?[]:Object.values(nodes).filter(n=>!n.rec&&(plnBy(!!opts.proto).get(n.item)||[]).length).map(n=>n.item)};
+  return {nodes,edges:E,raw:Object.values(nodes).filter(n=>!n.rec),cycle:st.cycle,loop:st.loop,nofp:opts.obs?[]:Object.values(nodes).filter(n=>!n.rec&&!ext.has(n.item)&&(plnBy(!!opts.proto).get(n.item)||[]).length).map(n=>n.item)};
 }
 function plnDraw(){
   const it=$("plnItem").value,rate=+$("plnRate").value||0;
