@@ -251,15 +251,26 @@ function links(L){
   const hk=lvHash(),k=[...hk].join(";")+"|"+LK;if(LKM&&LKM.k===k&&LKM.res.has(L))return LKM.res.get(L);
   const res=linksAll(L,hk);LKM={k,res};return res.get(L);
 }
+// elevator transfer, shared by links and theoProd: per port, all input loads (every level) go to ALL levels with an output belt on that port: equal share, each output capped at its belt speed, the unused part goes to outputs with room left
+function elvInject(lv,Kf,ldf){
+  const by=new Map(),inj=new Map(lv.map(l=>[l,[]])),sig=[];
+  lv.forEach(l=>Kf(l).elvIn.forEach(({k,id})=>{const ld=ldf(l,id);if(!ld)return;
+    let e=by.get(k);if(!e)by.set(k,e={src:new Map(),outs:[]});ld.items.forEach((v,it)=>e.src.set(it,(e.src.get(it)||0)+v))}));
+  lv.forEach(h=>{const K=Kf(h);K.elvOut.forEach((id,k)=>{const e=by.get(k);if(!e)return;const bl=K.belts.find(b=>b.id===id);e.outs.push({h,id,room:(bl&&beltMax(bl))||Infinity})})});
+  by.forEach((e,k)=>e.src.forEach((v,item)=>{
+    let left=v,act=e.outs.filter(o=>o.room>1e-9);const got=new Map();
+    while(left>1e-9&&act.length){const sh=left/act.length;let used=0;
+      act.forEach(o=>{const g=Math.min(sh,o.room);o.room-=g;used+=g;got.set(o,(got.get(o)||0)+g)});
+      left-=used;act=act.filter(o=>o.room>1e-9);if(used<1e-9)break}
+    got.forEach((g,o)=>{inj.get(o.h).push({id:o.id,item,rate:g});sig.push(o.h+k+item+r2(g))})}));
+  return{inj,sig};
+}
 function linksAll(L,hk){
   const lv=[...new Set(S.blocks.map(b=>b.h))];if(!lv.includes(L))lv.push(L);
   let res=new Map(lv.map(l=>[l,links1c(l,LKI.get(l)||null,hk)])),prev=LKS;
   if(!lv.some(l=>res.get(l).elvIn.length)){LKI=new Map();LKS="";return res}
   for(let pass=0;pass<Math.min(lv.length,6);pass++){
-    const inj=new Map(lv.map(l=>[l,[]])),sig=[];
-    lv.forEach(l=>{const K=res.get(l);K.elvIn.forEach(({k,id})=>{const ld=K.load.get(id);if(!ld)return;
-      const dst=[lv.filter(h=>h>l).sort((x,y)=>x-y),lv.filter(h=>h<l).sort((x,y)=>y-x)].map(c=>c.find(h=>res.get(h).elvOut.has(k))).filter(h=>h!=null);if(!dst.length)return;   // nearest level up / down with an output belt on that port
-      ld.items.forEach((v,item)=>dst.forEach(h=>{inj.get(h).push({id:res.get(h).elvOut.get(k),item,rate:v/dst.length});sig.push(h+k+item+r2(v/dst.length))}))})});
+    const{inj,sig}=elvInject(lv,l=>res.get(l),(l,id)=>res.get(l).load.get(id));
     const sg=sig.join();if(sg===prev)break;prev=sg;LKI=inj;LKS=sg;
     res=new Map(lv.map(l=>[l,links1c(l,inj.get(l),hk)]));
   }
