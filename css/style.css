@@ -189,6 +189,7 @@ header .mnl .hbt{flex-direction:row;min-height:34px;gap:6px;width:100%;justify-c
 
 /* planner modal: calm layout */
 #pvSet{margin-bottom:4px}#plnEngBadge{margin-left:auto;align-self:center;font-size:11px;color:var(--dim)}
+#pvParts{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;margin-bottom:4px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px}#pvParts[hidden]{display:none}#pvParts label.chk{display:flex;align-items:center;gap:6px;white-space:nowrap;min-height:28px}#pvParts small{color:var(--dim)}#pvParts button{font-size:12px}
 #pvDocks{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 12px;margin-bottom:4px;padding:6px 8px;border:1px solid var(--line);border-radius:6px}
 #pvDocks>label,#pvOptB>label{display:flex;flex-direction:column;gap:3px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
 #pvDocks select,#pvOptB select{text-transform:none;letter-spacing:0;font-size:13px;color:var(--text)}

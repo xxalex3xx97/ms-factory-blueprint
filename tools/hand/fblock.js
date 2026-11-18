@@ -8,10 +8,10 @@
 //   Non-raw lanes keep entering at x=0 and hop under the jog columns. Machines start east of the jog columns, so a dock-ready block holds slightly fewer machines.
 window.fbBuild=function(opts){
   opts=opts||{};const MK=opts.mk!=null?opts.mk:1,DOCK=!!opts.dock;HAND.reset({mk:MK});
-  const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],SPL=PLC_SPL[MK],TW=HAND.TW,DH=HAND.D(),by=plnBy(false,true),isRaw=it=>!!HAND.allRaw||!by.has(it);
+  const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],SPL=PLC_SPL[MK],TW=HAND.TW,DH=HAND.D(),by=plnBy(false,true),isRaw=it=>!!HAND.allRaw||!by.has(it)||!!(HAND.ext&&HAND.ext.has(it));
   const CLASSES=[['Refinery','DAT_Refinery','CRAFT_Refinery',6],['Assembler','DAT_Assembler','CRAFT_Assembler'],['GrowthChamber','DAT_GrowthChamber','CRAFT_GrowthChamber'],['Supercomputer','DAT_Supercomputer','CRAFT_Supercomputer'],['AdvancedAssembler','DAT_AdvancedAssembler','CRAFT_AdvancedAssembler'],['Enrichment','DAT_EnrichmentChamber','CRAFT_Enrichment']];
   const hopSpan=(ax,a,b)=>{const l=HAND.S.span.get(ax)||[];l.push([a,b]);HAND.S.span.set(ax,l)};   // tell check() the pair is intended
-  const info=[],dockBlk=[],anch=[];
+  const info=[],dockBlk=[],anch=[],srcNm=it=>HAND.noDock?(HAND.ext&&HAND.ext.has(it)?'From your factory: ':'Source: '):'Dock: ';   // label of an input container / dock
   function one(gx,gy,name,cls,crafter,rc,perOv,nTot,chain,yUp){
     const isRawL=it=>isRaw(it)||(chain&&it===rc.o[0]);   // an input that is the recipe's own product (growth seed) arrives from a dock like a raw item: no loop of the output into itself
     const dk=DOCK||(chain&&rc.i.some(([it])=>isRawL(it)));
@@ -66,7 +66,7 @@ window.fbBuild=function(opts){
     const TR=[1,0,3,2],A=HAND.adapt?16:0,DKX=HAND.adapt?4:3,dkTiles=(ux,uy)=>[{cls:HAND.CLS,x:ux-4,y:uy,rot:0},{cls:HAND.CLS,x:ux-2,y:uy,rot:0}],putF=(x,y,rot,c,extra)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+y,rot,...extra},true))throw new Error(name+': dock cell taken '+x+','+y)};
     if(dk&&groups.some(g=>g.length)){
       const asm=nlIndAsm(),nice=it=>it.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2');
-      const gRate=g=>g.reduce((sum,t)=>sum+Math.max(0,Math.min(per,nUse-t.r*per))*inRate(t.idx),0),gNm=gi=>groups[gi].length&&gRate(groups[gi])>0?(HAND.noDock?'Source: ':'Dock: ')+nice(gitem[gi])+' '+Math.round(gRate(groups[gi]))+'/min':null;   // the name tells the player which cargo to assign
+      const gRate=g=>g.reduce((sum,t)=>sum+Math.max(0,Math.min(per,nUse-t.r*per))*inRate(t.idx),0),gNm=gi=>groups[gi].length&&gRate(groups[gi])>0?srcNm(gitem[gi])+nice(gitem[gi])+' '+Math.round(gRate(groups[gi]))+'/min':null;   // the name tells the player which cargo to assign
       if(!nrm)asm.boxes.forEach(b=>{const gi=b.y===9&&(b.x===4||b.x===22)?(b.x===4?0:1):-1,it=gi>=0&&groups[gi].length?gitem[gi]:null;
         const c=HAND.put({cls:'DAT_Container_2',gx,gy,lx:-16-A+b.y,ly:b.x,force:true,name:'dock box',nm:it?gNm(gi):undefined,ct:it?[{item:it,n:0,inf:true}]:[]});if(!c)throw new Error(name+': dock box does not fit');
         if(it)c.ports.forEach(q=>{if(q.f==='W'||q.f==='E')c.used.add(q.key)})
@@ -76,7 +76,7 @@ window.fbBuild=function(opts){
       dockBlk.push(...(HAND.noDock?dkTiles(gx*2,gy*2):nrm?groups.flatMap((g,gi)=>g.length?[{cls:plcCls('BPO_Dock'),x:gx*2-1-(A?1:0),y:gy*2+gi,rot:2,nm:gNm(gi)}]:[]):[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:gy*2,rot:2,nm:[gNm(0),gNm(1)].filter(Boolean).join(' + ')}]),...(HAND.adapt&&!HAND.noDock?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:gy*2,rot:2}]:[]))}
     xDock.forEach(xd=>{const asm=nlIndAsm(),nice=it=>it.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2'),dy=xd.dy,idxs=[];rc.i.forEach(([it],j)=>{if(it===xd.item)idxs.push(j)});
       const rowsUsed=Math.ceil(nUse/per);let rate=0;for(let r=0;r<rowsUsed;r++){const m=Math.min(per,nUse-r*per);idxs.forEach(j=>rate+=m*inRate(j))}
-      const nm=(HAND.noDock?'Source: ':'Dock: ')+nice(xd.item)+' '+Math.round(rate)+'/min',putY=(x,y,rot,c)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+dy*TW+y,rot},true))throw new Error(name+': extra dock cell taken '+x+','+y)};
+      const nm=srcNm(xd.item)+nice(xd.item)+' '+Math.round(rate)+'/min',putY=(x,y,rot,c)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+dy*TW+y,rot},true))throw new Error(name+': extra dock cell taken '+x+','+y)};
       if(!nrm)asm.boxes.forEach(b=>{const grp2=b.x===22&&b.y===9,c=HAND.put({cls:'DAT_Container_2',gx,gy:gy+dy,lx:-16-A+b.y,ly:b.x,force:true,name:'dock box',nm:grp2?nm:undefined,ct:grp2?[{item:xd.item,n:0,inf:true}]:[]});if(!c)throw new Error(name+': extra dock box does not fit');
         if(grp2)c.ports.forEach(q=>{if(q.f==='W'||q.f==='E')c.used.add(q.key)});else c.ports.forEach(q=>c.used.add(q.key))});
       if(!nrm)asm.belts.forEach(kb=>putY(-16-A+kb.y,kb.x,TR[kb.rot],BELT));

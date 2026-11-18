@@ -2,6 +2,15 @@
 (function(){
   const l=s=>new Promise(r=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=r;document.head.appendChild(e)}),nx=()=>new Promise(r=>setTimeout(r,30));
   let ENG=null,tok=0;const ORUN=window.placerRun,OPLACE=window.placerPlace,SMALL=["BPO_Station_01","BPO_Station_2x1"];   // originals from js/placer.js: 1x1 and 2x1 are built by the template/composer engine (chain engine is 30x30 floor only)
+  // recipe parts: items the player already makes elsewhere are 'external' (plain inputs, a container to connect to the real factory); remembered per item
+  const EXK="msfb.ext",exAll=()=>{try{return JSON.parse(localStorage.getItem(EXK)||"{}")||{}}catch(e){return{}}},exGet=it=>exAll()[it]||[],exSet=(it,a)=>{try{const o=exAll();if(a.length)o[it]=a;else delete o[it];localStorage.setItem(EXK,JSON.stringify(o))}catch(e){}};
+  const partsUi=(item,rate,mk,ext)=>{const box=$("pvParts");if(!box)return;const rec=plnBy(false,true),P=plan(item,rate,mk,undefined,typeof PLN_PICK==="object"?PLN_PICK:undefined,{seedDock:true,ext}),
+      nodes=Object.values(P.nodes).filter(n=>n.item!==item&&rec.has(n.item));
+    if(!nodes.length){box.hidden=true;box.textContent="";return}
+    const direct=[...new Set(P.edges.filter(e=>e.to===item&&e.from!==item&&rec.has(e.from)).map(e=>e.from))];
+    box.hidden=false;box.innerHTML='<span class="pvGt">Recipe parts</span> '+nodes.map(n=>{const x=ext.includes(n.item);return'<label class="chk" title="'+(x?"Not built: a container “From your factory” is placed instead":"Built in this factory")+'"><input type="checkbox" data-it="'+n.item+'"'+(x?"":" checked")+'> '+esc(plnNm(n.item))+' <small>'+(x?"from your factory":n.machines+" machines")+" · "+Math.round(n.rate*10)/10+"/min</small></label>"}).join(" ")+' <button type="button" id="pvPartsFin" title="Build only the last recipe; every part it needs comes from containers">Only the final recipe</button> <button type="button" id="pvPartsAll">Build all</button>';
+    box.onchange=e=>{const c=e.target.closest("input[data-it]");if(!c)return;const it=c.dataset.it,cur=exGet(item).filter(x=>x!==it);if(!c.checked)cur.push(it);exSet(item,cur);window.placerRun(true)};
+    box.onclick=e=>{const id=e.target.id;if(id==="pvPartsFin"){exSet(item,direct);window.placerRun(true)}else if(id==="pvPartsAll"){exSet(item,[]);window.placerRun(true)}}};
   window.engineReady=async()=>{if(typeof chainBuild!=="function")for(const f of ["tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f)};
   window.placerRun=async function(open,defer){
     if(SMALL.includes($("plnBk").value)){++tok;ENG=null;$("plnPlace").onclick=OPLACE;return ORUN.call(this,open,defer)}   // 1x1 / 2x1: composer + templates; shows "Not supported yet: reason" itself
@@ -15,7 +24,8 @@
     $("pvLine").textContent="Building...";$("plnPrevMap").style.opacity=".45";await nx();
     if(typeof chainBuild!=="function")for(const f of ["tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f);
     if(me!==tok)return;
-    let T;try{T=chainBuild({item:item.replace(/^ITEM_/,""),rate,mk,pick:typeof PLN_PICK==="object"?PLN_PICK:undefined,tile:$("plnBk").value,dockType:$("plnDk").value,outDockType:$("plnDkOT").value||$("plnDk").value,docks:$("plnDkI").checked,outDock:$("plnDkO").checked,maxStates:60000,hw:3})}catch(e){$("pvLine").textContent="Build failed";$("plnPrevErr").textContent=e.message;$("plnPrevMap").style.opacity="";return}
+    const ext=exGet(item);try{partsUi(item,rate,mk,ext)}catch(e){}
+    let T;try{T=chainBuild({item:item.replace(/^ITEM_/,""),rate,mk,ext,pick:typeof PLN_PICK==="object"?PLN_PICK:undefined,tile:$("plnBk").value,dockType:$("plnDk").value,outDockType:$("plnDkOT").value||$("plnDk").value,docks:$("plnDkI").checked,outDock:$("plnDkO").checked,maxStates:60000,hw:3})}catch(e){$("pvLine").textContent="Build failed";$("plnPrevErr").textContent=e.message;$("plnPrevMap").style.opacity="";return}
     const bad=T.fails.length+HAND.check().bad.length,mach=T.ms.filter(m=>m.rec).length,boxes=T.ms.filter(m=>/Container/.test(m.cls)).length,docks=T.blocks.filter(b=>/Dock/.test(b.cls)).length;
     T.machines=mach;ENG={T};const mx=Math.min(...T.blocks.map(q=>q.x)),my=Math.min(...T.blocks.map(q=>q.y));plcT={ok:true,blocks:T.blocks.map(q=>({...q,x:q.x-mx,y:q.y-my})),ms:T.ms.map(q=>({...q,x:q.x-mx*FC,y:q.y-my*FC}))};   // the preview starts at the origin (its axes and fit assume that)
     plcL={items:[],src:{}};   // the preview is drawn by placerShot (the factory renderer) from plcT

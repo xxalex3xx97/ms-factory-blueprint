@@ -5,7 +5,8 @@
 // PLANNED ROUTES: a belt may only use the street tracks (pairs of adjacent cell lines of every street row and street column), the output blocks and the entry stubs, so the search is a thin graph, not open floor.
 //   Entry of a block without dock: stub row from the street column to (0,lane row). Entry of a dock block: stub column from the north street down to its approach column inside the block.
 window.chainBuild=function(opts){
-  opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.noDock=opts.docks===false;HAND.allRaw=!!opts.single;   // single: one recipe only (template gallery), every input is a source
+  opts=opts||{};HAND.setTile(opts.tile||'BPO_Station_03');HAND.ext=new Set(opts.ext||[]);HAND.noDock=opts.docks===false||HAND.ext.size>0;   // external parts (opts.ext) come from source containers: every input is a container then (mixed docks later)
+  HAND.allRaw=!!opts.single;   // single: one recipe only (template gallery), every input is a source
   HAND.nrm=opts.dockType==='nrm';   // input dock kind only; output dock kind is nrmO below
   // try factory rows packed / with a street row between them, and with / without the sideways jog at a blocked source port; keep the build with the fewest problems, then blocks, then belts (packing or jogging can lose on big chains)
   if(opts.pack===undefined&&!opts.dry&&!opts.noAdapt&&!opts.capsDone){
@@ -36,10 +37,10 @@ const ITEM='ITEM_'+(opts.item||'AdvancedPlates'),RATE=opts.rate||5,MK=opts.mk!=n
   // Deep Space Observatory (a block with one machine inside): used for the FINAL product when it is the only way to make it or the planner pick names it; the chain upstream makes its input
   const dsoR=(plnBy(false,false).get(ITEM)||[]).find(x=>x.c==='CRAFT_DeepSpaceObservatory'&&((opts.pick&&opts.pick[ITEM])?rk(x.r)===opts.pick[ITEM]:!(plnBy(false,true).get(ITEM)||[]).length)),
     dsoOk=!!dsoR&&HAND.CLS===plcCls('BPO_Station_03'),nDSO=dsoOk?Math.ceil(RATE/(dsoR.r.o[1]*1800/dsoR.r.t)-1e-9):0,
-    P=dsoOk?plan(dsoR.r.i[0][0],nDSO*dsoR.r.i[0][1]*1800/dsoR.r.t,MK,undefined,opts.pick,{seedDock:true}):plan(ITEM,RATE,MK,undefined,opts.pick,{seedDock:true});
+    P=dsoOk?plan(dsoR.r.i[0][0],nDSO*dsoR.r.i[0][1]*1800/dsoR.r.t,MK,undefined,opts.pick,{seedDock:true,ext:opts.ext}):plan(ITEM,RATE,MK,undefined,opts.pick,{seedDock:true,ext:(opts.ext||[]).filter(x=>x!==ITEM)});
   const CM={CRAFT_Refinery:['Refinery','DAT_Refinery',6],CRAFT_Assembler:['Assembler','DAT_Assembler'],CRAFT_GrowthChamber:['GrowthChamber','DAT_GrowthChamber'],CRAFT_Supercomputer:['Supercomputer','DAT_Supercomputer'],CRAFT_AdvancedAssembler:['AdvancedAssembler','DAT_AdvancedAssembler'],CRAFT_Enrichment:['Enrichment','DAT_EnrichmentChamber']};
   const CAPD={Refinery:36,Assembler:15,GrowthChamber:6,Supercomputer:9,AdvancedAssembler:4,Enrichment:4},CAPN={...CAPD,AdvancedAssembler:6,Enrichment:6};
-  const by=plnBy(false,true),isRaw=it=>!!opts.single||!by.has(it),rawOf=n=>n.rec.i.some(([it])=>isRaw(it)||it===n.rec.o[0]);
+  const by=plnBy(false,true),isRaw=it=>!!opts.single||!by.has(it)||HAND.ext.has(it),rawOf=n=>n.rec.i.some(([it])=>isRaw(it)||it===n.rec.o[0]);
   const nodes=Object.values(P.nodes).filter(n=>n.crafter&&n.machines>0&&CM[n.crafter]&&(!opts.single||n.item===ITEM));
   const dep={};const dOf=it=>{if(dep[it]!=null)return dep[it];dep[it]=0;let d=0;for(const e of P.edges)if(e.to===it&&e.from!==it&&P.nodes[e.from]&&P.nodes[e.from].crafter)d=Math.max(d,dOf(e.from)+1);return dep[it]=d};
   nodes.forEach(n=>dOf(n.item));
