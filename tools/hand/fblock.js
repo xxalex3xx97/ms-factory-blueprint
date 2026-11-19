@@ -11,7 +11,7 @@ window.fbBuild=function(opts){
   const BELT=PLC_BELT[MK],UGC=PLC_UG[MK],SPL=PLC_SPL[MK],TW=HAND.TW,DH=HAND.D(),by=plnBy(false,true),isRaw=it=>!!HAND.allRaw||!by.has(it)||!!(HAND.ext&&HAND.ext.has(it));
   const CLASSES=[['Refinery','DAT_Refinery','CRAFT_Refinery',6],['Assembler','DAT_Assembler','CRAFT_Assembler'],['GrowthChamber','DAT_GrowthChamber','CRAFT_GrowthChamber'],['Supercomputer','DAT_Supercomputer','CRAFT_Supercomputer'],['AdvancedAssembler','DAT_AdvancedAssembler','CRAFT_AdvancedAssembler'],['Enrichment','DAT_EnrichmentChamber','CRAFT_Enrichment']];
   const hopSpan=(ax,a,b)=>{const l=HAND.S.span.get(ax)||[];l.push([a,b]);HAND.S.span.set(ax,l)};   // tell check() the pair is intended
-  const info=[],dockBlk=[],anch=[],srcNm=it=>HAND.ext&&HAND.ext.has(it)?'From your factory: ':HAND.noDock?'Source: ':'Dock: ';   // label of an input container / dock
+  const info=[],dockBlk=[],anch=[],srcNm=it=>HAND.ext&&HAND.ext.has(it)?'From your factory: ':HAND.noDock?'Source: ':'Dock: ',ORE_TAG={ITEM_TitaniumOre:'TITANIUM',ITEM_NickelOre:'NICKEL',ITEM_CobaltOre:'COBALT',ITEM_IridiumOre:'IRIDIUM',ITEM_WaterIce:'WATERICE',ITEM_Silica:'SILICA',ITEM_Graphite:'GRAPHITE'},dkTag=(its,txt)=>{const u=[...new Set(its.filter(Boolean))];return u.length===1&&ORE_TAG[u[0]]&&srcNm(u[0])==='Dock: '?'[AUTO-FILTER] ['+ORE_TAG[u[0]]+'] '+txt:txt};   // label of an input container / dock; dkTag: mining-mod dock tags, ONE ore per dock = '[AUTO-FILTER] [ORE] text' (several items or a non-ore item = plain text, no tag)
   function one(gx,gy,name,cls,crafter,rc,perOv,nTot,chain,yUp){
     const isRawL=it=>isRaw(it)||(chain&&it===rc.o[0]);   // an input that is the recipe's own product (growth seed) arrives from a dock like a raw item: no loop of the output into itself
     const dk=DOCK||(chain&&rc.i.some(([it])=>isRawL(it)));
@@ -74,7 +74,7 @@ window.fbBuild=function(opts){
         else c.ports.forEach(q=>c.used.add(q.key))});
       if(!nrm)asm.belts.forEach(kb=>putF(-16-A+kb.y,kb.x,TR[kb.rot],BELT));
       const tails=new Set();groups.forEach(g=>g.forEach(t=>tails.add(t.p)));tails.forEach(py=>{for(let x=nrm?-1-A:-16-A+13;x<=-1;x++)putF(x,py,0,BELT)});
-      dockBlk.push(...(allCont?dkTiles(gx*2,gy*2):nrm?groups.flatMap((g,gi)=>g.length?[{cls:plcCls('BPO_Dock'),x:gx*2-1-(A?1:0),y:gy*2+gi,rot:2,nm:gNm(gi)}]:[]):[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:gy*2,rot:2,nm:[gNm(0),gNm(1)].filter(Boolean).join(' + ')}]),...(HAND.adapt&&!allCont?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:gy*2,rot:2}]:[]))}
+      dockBlk.push(...(allCont?dkTiles(gx*2,gy*2):nrm?groups.flatMap((g,gi)=>g.length?[{cls:plcCls('BPO_Dock'),x:gx*2-1-(A?1:0),y:gy*2+gi,rot:2,nm:dkTag([gitem[gi]],gNm(gi))}]:[]):[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:gy*2,rot:2,nm:(()=>{const act=[0,1].filter(g=>gNm(g)),its=act.map(g=>gitem[g]),same=its.length>0&&its.every(i=>i===its[0]);return dkTag(its,same?srcNm(its[0])+nice(its[0])+' '+Math.round(act.reduce((s,g)=>s+gRate(groups[g]),0))+'/min':act.map(gNm).join(' + '))})()}]),...(HAND.adapt&&!allCont?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:gy*2,rot:2}]:[]))}
     xDock.forEach(xd=>{const asm=nlIndAsm(),nice=it=>it.replace('ITEM_','').replace(/([a-z])([A-Z])/g,'$1 $2'),dy=xd.dy,idxs=[];rc.i.forEach(([it],j)=>{if(it===xd.item)idxs.push(j)});
       const rowsUsed=Math.ceil(nUse/per);let rate=0;for(let r=0;r<rowsUsed;r++){const m=Math.min(per,nUse-r*per);idxs.forEach(j=>rate+=m*inRate(j))}
       const nm=srcNm(xd.item)+nice(xd.item)+' '+Math.round(rate)+'/min',putY=(x,y,rot,c)=>{if(!HAND.piece({cls:c,x:ox+x,y:oy+dy*TW+y,rot},true))throw new Error(name+': extra dock cell taken '+x+','+y)};
@@ -82,7 +82,7 @@ window.fbBuild=function(opts){
         if(grp2)c.ports.forEach(q=>{if(q.f==='W'||q.f==='E')c.used.add(q.key)});else c.ports.forEach(q=>c.used.add(q.key))});
       if(!nrm)asm.belts.forEach(kb=>putY(-16-A+kb.y,kb.x,TR[kb.rot],BELT));
       for(let r=0;r<rowsUsed;r++)for(let x=nrm?-1-A:-16-A+13;x<=-1;x++)putY(x,nrm?[22,6][r]:22+2*r,0,BELT);   // one tail per row of the block, 2 rows apart
-      dockBlk.push(...(cont(xd.item)?dkTiles(gx*2,(gy+dy)*2):nrm?Array.from({length:rowsUsed},(_,r)=>({cls:plcCls('BPO_Dock'),x:gx*2-1-(A?1:0),y:(gy+dy)*2+(r===0?1:0),rot:2,nm})):[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:(gy+dy)*2,rot:2,nm}]),...(HAND.adapt&&!cont(xd.item)?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:(gy+dy)*2,rot:2}]:[]))});
+      dockBlk.push(...(cont(xd.item)?dkTiles(gx*2,(gy+dy)*2):nrm?Array.from({length:rowsUsed},(_,r)=>({cls:plcCls('BPO_Dock'),x:gx*2-1-(A?1:0),y:(gy+dy)*2+(r===0?1:0),rot:2,nm:dkTag([xd.item],nm)})):[{cls:plcCls('BPO_Dock_2'),x:gx*2-DKX,y:(gy+dy)*2,rot:2,nm:dkTag([xd.item],nm)}]),...(HAND.adapt&&!cont(xd.item)?[{cls:plcCls('BPO_StationAdapter_01'),x:gx*2-1,y:(gy+dy)*2,rot:2}]:[]))});
     if(dk)groups.forEach(g=>g.forEach(t=>{
       if(t.xj==null){rawStart.set(t.r+','+t.idx,0);usedP.set(t.p,0);return}
       for(let x=0;x<t.xj;x++)put1(x,t.p,0,BELT);

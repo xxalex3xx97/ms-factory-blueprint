@@ -6,13 +6,16 @@ const cmpCellsFor=(D,cap,lanes,avail)=>{const n=Math.max(Math.ceil(D/(2*cap)-1e-
 const cmpR1=v=>Math.round(v*10)/10;
 // DOCKDF: site filter key of a lane item (item id 'ITEM_X' or display name) -> 'x'; '' if unknown
 const cmpDfKey=q=>{const n=q.di||(q.ct&&q.ct[0]&&q.ct[0].item)||(q.dx&&q.dx.name)||(q.dkx&&q.dkx.name)||'',id=Object.keys(ITEMS).find(k=>k===n||(ITEMS[k].n||'')===n);return id?id.slice(5).toLowerCase():''};
+// DOCKTAG: mining-mod dock tags. Ore df keys -> tag word. One ore, one filter per dock (mod ignores multi-ore docks): exactly one ore key after dedupe -> "[AUTO-FILTER] [ORE]"; 2+ different keys, any non-ore key or none -> ''.
+const CMP_ORETAG={titaniumore:'TITANIUM',nickelore:'NICKEL',cobaltore:'COBALT',iridiumore:'IRIDIUM',waterice:'WATERICE',silica:'SILICA',graphite:'GRAPHITE'};
+const cmpDockTag=keys=>{const u=[...new Set((keys||[]).filter(Boolean))];if(u.length!==1||!CMP_ORETAG[u[0]])return'';return'[AUTO-FILTER] ['+CMP_ORETAG[u[0]]+']'};
 // DOCKDF: set db.df from the lane belts touching its bays. cl=[{d,x,y,q}] belt cells (final coords). Bays without a belt stay empty.
 function cmpDockDf(db,cl){
   const R=bayRects({...db,id:-1,h:0}),a=Array.from({length:dkN(db.cls)},()=>({item:'',bLoading:0})),ins=(r,x,y)=>x>=Math.round(r.x)&&x<Math.round(r.x+r.w)&&y>=Math.round(r.y)&&y<Math.round(r.y+r.h);
   for(const c of cl){const k=c.k;if(!k)continue;
     const own=R.find(r=>ins(r,c.x,c.y));if(own&&own.i>=0&&!a[own.i].item){a[own.i].item=k;continue}
     for(const[dx,dy]of DIR){const r=R.find(r=>ins(r,c.x+dx,c.y+dy));if(r&&r.i>=0&&!a[r.i].item)a[r.i].item=k}}
-  if(a.some(f=>f.item))db.df=a}
+  if(a.some(f=>f.item)){db.df=a;const t=cmpDockTag(a.map(f=>f.item));if(t&&!db.nm)db.nm=t}}
 // plan the containers of one SRC / OZ hub: a={kind:'in'|'out',name,D,rows (lane rows of the hub),H,dh}. dk={mk,notes:[]}. -> extra cmpPool params {ca,dock:true,dkx,pyOut|pyIn} | {ok:false,why}
 const cmpNoDk=(kind,j,name,dk)=>{const N=globalThis.CMP_NODK;if(!N||!N.has('X:'+kind+':'+j))return 0;const m=[...N].find(k=>k.startsWith('M:'+j+'|'));dk.notes.push('Industrial dock not possible for '+name+' (no free ship clearance: '+(m?m.split('|')[1]:'')+'): no dock, plain container');return 1};   // DOCKCLEAR
 function cmpDockHub(dk,a){
