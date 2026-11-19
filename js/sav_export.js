@@ -292,9 +292,22 @@ function savExport(j, opts) {
   }
 
   // Flat machines. Config from site ConfigHex; underground exit has none, so empty config (unverified in game).
+  // Game undergrounds are ONE record at the entrance (Length); the exit is virtual. Skip site exit tiles (same class/tier/height, no Length, entrance + (Length-1) cells along the rotation, 2 raw per cell).
+  const ugExit = new Set(), ugDir = [[1, 0], [0, 1], [-1, 0], [0, -1]], isUG = m => /^BP_UndergroundBeltObject/.test(savShort(m.Class));
   for (const m of j.DefaultMachines || []) {
-    const s = savShort(m.Class);
-    let path = SAV_PATHS[s] || (s === 'DAT_Teleporter' && '/Game/Blueprints/Machines/BPO_Teleporter.BPO_Teleporter_C');   // class path seen in a real save
+    if (!isUG(m) || !(m.Length > 1)) continue;
+    const g = m.Transform.GridLocation, d = ugDir[((m.Transform.GridRotation % 4) + 4) % 4];
+    ugExit.add(savKey(m.DefaultName, g.X + 2 * (m.Length - 1) * d[0], g.Y + 2 * (m.Length - 1) * d[1], m.Transform.Height));
+  }
+  for (const m of j.DefaultMachines || []) {
+    let s = savShort(m.Class);
+    if (isUG(m)) {
+      const g = m.Transform.GridLocation;
+      if (!m.Length && ugExit.has(savKey(m.DefaultName, g.X, g.Y, m.Transform.Height))) continue;
+      const sfx = (/_([23])$/.exec(m.DefaultName || '') || [])[0] || '';   // game classes BP_UndergroundBeltObject / _2 / _3 (Mk1 / Mk2 / Mk3)
+      s = 'BP_UndergroundBeltObject' + sfx;
+    }
+    let path = SAV_PATHS[s] || (isUG(m) && `/Game/Blueprints/Machines/${s}.${s}_C`) || (s === 'DAT_Teleporter' && '/Game/Blueprints/Machines/BPO_Teleporter.BPO_Teleporter_C');   // class path seen in a real save
     if (!path) { path = `/Game/Blueprints/Machines/${s}.${s}_C`; warn.push('guessed path ' + s); }
     const t = m.Transform;
     if (used.has(savKey(s, t.GridLocation.X, t.GridLocation.Y, t.Height))) continue;
