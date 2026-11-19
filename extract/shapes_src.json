@@ -16,8 +16,7 @@
         "kind": "doors",
         "evidence": "doors on every hall side except the ship berth (DIR[rot], rot 0 east = shaft end): W, N, S at rot 0, slots by the station door rule (BPO_Dock_2 colliders: W gaps y-11..-5,5..11; N/S gaps x-11..-5); the ship side gets no entrance mark"
       },
-      "hatch": "interior",
-      "levels": 2
+      "hatch": "interior"
     },
     "BPO_Station_01": {
       "w": 1,
