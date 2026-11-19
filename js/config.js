@@ -3,6 +3,7 @@
 // splitter/balancer: 01 00, i32 n, n*FString filter, i32 -1, i32 -1, i32 n, n*u8 portEnabled
 // dock: 01 00, FString name, i32 n, n*{FString item, i32 bLoading}   dronebay: 01 00, FString resource
 // underground: 01 00, i32 Length (cells entrance..exit inclusive; ONE machine at the entrance in the game)
+// container(_2) (EA, port-toggleable): 01 00, 3 x i32 0, i32 n, n*{FString item, i32 amount, u8 flag} (logistic filters, kept from an import), i32 n, n*u8 portEnabled; no config at all (0 bytes) until a port is toggled
 // FString = i32 len incl NUL (0 = empty; <0 = UTF-16) + ascii + NUL. Recipe names: js/recnames.js (generated, replaceable).
 function cfgKind(cls){
   const c=String(cls||"").toLowerCase();
@@ -11,6 +12,7 @@ function cfgKind(cls){
   if(c.includes("miningdronebay"))return"dronebay";
   if((c.includes("elevator")&&!c.includes("itemelevator"))||c.includes("teleporter"))return"named";
   if(c.includes("dock")&&!c.includes("docking"))return"dock";
+  if(/^(dat_container|bp_containerobject)(_\d+)?$/.test(c))return"container";
   if(["assembler","refinery","enrichment","growth","supercomputer","relicsynth"].some(k=>c.includes(k)))return"recipe";
   return null;
 }
@@ -25,6 +27,7 @@ const balOuts=ps=>[2,1].map(n=>ps.find(p=>p.dir==="out"&&+p.pos===n));
 function cfgEnc(k,d){
   const o=[1,0],i32=v=>{for(let i=0;i<4;i++)o.push((v>>(8*i))&255)},fs=s=>{if(!s)return i32(0);if(/[^\x00-\x7f]/.test(s)){i32(-(s.length+1));for(let i=0;i<s.length;i++)o.push(s.charCodeAt(i)&255,s.charCodeAt(i)>>8);o.push(0,0);return}i32(s.length+1);for(let i=0;i<s.length;i++)o.push(s.charCodeAt(i)&255);o.push(0)},bl=a=>{i32(a.length);a.forEach(p=>o.push(p?1:0))};
   if(k==="recipe"){fs(d.recipe||"");bl(d.ports)}
+  else if(k==="container"){i32(0);i32(0);i32(0);i32(d.filters.length);d.filters.forEach(f=>{fs(f.item);i32(f.amount);o.push(f.flag&255)});bl(d.ports)}
   else if(k==="splitter"){i32(d.filters.length);d.filters.forEach(fs);i32(d.prioA==null?-1:d.prioA);i32(d.prioB==null?-1:d.prioB);bl(d.ports)}
   else if(k==="dock"){fs(d.name||"");i32(d.filters.length);d.filters.forEach(f=>{fs(f.item);i32(f.bLoading)})}
   else if(k==="dronebay")fs(d.resource||"");
@@ -44,6 +47,7 @@ function cfgDec(cls,hex){
     const ver=take(2);if(ver[0]!==1||ver[1]!==0)return null;
     const d={layout:k},cnt=f=>{const n=i32();if(n<0||n>10000)throw 0;const a=[];for(let i=0;i<n;i++)a.push(f());return a};
     if(k==="recipe"){d.recipe=fstr();d.ports=bools()}
+    else if(k==="container"){take(12);d.filters=cnt(()=>({item:fstr(),amount:i32(),flag:take(1)[0]}));d.ports=bools()}
     else if(k==="splitter"){d.filters=cnt(fstr);d.prioA=i32();d.prioB=i32();d.ports=bools()}
     else if(k==="dock"){d.name=fstr();d.filters=cnt(()=>({item:fstr(),bLoading:i32()}))}
     else if(k==="dronebay")d.resource=fstr();

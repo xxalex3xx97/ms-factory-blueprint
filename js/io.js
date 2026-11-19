@@ -34,6 +34,12 @@ function cfgModel(b,d,e,ugn){
     const gf=gameFlags(b);
     if(gf&&!PORT_ORDER[b.cls].verified){poWarn(b.cls);e.PortOrderUnverified=true}
     e.ConfigHex=cfgEnc(k,{recipe:b.rec?recName(b.rec):b.recn||"",ports:gf||en});
+  }else if(k==="container"){
+    const kd=b.cfgKeep&&cfgDec(d.id,b.cfgKeep.hex);   // imported logistic filters survive a port change
+    if(!off&&!(kd&&kd.filters.length))return;
+    const gf=gameFlags(b);
+    if(gf&&!PORT_ORDER[b.cls].verified){poWarn(b.cls);e.PortOrderUnverified=true}
+    e.ConfigHex=cfgEnc(k,{filters:kd?kd.filters:[],ports:gf||en});
   }else if(k==="splitter"){
     if(!b.fl&&!b.pr&&!off)return;
     if(b.fl)e.Filters=b.fl;
@@ -182,7 +188,7 @@ function impCfg(b,d,m){SV++;
   else{const sk=k==="splitter"?Math.max(0,ps.length-(dc.ports||[]).length):0;(dc.ports||[]).forEach((e,i)=>{const q=ps[sk+i];if(e===false&&q&&q.tg)off.push(q.key)})}
   if(off.length)b.off=off;
   if(dc.recipe){const kk=recKeyOf(dc.recipe);if(kk)b.rec=kk;else b.recn=dc.recipe}
-  if(dc.filters){if(dc.filters.some(Boolean))b.fl=dc.filters;if(dc.prioA!==-1||dc.prioB!==-1)b.pr=[dc.prioA,dc.prioB]}
+  if(dc.filters&&k!=="container"){if(dc.filters.some(Boolean))b.fl=dc.filters;if(dc.prioA!==-1||dc.prioB!==-1)b.pr=[dc.prioA,dc.prioB]}
   b.cfgKeep={hex:m.ConfigHex,sig:cfgSig(b)};
 }
 const n0=v=>Math.round(Number(v))||0;
