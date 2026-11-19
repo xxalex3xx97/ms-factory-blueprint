@@ -559,7 +559,8 @@ function paint0(){
   if(F)tallLabels().forEach(r=>{const x=V.ox+r.x*s,y=V.oy+r.y*s,w=r.w*s;if(w>90&&vis(x,y,w,r.h*s)){cx.save();cx.shadowColor="rgba(0,0,0,.9)";cx.shadowBlur=3;cx.fillStyle="rgba(215,225,240,.95)";cx.font="11px system-ui,sans-serif";cx.textAlign="left";cx.textBaseline="top";cx.fillText(nameOf(r.b)+" - from level "+(r.b.h+1),x+5,y+4,w-8);cx.restore()}});   // label on top of everything, top-left like the floor labels   // viewport cull inside drawBlocks
   cx.fillStyle="rgba(255,60,60,.5)";
   // overlap marks: the duplicate cells of this layer, found once per paint key (all blocks; only the ones on screen are drawn, same pixels as before)
-  const OVK=PK+"|"+layer+"|"+S.blocks.length;
+  let oh=0;S.blocks.forEach(a=>{if(a.h===layer){const d=dim(a);oh=(Math.imul(oh,31)+a.x*7+a.y*13+d.w*17+d.h*19)|0}});   // own signature (positions + current dims): stale red after a delete / rotation otherwise
+  const OVK=layer+"|"+S.blocks.length+"|"+oh;
   if(!OVC||OVC.k!==OVK){const occ=new Set(),ov=[];S.blocks.forEach(a=>{if(a.h!==layer)return;const d=dim(a);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const k=(a.x+i+32768)*65536+(a.y+j+32768);
     if(occ.has(k))ov.push(a.x+i,a.y+j);else occ.add(k)}});OVC={k:OVK,ov}}
   for(let t=0;t<OVC.ov.length;t+=2){const X=V.ox+OVC.ov[t]*s,Y=V.oy+OVC.ov[t+1]*s;if(X<W&&Y<H&&X+s>0&&Y+s>0)cx.fillRect(X,Y,s,s)}
