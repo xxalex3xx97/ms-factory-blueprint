@@ -37,7 +37,7 @@ try {
   });
   chk('untouched container exports no config', r.plain === undefined, String(r.plain));
   chk('toggled port -> ConfigHex, 8 ports, exactly one off', r.dec && r.dec.ports.length === 8 && r.dec.ports.filter(x => !x).length === 1 && r.dec.filters.length === 0, JSON.stringify(r.dec));
-  chk('port order flagged unverified', r.unv === true);
+  chk('verified port order: no PortOrderUnverified flag', r.unv === undefined);
   chk('site Ports field lists the disabled port', r.ports === 1);
   chk('import -> export keeps the bytes and the disabled port', r.back === r.hex && r.off2 === 1, r.back + ' vs ' + r.hex);
   chk('real-style config imported: bytes kept bit-for-bit, 1 port off', r.keep && r.off3 === 1);
