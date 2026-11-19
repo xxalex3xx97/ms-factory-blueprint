@@ -1,0 +1,831 @@
+{
+  "Version": 2,
+  "DisplayName": "Untitled station",
+  "Blocks": [
+    {
+      "Class": "/Game/Blueprints/BuildingBlocks/BPO_Station_01.BPO_Station_01_C",
+      "GridLocation": {
+        "X": 28,
+        "Y": 36
+      },
+      "Height": 6,
+      "GridRotation": 0,
+      "BlockID": 1,
+      "PaletteID": 0
+    },
+    {
+      "Class": "/Game/Blueprints/BuildingBlocks/BPO_Station_01.BPO_Station_01_C",
+      "GridLocation": {
+        "X": 24,
+        "Y": 36
+      },
+      "Height": 6,
+      "GridRotation": 0,
+      "BlockID": 2,
+      "PaletteID": 0
+    },
+    {
+      "Class": "/Game/Blueprints/BuildingBlocks/BPO_Dock.BPO_Dock_C",
+      "GridLocation": {
+        "X": 24,
+        "Y": 40
+      },
+      "Height": 6,
+      "GridRotation": 1,
+      "BlockID": 3,
+      "PaletteID": 0
+    }
+  ],
+  "DefaultMachines": [
+    {
+      "Class": "BP_UndergroundBeltObject",
+      "Transform": {
+        "GridLocation": {
+          "X": 211,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 2
+      },
+      "MachineID": 1,
+      "PaletteID": 0,
+      "DefaultName": "DAT_UndergroundBelt_3",
+      "Length": 4,
+      "ConfigHex": "010004000000"
+    },
+    {
+      "Class": "BP_UndergroundBeltObject",
+      "Transform": {
+        "GridLocation": {
+          "X": 205,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 2
+      },
+      "MachineID": 2,
+      "PaletteID": 0,
+      "DefaultName": "DAT_UndergroundBelt_3"
+    },
+    {
+      "Class": "BP_UndergroundBeltObject",
+      "Transform": {
+        "GridLocation": {
+          "X": 203,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 2
+      },
+      "MachineID": 3,
+      "PaletteID": 0,
+      "DefaultName": "DAT_UndergroundBelt_3",
+      "Length": 5,
+      "ConfigHex": "010005000000"
+    },
+    {
+      "Class": "BP_UndergroundBeltObject",
+      "Transform": {
+        "GridLocation": {
+          "X": 195,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 2
+      },
+      "MachineID": 4,
+      "PaletteID": 0,
+      "DefaultName": "DAT_UndergroundBelt_3"
+    },
+    {
+      "Class": "BP_UndergroundBeltObject",
+      "Transform": {
+        "GridLocation": {
+          "X": 213,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 5,
+      "PaletteID": 0,
+      "DefaultName": "DAT_UndergroundBelt_3",
+      "Length": 4,
+      "ConfigHex": "010004000000"
+    },
+    {
+      "Class": "BP_UndergroundBeltObject",
+      "Transform": {
+        "GridLocation": {
+          "X": 219,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 6,
+      "PaletteID": 0,
+      "DefaultName": "DAT_UndergroundBelt_3"
+    },
+    {
+      "Class": "BP_ConveyorBeltObject_3",
+      "Transform": {
+        "GridLocation": {
+          "X": 193,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 2
+      },
+      "MachineID": 7,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt3"
+    },
+    {
+      "Class": "BP_ConveyorBeltObject_3",
+      "Transform": {
+        "GridLocation": {
+          "X": 191,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 2
+      },
+      "MachineID": 8,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt3"
+    },
+    {
+      "Class": "BP_ConveyorBeltObject_3",
+      "Transform": {
+        "GridLocation": {
+          "X": 221,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 9,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt3"
+    },
+    {
+      "Class": "BP_ConveyorBeltObject_3",
+      "Transform": {
+        "GridLocation": {
+          "X": 223,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 10,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt3"
+    },
+    {
+      "Class": "BP_UndergroundBeltObject",
+      "Transform": {
+        "GridLocation": {
+          "X": 189,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 2
+      },
+      "MachineID": 11,
+      "PaletteID": 0,
+      "DefaultName": "DAT_UndergroundBelt_2",
+      "Length": 3,
+      "ConfigHex": "010003000000"
+    },
+    {
+      "Class": "BP_UndergroundBeltObject",
+      "Transform": {
+        "GridLocation": {
+          "X": 185,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 2
+      },
+      "MachineID": 12,
+      "PaletteID": 0,
+      "DefaultName": "DAT_UndergroundBelt_2"
+    },
+    {
+      "Class": "BP_UndergroundBeltObject",
+      "Transform": {
+        "GridLocation": {
+          "X": 225,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 13,
+      "PaletteID": 0,
+      "DefaultName": "DAT_UndergroundBelt_2",
+      "Length": 3,
+      "ConfigHex": "010003000000"
+    },
+    {
+      "Class": "BP_UndergroundBeltObject",
+      "Transform": {
+        "GridLocation": {
+          "X": 229,
+          "Y": 281
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 14,
+      "PaletteID": 0,
+      "DefaultName": "DAT_UndergroundBelt_2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 187,
+          "Y": 289
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 15,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 189,
+          "Y": 289
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 16,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 191,
+          "Y": 289
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 17,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 193,
+          "Y": 289
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 18,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 195,
+          "Y": 289
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 19,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 197,
+          "Y": 289
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 20,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 199,
+          "Y": 289
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 21,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 183,
+          "Y": 291
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 22,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 185,
+          "Y": 291
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 23,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 187,
+          "Y": 291
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 24,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 189,
+          "Y": 291
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 25,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 191,
+          "Y": 291
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 26,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 193,
+          "Y": 291
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 27,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 195,
+          "Y": 291
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 28,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 197,
+          "Y": 291
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 29,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 199,
+          "Y": 291
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 30,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 181,
+          "Y": 293
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 31,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 183,
+          "Y": 293
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 32,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 185,
+          "Y": 293
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 33,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 187,
+          "Y": 293
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 34,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 189,
+          "Y": 293
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 35,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 191,
+          "Y": 293
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 36,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 193,
+          "Y": 293
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 37,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 195,
+          "Y": 293
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 38,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 197,
+          "Y": 293
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 39,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 199,
+          "Y": 293
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 40,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 179,
+          "Y": 293
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 41,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_SplitterObject_2",
+      "Transform": {
+        "GridLocation": {
+          "X": 179,
+          "Y": 291
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 42,
+      "PaletteID": 0,
+      "DefaultName": "DAT_Splitter_2"
+    },
+    {
+      "Class": "BP_SplitterObject_2",
+      "Transform": {
+        "GridLocation": {
+          "X": 183,
+          "Y": 289
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 43,
+      "PaletteID": 0,
+      "DefaultName": "DAT_Splitter_2",
+      "ConfigHex": "010003000000000000000000000000000000ffffffffffffffff03000000010100",
+      "Ports": [
+        {
+          "Face": "N",
+          "Index": 0,
+          "Enabled": false
+        },
+        {
+          "Face": "E",
+          "Index": 1,
+          "Enabled": true
+        },
+        {
+          "Face": "S",
+          "Index": 2,
+          "Enabled": true
+        },
+        {
+          "Face": "W",
+          "Index": 3,
+          "Enabled": true
+        }
+      ]
+    },
+    {
+      "Class": "BP_SplitterObject_2",
+      "Transform": {
+        "GridLocation": {
+          "X": 187,
+          "Y": 287
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 44,
+      "PaletteID": 0,
+      "DefaultName": "DAT_Splitter_2",
+      "ConfigHex": "010003000000000000000000000000000000ffffffffffffffff03000000010100",
+      "Ports": [
+        {
+          "Face": "N",
+          "Index": 0,
+          "Enabled": false
+        },
+        {
+          "Face": "E",
+          "Index": 1,
+          "Enabled": true
+        },
+        {
+          "Face": "S",
+          "Index": 2,
+          "Enabled": true
+        },
+        {
+          "Face": "W",
+          "Index": 3,
+          "Enabled": true
+        }
+      ]
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 189,
+          "Y": 287
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 45,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 191,
+          "Y": 287
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 46,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 193,
+          "Y": 287
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 47,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 195,
+          "Y": 287
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 48,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 197,
+          "Y": 287
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 49,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 199,
+          "Y": 287
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 50,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 181,
+          "Y": 291
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 51,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    },
+    {
+      "Class": "BP_ConveyorBelt2Object",
+      "Transform": {
+        "GridLocation": {
+          "X": 185,
+          "Y": 289
+        },
+        "Height": 48,
+        "GridRotation": 0
+      },
+      "MachineID": 52,
+      "PaletteID": 0,
+      "DefaultName": "DAT_ConveyorBelt2"
+    }
+  ],
+  "FactoryLayout": {
+    "FloorCellsPerBlock": 16,
+    "DoorwayCells": 2,
+    "ClosedDoorways": []
+  },
+  "Catalog": {}
+}
