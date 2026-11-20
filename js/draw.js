@@ -561,7 +561,7 @@ function paint0(){
   // overlap marks: the duplicate cells of this layer, found once per paint key (all blocks; only the ones on screen are drawn, same pixels as before)
   let oh=0;S.blocks.forEach(a=>{if(a.h===layer){const d=dim(a);oh=(Math.imul(oh,31)+a.x*7+a.y*13+d.w*17+d.h*19)|0}});   // own signature (positions + current dims): stale red after a delete / rotation otherwise
   const OVK=layer+"|"+S.blocks.length+"|"+oh;
-  if(!OVC||OVC.k!==OVK){const occ=new Set(),ov=[];S.blocks.forEach(a=>{if(a.h!==layer)return;const d=dim(a);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const k=(a.x+i+32768)*65536+(a.y+j+32768);
+  if(!OVC||OVC.k!==OVK){const occ=new Set(),ov=[];S.blocks.forEach(a=>{if(a.h!==layer)return;const d=dim(a);for(let i=0;i<d.w;i++)for(let j=0;j<d.h;j++){const k=((a.x+i+32768)*65536+(a.y+j+32768))*2+(isM(a)?1:0);   // machines (floor cells) and blocks (block cells) are different grids: never compared
     if(occ.has(k))ov.push(a.x+i,a.y+j);else occ.add(k)}});OVC={k:OVK,ov}}
   for(let t=0;t<OVC.ov.length;t+=2){const X=V.ox+OVC.ov[t]*s,Y=V.oy+OVC.ov[t+1]*s;if(X<W&&Y<H&&X+s>0&&Y+s>0)cx.fillRect(X,Y,s,s)}
   return{RCT,CUR};
