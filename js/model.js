@@ -130,7 +130,9 @@ function areas(L,tall){   // tall: only the multi-level blocks standing on lower
         const p=!!nf&&nf!==f&&cOk(b,nf.b,ed)&&(!matchRule(b,nf.b)||passage(b,nf.b,ed));
         if(nf&&nf!==f&&ed<2&&!cOk(b,nf.b,ed))mis.push(v?{x:(ed===0?r.x+r.w:r.x)-1,y:r.y+FC*k,w:2,h:FC}:{x:r.x+FC*k,y:(ed===1?r.y+r.h:r.y)-1,w:FC,h:2});   // connector mismatch (large block vs normal block): hint, no doorway   // real neighbour: door passage (Corner/Corridor pairs: only if it has a door over this slot too)
         if(op)strips.push(v?{x:ed===0?r.x+r.w:r.x-1,y:t0,w:1,h:sg[1]-sg[0]}:{x:t0,y:ed===1?r.y+r.h:r.y-1,w:sg[1]-sg[0],h:1});   // open gap: 1-thick strip in the wall line, buildable even next to a refused neighbour
-        if(nf&&nf!==f&&!p)continue;   // neighbour with no matching door (corridor long side, corner/dock open side): the wall stays, no ring, no door
+        if(nf&&nf!==f&&!p){   // neighbour with no matching door (corridor long side, corner/dock open side): the wall stays, no door; the inset ring strip of the slot is still buildable (user 2026-11-22: elevator 1x6)
+          if(QI&&!op)strips.push(v?{x:ed===0?r.x+r.w:r.x-QI,y:t0,w:QI,h:DOORW}:{x:t0,y:ed===1?r.y+r.h:r.y-QI,w:DOORW,h:QI});
+          continue}
         const dl=op?sg[1]-sg[0]:DOORW;
         r.cuts[ed].push([t0,t0+dl]);
         if(p||op)r.wcuts[ed].push([t0,t0+dl]);
