@@ -65,7 +65,7 @@ function panel(){
       }
     }
     h+='</div>';
-    if(one&&F&&one.h===layer)h+=(isBelt(one)?"":rateHtml(one))+linkHtml(one)+(isBelt(one)?beltRateHtml(one):isStore(one)?storeHtml(one):"");
+    if(one&&F&&one.h===layer)h+=(isBelt(one)?"":rateHtml(one))+(isBelt(one)?beltRateHtml(one):isStore(one)?storeHtml(one):"");
     if(one&&F&&SM&&SIM)h+=sec("sim","Simulation live",'<div id="simLive">'+simLiveHtml(one)+'</div>');
     if(one){
       if(F&&one.h===layer)h+=portsHtml(one);
@@ -83,25 +83,8 @@ function panel(){
       h+='<h2>'+(d&&d.kind==="m"?"Buildable":"Block")+' type</h2><div class="pad">'+(d?'<div class="sn">'+ico(d)+'<b>'+esc(lab(d))+'</b>'+(d.verified?"":BQ)+'</div>':'<div class="sub">Unknown class: shown as grey 1&times;1, kept as-is on export.</div>')+'</div>';
     }
     if(d){
-      sz='<div class="kv" style="margin-bottom:6px">'+esc(tcls)+'</div>'+(d.source?'<div class="sub">source: '+esc(nog(d.source))+'</div>':"")
-      +(d.note?'<div class="sub">'+esc(nog(d.note))+'</div>':"")
-      +(d.kind==="m"&&d.evidence?'<div class="sub">'+esc(nog(d.evidence))+'</div>':"")
-      +(d.kind==="m"?'<div class="sub">Size '+d.w+'&times;'+d.h+' floor cells'+(d.directional?' &middot; directional (rot 0 = east, 90&deg; steps clockwise)':"")+'</div>':"")
-      +(d.maxApart!=null?'<div class="sub">Max length: '+d.maxApart+' cells, entrance to exit inclusive (warning only)</div>':"")
-      +'<div class="row"><label for="tw">Width</label><input id="tw" type="number" min="1" step="1" data-t="w" value="'+d.w+'"></div>'
-      +'<div class="row"><label for="th">Depth</label><input id="th" type="number" min="1" step="1" data-t="h" value="'+d.h+'"></div>'
-      +(d.kind==="b"?'<div class="row"><label for="tfw">Floor W</label><input id="tfw" type="number" min="1" step="1" data-t="fw" placeholder="unknown" value="'+(d.fw==null?"":d.fw)+'"></div><div class="row"><label for="tfh">Floor H</label><input id="tfh" type="number" min="1" step="1" data-t="fh" placeholder="unknown" value="'+(d.fh==null?"":d.fh)+'"></div>':"")
-      +(d.speed?'<div class="row"><label>Speed</label><span>'+(d.speed.itemsPerMin==null?"unknown":d.speed.itemsPerMin+" items/min")+'</span></div>':"")
-      +(d.input?'<div class="row"><label>Input</label><span style="display:flex;gap:6px;align-items:center">'+(iurl(d.input.icon)?'<img class="ic" alt="" src="'+iurl(d.input.icon)+'">':"")+esc(d.input.name)+'</span></div>':"")
-      +(d.portsLayout?'<div class="sub">Ports (positions 1-based along each side, comma separated)</div>'
-      +FN.map(f=>'<div class="row"><label for="pl'+f+'">'+f+'</label><input id="pl'+f+'" type="text" data-pl="1" value="'+d.portsLayout.ports.filter(q=>q.face===f).map(q=>q.pos).join(",")+'"></div>').join("")
-      +'<div class="row chk"><input id="plt" type="checkbox" data-pl="1" '+(d.portsLayout.toggleable?"checked":"")+'><label for="plt">ports toggleable</label></div>'
-      +'<div class="row chk"><input id="plv" type="checkbox" data-pl="1" '+(d.portsLayout.verified?"checked":"")+'><label for="plv">ports verified</label></div>'
-      +(d.portsLayout.source?'<div class="sub">'+esc(nog(d.portsLayout.source))+'</div>':""):"")
-      +'<div class="row"><label for="tc">Category</label><input id="tc" type="text" list="catl" data-t="category" value="'+esc(d.category)+'"><datalist id="catl">'+cats(d.kind).map(c=>'<option value="'+esc(c)+'">').join("")+'</datalist></div>'
-      +'<div class="row chk"><input id="tv" type="checkbox" data-t="verified" '+(d.verified?"checked":"")+'><label for="tv">verified</label></div>'
-      +factsHtml(d);
-      h+=sec("size","Size &amp; data"+(d.verified?"":" "+BQ),sz);
+      sz=factsHtml(d);
+      h+=sec("size","Data"+(d.verified?"":" "+BQ),sz);
       h+=recipesHtml(d,one&&isM(one)?one:null)+resHtml(d);
     }
   }
@@ -115,7 +98,6 @@ $("insp").addEventListener("toggle",e=>{const k=e.target.dataset&&e.target.datas
 $("insp").addEventListener("change",e=>{
   const t=e.target,bs=S.blocks.filter(b=>sel.has(b.id));
   if(t.dataset.prio&&bs.length===1){push();togglePrio(bs[0],t.dataset.prio);all();return}
-  if(t.dataset.port&&bs.length===1){push();togglePort(bs[0],t.dataset.port);all();return}
   if(t.dataset.nm&&bs.length===1){const v=t.value.trim();if(v===(bs[0].nm||""))return;push();if(v)bs[0].nm=v;else delete bs[0].nm;delete bs[0].cfgKeep;all();return}
   if(t.dataset.ct&&bs.length===1){
     const m=bs[0],i=+t.dataset.i;push();
@@ -146,6 +128,8 @@ $("insp").addEventListener("click",e=>{
     rsPick(S.blocks.find(q=>sel.has(q.id)),rb);
     return;
   }
+  const pk=e.target.closest&&e.target.closest("button[data-port]");
+  if(pk&&S.blocks.filter(q=>sel.has(q.id)).length===1){push();togglePort(S.blocks.find(q=>sel.has(q.id)),pk.dataset.port);all();return}
   const pa=e.target.closest&&e.target.closest("button[data-pall]");
   if(pa&&S.blocks.filter(q=>sel.has(q.id)).length===1){push();setAllPorts(S.blocks.find(q=>sel.has(q.id)),pa.dataset.pall==="1");all();return}
   const fb=e.target.closest&&e.target.closest("button[data-fl],button[data-df]");

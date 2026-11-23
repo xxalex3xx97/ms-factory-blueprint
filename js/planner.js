@@ -201,7 +201,7 @@ const SL={ConsumePower:"Power use",GeneratesPower:"Power generated",StoresItems:
 function factsHtml(d){
   const st=Object.entries(d.stats||{}).filter(([k])=>SL[k]),cost=d.cost||[];
   if(!st.length&&!cost.length)return"";
-  return st.map(([k,v])=>`<div class="row"><label>${SL[k]}</label><span>${esc(v)}</span></div>`).join("")+(cost.length?`<div class="row"><label>Cost</label><span style="display:flex;flex-wrap:wrap">${cost.map(c=>itemHtml(c[0],c[1])).join("")}</span></div>`:"")
+  return st.map(([k,v])=>`<div class="row"><label>${SL[k]}</label><span>${esc(v)}${/Power$/.test(k)?" MW":""}</span></div>`).join("")+(cost.length?`<div class="row"><label>Cost</label><span style="display:flex;flex-wrap:wrap">${cost.map(c=>itemHtml(c[0],c[1])).join("")}</span></div>`:"")
 }
 
 // Export the diagram as a standalone SVG that is a 1:1 snapshot of the canvas: the live DOM (unzoomed, boxes where you dragged them) cloned into a foreignObject with every computed style inlined and icons embedded as data URIs
