@@ -135,7 +135,7 @@ def underground_lengths(d):
         for m in re.finditer(re.escape(struct.pack('<i', ci)), d):
             o = m.start(); st = o + 36
             try:
-                if d[st + 8:st + 16] != b'\0\0\0\0\6\0\0\0': continue
+                if d[st + 8:st + 12] != bytes(4): continue   # w3 (st+12) is 6 or 139 depending on the save: not checked
                 mid, fx, fy = struct.unpack_from('<3i', d, o + 4)
                 if (fx >> 15, fy >> 15) != struct.unpack_from('<2i', d, st + 20): continue
                 p = st + 36

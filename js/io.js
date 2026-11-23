@@ -134,7 +134,7 @@ function parseSav(buf){
   const UG={};
   for(let ci=0;ci<top.length;ci++){if(!top[ci].includes("UndergroundBeltObject"))continue;
     for(let q=0;q+36<=L;q++){if(I(q)!==ci)continue;
-      try{const st=q+36;if(I(st+8)!==0||I(st+12)!==6)continue;   // 5-word block: w2=0, w3=6
+      try{const st=q+36;if(I(st+8)!==0)continue;   // 5-word block: w2=0 (w3 is 6 in most saves, 139 on the Felleranias Mk3 tunnels: not checked)
         const mid=I(q+4),fx=I(q+8),fy=I(q+12);if((fx>>15)!==I(st+20)||(fy>>15)!==I(st+24))continue;   // gridX, gridY
         let p=st+36;
         for(let k=0;k<2;k++){const n=I(p);if(n<0||n>=64)throw 0;p+=4+4*n}   // input / output machine ids
