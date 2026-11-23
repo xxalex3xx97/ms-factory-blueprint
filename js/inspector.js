@@ -11,7 +11,8 @@ function resHtml(d){
 }
 function portsHtml(b){
   const ps=portsOf(b);if(!ps.length)return"";
-  return sec("ports","Ports",ps.map(p=>`<div class="row chk">${p.tg?`<input id="pt${p.key}" type="checkbox" data-port="${p.key}" ${p.en?"checked":""}>`:`<span style="width:1.2em"></span>`}<label ${p.tg?`for="pt${p.key}"`:""}>${p.f}${p.pos} <span class="sub">faces ${FN[p.wf]}${p.dir?" &middot; "+p.dir:""} &middot; ${p.tg?(p.en?"enabled (green)":"disabled (red)"):"always enabled"}</span></label>${p.tg&&p.dir==="out"&&hasPrio(b.cls)?`<label class="sub" style="margin-left:auto"><input type="radio" name="prio${b.id}" data-prio="${p.key}" ${p.pr?"checked":""} ${p.en?"":"disabled"}> priority</label>`:""}</div>`).join(""));
+  const n=ps.filter(p=>p.tg).length,bt=n>1?`<div class="btns"><button data-pall="0">All off</button><button data-pall="1">All on</button></div>`:"";
+  return sec("ports","Ports",bt+ps.map(p=>`<div class="row chk">${p.tg?`<input id="pt${p.key}" type="checkbox" data-port="${p.key}" ${p.en?"checked":""}>`:`<span style="width:1.2em"></span>`}<label ${p.tg?`for="pt${p.key}"`:""}>${p.f}${p.pos} <span class="sub">faces ${FN[p.wf]}${p.dir?" &middot; "+p.dir:""} &middot; ${p.tg?(p.en?"enabled (green)":"disabled (red)"):"always enabled"}</span></label>${p.tg&&p.dir==="out"&&hasPrio(b.cls)?`<label class="sub" style="margin-left:auto"><input type="radio" name="prio${b.id}" data-prio="${p.key}" ${p.pr?"checked":""} ${p.en?"":"disabled"}> priority</label>`:""}</div>`).join(""));
 }
 const ITEMS=CATALOG.items||{},RECS=CATALOG.recipes||{};
 const itemHtml=(id,n)=>`<span class="it">${iurl(id)?`<img class="ic" alt="" src="${iurl(id)}">`:""}${n?n+"&times; ":""}${esc((ITEMS[id]||{}).n||String(id).replace(/^ITEM_/,""))}</span>`;

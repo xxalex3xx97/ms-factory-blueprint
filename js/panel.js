@@ -146,6 +146,8 @@ $("insp").addEventListener("click",e=>{
     rsPick(S.blocks.find(q=>sel.has(q.id)),rb);
     return;
   }
+  const pa=e.target.closest&&e.target.closest("button[data-pall]");
+  if(pa&&S.blocks.filter(q=>sel.has(q.id)).length===1){push();setAllPorts(S.blocks.find(q=>sel.has(q.id)),pa.dataset.pall==="1");all();return}
   const fb=e.target.closest&&e.target.closest("button[data-fl],button[data-df]");
   if(fb&&S.blocks.filter(q=>sel.has(q.id)).length===1){
     const m=S.blocks.find(q=>sel.has(q.id)),i=+(fb.dataset.fl??fb.dataset.df),dn=dkN(m.cls);

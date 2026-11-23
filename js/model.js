@@ -284,6 +284,7 @@ function linksAll(L,hk){
 }
 // ports drawn as bars: splitter input (back) face is not a port, so no bar (draw.js draws a neutral chevron there)
 const barPorts=b=>portsOf(b).filter(p=>!(p.dir==="in"&&isSplitterCls(b.cls)));
+const setAllPorts=(b,on)=>{const k=portsOf(b).filter(p=>p.tg).map(p=>p.key);if(on)delete b.off;else b.off=k;clrPrio(b)};
 const togglePort=(b,k)=>{if(!portsOf(b).some(p=>p.key===k&&p.tg))return;const o=b.off||[];b.off=o.includes(k)?o.filter(q=>q!==k):o.concat(k);clrPrio(b)};
 // splitter/balancer output priority (exclusive, stored face-based as b.pr=[index in SPL_FACES,-1]); a disabled port cannot keep it. prioB is kept as imported.
 const clrPrio=b=>{if(hasPrio(b.cls)&&b.pr&&portsOf(b).some(p=>p.pr&&!p.en))delete b.pr};
