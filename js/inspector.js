@@ -11,7 +11,18 @@ function resHtml(d){
 }
 function portsHtml(b){
   const ps=portsOf(b);if(!ps.length)return"";
-  return sec("ports","Ports",ps.map(p=>`<div class="row chk">${p.tg?`<input id="pt${p.key}" type="checkbox" data-port="${p.key}" ${p.en?"checked":""}>`:`<span style="width:1.2em"></span>`}<label ${p.tg?`for="pt${p.key}"`:""}>${p.f}${p.pos} <span class="sub">faces ${FN[p.wf]}${p.dir?" &middot; "+p.dir:""} &middot; ${p.tg?(p.en?"enabled (green)":"disabled (red)"):"always enabled"}</span></label>${p.tg&&p.dir==="out"&&hasPrio(b.cls)?`<label class="sub" style="margin-left:auto"><input type="radio" name="prio${b.id}" data-prio="${p.key}" ${p.pr?"checked":""} ${p.en?"":"disabled"}> priority</label>`:""}</div>`).join(""));
+  const d0=def(b.cls),el=d0&&d0.elevator?floorRect(b):null,d=el||dim(b),C=Math.max(14,Math.min(40,Math.floor(170/Math.max(d.w,d.h)))),Ln=Math.min(.6*C,18),T=Math.min(5,Math.max(3,.2*C)),PAD=14;
+  const tg=ps.filter(p=>p.tg),pri=hasPrio(b.cls)?tg.filter(p=>p.dir==="out"):[],num=new Map(pri.map((p,i)=>[p.key,i+1]));
+  const bt=tg.length>1?`<div class="btns"><button data-pall="0">All off</button><button data-pall="1">All on</button></div>`:"";
+  const mk=ps.map(p=>{
+    const ex=(p.x-b.x+.5+p.nx*.5)*C+PAD,ey=(p.y-b.y+.5+p.ny*.5)*C+PAD,w=p.nx?T:Ln,h=p.nx?Ln:T,sg=p.dir==="in"?-1:1,an=Math.atan2(p.ny*sg,p.nx*sg)*180/Math.PI+90,
+      tip=`${p.f}${p.pos} (faces ${FN[p.wf]})${p.dir?" "+p.dir:""} - ${p.tg?(p.en?"enabled: click to disable":"disabled: click to enable"):"always enabled"}`,
+      st=`left:${ex-Math.max(w,10)/2}px;top:${ey-Math.max(h,10)/2}px;width:${Math.max(w,10)}px;height:${Math.max(h,10)}px`,
+      gl=p.dir?(num.has(p.key)?`<i>${num.get(p.key)}</i>`:`<i style="transform:rotate(${an}deg)">&#9650;</i>`):"";
+    return`<button type="button" class="pmk ${p.en?"on":"off"}${p.pr?" pr":""}" style="${st}" ${p.tg?`data-port="${p.key}"`:"disabled"} title="${tip}" aria-label="${tip}">${gl}</button>`}).join("");
+  const body=`<div class="pbody" style="left:${PAD}px;top:${PAD}px;width:${d.w*C}px;height:${d.h*C}px;background:${kFill(tileKey(b),.8)};border-color:${kStroke(tileKey(b),1)}">${esc(d0?lab(d0):shortCls(b.cls))}</div>`;
+  const pr=pri.length>1?`<div class="sub">Priority output: ${pri.map(p=>`<label style="margin-right:8px"><input type="radio" name="prio${b.id}" data-prio="${p.key}" ${p.pr?"checked":""} ${p.en?"":"disabled"}> ${num.get(p.key)}</label>`).join("")}</div>`:"";
+  return sec("ports","Ports",bt+`<div class="pmap" style="width:${d.w*C+2*PAD}px;height:${d.h*C+2*PAD}px">${body}${mk}</div><div class="sub">Same view as the factory floor: green = enabled, red = disabled. Click a port to toggle it.</div>`+pr);
 }
 const ITEMS=CATALOG.items||{},RECS=CATALOG.recipes||{};
 const itemHtml=(id,n)=>`<span class="it">${iurl(id)?`<img class="ic" alt="" src="${iurl(id)}">`:""}${n?n+"&times; ":""}${esc((ITEMS[id]||{}).n||String(id).replace(/^ITEM_/,""))}</span>`;

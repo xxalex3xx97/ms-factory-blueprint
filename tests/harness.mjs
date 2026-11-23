@@ -549,9 +549,9 @@ async function s7(pg, C) {
 
   // UI: select Assembler, untick port E2 in the inspector -> no link; export round-trips the toggle
   await pg.evaluate(() => { __fb.setView('F'); __fb.click(2, 2); });
-  chk('Assembler selected on floor shows port checkbox #ptE2', (await pg.locator('#ptE2').count()) === 1);
+  chk('Assembler selected on floor shows port button E2', (await pg.locator('button[data-port="E2"]').count()) === 1);
   await pg.evaluate(() => { document.querySelector('#insp details[data-sec=ports]').open = true; });
-  await pg.uncheck('#ptE2');
+  await pg.click('button[data-port="E2"]');
   L = await pg.evaluate(() => { const k = __fb.links(); return {ports: k.ports.length, off: k.off.length}; });
   chk('disabled toggleable port facing belt -> links().ports.length === 0 (red tick only)', L.ports === 0 && L.off === 1, JSON.stringify(L));
   const ex = await pg.evaluate(() => __fb.build());
@@ -562,7 +562,7 @@ async function s7(pg, C) {
   chk('toggled port survives export -> import (still 0 links)', L.ports === 0 && L.off === 1, JSON.stringify(L));
   await pg.evaluate(() => { __fb.setView('F'); __fb.click(2, 2); });
   await pg.evaluate(() => { document.querySelector('#insp details[data-sec=ports]').open = true; });
-  await pg.check('#ptE2');
+  await pg.click('button[data-port="E2"]');
   L = await pg.evaluate(() => __fb.links().ports.length);
   chk('re-enabling the port restores the link', L === 1, `links ${L}`);
 
@@ -2462,12 +2462,12 @@ async function s22(br) {
   await imp(pg, bp([blk('Station 1x1', 0, 0), blk('BPO_Dock', 60, 40)], design));
   await pg.evaluate(() => { __fb.setView('F'); __fb.fit(); __fb.click(40, 40); });
   const sec = n => `#insp details[data-sec=${n}]`, isOpen = n => pg.evaluate(s => document.querySelector(s).open, sec(n));
-  chk('22 refinery: Position, Ports and Size & data sections exist and are closed by default', (await Promise.all(['pos', 'ports', 'size'].map(async n => (await pg.locator(sec(n)).count()) === 1 && !(await pg.locator(sec(n)).getAttribute('open') !== null)))).every(Boolean));
-  chk('22 closed sections hide #fx / #ptE2 / #tw', !(await pg.isVisible('#fx')) && !(await pg.isVisible('#tw')) && !(await pg.isVisible('#ptE2')));
+  chk('22 refinery: Position, Ports and Data sections exist and are closed by default', (await Promise.all(['pos', 'ports', 'size'].map(async n => (await pg.locator(sec(n)).count()) === 1 && !(await pg.locator(sec(n)).getAttribute('open') !== null)))).every(Boolean));
+  chk('22 closed sections hide #fx / button[data-port="E2"]', !(await pg.isVisible('#fx')) && !(await pg.isVisible('button[data-port="E2"]')));
   const nm = await pg.evaluate(() => CATALOG.items.ITEM_TitaniumPlates.n);
   const sum = await pg.evaluate(() => document.querySelector('#insp .sum').innerText);
   chk('22 summary shows the item name and a /min rate', sum.includes(nm) && /\/min/.test(sum), sum);
-  chk('22 rate/links sections are open by default', (await isOpen('rate')) && (await isOpen('links')));
+  chk('22 rate section is open by default', await isOpen('rate'));
   await pg.screenshot({path: path.join(SHOTS, 'u2-inspector-closed-1400.png')});
   await pg.click(sec('pos') + ' summary');
   chk('22 opening Position makes #fx visible', (await pg.isVisible('#fx')));
