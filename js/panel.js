@@ -83,7 +83,9 @@ function panel(){
       h+='<h2>'+(d&&d.kind==="m"?"Buildable":"Block")+' type</h2><div class="pad">'+(d?'<div class="sn">'+ico(d)+'<b>'+esc(lab(d))+'</b>'+(d.verified?"":BQ)+'</div>':'<div class="sub">Unknown class: shown as grey 1&times;1, kept as-is on export.</div>')+'</div>';
     }
     if(d){
-      sz=factsHtml(d);
+      sz=(d.speed?'<div class="row"><label>Speed</label><span>'+(d.speed.itemsPerMin==null?"unknown":d.speed.itemsPerMin+" items/min")+'</span></div>':"")
+      +(d.input?'<div class="row"><label>Input</label><span style="display:flex;gap:6px;align-items:center">'+(iurl(d.input.icon)?'<img class="ic" alt="" src="'+iurl(d.input.icon)+'">':"")+esc(d.input.name)+'</span></div>':"")
+      +factsHtml(d);
       h+=sec("size","Data"+(d.verified?"":" "+BQ),sz);
       h+=recipesHtml(d,one&&isM(one)?one:null)+resHtml(d);
     }
