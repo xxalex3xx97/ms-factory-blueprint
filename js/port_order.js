@@ -15,7 +15,7 @@ const PORT_ORDER={
   DAT_ConveyorBelt2:{verified:false,cells:[[1,0],[0,1],[-1,0],[0,-1]]},
   DAT_ConveyorBelt3:{verified:false,cells:[[1,0],[0,1],[-1,0],[0,-1]]},
   DAT_ElectroSciLab:{verified:false,cells:[[5,0]]},
-  DAT_EnrichmentChamber:{verified:false,cells:[[9,-4],[9,0],[9,4],[4,9],[0,9],[-4,9],[-9,4],[-9,0],[-9,-4],[-4,-9],[0,-9],[4,-9]]},
+  DAT_EnrichmentChamber:{verified:true,/*user game 2026-11-23 (tests: Enrich_port_test): per face the middle port comes first, then E top,bot / S left,right / W top,bot / N left,right; NOT the Assembler rule*/cells:[[9,0],[9,-4],[9,4],[0,9],[-4,9],[4,9],[-9,0],[-9,-4],[-9,4],[0,-9],[-4,-9],[4,-9]]},
   DAT_GrowthChamber:{verified:true,cells:[[7,-2],[7,2],[2,7],[-2,7],[-7,2],[-7,-2],[-2,-7],[2,-7]]},
   DAT_LargeConveyorBelt:{verified:false,cells:[[3,0],[0,3],[-3,0],[0,-3]]},
   DAT_MatSciLab:{verified:false,cells:[[3,0]]},
