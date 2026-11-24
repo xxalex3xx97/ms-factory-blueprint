@@ -155,5 +155,12 @@ chk('python: Blocks/Connectors/Machines == JS', py.Blocks === blkRe.length && py
 chk('python: DisplayName == JS', py.DisplayName === dnRe, `py "${py.DisplayName}"`);
 chk('python: Type contains STATION', String(py.Type).includes('STATION'), String(py.Type));
 
+// dock filters + name survive export -> savImport (block Filters / Name)
+{
+  const jd = {Version: 2, DisplayName: 't', Blocks: [{Class: '/Game/Blueprints/BuildingBlocks/BPO_Dock_2.BPO_Dock_2_C', GridLocation: {X: 0, Y: 0}, Height: 0, GridRotation: 0, BlockID: 1, PaletteID: 0, Name: 'D1', Filters: [{item: 'ITEM_IronOre', bLoading: 1}, ...Array(7).fill({item: '', bLoading: 0})]}], DefaultMachines: []};
+  const back = savImport(savExport(jd, {size: () => [1, 1]}).bytes), bb = back && back.Blocks.find(b => /BPO_Dock_2/.test(b.Class));
+  chk('dock filters survive export -> import', !!bb && bb.Name === 'D1' && bb.Filters && bb.Filters.length === 8 && bb.Filters[0].item === 'ITEM_IronOre' && bb.Filters[0].bLoading === 1, JSON.stringify(bb));
+}
+
 console.log(`${pass === total ? 'PASS' : 'FAIL'} ${pass}/${total}`);
 process.exitCode = pass === total ? 0 : 1;
