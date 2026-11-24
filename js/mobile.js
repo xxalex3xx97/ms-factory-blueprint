@@ -25,7 +25,7 @@
     <button type="button" data-s="mMenu" aria-expanded="false" aria-controls="mMenu">${ic('<path d="M5 7h14M5 12h14M5 17h14"/>')}Menu</button>
   </nav>`);
   const sheet = (id, title, body) => mk(`<section id="${id}" class="msh" role="dialog" aria-label="${title}"><div class="mgrab"><span>${title}</span><button type="button" class="mx" aria-label="Close ${title}">&times;</button></div>${body}</section>`);
-  const tools = sheet('mTools', 'Tools', `<h4>Windows</h4><div class="mgrid">${proxies([['stB', 'Settings'], ['shB', 'Screenshot'], ['simB', 'Simulation'], ['thB', 'Theoretical'], ['plnB', 'Planner'], ['lvB', 'Level'], ['flwB', 'Flow']])}</div>`);
+  const tools = sheet('mTools', 'Tools', `<h4>Edit modes</h4><div class="mgrid">${[['del', 'Delete mode'], ['copy', 'Copy mode'], ['paste', 'Paste mode'], ['cfgcopy', 'Copy config'], ['cfgpaste', 'Paste config']].map(([m, t]) => `<button type="button" data-m="${m}">${t}</button>`).join('')}</div><h4>Windows</h4><div class="mgrid">${proxies([['stB', 'Settings'], ['shB', 'Screenshot'], ['simB', 'Simulation'], ['thB', 'Theoretical'], ['plnB', 'Planner'], ['lvB', 'Level'], ['flwB', 'Flow']])}</div>`);
   const menu = sheet('mMenu', 'Menu', `<h4>File</h4><div class="mgrid">${proxies([['nw', 'New / Clear'], ['fOpen', 'Open'], ['fSaveAs', 'Save as'], ['fSave', 'Save', 'pri'], ['exp', 'Export', 'pri']])}</div><h4>Import</h4><div class="mgrid">${proxies([['impSav', 'Import save'], ['imp', 'Import JSON']])}</div><h4>Help</h4><div class="mgrid">${proxies([['fit', 'Zoom to fit'], ['help', 'Help and controls']])}</div>`);
   const sel = mk(`<button type="button" id="mSel" aria-pressed="false" aria-label="Touch mode: Pan. Tap to switch to Select">${ic('<path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/>')}<b>Pan</b></button>`);
   document.querySelector('main').after(mtb);
@@ -52,6 +52,8 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') open(null); });
   // proxy buttons: click the real (hidden) header button, then close the sheet
   [tools, menu].forEach(s => s.addEventListener('click', e => {
+    const m = e.target.closest('[data-m]');
+    if (m) { open(null); const k = m.dataset.m; if (k === 'paste') paste(); else if (k === 'cfgpaste') cfgPasteMode(); else setMode(k); return; }
     const b = e.target.closest('[data-p]'); if (!b) return;
     open(null); const r = $(b.dataset.p); if (r) r.click();
   }));
@@ -59,24 +61,31 @@
   $('palList').addEventListener('click', e => { if (e.target.closest('.item')) open(null); });
 
   // touch placing bar: shown while a palette tool is active. Place = a synthetic mouse click at the canvas centre (the ghost cell), so every tool kind reuses the desktop code
-  const bar = mk('<div id="mPlace" role="toolbar" aria-label="Placing" hidden><button type="button" data-a="go" class="pri">Place</button><button type="button" data-a="rot">Rotate</button><button type="button" data-a="stop">Stop</button></div>');
+  const bar = mk('<div id="mPlace" role="toolbar" aria-label="Placing" hidden><button type="button" data-a="go" class="pri">Place</button><button type="button" data-a="rot">Rotate</button><button type="button" data-a="flip">Flip</button><button type="button" data-a="stop">Stop</button><button type="button" data-a="done" class="pri">Done</button></div>');
+  const hint = mk('<span class="mh" hidden></span>'); bar.prepend(hint);
+  const HINT = {del: 'Delete: tap a building or drag a box', copy: 'Copy: drag a box over buildings', cfgcopy: 'Copy config: tap one building', cfgpaste: 'Paste config: drag a box over same-type buildings'};
   $('stage').append(bar);
   const bb = a => bar.querySelector(`[data-a=${a}]`);
   bar.addEventListener('click', e => {
     const a = e.target.closest('[data-a]'); if (!a) return; const k = a.dataset.a;
     if (k === 'stop') { tb.tr = []; active = null; ugCancel(); all(); return; }
-    if (k === 'rot') { placeRot = (placeRot + 1) & 3; all(); return; }
+    if (k === 'done') { tbCancel(); exitAll(); return; }
+    if (k === 'flip') { if (pasting) { pasting.fl = !pasting.fl; all(); } return; }
+    if (k === 'rot') { if (pasting) rotate(); else { placeRot = (placeRot + 1) & 3; all(); } return; }
     if (tbBelt()) { if (k === 'go') tbAnchor(); else if (k === 'ok') tbConfirm(); else if (k === 'cancel') tbCancel(); return; }
     const r = $('cv').getBoundingClientRect(), o = {pointerType: 'mouse', pointerId: 77, button: 0, buttons: 1, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true};
     $('cv').dispatchEvent(new PointerEvent('pointerdown', o)); $('cv').dispatchEvent(new PointerEvent('pointerup', {...o, buttons: 0}));
   });
   window.mPlaceSync = () => {
-    const on = touchPlace(), belt = on && tbBelt();
-    bar.hidden = !on; document.documentElement.classList.toggle('placing', on);
+    const md = touchModal(), on = touchPlace() || md, belt = on && tbBelt(), h = md && !pasting ? HINT[mode] : '';
+    bar.hidden = !on; document.documentElement.classList.toggle('placing', on); document.documentElement.classList.toggle('mh', !!h);
     if (!on) return;
     const n = belt ? tb.tr.length : 0;
+    hint.textContent = h; hint.hidden = !h;
     bb('go').textContent = belt ? 'Anchor' : 'Place';
-    bb('rot').hidden = bb('stop').hidden = n > 0;   // anchored belt: Anchor / Confirm / Cancel only
+    bb('go').hidden = md && !pasting;   // del / copy / config modes: only Done
+    bb('rot').hidden = (md && !pasting) || n > 0; bb('stop').hidden = md || n > 0;   // anchored belt: Anchor / Confirm / Cancel only
+    bb('flip').hidden = !pasting; bb('done').hidden = !md;
     let ok = bar.querySelector('[data-a=ok]'), cn = bar.querySelector('[data-a=cancel]');
     if (!ok) { ok = mk('<button type="button" data-a="ok" class="pri">Confirm</button>'); cn = mk('<button type="button" data-a="cancel">Cancel</button>'); bar.append(ok, cn); }
     ok.hidden = cn.hidden = !(belt && n > 0);
