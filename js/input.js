@@ -20,10 +20,26 @@ const HAR=L=>{const k=PK+"|"+L+"|"+S.blocks.length;if(HARC.k!==k){HARC.k=k;HARC.
 const HLK=L=>{const k=PK+"|"+L+"|"+LK+"|"+S.blocks.length;if(HLKC.k!==k){HLKC.k=k;HLKC.v=links(L)}return HLKC.v};
 let HLC="";   // hovered cell + view/layer/paint: the hover work (tooltip, warnings, port links) runs only when this changes
 cv.addEventListener("contextmenu",e=>e.preventDefault());
+// touch: 1 finger = the mouse tool as before; 2 fingers = pinch zoom + pan (the one-finger gesture in progress is dropped)
+const tp=new Map();let pin=null;
+const pinSet=()=>{if(tp.size<2){pin=null;return}const[a,b]=[...tp.values()];pin={d:Math.hypot(a.x-b.x,a.y-b.y)||1,x:(a.x+b.x)/2,y:(a.y+b.y)/2}};
+const pinMove=()=>{const[a,b]=[...tp.values()],d=Math.hypot(a.x-b.x,a.y-b.y)||1,x=(a.x+b.x)/2,y=(a.y+b.y)/2,z0=V.z,z=Math.min(60,Math.max(.01,z0*d/pin.d));
+  V.ox=x-(pin.x-V.ox)*(z/z0);V.oy=y-(pin.y-V.oy)*(z/z0);V.z=z;pin={d,x,y};draw(true)};
+function pinAbort(){if(!drag)return;if(drag.k==="move"&&drag.moved){S.blocks.forEach(q=>{const o=drag.orig.get(q.id);if(o){q.x=o.x;q.y=o.y}});if(drag.cr)drag.cr(0,0)}if(drag.k==="box")sel=new Set();drag=null;cv.style.cursor="";all()}
+// mobile (m.html sets class "mob" on <html>): 1-finger drag on empty space pans unless touchSel (Select mode) or a tool is active; tap on empty deselects; 500 ms long-press = right-click
+const MOB=document.documentElement.classList.contains("mob");
+let touchSel=false;function setTouchSel(v){touchSel=!!v;all()}
+let lp=null;const lpCancel=()=>{if(lp){clearTimeout(lp.t);lp=null}};
+function lpFire(L){if(lp!==L)return;lp=null;if(!drag||tp.size!==1||(drag.k!=="pan"&&drag.k!=="move"))return;
+  const k=drag.k,c=toCell(L.x,L.y),b=hit(c);drag=null;cv.style.cursor="";
+  if(k==="move"){if(b)sel=new Set([b.id]);all();return}   // touch safety: long-press on a block only selects it, never deletes
+  ctxOpen(L.cx,L.cy)}
 cv.addEventListener("pointerdown",e=>{
   cv.focus();const p=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
+  if(e.pointerType==="touch"){tp.set(e.pointerId,p);if(tp.size>1){lpCancel();pinAbort();pinSet();return}}
   if(e.button===1||e.button===2||(e.button===0&&space)){const uc=e.button===2&&ugCancel();drag={k:"pan",px:p.x,py:p.y,d:0,rc:e.button===2&&!uc};cv.style.cursor="grabbing";return}
   if(e.button!==0)return;
+  if(MOB&&e.pointerType==="touch"&&!pasting&&!mode&&!active){const L={id:e.pointerId,x:p.x,y:p.y,cx:e.clientX,cy:e.clientY};L.t=setTimeout(()=>lpFire(L),500);lp=L}
   const bh=!pasting&&!mode&&BAYHIT.find(q=>p.x>=q.x&&p.x<=q.x+q.w&&p.y>=q.y&&p.y<=q.y+q.h),bmod=e.shiftKey||e.ctrlKey||e.metaKey;
   if(bh&&!bmod&&!sel.has(bh.b.id)){bayFilter(bh.b,bh.i);return}   // unselected block: picker at once; selected block: picker on click without drag (end())
   const c=toCell(p.x,p.y);
@@ -53,6 +69,8 @@ cv.addEventListener("pointerdown",e=>{
     else if(!sel.has(b.id))sel=new Set([b.id]);
     drag={k:"move",dx:0,dy:0,c0:c,orig:new Map(S.blocks.filter(q=>sel.has(q.id)).map(q=>[q.id,{x:q.x,y:q.y}])),moved:false,cr:view==="L"?carryOf(S.blocks.filter(q=>sel.has(q.id)&&!isM(q))):null,bay:bh&&!bmod?{b:bh.b,i:bh.i,x:p.x,y:p.y}:null};
     panel();draw();
+  }else if(MOB&&e.pointerType==="touch"&&!touchSel){
+    drag={k:"pan",px:p.x,py:p.y,d:0,rc:false,tap:true};
   }else{
     drag={k:"box",sx:p.x,sy:p.y,px:p.x,py:p.y,add:e.shiftKey,base:new Set(sel)};
     if(!e.shiftKey)sel=new Set();
@@ -70,6 +88,7 @@ function btip(b,pl,ev,w){
   cv.title="";if(ev){const R=cv.getBoundingClientRect();t.style.left=Math.min(innerWidth-300,ev.clientX+14)+"px";t.style.top=(ev.clientY+16)+"px"}t.style.display="block";
 }
 cv.addEventListener("pointermove",e=>{
+  if(e.pointerType==="touch"&&tp.has(e.pointerId)){const q=pt(e);if(lp&&lp.id===e.pointerId&&Math.hypot(q.x-lp.x,q.y-lp.y)>8)lpCancel();tp.set(e.pointerId,q);if(tp.size>1){if(pin)pinMove();return}}
   const p=pt(e),c=toCell(p.x,p.y);hover=c;hoverIn=true;if(ugPend){ugPend.cur=c;const en=S.blocks.find(b=>b.id===ugPend.id),g=ugDrag(ugPend);if(en&&g.n>1)en.rot=g.rot}
   $("read").textContent=view==="F"?`floor x ${c.x}  y ${c.y}  block ${Math.floor(c.x/FC)},${Math.floor(c.y/FC)}  h ${layer}  zoom ${Math.round(V.z*100)}%`:`x ${c.x}  y ${c.y}  h ${layer}  zoom ${Math.round(V.z*100)}%`;
   if(!drag&&HLC!==(HLC=c.x+","+c.y+","+view+","+layer+","+PK)){
@@ -103,7 +122,8 @@ cv.addEventListener("pointermove",e=>{
 });
 cv.addEventListener("pointerleave",()=>{hoverIn=false;btip(null);draw()});
 const end=e=>{
-  if(!drag)return;const k=drag.k,bay=drag.bay&&!drag.moved?drag.bay:null,rc=k==="pan"&&drag.rc&&drag.d<4&&e.type==="pointerup"?pt(e):null;
+  if(e.pointerType==="touch"){tp.delete(e.pointerId);pinSet();lpCancel()}
+  if(!drag)return;const k=drag.k,bay=drag.bay&&!drag.moved?drag.bay:null,rc=k==="pan"&&drag.rc&&drag.d<4&&e.type==="pointerup"?pt(e):null,tap=k==="pan"&&drag.tap&&drag.d<4&&e.type==="pointerup";
   if(k==="belt"){
     const cells=beltCells(drag);
     const nb=cells.map(c=>({id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:c.rot,pid:0}));
@@ -114,7 +134,8 @@ const end=e=>{
   drag=null;cv.style.cursor=space?"grab":"";
   if(bay&&e.type==="pointerup"){const q=pt(e);if(Math.abs(q.x-bay.x)<=4&&Math.abs(q.y-bay.y)<=4){bayFilter(bay.b,bay.i);return}}   // click (no drag, <=4px) on a selected block's bay square
   if(rc){if(pasting){pasting=null;all();return}const b=hit(toCell(rc.x,rc.y));if(b){sel=new Set([b.id]);del();return}if(active){active=null;all();return}ctxOpen(e.clientX,e.clientY);return}
-  if(k!=="pan")all();else draw();
+  if(tap)sel=new Set();
+  if(k!=="pan"||tap)all();else draw();
 };
 cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end);cv.addEventListener("lostpointercapture",()=>{if(drag)end({type:"pointercancel"})});
 // release outside the canvas (or over the modal/chrome) ends the gesture too; end() is a no-op when no drag is active

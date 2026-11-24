@@ -1,0 +1,28 @@
+/* mobile planner layout (#pln, #plnPrev): owned by another slice */
+/* Planner on phone/tablet. Only under html.mob. */
+html.mob #pln{top:0;left:0;width:100%;height:100%;border-radius:0;border-width:0}
+html.mob #plnHd{padding:6px 6px 6px 12px}
+html.mob #plnHd h3{font-size:16px}
+html.mob #plnHd button{min-width:44px;min-height:44px;font-size:14px}
+html.mob #pln button,html.mob #plnPrev button,html.mob #plnPrev summary{min-height:44px}
+html.mob #pln input[type=number],html.mob #pln select,html.mob #plnPrev input[type=number],html.mob #plnPrev select{min-height:44px;font-size:16px}
+html.mob #pln input[type=checkbox],html.mob #plnPrev input[type=checkbox]{width:24px;height:24px}
+html.mob #pln label.chk,html.mob #plnPrev label.chk{min-height:44px;display:flex;align-items:center;gap:8px}
+html.mob #plnBody{overflow-y:auto;overscroll-behavior:contain;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+html.mob #plnForm{grid-template-columns:minmax(0,2fr) minmax(0,1fr);max-width:none}
+html.mob #plnBuild{grid-column:1/-1}
+html.mob #plnMain{flex-direction:column;flex:none}
+html.mob #plnOut{flex:none;height:55dvh;min-height:240px}
+html.mob .plnVp{touch-action:none}
+html.mob #pln .plnAlt{min-height:44px;font-size:16px}
+/* preview dialog: full screen, content scrolls, Place/Cancel bar sticky */
+html.mob #plnPrev{width:100vw;height:100dvh;max-width:none;max-height:none;margin:0;border:0;border-radius:0;overscroll-behavior:contain}
+html.mob #plnPrev>*{margin-left:12px;margin-right:12px}
+html.mob #plnPrev h3{font-size:16px}
+html.mob #plnPrev .pvTb button{min-width:44px}
+html.mob #plnPrev .pvHd{position:sticky;top:0;z-index:2;background:var(--panel);margin:0;padding:calc(8px + env(safe-area-inset-top)) 12px 8px}
+html.mob #plnPrevView{flex:none;height:46dvh;min-height:240px}
+html.mob #pvSet>label:not(.chk){flex:1 1 40%;font-size:11px}
+html.mob #pvSet select,html.mob #pvSet input{width:100%;font-size:16px}
+html.mob #plnPrev .btns{margin:0;padding:8px 12px calc(8px + env(safe-area-inset-bottom));gap:10px;border-top:1px solid var(--line);z-index:2;box-sizing:border-box}
+html.mob #plnPrev .btns button{flex:1 1 0;min-height:48px;font-size:16px}
