@@ -510,9 +510,9 @@ function cached(name,fn){
 }
 function paint(pk){
   tbSync();
-  if(touchPlace()){hover=toCell(W/2,H/2);hoverIn=true;if(ugPend){ugPend.cur=hover;const en=S.blocks.find(b=>b.id===ugPend.id),g=ugDrag(ugPend);if(en&&g.n>1)en.rot=g.rot}}   // touch placing: the ghost is fixed at the canvas centre, the view pans under it
+  if(touchGhost()){hover=toCell(W/2,H/2);hoverIn=true;if(ugPend){ugPend.cur=hover;const en=S.blocks.find(b=>b.id===ugPend.id),g=ugDrag(ugPend);if(en&&g.n>1)en.rot=g.rot}}   // touch placing: the ghost is fixed at the canvas centre, the view pans under it
   if(MOB&&typeof mPlaceSync==="function")mPlaceSync();
-  if(WHEEL_BLIT&&!touchPlace()&&ZW&&ZS&&!USEB&&!smOn()&&ZS.k===zsKey()){   // no blit while the simulation draws (its overlays would be scaled with the base)   // wheel frame: scaled copy of the last full paint (blocks unchanged: any other draw cleared ZS)
+  if(WHEEL_BLIT&&!touchGhost()&&ZW&&ZS&&!USEB&&!smOn()&&ZS.k===zsKey()){   // no blit while the simulation draws (its overlays would be scaled with the base)   // wheel frame: scaled copy of the last full paint (blocks unchanged: any other draw cleared ZS)
     const f=V.z/ZS.z;cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);cx.drawImage(ZS.c,dpr*(V.ox-f*ZS.ox),dpr*(V.oy-f*ZS.oy),cv.width*f,cv.height*f);return}
   if(!USEB)DIRTY=true;LKP=true;PK=pk||blkKey();LBM=null;try{paint0()}finally{LKP=false;LBM=null;CUR=[]}
   if(view==="F"&&typeof HAR==="function")setTimeout(()=>{try{HAR(layer);HLK(layer);hit({x:-1e9,y:-1e9})}catch(e){}},50);   // hover tables are built right after a paint, not on the first mouse move
@@ -623,7 +623,7 @@ function paint0(){
     if(d.kind!=="m"&&!gsh)entMark({id:-1,cls:active,x:hover.x,y:hover.y,h:layer,rot:placeRot},px,py,.9,s,bw*s,bh*s,true);   // doors/ports show which way the block is rotated
     cx.strokeStyle=d.kind==="m"&&noBuild([{id:-1,x:hover.x,y:hover.y,w:bw,h:bh,l:layer,belt:isBelt({cls:active})}])?"hsl(0,85%,60%)":d.kind==="m"&&RCT&&!onArea(hover.x,hover.y,bw,bh,RCT)?"hsl(45,95%,62%)":"#fff";
     if(!gsh){cx.setLineDash([5,4]);cx.lineWidth=1.5;cx.strokeRect(px+.5,py+.5,bw*s-1,bh*s-1);cx.setLineDash([])}
-    if(touchPlace()){   // centre frame + ticks (the fixed placing point)
+    if(touchGhost()){   // centre frame + ticks (the fixed placing point)
       const m=Math.max(6,s*.5);cx.save();cx.strokeStyle="hsl(190,90%,65%)";cx.lineWidth=1.5;cx.strokeRect(px-2.5,py-2.5,bw*s+5,bh*s+5);cx.beginPath();
       [[px+bw*s/2,py-2.5,0,-m],[px+bw*s/2,py+bh*s+2.5,0,m],[px-2.5,py+bh*s/2,-m,0],[px+bw*s+2.5,py+bh*s/2,m,0]].forEach(([x,y,a,b])=>{cx.moveTo(x,y);cx.lineTo(x+a,y+b)});cx.stroke();cx.restore();
       const tp2=tbPrev();if(tp2)tp2.forEach(c=>{const qx=V.ox+c.x*s,qy=V.oy+c.y*s;cx.fillStyle=kFill(beltKey(d)||d.category,.5);cx.fillRect(qx,qy,s,s);drawIcon(d,qx,qy,s,s,.8);arrow(qx,qy,s,s,c.rot,.9)})}

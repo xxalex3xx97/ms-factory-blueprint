@@ -30,6 +30,8 @@ function pinAbort(){if(!drag)return;if(drag.k==="move"&&drag.moved){S.blocks.for
 const MOB=document.documentElement.classList.contains("mob");
 // touch placing mode: a tool is active -> ghost fixed at the canvas centre (draw.js paint), 1-finger drag only pans, #mPlace bar (mobile.js) places
 const touchPlace=()=>MOB&&active&&!pasting&&!mode;
+// ghost fixed at the canvas centre: placing a tool or stamping a paste; touchModal = a mode or paste is on (bar with Done)
+const touchGhost=()=>touchPlace()||MOB&&!!pasting,touchModal=()=>MOB&&!!(mode||pasting);
 // belt on touch: tb.tr = path cells from the first anchor to the last anchor (straight segments); preview = tr + straight run to the ghost cell
 let tb={tr:[],cls:null,view:null,layer:0};
 const tbBelt=()=>MOB&&active&&view==="F"&&runTool(def(active));
@@ -48,7 +50,7 @@ function lpFire(L){if(lp!==L)return;lp=null;if(!drag||tp.size!==1||(drag.k!=="pa
 cv.addEventListener("pointerdown",e=>{
   cv.focus();const p=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
   if(e.pointerType==="touch"){tp.set(e.pointerId,p);if(tp.size>1){lpCancel();pinAbort();pinSet();return}}
-  if(MOB&&e.pointerType==="touch"&&e.button===0&&!space&&touchPlace()){drag={k:"pan",px:p.x,py:p.y,d:0,rc:false};return}   // placing mode: a finger only pans (the Place bar places)
+  if(MOB&&e.pointerType==="touch"&&e.button===0&&!space&&touchGhost()){drag={k:"pan",px:p.x,py:p.y,d:0,rc:false};return}   // placing mode: a finger only pans (the Place bar places)
   if(e.button===1||e.button===2||(e.button===0&&space)){const uc=e.button===2&&ugCancel();drag={k:"pan",px:p.x,py:p.y,d:0,rc:e.button===2&&!uc};cv.style.cursor="grabbing";return}
   if(e.button!==0)return;
   if(MOB&&e.pointerType==="touch"&&!pasting&&!mode&&!active){const L={id:e.pointerId,x:p.x,y:p.y,cx:e.clientX,cy:e.clientY};L.t=setTimeout(()=>lpFire(L),500);lp=L}

@@ -98,3 +98,9 @@ html.mob #mPlace button[hidden]{display:none}
 html.mob #mPlace .pri{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
 html.mob.placing #mSel{bottom:126px}
 html.mob.placing #mFit{bottom:182px}
+html.mob #mPlace{flex-wrap:wrap}
+html.mob #mPlace .mh{flex:0 0 100%;order:-1;text-align:center;font-size:13px;font-weight:600;padding:6px 12px;border-radius:14px;background:oklch(0.17 0.012 250 / .94);border:1px solid var(--line);align-self:center;max-width:max-content;margin:0 auto}
+html.mob #mPlace .mh[hidden]{display:none}
+html.mob.mh #mSel{bottom:172px}
+html.mob.mh #mFit{bottom:228px}
+html.mob #modeb{display:none}

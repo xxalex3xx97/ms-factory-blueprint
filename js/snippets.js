@@ -34,10 +34,12 @@ function fit(){
   frame(a,b,c,d);
 }
 $("fit").onclick=fit;
+// Esc: drop every tool / mode / paste / selection (also the touch Done button)
+function exitAll(typing){hideCtx();ugCancel();active=null;pasting=null;mode=null;if(!typing)sel=new Set();all()}
 addEventListener("keydown",e=>{
   const t=e.target,typing=t.matches&&t.matches("input[type=text],input[type=number],textarea,select");
   const dlg=document.querySelector("dialog[open]");
-  if(e.key==="Escape"){hideCtx();if(!dlg&&ugCancel())return;if(!dlg){active=null;pasting=null;mode=null;if(!typing)sel=new Set();all()}return}
+  if(e.key==="Escape"){hideCtx();if(!dlg&&ugCancel())return;if(!dlg)exitAll(typing);return}
   if(typing||dlg)return;
   const k=e.key.toLowerCase(),ctl=e.ctrlKey||e.metaKey;
   if(e.code==="Space"){if(e.target.closest&&e.target.closest("input,select,textarea,button,[contenteditable]"))return;space=true;cv.style.cursor="grab";e.preventDefault();return}
