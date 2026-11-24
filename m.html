@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en" class="mob">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>try{if(localStorage.getItem("msfbp.view")==="d")location.replace("index.html"+location.search+location.hash)}catch(e){}</script>
+<title>MS Factory Blueprint</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%23101a24%27/%3E%3Cpath d=%27M5 22h22M5 22V12l7 5v-5l7 5v-9h5v14%27 fill=%27none%27 stroke=%27%2342d4e8%27 stroke-width=%272.6%27 stroke-linejoin=%27round%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/gallery.css">
+<link rel="stylesheet" href="css/mobile.css">
+<link rel="stylesheet" href="css/mobile_pln.css">
+</head>
+<body>
+<header>
+  <h1>MS <span>Factory Blueprint</span></h1>
+  <div class="tg" role="group" aria-label="Plan"><span class="gl">Plan</span>
+  <div class="grp"><label for="name">Name</label><input id="name" type="text" value="Untitled station"></div>
+  <div class="grp" id="stG" hidden><select id="stSel" aria-label="Station in the loaded save" title="Switch to another station of the loaded save (unsaved changes are lost)"></select></div>
+  <div class="grp">
+    <button id="undo" aria-label="Undo" title="Undo (Ctrl+Z)"><span class="ic" aria-hidden="true">&#8630;</span><span class="tx">Undo</span></button>
+    <button id="redo" aria-label="Redo" title="Redo (Ctrl+Y)"><span class="ic" aria-hidden="true">&#8631;</span><span class="tx">Redo</span></button>
+    <button id="fit" aria-label="Zoom to fit" title="Fit view">Fit</button>
+  </div>
+  <div class="grp">
+    <div class="mn" id="fileMn"><button id="fileM" aria-haspopup="menu" aria-expanded="false" aria-controls="fileL">File <span aria-hidden="true">&#9662;</span></button>
+    <div class="mnl" id="fileL" role="menu" hidden>
+      <button id="nw" role="menuitem" aria-label="New design and clear saved" title="Clear the autosaved design and start empty">New / Clear</button>
+      <button id="fOpen" role="menuitem" aria-label="Open file" title="Open a .json file and keep it linked for Save">Open</button>
+      <button id="fSaveAs" role="menuitem" aria-label="Save as" title="Save to a new file (Ctrl+Shift+S)">Save as</button>
+    </div></div>
+  </div>
+  <div class="grp">
+    <button id="impSav" class="imp-sav" aria-label="Import save" title="Import a Main Sequence save (*_S.sav) and pick a station"><span class="tx">Import save</span></button>
+    <button id="imp" aria-label="Import JSON" title="Import a blueprint from JSON (paste or file)"><span class="tx">Import JSON</span></button>
+  </div>
+  <div class="grp">
+    <button id="fSave" class="pri" aria-label="Save" title="Save to the opened file (Ctrl+S)">Save</button>
+    <button id="exp" class="pri" aria-label="Export JSON">Export</button>
+  </div>
+  </div>
+  <div class="tg" role="group" aria-label="Tools">
+    <div class="mn" id="winMn"><button id="winM" aria-haspopup="menu" aria-expanded="false" aria-controls="winL">Windows <span aria-hidden="true">&#9662;</span></button>
+    <div class="mnl" id="winL" role="menu" hidden>
+      <button role="menuitem" id="stB" class="hbt" aria-pressed="false" aria-controls="stW" aria-label="Settings" title="Settings"><span class="ic" aria-hidden="true">&#9881;</span><span class="tx">Settings</span></button>
+      <button role="menuitem" id="shB" class="hbt" aria-pressed="false" aria-controls="shW" aria-label="Screenshot" title="Screenshot: export the plan as PNG or SVG"><span class="ic" aria-hidden="true">&#128247;</span><span class="tx">Screenshot</span></button>
+      <button role="menuitem" id="simB" class="hbt" aria-pressed="false" aria-controls="smW" title="Simulation window"><span class="ic" aria-hidden="true">&#9654;</span><span class="tx">Simulation</span></button>
+      <button role="menuitem" id="thB" class="hbt" aria-pressed="false" aria-controls="dProd" title="Theoretical production: full speed, limited by belts"><span class="ic" aria-hidden="true">&#931;</span><span class="tx">Theoretical</span></button>
+      <button role="menuitem" id="plnB" class="hbt" aria-label="Planner" title="Planner: target item, rate, machines and belts (schematic only)" aria-pressed="false"><span class="ic" aria-hidden="true">&#9638;</span><span class="tx">Planner</span></button>
+    </div></div>
+    <button id="lvB" class="hbt" aria-pressed="false" aria-controls="lvW" title="Level window (up/down, ghost levels)"><span class="tx">Level</span> <span id="lvN">1</span></button>
+    <button id="flwB" class="hbt" aria-pressed="false" aria-controls="fwW" title="Flow window: links and bottlenecks"><span class="ic" aria-hidden="true">&#8644;</span><span class="tx">Flow</span></button>
+  </div>
+  <div class="tg" role="group" aria-label="View"><span class="gl">View</span>
+  <div class="grp seg" id="vw" role="group" aria-label="View level"><button id="vwL" class="on" aria-pressed="true" title="Block layout">Layout</button><button id="vwF" aria-pressed="false" title="Factory floor (F)"><span class="lg">Factory </span><span class="fl">floor</span> <kbd>F</kbd></button></div>
+  <button id="help" aria-label="Help" title="Help: getting started, controls, simulation rules, legend">?</button>
+  </div>
+</header>
+<main>
+  <aside id="pal" aria-label="Palette">
+    <button id="palT" class="edge" type="button" aria-expanded="true" aria-controls="palList" aria-label="Hide palette" title="Hide the palette"><span class="ar" aria-hidden="true">&laquo;</span><span class="lb">Hide</span></button>
+    <input id="search" type="text" placeholder="Search blocks..." aria-label="Search blocks">
+    <div id="palCtl"><button id="palCol" title="Collapse all sections">Collapse all</button><button id="palExp" title="Expand all sections">Expand all</button></div>
+    <div id="palList"></div>
+    <section id="snp" aria-label="Snippets"><details open><summary>Snippets</summary><div class="pad"><button id="snSave">Save selection as snippet</button><div id="snList"></div><button id="snExp">Export library</button><label>Import library <input id="snImp" type="file" accept=".json,application/json"></label></div></details></section>
+  </aside>
+  <section id="stage">
+    <canvas id="cv" tabindex="0" aria-label="Station grid canvas"></canvas>
+    <div id="dProd" role="region" aria-labelledby="dProdT" hidden>
+      <div id="prHd"><h3 id="dProdT">Production</h3><button id="prodC" aria-expanded="true" aria-label="Collapse production" title="Collapse to title bar">&#9650;</button><button id="prodX" aria-label="Close production" title="Close">&times;</button></div>
+      <div id="prScroll">
+        <div id="prSub" class="sub">30 s average, sampled every 5 s</div>
+        <div id="prEmpty" class="sub" style="display:none">No production yet</div>
+        <div id="prBody">
+          <canvas id="prCv" aria-label="Items per minute over simulated time"></canvas>
+          <div id="prLeg" class="leg"></div>
+          <h4>Now (items/min)</h4><div id="prNow"></div>
+          <h4>By machine type</h4><div id="prMt"></div>
+          <div id="prTW"><h4>Total built</h4><div id="prTot"></div></div>
+        </div>
+      </div>
+    </div>
+    <div id="dTheo" role="region" aria-labelledby="dTheoT" hidden>
+      <div id="thHd"><h3 id="dTheoT">Theoretical production</h3><button id="thC" aria-expanded="true" aria-label="Collapse theoretical production" title="Collapse to title bar">&#9650;</button><button id="thX" aria-label="Close theoretical production" title="Close">&times;</button></div>
+      <div id="thScroll">
+        <div class="sub">Full speed, limited by belt throughput. Snapshot at click.</div>
+        <label id="thAllL"><input id="thAll" type="checkbox" checked aria-label="All floors"> <span class="tx">All floors</span></label>
+        <div id="thElv" class="sub">Elevator transfers not included</div>
+        <div id="thEmpty" class="sub" style="display:none">No production</div>
+        <div id="thBody">
+          <h4>Now (items/min)</h4><div id="thNow"></div>
+          <h4>By machine type</h4><div id="thMt"></div>
+        </div>
+      </div>
+    </div>
+    <div id="pln" role="region" aria-labelledby="plnT" hidden>
+      <div id="plnHd"><h3 id="plnT">Planner</h3><button id="plnPng" title="Export the planner diagram as a PNG image (2x)">PNG</button><button id="plnSv" title="Export the planner diagram as SVG (keeps your box positions)">SVG</button><button id="plnC" aria-expanded="true" aria-label="Collapse planner" title="Collapse to title bar">&#9650;</button><button id="plnX" aria-label="Close planner" title="Close">&times;</button></div>
+      <div id="plnBody">
+      <div id="plnForm">
+      <label>Item <select id="plnItem" aria-label="Target item"></select></label>
+      <label>Rate (items/min) <input id="plnRate" type="number" min="0.001" step="any" value="1" aria-label="Target rate in items per minute"></label>
+      <button id="plnBuild" type="button" title="Preview and place machines, belts and source containers for this plan">Build factory</button>
+      <button id="galOpen" type="button" title="Template gallery: one preview per craftable recipe">Templates</button>
+      </div>
+      <div id="plnMain">
+      <div id="plnOut" tabindex="0" role="region" aria-label="Planner flow diagram"></div>
+      <div id="plnOpt"><button id="plnOptT" class="edge" type="button" aria-expanded="true" aria-controls="plnOptB" aria-label="Hide options" title="Hide options"><span class="ar" aria-hidden="true">&raquo;</span><span class="lb">Options</span></button><div id="plnOptB">
+      <label>Belt <select id="plnMk" aria-label="Belt tier"><option value="0">Mk1</option><option value="1" selected>Mk2</option><option value="2">Mk3</option></select></label>
+      <label>Splitter <select id="plnSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+      <label>Balancer <select id="plnBal" aria-label="Balancer tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+      <div class="plnGxW"><span>View</span><button id="plnGx" type="button" aria-pressed="false" title="Grouped: one box per node. Expanded: one box per machine">Grouped</button></div>
+      <label class="chk"><input type="checkbox" id="plnEnr"> Use enriched ores</label>
+      <label>Protomatter <select id="plnProto" aria-label="Protomatter use"><option value="0" selected>Don't use</option><option value="1">Use</option></select></label>
+      </div></div>
+      </div>
+      </div>
+    </div>
+    <div id="fms">
+    <div id="wnW" class="fm" role="region" aria-labelledby="wnWT" hidden>
+      <div class="fmh"><h3 id="wnWT">Windows</h3><button id="wnWX" aria-label="Close windows" title="Close">&times;</button></div>
+      <div class="fmb" id="wnL">
+        <button id="stB" class="hbt" aria-pressed="false" aria-controls="stW" aria-label="Settings" title="Settings"><span class="ic" aria-hidden="true">&#9881;</span><span class="tx">Settings</span></button>
+        <button id="shB" class="hbt" aria-pressed="false" aria-controls="shW" aria-label="Screenshot" title="Screenshot: export the plan as PNG or SVG"><span class="ic" aria-hidden="true">&#128247;</span><span class="tx">Screenshot</span></button>
+        <button id="lvB" class="hbt" aria-pressed="false" aria-controls="lvW" title="Level window (up/down, ghost levels)"><span class="tx">Level</span> <span id="lvN">1</span></button>
+        <button id="flwB" class="hbt" aria-pressed="false" aria-controls="fwW" title="Flow window: links and bottlenecks"><span class="ic" aria-hidden="true">&#8644;</span><span class="tx">Flow</span></button>
+        <button id="simB" class="hbt" aria-pressed="false" aria-controls="smW" title="Simulation window"><span class="ic" aria-hidden="true">&#9654;</span><span class="tx">Simulation</span></button>
+        <button id="thB" class="hbt" aria-pressed="false" aria-controls="dProd" title="Theoretical production: full speed, limited by belts"><span class="ic" aria-hidden="true">&#931;</span><span class="tx">Theoretical</span></button>
+        <button id="plnB" class="hbt" aria-label="Planner" title="Planner: target item, rate, machines and belts (schematic only)" aria-pressed="false"><span class="ic" aria-hidden="true">&#9638;</span><span class="tx">Planner</span></button>
+      </div>
+    </div>
+    <div id="stW" class="fm" role="region" aria-labelledby="stWT" hidden>
+      <div class="fmh"><h3 id="stWT">Settings</h3><button id="stWX" aria-label="Close settings" title="Close">&times;</button></div>
+      <div class="fmb">
+        <label title="Refuse to place buildables outside the block floors or across a wall"><input id="strict" type="checkbox" checked aria-label="Keep buildables inside the floor"> <span class="tx">keep buildables inside the floor</span></label>
+      </div>
+    </div>
+    <div id="shW" class="fm" role="region" aria-labelledby="shWT" hidden>
+      <div class="fmh"><h3 id="shWT">Screenshot</h3><button id="shWX" aria-label="Close screenshot" title="Close">&times;</button></div>
+      <div class="fmb">
+        <label title="100% = full size. 100% = the largest picture this browser can make; lower = smaller picture, same content"><span class="tx">Quality</span> <input id="shQ" type="range" min="10" max="100" step="5" value="50" aria-label="Screenshot quality"> <b id="shQv">50%</b></label>
+        <div id="shPrev" class="sub" aria-live="polite"></div>
+        <div id="shLim" class="sub"></div>
+        <div id="shRef" title="Size preview: the outer square is 100%" aria-hidden="true"><div id="shBox"></div></div>
+        <div class="grp"><button id="shPng" title="Export the current view (whole plan, current level) as a PNG image">PNG</button><button id="shSvg" title="Export as an SVG (the image is embedded, not redrawn as vectors)">SVG</button></div>
+      </div>
+    </div>
+    <div id="lvW" class="fm" role="region" aria-labelledby="lvWT" hidden>
+      <div class="fmh"><h3 id="lvWT">Level</h3><button id="lvWX" aria-label="Close level" title="Close">&times;</button></div>
+      <div class="fmb">
+        <div class="grp" role="group" aria-label="Level"><button id="lDn" aria-label="Level down" title="Level down ([)">&#9660;</button><input id="lay" class="layer" type="number" step="1" value="1" aria-label="Level number" aria-live="polite"><button id="lUp" aria-label="Level up" title="Level up (])">&#9650;</button></div>
+        <label title="Show the levels above and below faintly (ghost layers)"><input id="ghost" type="checkbox" checked aria-label="Ghost layers"> <span class="tx">ghost layers</span></label>
+        <label title="Ghost all levels, not just the one above and below"><input id="ghostAll" type="checkbox" aria-label="Ghost all levels"> <span class="tx">show all levels</span></label>
+      </div>
+    </div>
+    <div id="smW" class="fm" role="region" aria-labelledby="smWT" hidden>
+      <div class="fmh"><h3 id="smWT">Simulation</h3><button id="smWX" aria-label="Close simulation" title="Close">&times;</button></div>
+      <div class="fmb" id="tgS" role="group" aria-label="Simulation controls">
+        <div class="smr"><button id="smPlay" class="pri" aria-label="Play or pause the simulation">Play</button><button id="smRst" aria-label="Reset the simulation">Reset</button><button id="prodB" aria-label="Production graph" title="Production: items per minute, per item and machine type">Production</button></div>
+        <div class="smr"><div class="seg" role="group" aria-label="Simulation speed"><button id="sm1" aria-pressed="true" class="on">1x</button><button id="sm10" aria-pressed="false">10x</button><button id="sm60" aria-pressed="false">60x</button></div><span id="smClk" class="layer" title="Simulation clock (hh:mm:ss game time)" aria-label="Simulation clock">00:00:00</span></div>
+        <div class="smr"><label title="Simulate only the floor shown; belts through elevators to other floors act as sinks/sources"><input id="smCur" type="checkbox" checked aria-label="Simulate only current floor"> <span class="tx">Simulate only current floor</span></label></div>
+        <p class="sub hint" id="smHint" hidden>Switch to the Factory floor to run the simulation.</p>
+      </div>
+    </div>
+    <div id="fwW" class="fm" role="region" aria-labelledby="fwWT" hidden>
+      <div class="fmh"><h3 id="fwWT">Flow</h3><button id="fwWX" aria-label="Close flow" title="Close">&times;</button></div>
+      <div class="fmb">
+        <div class="chips" id="lkg" role="group" aria-label="Flow overlays"><button id="lk" aria-pressed="false" title="Informational link overlay (no rules, nothing blocked). Machine&lt;-&gt;belt marker = an ENABLED port faces a belt cell (disabled port = no link, faint red tick); input/output direction is unknown, so it is undirected. Ports: layout inferred from screenshots, not verified vs game data. Arrows = belt flow; green thick = T-join merge; dashed = underground pair.">Links</button><button id="bn" aria-pressed="false" title="Bottlenecks: belt load = items/min passing / belt capacity. Links on: gradient on the flow arrows; links off: belt cells are coloured. While a simulation has run, colours use the simulated values, otherwise the planning estimate. Informational only.">Bottlenecks</button><button id="bnF" aria-pressed="false" disabled title="Flow: grey (no flow) to green (full capacity). Uses simulated load once the simulation has run.">Flow</button><button id="bnB" class="on" aria-pressed="true" disabled title="Blockage: green up to capacity, red when over capacity (simulation: or when the belt chain is full/blocked)">Blockage</button></div>
+        <button id="flLegBtn" type="button" class="legb" aria-expanded="false" aria-controls="flLegCard" title="Show or hide the legend: machine states, belt colours, markers"><span>Legend</span><span class="ar" aria-hidden="true"></span></button>
+        <div id="flLegCard" hidden>
+          <h4>Machine states</h4>
+          <div id="smLeg" aria-label="Machine states"><span><b style="background:hsl(220,10%,58%)">I</b>idle</span><span><b style="background:hsl(140,60%,48%)">W</b>working</span><span><b style="background:hsl(48,95%,55%)">S</b>starved</span><span><b style="background:hsl(0,75%,58%)">B</b>blocked</span></div>
+          <h4>Belts</h4>
+          <div class="leg" aria-label="Belt colours"><span><i style="background:linear-gradient(90deg,hsl(220,10%,50%),hsl(140,65%,46%))"></i>Flow: grey (none) to green (full)</span><span><i style="background:linear-gradient(90deg,hsl(140,65%,46%),hsl(0,65%,46%))"></i>Blockage: green to red (over capacity)</span><span><i style="background:none;border:2px solid hsl(0,75%,58%)"></i>Full belt (blocked): red ring</span></div>
+          <h4>Markers</h4>
+          <div class="leg"><span><span class="bq">!?</span>Size not confirmed in game</span></div>
+          <div class="leg" aria-label="Layout arrows"><span>Layout arrows: entrances</span><span><i class="sw" style="background:#fff"></i>White = station door (points into the block)</span><span><i class="sw" style="background:hsl(140,85%,75%)"></i>Green = output ports side (blocks without doors)</span></div>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div id="hb" role="toolbar" aria-label="Hotbar"></div>
+    <div id="hud">
+      <div id="read" aria-live="off">x 0 y 0</div>
+    </div>
+  </section>
+  <aside id="dock" aria-label="Info">
+    <button id="dockT" class="edge" type="button" aria-expanded="true" aria-controls="insp" aria-label="Hide side panel" title="Hide the side panel"><span class="ar" aria-hidden="true">&raquo;</span><span class="lb">Hide</span></button>
+    <div id="insp" aria-label="Inspector"></div>
+  </aside>
+</main>
+
+<dialog id="dHelp" aria-labelledby="dHelpT">
+  <div class="hhd"><h3 id="dHelpT">Help</h3><input id="helpSearch" type="text" placeholder="Search help..." aria-label="Search help" autocomplete="off" spellcheck="false"></div>
+  <div class="hmain">
+    <nav id="helpNav" aria-label="Help sections">
+      <button type="button" data-hs="start">Getting started</button>
+      <button type="button" data-hs="ctl">Controls</button>
+      <button type="button" data-hs="sim">Simulation rules</button>
+      <button type="button" data-hs="leg">Flow &amp; legend</button>
+      <button type="button" data-hs="game">Build in game</button>
+    </nav>
+    <div id="helpBody" tabindex="0" role="region" aria-label="Help text" aria-live="polite">
+      <section data-hs="start" aria-labelledby="hsT-start"><h4 id="hsT-start">Getting started</h4>
+        <ul>
+          <li>Blocks sit on a grid; open the factory floor (<kbd>F</kbd> or double-click a block) to place machines and belts inside.</li>
+          <li>Adjacent blocks always connect. Doors are open by default.</li>
+          <li>Pick an item in the palette, then click to place. Shift+click an item to put it on the hotbar.</li>
+          <li>Simulate, then Production: items per minute per item and machine type, plus totals.</li>
+          <li>Theoretical: items per minute at full speed, limited by belts, no simulation needed.</li>
+          <li>Layout, port positions, rotation and machine scale not marked as verified are not confirmed and may differ in the game.</li>
+        </ul>
+      </section>
+      <section data-hs="ctl" aria-labelledby="hsT-ctl"><h4 id="hsT-ctl">Controls</h4>
+        <div class="hg"><h5>Layout</h5><ul id="helpCtlL"></ul></div>
+        <div class="hg"><h5>Factory floor</h5><ul id="helpCtlF"></ul></div>
+      </section>
+      <section data-hs="sim" aria-labelledby="hsT-sim"><h4 id="hsT-sim">Simulation rules</h4>
+        <ul id="helpSim"></ul>
+      </section>
+      <section data-hs="leg" aria-labelledby="hsT-leg"><h4 id="hsT-leg">Flow &amp; legend</h4>
+        <p>The legend lives in the Flow window: open Windows, then Flow, and press Legend. It shows the machine states (idle, working, starved, blocked), the belt colours (Flow, Blockage, full belt), the !? mark for sizes not confirmed in the game, and the Layout arrows.</p>
+      </section>
+      <section data-hs="game" aria-labelledby="hsT-game"><h4 id="hsT-game">Build in game</h4>
+        <p>The <a href="https://github.com/xxalex3xx97/MSBlueprintUnit" target="_blank" rel="noopener">Blueprint Unit</a> mod adds a station block that builds this factory for you. Export the JSON here, paste it into the unit's window in the game, check the modification cost, and it builds the factory on your station. Needs MSCore (install with MSCoreManager).</p>
+      </section>
+      <p id="helpNone" class="sub" hidden>No results.</p>
+    </div>
+  </div>
+  <div class="btns"><button id="helpTour" type="button">Replay tutorial</button><button id="helpX" class="pri">Close</button></div>
+</dialog>
+<dialog id="dBay" aria-labelledby="bayT" style="width:min(340px,94vw)">
+  <h3 id="bayT">Bay filter</h3>
+  <input id="bayIn" type="text" placeholder="Search item..." aria-label="Search item" autocomplete="off" role="combobox" aria-controls="bayL">
+  <ul id="bayL" role="listbox"></ul>
+  <div class="btns"><button id="bayX">Cancel</button></div>
+</dialog>
+<dialog id="dExp" aria-labelledby="dExpT">
+  <h3 id="dExpT">Export JSON</h3>
+  <textarea id="expTa" readonly aria-label="Exported JSON"></textarea>
+  <div class="btns"><button id="expDl" class="pri">Download .json</button><button id="expSav">Download .sav</button><button id="expCp">Copy</button><button id="expX">Close</button></div>
+</dialog>
+<dialog id="dImp" aria-labelledby="dImpT">
+  <h3 id="dImpT">Import JSON</h3>
+  <p class="sub">Replaces the current blueprint (undoable). Paste JSON or choose a .json file.</p>
+  <textarea id="impTa" aria-label="JSON to import" placeholder='{"Version":1,"Blocks":[...]}'></textarea>
+  <div class="btns"><input id="impFile" type="file" accept=".json,application/json" aria-label="Choose JSON file" style="width:auto"><button id="impGo" class="pri">Import</button><button id="impX">Cancel</button></div>
+</dialog>
+<input id="savFile" type="file" accept=".sav" hidden aria-label="Choose Main Sequence save (*_S.sav)">
+<dialog id="dSav" aria-labelledby="dSavT">
+  <h3 id="dSavT">Import save</h3>
+  <p class="sub">Pick a player station from the save. Replaces the current blueprint (undoable).</p>
+  <select id="savSt" aria-label="Station to import"></select>
+  <div class="btns"><button id="savGo" class="pri">Import</button><button id="savX">Cancel</button></div>
+</dialog>
+<div id="toast" role="status"></div>
+
+<script defer src="js/catalog.js"></script>
+<script defer src="js/shapes.js"></script>
+<script defer src="js/connectors.js"></script>
+<script defer src="js/conn.js"></script>
+<script defer src="js/core.js"></script>
+<script defer src="js/recnames.js"></script>
+<script defer src="js/port_order.js"></script>
+<script defer src="js/config.js"></script>
+<script defer src="js/model.js"></script>
+<script defer src="js/sim.js"></script>
+<script defer src="js/draw.js"></script>
+<script defer src="js/input.js"></script>
+<script defer src="js/snippets.js"></script>
+<script defer src="js/palette.js"></script>
+<script defer src="js/inspector.js"></script>
+<script defer src="js/planner.js"></script>
+<script defer src="js/prefab.js"></script>
+<script src="js/dock_apply.js"></script>
+<script src="js/tpl/iface.js"></script>
+<script src="js/tpl/bundle.js"></script>
+<script src="js/tpl/registry.js"></script>
+<script src="js/cmp_hub.js"></script>
+<script src="js/cmp_dock.js"></script>
+<script src="js/cmp_asm.js"></script>
+<script src="js/rb_pack.js"></script>
+<script src="js/rb_grid.js"></script>
+<script src="js/rb_size.js"></script>
+<script src="js/rb_build.js"></script>
+<script src="js/city_build.js"></script>
+<script src="js/rb_run.js"></script>
+<script src="js/cmp_layout.js"></script>
+<script src="js/cmp_route.js"></script>
+<script src="js/compose.js"></script>
+<script src="js/cmp_groups.js"></script>
+<script defer src="js/worker_src.js"></script>
+<script defer src="js/placer.js"></script>
+<script defer src="tools/hand/enginepanel.js"></script>
+<script defer src="js/gallery.js"></script>
+<script defer src="js/panel.js"></script>
+<script defer src="js/io.js"></script>
+<script defer src="js/simui.js"></script>
+<script defer src="js/panels.js"></script>
+<script defer src="js/autosave.js"></script>
+<script defer src="js/help.js"></script>
+<script defer src="js/tutorial.js"></script>
+<script defer src="js/sav_template.js"></script>
+<script defer src="js/sav_icon.js"></script>
+<script defer src="js/sav_export.js"></script>
+<script defer src="js/boot.js"></script>
+<dialog id="plnPrev" aria-labelledby="plnPrevT">
+  <div class="pvHd"><h3 id="plnPrevT">Factory preview</h3><div class="pvTb" role="toolbar" aria-label="Preview zoom"><button id="plnZo" type="button" aria-label="Zoom out" title="Zoom out">&minus;</button><button id="plnZi" type="button" aria-label="Zoom in" title="Zoom in">+</button><button id="plnZf" type="button" aria-label="Fit to view" title="Fit to view">Fit</button></div></div>
+  <div id="pvSet">
+    <label>Rate (items/min) <input id="pvRate" type="number" min="0.001" step="any" aria-label="Target rate in items per minute"></label>
+    <label>Belt <select id="pvMk"aria-label="Belt tier"><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+    <label>Blocks <select id="plnBk" aria-label="Block type" title="Block type the factory is cut from"><option value="BPO_Station_01">1x1</option><option value="BPO_Station_2x1">2x1</option><option value="BPO_Station_02A">2x2 A</option><option value="BPO_Station_02" selected>2x2 B</option><option value="BPO_Station_03">2x2 C</option></select></label>
+    <span id="plnEngBadge" role="status" title="Layout template used for this preview"></span>
+  </div>
+  <div id="pvDocks"><span class="pvGt">Docks</span>
+    <label class="chk"><input type="checkbox" id="plnDkI"> Raw inputs from docks</label>
+    <label>Dock <select id="plnDk" aria-label="Dock type"><option value="ind">Industrial</option><option value="nrm">Normal</option></select></label>
+    <label class="chk"><input type="checkbox" id="plnDkO"> Output to a dock</label>
+    <label>Output dock <select id="plnDkOT" aria-label="Output dock type"><option value="">Same as input</option><option value="ind">Industrial</option><option value="nrm">Normal</option></select></label>
+  </div>
+  <details id="pvOpt"><summary>Options</summary><div id="pvOptB">
+    <label>Splitter <select id="pvSp" aria-label="Splitter tier"><option value="">follow belt</option><option value="0">Mk1</option><option value="1">Mk2</option><option value="2">Mk3</option></select></label>
+    <label>Buffer <select id="plnBuf" aria-label="Buffer container"><option value="DAT_Container">Container</option><option value="DAT_Container_2" selected>Large Container</option></select></label>
+    <label class="chk"><input type="checkbox" id="plnLbl"> Machine rate labels</label>
+    <label class="chk" hidden style="display:none" title="Open-ended chainable module: input on west edge, output on east edge, no source/sink containers"><input type="checkbox" id="plnMod"> Modular build</label>
+  </div></details>
+  <div id="plnPrevView"><canvas id="plnPrevMap" width="300" height="180" aria-label="Factory layout preview"></canvas></div>
+  <div id="pvLine"></div>
+  <details id="pvDet"><summary>Details</summary><dl id="plnPrevCnt"><dt>Machines</dt><dd id="pvMach"></dd><dt>Belts</dt><dd id="pvBelt"></dd><dt>Splitters</dt><dd id="pvSpl"></dd><dt>Containers</dt><dd id="pvBox"></dd><dt>Undergrounds</dt><dd id="pvUg"></dd><dt>Blocks</dt><dd id="pvBlk"></dd><dt>Cells</dt><dd id="pvCell"></dd><dt>In/Out</dt><dd id="pvIO"></dd></dl>
+  <div id="plnPrevNote"></div></details>
+  <p id="plnPrevErr" role="alert"></p>
+  <p id="plnPrevBig" role="status"></p>
+  <div class="btns"><button id="plnPlace" type="button">Place</button><button id="plnCancel" type="button">Cancel</button></div>
+</dialog>
+<script defer src="js/mobile.js"></script>
+<script defer src="js/switch.js"></script>
+<script>/* ?exo=1: build the hand-designed Exosuit factory (tools/hand) live, block by block */
+if(/[?&]exo=chain/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{await l("tools/hand/chainplay.js");chainPlay({url:"tools/hand/chain_plan.json",stepMs:500})}catch(e){console.error("exo",e)}});   /* ?exo=chain: replay the planned Advanced Plates chain step by step */
+if(/[?&]exo=dock/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","fblock","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:500,build:()=>fbBuild({mk:1,dock:true})})}catch(e){console.error("exo",e)}});   /* ?exo=dock: one dock-ready block per recipe with a raw input */
+if(/[?&]exo=blocks/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","fblock","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:1500,build:fbBuild})}catch(e){console.error("exo",e)}});   /* ?exo=blocks: one full factory block per machine class */
+if(/[?&]exo=bus/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","exosuit_spec","exobus","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:500,build:exoBus})}catch(e){console.error("exo",e)}});   /* ?exo=bus: the row-bus layout */
+if(/[?&]exo=1/.test(location.search))addEventListener("load",async()=>{const l=s=>new Promise((r,j)=>{const e=document.createElement("script");e.src=s;e.onload=r;e.onerror=j;document.head.appendChild(e)});try{for(const f of["hand","exosuit_spec","exosuit","play"])await l("tools/hand/"+f+".js");exoPlay({stepMs:900})}catch(e){console.error("exo",e)}});</script>
+</body>
+</html>

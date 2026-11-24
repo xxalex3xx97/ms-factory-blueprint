@@ -1,0 +1,82 @@
+/* Touch layout (m.html, <html class="mob">): canvas fills the screen, panels = bottom sheets. Planner (#pln/#plnPrev) lives in mobile_pln.css */
+html.mob{--tb:calc(56px + env(safe-area-inset-bottom));--sh:min(72dvh,calc(100dvh - 120px));-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+html.mob body{height:100dvh;overflow:hidden;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);overscroll-behavior:none}
+html.mob button,html.mob select,html.mob input[type=text],html.mob input[type=number]{min-height:44px}
+html.mob input,html.mob select,html.mob textarea{font-size:16px}
+html.mob input[type=checkbox]{width:24px;height:24px}
+html.mob label:has(>input[type=checkbox]){display:flex;align-items:center;gap:8px;min-height:44px}
+html.mob summary{min-height:44px;display:flex;align-items:center}
+html.mob input[type=range]{min-height:44px}
+
+/* header: essentials only (name, undo/redo/fit, view, help); files + windows live in the bottom toolbar sheets */
+html.mob header{height:auto;min-height:56px;padding:env(safe-area-inset-top) 8px 0;gap:6px}
+html.mob header h1,html.mob header .tg[aria-label=Tools],html.mob header .grp:has(#fileM),html.mob header .grp:has(#impSav),html.mob header .grp:has(#fSave){display:none}
+html.mob header button{min-height:44px;min-width:44px}
+html.mob header .tg{gap:6px}
+html.mob header #undo,html.mob header #redo{min-width:44px;padding-left:10px;padding-right:10px;font-size:18px}
+html.mob header #name{width:96px;min-height:44px}
+html.mob header #stSel{max-width:90px}
+html.mob header #vwF kbd,html.mob header #vwF .lg{display:none}
+html.mob header #vwF .fl::first-letter{text-transform:uppercase}
+html.mob header .tg:last-child{order:0}
+html.mob header .tg[aria-label=View]{display:contents}
+html.mob header .tg[aria-label=Plan]{display:contents}
+html.mob header #help{order:9}
+html.mob header .tg>.grp:first-of-type label{display:none}
+
+/* layout: one column; stage is the screen, toolbar docks below */
+html.mob main{display:block;position:relative;flex:1 1 0;min-height:0}
+html.mob #stage{position:absolute;inset:0;height:auto;flex:none}
+html.mob .edge{display:none}
+html.mob #hb{width:calc(100% - 8px);max-width:560px;bottom:8px;gap:2px;padding:2px}
+html.mob #hud{left:6px;right:6px}
+
+/* bottom toolbar */
+#mtb{display:none}
+html.mob #mtb{display:grid;grid-template-columns:repeat(4,1fr);flex:none;height:var(--tb);padding:0 max(4px,env(safe-area-inset-left)) env(safe-area-inset-bottom) max(4px,env(safe-area-inset-right));background:var(--panel);border-top:1px solid var(--line);position:relative;z-index:31}
+html.mob #mtb button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:56px;background:none;border:0;border-radius:0;color:var(--dim);font-size:11px;padding:4px 0;border-top:2px solid transparent}
+html.mob #mtb button svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+html.mob #mtb button[aria-expanded=true]{color:var(--acc);border-top-color:var(--acc);background:var(--panel2)}
+
+/* sheets: palette, inspector, tools, menu, windows */
+#mbk{display:none}
+html.mob #mbk{display:block;position:fixed;inset:0;z-index:32;background:oklch(0.1 0.01 250 / .55);opacity:0;visibility:hidden;transition:opacity .2s,visibility 0s .2s}
+html.mob #mbk.on{opacity:1;visibility:visible;transition:opacity .2s}
+html.mob #pal,html.mob #dock,html.mob .msh,html.mob #fms{position:fixed;left:0;right:0;margin:0 auto;width:100%;max-width:640px;bottom:var(--tb);top:auto;z-index:33;background:var(--panel);border:1px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;box-shadow:0 -8px 28px oklch(0.1 0.01 250 / .5);transform:translateY(calc(100% + 60px));visibility:hidden;transition:transform .24s cubic-bezier(.2,.8,.2,1),visibility 0s .24s}
+html.mob #pal,html.mob #dock{height:var(--sh);max-height:var(--sh);overflow:auto;overscroll-behavior:contain;border-right:0;border-left:0}
+html.mob .msh{max-height:var(--sh);overflow:auto;padding:0 12px 12px}
+html.mob #pal.mopen,html.mob #dock.mopen,html.mob .msh.mopen{transform:none;visibility:visible;transition:transform .24s cubic-bezier(.2,.8,.2,1)}
+html.mob #dock.col>:not(.edge),html.mob #pal.col>:not(.edge){display:revert!important}
+html.mob #insp{overflow:visible}
+@media (prefers-reduced-motion:reduce){html.mob #pal,html.mob #dock,html.mob .msh,html.mob #fms,html.mob #mbk{transition:none}}
+.mgrab{display:none}
+html.mob .mgrab{display:flex;position:sticky;top:0;z-index:2;align-items:center;gap:8px;min-height:48px;padding:0 6px 0 14px;background:var(--panel);border-bottom:1px solid var(--line);font-weight:600;flex:none}
+html.mob .mgrab span{flex:1}
+html.mob .mgrab button{width:44px;font-size:22px;line-height:1;padding:0}
+html.mob .msh .mgrab{margin:0 -12px 10px}
+html.mob .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:12px}
+html.mob .mgrid button{display:flex;align-items:center;justify-content:center;text-align:center;min-height:48px}
+html.mob .msh h4{margin:6px 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim)}
+html.mob .msh .pri{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+
+/* floating windows (settings, level, simulation, flow, screenshot, production, theoretical): same sheet slot, each window = a sheet */
+html.mob #fms{display:flex;flex-direction:column;align-items:stretch;gap:0;pointer-events:none;max-height:var(--sh)!important;transform:none;visibility:visible;border:0;box-shadow:none;background:none;border-radius:0;top:auto!important;bottom:var(--tb)!important;right:0}
+html.mob #fms>.fm{pointer-events:auto;width:100%;max-width:640px;margin:0 auto;border-radius:14px 14px 0 0;max-height:var(--sh);box-shadow:0 -8px 28px oklch(0.1 0.01 250 / .5)}
+html.mob #fms>.fm:not([hidden])~.fm:not([hidden]){display:none}
+html.mob .fmh{min-height:48px;padding:0 6px 0 14px}
+html.mob .fmh button,html.mob #prHd button,html.mob #thHd button{min-width:44px;min-height:44px;font-size:22px}
+html.mob #dProd,html.mob #dTheo{position:fixed!important;left:0!important;right:0!important;top:auto!important;bottom:var(--tb)!important;width:100%!important;max-width:640px;margin:0 auto;max-height:min(60dvh,calc(100dvh - 140px))!important;z-index:34;border-radius:14px 14px 0 0}
+
+/* Pan / Select toggle + fit */
+#mSel,#mFit{display:none}
+html.mob #mFit{display:flex;position:absolute;right:10px;bottom:118px;z-index:8;align-items:center;justify-content:center;width:48px;height:48px;padding:0;border-radius:24px;background:oklch(0.17 0.012 250 / .92);border:1px solid var(--line);box-shadow:0 2px 10px oklch(0.1 0.01 250 / .5)}
+html.mob #mFit svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+html.mob #mSel{display:flex;position:absolute;right:10px;bottom:62px;z-index:8;align-items:center;gap:6px;min-height:48px;min-width:96px;padding:0 14px;border-radius:24px;background:oklch(0.17 0.012 250 / .92);border:1px solid var(--line);font-weight:600;box-shadow:0 2px 10px oklch(0.1 0.01 250 / .5);touch-action:manipulation}
+html.mob #mSel svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+html.mob #mSel[aria-pressed=true]{background:var(--acc);color:var(--acc-ink);border-color:var(--acc)}
+html.mob #hud{top:6px;bottom:auto}
+
+/* dialogs: near full screen */
+html.mob dialog:not(#plnPrev){width:calc(100vw - 16px);max-width:720px;max-height:calc(100dvh - 16px);overflow:auto}
+html.mob dialog .btns button,html.mob dialog .btns input{min-height:44px}
+html.mob #toast{bottom:calc(var(--tb) + 12px)}

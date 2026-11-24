@@ -987,10 +987,15 @@ $("plnCancel").onclick=()=>$("plnPrev").close();$("plnPrev").addEventListener("c
 $("plnPrevMap").addEventListener("wheel",e=>{e.preventDefault();plcZ(plcP(e),e.deltaY<0?1.12:1/1.12)},{passive:false});
 let plcSt=null;
 const plcM=$("plnPrevMap");
-plcM.addEventListener("pointerdown",e=>{plcM.setPointerCapture(e.pointerId);plcSt={x:e.clientX,y:e.clientY,ox:plcV.ox,oy:plcV.oy}});
-plcM.addEventListener("pointermove",e=>{if(!plcSt)return;if(e.buttons===0){plcEnd();return}   // button already released (missed up outside): stop panning
+const plcTp=new Map();let plcPin=null;   // touch: 2 fingers = pinch zoom + pan
+const plcPinSet=()=>{if(plcTp.size<2){plcPin=null;return}const[a,b]=[...plcTp.values()];plcPin={d:Math.hypot(a.x-b.x,a.y-b.y)||1,x:(a.x+b.x)/2,y:(a.y+b.y)/2}};
+plcM.addEventListener("pointerdown",e=>{plcM.setPointerCapture(e.pointerId);if(e.pointerType==="touch"){plcTp.set(e.pointerId,plcP(e));if(plcTp.size>1){plcSt=null;plcPinSet();return}}plcSt={x:e.clientX,y:e.clientY,ox:plcV.ox,oy:plcV.oy}});
+plcM.addEventListener("pointermove",e=>{
+  if(e.pointerType==="touch"&&plcTp.has(e.pointerId)){plcTp.set(e.pointerId,plcP(e));if(plcPin){const[a,b]=[...plcTp.values()],d=Math.hypot(a.x-b.x,a.y-b.y)||1,x=(a.x+b.x)/2,y=(a.y+b.y)/2,z0=plcV.z,z=Math.min(60,Math.max(.01,z0*d/plcPin.d));
+    plcV.ox=x-(plcPin.x-plcV.ox)*(z/z0);plcV.oy=y-(plcPin.y-plcV.oy)*(z/z0);plcV.z=z;plcPin={d,x,y};plcDo();return}}
+  if(!plcSt)return;if(e.buttons===0){plcEnd();return}   // button already released (missed up outside): stop panning
   plcV.ox=plcSt.ox+(e.clientX-plcSt.x);plcV.oy=plcSt.oy+(e.clientY-plcSt.y);plcDo()});
-const plcEnd=()=>{plcSt=null;plcCache=null;plcDo()};   // pan stopped: full repaint
+const plcEnd=e=>{if(e&&e.pointerType==="touch"){plcTp.delete(e.pointerId);plcPinSet()}plcSt=null;plcCache=null;plcDo()};   // pan stopped: full repaint
 plcM.addEventListener("pointerup",plcEnd);plcM.addEventListener("pointercancel",plcEnd);plcM.addEventListener("lostpointercapture",plcEnd);
 // release outside the canvas (or over the modal chrome) must end the pan too
 window.addEventListener("pointerup",()=>{if(plcSt)plcEnd()});window.addEventListener("pointercancel",()=>{if(plcSt)plcEnd()});window.addEventListener("blur",()=>{if(plcSt)plcEnd()});
