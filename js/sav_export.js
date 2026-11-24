@@ -352,6 +352,7 @@ function savImport0(u8) {
       const q = mach(m), d = q.ConfigHex && cfgDec(q.Class, q.ConfigHex);
       if (d && d.name && (cfgKind(q.Class) === 'dock' || cfgKind(q.Class) === 'named')) e.Name = d.name;
       if (d && d.resource) e.Resource = d.resource;
+      if (d && cfgKind(q.Class) === 'dock' && d.filters && d.filters.some(f => f.item)) e.Filters = d.filters.map(f => ({item: f.item || '', bLoading: f.bLoading | 0}));   // dock bay filters -> block Filters (site b.df), like export writes them
       machs.push(q);
     }
     blocks.push(e);
