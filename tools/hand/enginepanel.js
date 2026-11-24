@@ -11,6 +11,13 @@
     box.hidden=false;box.innerHTML='<span class="pvGt">Recipe parts</span> '+nodes.map(n=>{const x=ext.includes(n.item);return'<label class="chk" title="'+(x?"Not built: a container “From your factory” is placed instead":"Built in this factory")+'"><input type="checkbox" data-it="'+n.item+'"'+(x?"":" checked")+'> '+esc(plnNm(n.item))+' <small>'+(x?"from your factory":n.machines+" machines")+" · "+Math.round(n.rate*10)/10+"/min</small></label>"}).join(" ")+' <button type="button" id="pvPartsFin" title="Build only the last recipe; every part it needs comes from containers">Only the final recipe</button> <button type="button" id="pvPartsAll">Build all</button>';
     box.onchange=e=>{const c=e.target.closest("input[data-it]");if(!c)return;const it=c.dataset.it,cur=exGet(item).filter(x=>x!==it);if(!c.checked)cur.push(it);exSet(item,cur);window.placerRun(true)};
     box.onclick=e=>{const id=e.target.id;if(id==="pvPartsFin"){exSet(item,direct);window.placerRun(true)}else if(id==="pvPartsAll"){exSet(item,[]);window.placerRun(true)}}};
+  // build budget: the chain engine runs on the main thread and its time grows with the machine count (measured ~0.04 s per machine, worse above ~300). Over BUILD_M machines: warn first; picking an item starts at the highest rate under the budget.
+  const BUILD_M=50,machN=(item,rate,mk,ext)=>{const P=plan(item,rate,mk,undefined,typeof PLN_PICK==="object"?PLN_PICK:undefined,{seedDock:true,ext});return Object.values(P.nodes).reduce((s,n)=>s+(n.machines||0),0)},
+    estS=m=>Math.round(.04*m*(1+m/1000)),
+    safeRate=(item,mk)=>{let lo=.001,hi=1000;if(machN(item,lo,mk,[])>BUILD_M)return lo;if(machN(item,hi,mk,[])<=BUILD_M)return hi;for(let i=0;i<14;i++){const m=Math.sqrt(lo*hi);if(machN(item,m,mk,[])<=BUILD_M)lo=m;else hi=m}return Math.floor(lo*1000)/1000};
+  window.buildSafeRate=safeRate;
+  let okKey="";
+  $("plnItem").addEventListener("change",()=>{try{const it=$("plnItem").value,cur=+$("plnRate").value;if(!it||!(cur>0))return;const s=safeRate(it,+$("plnMk").value);if(cur>s){$("plnRate").value=s;$("plnRate").dispatchEvent(new Event("input",{bubbles:true}));$("plnRate").dispatchEvent(new Event("change",{bubbles:true}));if(typeof toast==="function")toast("Rate set to "+s+"/min: bigger factories take long to build")}}catch(e){}});
   window.engineReady=async()=>{if(typeof chainBuild!=="function")for(const f of ["tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f)};
   window.placerRun=async function(open,defer){
     const pp=$("pvParts");if(pp)pp.hidden=true;   // the parts checklist only belongs to the chain engine builds below
@@ -18,6 +25,8 @@
     $("plnPlace").onclick=placerPlace;$("plnEngBadge").textContent="";
     const dl=$("plnPrev");if(!open&&!dl.open)return;
     const item=$("plnItem").value,rate=+$("pvRate").value||+$("plnRate").value,mk=+$("pvMk").value,me=++tok;
+    if(item&&rate>0){let m=0;try{m=machN(item,rate,mk,exGet(item).filter(x=>x!==item))}catch(e){}const k=item+"|"+rate+"|"+mk;
+      if(m>BUILD_M&&k!==okKey){const s=safeRate(item,mk);if(!confirm("This factory has about "+m+" machines. Building it takes roughly "+estS(m)+" s and the window will freeze until it is done.\n\nOK = build anyway.\nCancel = keep the window responsive (a rate of "+s+"/min builds quickly).")){if(dl.open)$("pvLine").textContent="Cancelled: lower the rate (up to "+s+"/min builds quickly)";return}okKey=k}}
     placerClear();ENG=null;plcL=null;plcT=null;
     if(!dl.open)dl.showModal();
     $("plnPlace").disabled=true;$("plnPlace").textContent="Place";

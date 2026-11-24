@@ -104,3 +104,4 @@ html.mob #mPlace .mh[hidden]{display:none}
 html.mob.mh #mSel{bottom:172px}
 html.mob.mh #mFit{bottom:228px}
 html.mob #modeb{display:none}
+html.mob .pmk{min-height:0;min-width:0}
