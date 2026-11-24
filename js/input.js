@@ -37,7 +37,7 @@ function tbSync(){if(tb.tr.length&&(!tbBelt()||tb.cls!==active||tb.view!==view||
 function tbEnd(){const l=tb.tr[tb.tr.length-1],dx=hover.x-l.x,dy=hover.y-l.y;return Math.abs(dx)>=Math.abs(dy)?{x:hover.x,y:l.y}:{x:l.x,y:hover.y}}
 function tbPrev(){if(!tb.tr.length)return null;const g={tr:tb.tr.slice()};beltStep(g,tbEnd());return beltCells(g)}
 function tbAnchor(){if(!tbBelt())return;hover=toCell(W/2,H/2);if(!tb.tr.length){tb={tr:[{x:hover.x,y:hover.y}],cls:active,view,layer};all();return}beltStep(tb,tbEnd());all()}
-function tbConfirm(){if(!tb.tr.length)return;hover=toCell(W/2,H/2);const cells=tbPrev();tb.tr=[];beltPut(cells);all()}
+function tbConfirm(){if(!tb.tr.length)return;hover=toCell(W/2,H/2);const cells=tbPrev();tb.tr=[];if(cells&&cells.length)beltPut(cells);all()}
 function tbCancel(){tb.tr=[];all()}
 let touchSel=false;function setTouchSel(v){touchSel=!!v;all()}
 let lp=null;const lpCancel=()=>{if(lp){clearTimeout(lp.t);lp=null}};
