@@ -28,6 +28,17 @@ const pinMove=()=>{const[a,b]=[...tp.values()],d=Math.hypot(a.x-b.x,a.y-b.y)||1,
 function pinAbort(){if(!drag)return;if(drag.k==="move"&&drag.moved){S.blocks.forEach(q=>{const o=drag.orig.get(q.id);if(o){q.x=o.x;q.y=o.y}});if(drag.cr)drag.cr(0,0)}if(drag.k==="box")sel=new Set();drag=null;cv.style.cursor="";all()}
 // mobile (m.html sets class "mob" on <html>): 1-finger drag on empty space pans unless touchSel (Select mode) or a tool is active; tap on empty deselects; 500 ms long-press = right-click
 const MOB=document.documentElement.classList.contains("mob");
+// touch placing mode: a tool is active -> ghost fixed at the canvas centre (draw.js paint), 1-finger drag only pans, #mPlace bar (mobile.js) places
+const touchPlace=()=>MOB&&active&&!pasting&&!mode;
+// belt on touch: tb.tr = path cells from the first anchor to the last anchor (straight segments); preview = tr + straight run to the ghost cell
+let tb={tr:[],cls:null,view:null,layer:0};
+const tbBelt=()=>MOB&&active&&view==="F"&&runTool(def(active));
+function tbSync(){if(tb.tr.length&&(!tbBelt()||tb.cls!==active||tb.view!==view||tb.layer!==layer))tb.tr=[]}
+function tbEnd(){const l=tb.tr[tb.tr.length-1],dx=hover.x-l.x,dy=hover.y-l.y;return Math.abs(dx)>=Math.abs(dy)?{x:hover.x,y:l.y}:{x:l.x,y:hover.y}}
+function tbPrev(){if(!tb.tr.length)return null;const g={tr:tb.tr.slice()};beltStep(g,tbEnd());return beltCells(g)}
+function tbAnchor(){if(!tbBelt())return;hover=toCell(W/2,H/2);if(!tb.tr.length){tb={tr:[{x:hover.x,y:hover.y}],cls:active,view,layer};all();return}beltStep(tb,tbEnd());all()}
+function tbConfirm(){if(!tb.tr.length)return;hover=toCell(W/2,H/2);const cells=tbPrev();tb.tr=[];beltPut(cells);all()}
+function tbCancel(){tb.tr=[];all()}
 let touchSel=false;function setTouchSel(v){touchSel=!!v;all()}
 let lp=null;const lpCancel=()=>{if(lp){clearTimeout(lp.t);lp=null}};
 function lpFire(L){if(lp!==L)return;lp=null;if(!drag||tp.size!==1||(drag.k!=="pan"&&drag.k!=="move"))return;
@@ -37,6 +48,7 @@ function lpFire(L){if(lp!==L)return;lp=null;if(!drag||tp.size!==1||(drag.k!=="pa
 cv.addEventListener("pointerdown",e=>{
   cv.focus();const p=pt(e);try{cv.setPointerCapture(e.pointerId)}catch(_){}
   if(e.pointerType==="touch"){tp.set(e.pointerId,p);if(tp.size>1){lpCancel();pinAbort();pinSet();return}}
+  if(MOB&&e.pointerType==="touch"&&e.button===0&&!space&&touchPlace()){drag={k:"pan",px:p.x,py:p.y,d:0,rc:false};return}   // placing mode: a finger only pans (the Place bar places)
   if(e.button===1||e.button===2||(e.button===0&&space)){const uc=e.button===2&&ugCancel();drag={k:"pan",px:p.x,py:p.y,d:0,rc:e.button===2&&!uc};cv.style.cursor="grabbing";return}
   if(e.button!==0)return;
   if(MOB&&e.pointerType==="touch"&&!pasting&&!mode&&!active){const L={id:e.pointerId,x:p.x,y:p.y,cx:e.clientX,cy:e.clientY};L.t=setTimeout(()=>lpFire(L),500);lp=L}
@@ -121,14 +133,17 @@ cv.addEventListener("pointermove",e=>{
   if(drag||active||pasting||ugPend)draw(!!(drag&&drag.k==="pan"&&!active&&!pasting&&!ugPend&&typeof BIGF==="function"&&BIGF()));   // big factory: a pan is drawn with less detail (full detail 160 ms after the last move); a plain hover changes no painted pixel (tooltip only): no full repaint per mouse move
 });
 cv.addEventListener("pointerleave",()=>{hoverIn=false;btip(null);draw()});
+function beltPut(cells){
+  const nb=cells.map(c=>({id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:c.rot,pid:0}));
+  if(noBuild(nb.map(mItem)))toast(NOBUILD);
+  else{push();cutBelts(nb);S.blocks.push(...nb);sel=new Set();placeRot=cells[0].rot}
+}
 const end=e=>{
   if(e.pointerType==="touch"){tp.delete(e.pointerId);pinSet();lpCancel()}
   if(!drag)return;const k=drag.k,bay=drag.bay&&!drag.moved?drag.bay:null,rc=k==="pan"&&drag.rc&&drag.d<4&&e.type==="pointerup"?pt(e):null,tap=k==="pan"&&drag.tap&&drag.d<4&&e.type==="pointerup";
   if(k==="belt"){
     const cells=beltCells(drag);
-    const nb=cells.map(c=>({id:uid++,cls:active,x:c.x,y:c.y,h:layer,rot:c.rot,pid:0}));
-    if(noBuild(nb.map(mItem)))toast(NOBUILD);
-    else{push();cutBelts(nb);S.blocks.push(...nb);sel=new Set();placeRot=cells[0].rot}
+    beltPut(cells);
   }
   if(k==="box"&&mode){const m=mode;drag=null;cv.style.cursor=space?"grab":"";if(e.type==="pointercancel"){sel=new Set();all();return}boxMode(m);return}   // a cancelled gesture never applies the mode
   drag=null;cv.style.cursor=space?"grab":"";
