@@ -17,7 +17,7 @@
     safeRate=(item,mk)=>{let lo=.001,hi=1000;if(machN(item,lo,mk,[])>BUILD_M)return lo;if(machN(item,hi,mk,[])<=BUILD_M)return hi;for(let i=0;i<14;i++){const m=Math.sqrt(lo*hi);if(machN(item,m,mk,[])<=BUILD_M)lo=m;else hi=m}return Math.floor(lo*1000)/1000};
   window.buildSafeRate=safeRate;
   let okKey="";
-  $("plnItem").addEventListener("change",()=>{try{const it=$("plnItem").value,cur=+$("plnRate").value;if(!it||!(cur>0))return;const s=safeRate(it,+$("plnMk").value);if(cur>s){$("plnRate").value=s;$("plnRate").dispatchEvent(new Event("input",{bubbles:true}));$("plnRate").dispatchEvent(new Event("change",{bubbles:true}));if(typeof toast==="function")toast("Rate set to "+s+"/min: bigger factories take long to build")}}catch(e){}});
+  $("plnItem")&&$("plnItem").addEventListener("change",()=>{try{const it=$("plnItem").value,cur=+$("plnRate").value;if(!it||!(cur>0))return;const s=safeRate(it,+$("plnMk").value);if(cur>s){$("plnRate").value=s;$("plnRate").dispatchEvent(new Event("input",{bubbles:true}));$("plnRate").dispatchEvent(new Event("change",{bubbles:true}));if(typeof toast==="function")toast("Rate set to "+s+"/min: bigger factories take long to build")}}catch(e){}});
   window.engineReady=async()=>{if(typeof chainBuild!=="function")for(const f of ["tools/hand/hand.js","tools/hand/fblock.js","tools/hand/fchain.js","tools/hand/chainplay.js"])await l(f)};
   window.placerRun=async function(open,defer){
     const pp=$("pvParts");if(pp)pp.hidden=true;   // the parts checklist only belongs to the chain engine builds below
@@ -25,8 +25,8 @@
     $("plnPlace").onclick=placerPlace;$("plnEngBadge").textContent="";
     const dl=$("plnPrev");if(!open&&!dl.open)return;
     const item=$("plnItem").value,rate=+$("pvRate").value||+$("plnRate").value,mk=+$("pvMk").value,me=++tok;
-    if(item&&rate>0){let m=0;try{m=machN(item,rate,mk,exGet(item).filter(x=>x!==item))}catch(e){}const k=item+"|"+rate+"|"+mk;
-      if(m>BUILD_M&&k!==okKey){const s=safeRate(item,mk);if(!confirm("This factory has about "+m+" machines. Building it takes roughly "+estS(m)+" s and the window will freeze until it is done.\n\nOK = build anyway.\nCancel = keep the window responsive (a rate of "+s+"/min builds quickly).")){if(dl.open)$("pvLine").textContent="Cancelled: lower the rate (up to "+s+"/min builds quickly)";return}okKey=k}}
+    if(item&&rate>0){let m=0;try{m=machN(item,rate,mk,exGet(item).filter(x=>x!==item))}catch(e){}const k=item+"|"+rate+"|"+mk+"|"+exGet(item).join();
+      if(m>BUILD_M&&k!==okKey){const s=safeRate(item,mk);if(!confirm("This factory has about "+m+" machines. Building it takes roughly "+estS(m)+" s and the window will freeze until it is done.\n\nOK = build anyway.\nCancel = keep the window responsive (a rate of "+s+"/min builds quickly).")){if(dl.open){$("plnPlace").disabled=true;$("pvLine").textContent="Cancelled: lower the rate (up to "+s+"/min builds quickly)"}return}okKey=k}}
     placerClear();ENG=null;plcL=null;plcT=null;
     if(!dl.open)dl.showModal();
     $("plnPlace").disabled=true;$("plnPlace").textContent="Place";
