@@ -106,3 +106,22 @@ html.mob.mh #mFit{bottom:228px}
 html.mob #modeb{display:none}
 html.mob .pmk{min-height:0;min-width:0}
 html.mob .pmk::after{content:"";position:absolute;inset:-8px}
+
+/* hotbar: long-press hint in the palette, collapse tab */
+html.mob .mhint{padding:6px 14px;font-size:12px;color:var(--dim)}
+html.mob .item,html.mob #hb .slot{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+#hbT{display:none}
+html.mob #hbT{display:flex;position:absolute;left:8px;bottom:54px;z-index:8;align-items:center;justify-content:center;min-height:0;min-width:0;width:44px;height:24px;padding:0;border-radius:12px 12px 0 0;background:oklch(0.17 0.012 250 / .92);border:1px solid var(--line);border-bottom:0;touch-action:manipulation}
+html.mob #hbT::after{content:"";position:absolute;inset:-12px -6px -4px}
+html.mob #hbT svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+html.mob.hbc #hb{display:none}
+html.mob.hbc #hbT{bottom:8px;border-radius:12px;border-bottom:1px solid var(--line)}
+html.mob.hbc #hbT svg{transform:rotate(180deg)}
+html.mob.placing #hbT{display:none}
+html.mob.hbc #mSel{bottom:8px}
+html.mob.hbc #mFit{bottom:64px}
+html.mob.hbc.placing #mSel{bottom:72px}
+html.mob.hbc.placing #mFit{bottom:128px}
+html.mob.hbc.mh #mSel{bottom:118px}
+html.mob.hbc.mh #mFit{bottom:174px}
+html.mob.hbc #mPlace:not([hidden]){bottom:16px}

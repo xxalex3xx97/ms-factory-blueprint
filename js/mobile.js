@@ -60,6 +60,25 @@
   // picking a palette item = ready to tap-place: get the sheet out of the way
   $('palList').addEventListener('click', e => { if (e.target.closest('.item')) open(null); });
 
+  // hotbar on touch: long-press a palette item = add it, long-press a slot = clear it (desktop: Shift+click / right-click); the tab above the bar collapses it
+  const longPress = (root, sel, fn) => {
+    let t = 0, x = 0, y = 0, hit = null;
+    root.addEventListener('pointerdown', e => { const el = e.target.closest(sel); if (!el || e.pointerType === 'mouse') return; x = e.clientX; y = e.clientY; clearTimeout(t); t = setTimeout(() => { t = 0; hit = el; if (navigator.vibrate) navigator.vibrate(15); fn(el); }, 500); });
+    root.addEventListener('pointermove', e => { if (t && Math.hypot(e.clientX - x, e.clientY - y) > 10) { clearTimeout(t); t = 0; } });
+    ['pointerup', 'pointercancel'].forEach(ev => root.addEventListener(ev, () => { clearTimeout(t); t = 0; }));
+    root.addEventListener('click', e => { if (hit && e.target.closest(sel) === hit) { hit = null; e.stopPropagation(); e.preventDefault(); } else hit = null; }, true);   // the tap that ends a long-press is not a pick
+    root.addEventListener('contextmenu', e => { if (e.target.closest(sel)) e.preventDefault(); });
+  };
+  longPress($('palList'), '.item', el => hbAdd(el.dataset.cls));
+  longPress($('hb'), '.slot', el => hbClear(+el.dataset.i));
+  $('palList').addEventListener('dragstart', e => e.preventDefault(), true);   // touch long-press must not start an HTML5 drag
+  $('pal').querySelector('.mgrab').after(mk('<div class="mhint">Long-press an item to add it to the hotbar. Long-press a hotbar slot to clear it.</div>'));
+  const HBC = 'msfb.hbc', hbt = mk(`<button type="button" id="hbT" aria-controls="hb" aria-expanded="true" aria-label="Collapse hotbar">${ic('<path d="M6 9l6 6 6-6"/>')}</button>`);
+  const hbSet = c => { document.documentElement.classList.toggle('hbc', c); hbt.setAttribute('aria-expanded', !c); hbt.setAttribute('aria-label', c ? 'Show hotbar' : 'Collapse hotbar'); try { localStorage.setItem(HBC, c ? '1' : '0'); } catch (e) {} };
+  hbt.addEventListener('click', () => hbSet(!document.documentElement.classList.contains('hbc')));
+  $('stage').append(hbt);
+  try { hbSet(localStorage.getItem(HBC) === '1'); } catch (e) { hbSet(false); }
+
   // touch placing bar: shown while a palette tool is active. Place = a synthetic mouse click at the canvas centre (the ghost cell), so every tool kind reuses the desktop code
   const bar = mk('<div id="mPlace" role="toolbar" aria-label="Placing" hidden><button type="button" data-a="go" class="pri">Place</button><button type="button" data-a="rot">Rotate</button><button type="button" data-a="flip">Flip</button><button type="button" data-a="stop">Stop</button><button type="button" data-a="done" class="pri">Done</button></div>');
   const hint = mk('<span class="mh" hidden></span>'); bar.prepend(hint);

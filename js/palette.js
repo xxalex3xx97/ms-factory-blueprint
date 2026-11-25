@@ -13,9 +13,12 @@ function palette(){
 function pick(cls){pasting=null;mode=null;const pa=active;active=active===cls?null:cls;if(active)sel=new Set();if(active&&active!==pa)placeRot=0;all()}
 $("palList").addEventListener("click",e=>{
   const b=e.target.closest(".item");if(!b)return;
-  if(e.shiftKey){const h=HB[tab],i=h.indexOf(null);if(i<0)toast("Hotbar full");else{h[i]=b.dataset.cls;hbSave();hotbar()}return}
+  if(e.shiftKey){hbAdd(b.dataset.cls);return}
   pick(b.dataset.cls);
 });
+// first empty hotbar slot of the current tab (Shift+click on desktop, long-press on touch)
+function hbAdd(cls){const h=HB[tab],i=h.indexOf(null);if(h.includes(cls))toast("Already on the hotbar");else if(i<0)toast("Hotbar full");else{h[i]=cls;hbSave();hotbar();toast("Added to the hotbar")}}
+function hbClear(i){if(HB[tab][i]){HB[tab][i]=null;hbSave();hotbar()}}
 $("palList").addEventListener("dragstart",e=>{const b=e.target.closest(".item");if(!b)return;e.dataTransfer.setData("text/plain",b.dataset.cls);e.dataTransfer.effectAllowed="copy"});
 
 // ---- hotbar (one list per palette tab: b = blocks, m = buildables)
