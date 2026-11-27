@@ -292,7 +292,7 @@ $("impSav").onclick=()=>{
   if(!ok)toast("Save folder: "+SAVDIR);
   $("savFile").value="";$("savFile").click()};
 $("savFile").onchange=e=>savOpen(e.target.files[0]);
-const savOpen=async f=>{if(!f)return;try{const ab=await f.arrayBuffer(),dj=typeof savImport==="function"?savImport(new Uint8Array(ab)):null;   // Designs folder blueprint (.sav): import directly
+const savOpen=async f=>{if(!f)return;try{const ab=await f.arrayBuffer(),dj=typeof savImport==="function"?savImport(new Uint8Array(ab),b=>{const f=dim({cls:b.Class,rot:b.GridRotation});return[f.w,f.h]}):null;   // Designs folder blueprint (.sav): import directly
  if(dj){if(importJson(JSON.stringify(dj)))toast("Imported design \""+dj.DisplayName+"\"");return}
  const l=parseSav(ab);if(!l.length){toast("No player stations found in this save");return}
  if(l.length===1){if(importJson(JSON.stringify(l[0].json)))svPut(ab,f.name,l,0);return}

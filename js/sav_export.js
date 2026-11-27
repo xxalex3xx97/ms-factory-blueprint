@@ -328,8 +328,8 @@ function savExport(j, opts) {
 }
 // ---- Design .sav import (inverse of savExport): GVAS design file -> site JSON (Version 2). Returns null when u8 is not a design file.
 // Machines inside blocks become flat DefaultMachines (as parseSav does for world saves); dock/elevator names and drone bay resource are read from their child configs.
-function savImport(u8) { try { return savImport0(u8); } catch (e) { return null; } }
-function savImport0(u8) {
+function savImport(u8, size) { try { return savImport0(u8, size); } catch (e) { return null; } }
+function savImport0(u8, size) {
   const o = savLoad(u8);
   const bpp = o.props.find(x => x.name === 'Blueprint');
   if (!bpp || bpp.val[0] !== 'props') return null;
@@ -360,6 +360,17 @@ function savImport0(u8) {
   bl[1].forEach(addBlock);
   if (cn && cn[0] === 'sarr') cn[1].forEach(addBlock);
   if (ma && ma[0] === 'sarr') ma[1].forEach(m => machs.push(mach(m)));
+  // A design drawn in the game keeps its blocks on a half-cell origin (raw = 4*cell + 2*(w-1) + 2): rounding that would move every block
+  // 8 floor cells but not the machines. Shift blocks +2 and machines +16 (same frame) when most blocks are off the footprint-centre grid.
+  if (size) for (const ax of ['X', 'Y']) {
+    let bad = 0, tot = 0;
+    for (const b of blocks) {
+      if (/Connector|Dock|Ship/.test(savShort(b.Class))) continue;
+      const d = size(b), g = b.GridLocation[ax]; if (!d) continue;
+      tot++; if ((((g - 2 * ((ax === 'X' ? d[0] : d[1]) - 1)) % 4) + 4) % 4) bad++;
+    }
+    if (tot && bad * 2 > tot) { blocks.forEach(b => b.GridLocation[ax] += 2); machs.forEach(m => m.Transform.GridLocation[ax] += 16); }
+  }
   machs.sort((a, b) => a.MachineID - b.MachineID);
   const name = dn && dn[0] === 'raw' && dn[1].length > 9 ? savFstrR(dn[1], 9)[0] : 'Imported';
   return blocks.length ? { Version: 2, DisplayName: name, Blocks: blocks, DefaultMachines: machs } : null;
